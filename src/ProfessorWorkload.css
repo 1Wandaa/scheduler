@@ -1,0 +1,63 @@
+.professor-workload-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.professor-workload-container h2 {
+  margin-top: 0;
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+.workload-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.workload-card {
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.3s;
+}
+
+.workload-card.normal {
+  border-color: #4CAF50;
+  background-color: #f1f8f6;
+}
+
+.workload-card.warning {
+  border-color: #ff9800;
+  background-color: #fff3e0;
+}
+
+.workload-card.overload {
+  border-color: #f44336;
+  background-color: #ffebee;
+}
+
+.workload-card h3 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.workload-card .department {
+  margin: 0 0 1rem 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.workload-bar {
+  height: 24px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.bar-fill {
+  
