@@ -21,11 +21,11 @@ const UserManagement = () => {
   return (
     <div className="main-container">
       <div className="section-title">👥 User Management</div>
-      <p style={{color: '#666'}}>Manage system users and permissions</p>
+      <p style={{ color: '#666' }}>Manage system users and permissions</p>
 
       <table className="user-table">
         <thead>
-          <tr style={{background: '#f8f9fa'}}>
+          <tr style={{ background: '#f8f9fa' }}>
             <th>User</th>
             <th>Full Name</th>
             <th>Role</th>
@@ -43,7 +43,7 @@ const UserManagement = () => {
                 </span>
               </td>
               <td>
-                <button style={{color: 'red', border:'none', background:'none'}}>Delete</button>
+                <button style={{ color: 'red', border: 'none', background: 'none' }}>Delete</button>
               </td>
             </tr>
           ))}
@@ -56,19 +56,19 @@ const UserManagement = () => {
       {/* Add User Modal */}
       {showModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{textAlign: 'left'}}>
+          <div className="modal-content" style={{ textAlign: 'left' }}>
             <h3>Add New User</h3>
             <div className="form-group">
               <label>Username</label>
-              <input className="form-control" value={newUser.username} onChange={e => setNewUser({...newUser, username: e.target.value})} />
+              <input className="form-control" value={newUser.username} onChange={e => setNewUser({ ...newUser, username: e.target.value })} />
             </div>
             <div className="form-group">
               <label>Full Name</label>
-              <input className="form-control" value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} />
+              <input className="form-control" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
             </div>
             <div className="form-group">
               <label>Role</label>
-              <select className="form-control" value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})}>
+              <select className="form-control" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
                 <option>Student</option>
                 <option>Faculty</option>
                 <option>Department Head</option>

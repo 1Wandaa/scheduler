@@ -1,14 +1,22 @@
+// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getDatabase } from "firebase/database";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyAN_6KthtgbGRNq6INNznVs73PH708f5OA",
-  authDomain: "scheduler-db2d5.firebaseapp.com",
-  projectId: "scheduler-db2d5",
-  storageBucket: "scheduler-db2d5.firebasestorage.app",
-  messagingSenderId: "1049693325979",
-  appId: "1:1049693325979:web:1cb643730fac9e4ae6943e"
+  apiKey: "AIzaSyA8-k0LhdhGBkG4KcZiTz9dsCiMRDf_SAE",
+  authDomain: "scheduler-app2503.firebaseapp.com",
+  databaseURL: "https://scheduler-app2503-default-rtdb.firebaseio.com",
+  projectId: "scheduler-app2503",
+  storageBucket: "scheduler-app2503.firebasestorage.app",
+  messagingSenderId: "125166548137",
+  appId: "1:125166548137:web:9af20b6a36bcadbb2e65b8",
+  measurementId: "G-2L97MG6SJW"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app); // <--- This fixes your error!
+const analytics = getAnalytics(app);
