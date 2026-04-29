@@ -3,27 +3,31 @@
 :root {
   /* --- NEW LINEAR/STRIPE INSPIRED PALETTE --- */
   --accent-dark: #2A265F;
-  /* Deep Navy/Purple - For headers, sidebars, active states */
   --accent-primary: #5645EE;
-  /* Vibrant Purple - For primary buttons, links, highlights */
   --success: #02B974;
-  /* Emerald Green - For success, available status */
   --success-bg: #E6F8F0;
   --danger: #EF2A66;
-  /* Rose Red - For errors, conflicts, delete buttons */
   --danger-bg: #FDEAEF;
   --warning: #F5A623;
-  /* Warm Orange - For warnings */
   --warning-bg: #FEF6E9;
 
   /* Structural Colors */
   --bg-main: #F4F5F7;
-  --sidebar-bg: #FFFFFF;
   --card-bg: rgba(255, 255, 255, 0.98);
   --text-main: #1E293B;
   --text-muted: #64748B;
   --table-header: #F8FAFC;
   --border-color: #E2E8F0;
+
+  /* --- NEW DARK SIDEBAR COLORS --- */
+  --sidebar-bg: #15133C;
+  /* Deep, premium Navy Blue */
+  --sidebar-hover: #282463;
+  /* Slightly lighter Navy for hover states */
+  --sidebar-text-muted: #8E8CB0;
+  /* Muted lavender/grey for unselected text */
+  --sidebar-text-active: #FFFFFF;
+  /* Crisp white for active items */
 }
 
 body,
@@ -63,12 +67,15 @@ h6 {
 .sidebar {
   width: 250px;
   background: var(--sidebar-bg);
+  /* Now uses the deep navy */
   display: flex;
   flex-direction: column;
   padding: 20px 0;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
+  /* Deepened the shadow for depth */
   z-index: 10;
   overflow-y: auto;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .logo-area {
@@ -79,12 +86,18 @@ h6 {
 
 .logo-area img {
   width: 80px;
+  border: 2px solid var(--accent-primary);
+  /* Gives the logo a bright ring to pop on dark BG */
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .logo-area h3 {
   margin: 10px 0 0;
-  font-size: 1rem;
-  color: var(--accent-dark);
+  font-size: 1.1rem;
+  color: var(--sidebar-text-active);
+  /* Changed to white */
+  letter-spacing: 1px;
 }
 
 .nav-menu {
@@ -97,9 +110,10 @@ h6 {
 .nav-item {
   padding: 12px 20px;
   cursor: pointer;
-  color: var(--text-muted);
+  color: var(--sidebar-text-muted);
+  /* Changed to muted light text */
   font-weight: 500;
-  transition: 0.3s;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -107,8 +121,8 @@ h6 {
 
 .nav-item:hover,
 .nav-item.active {
-  background: var(--accent-primary);
-  color: white;
+  background: var(--sidebar-hover);
+  color: var(--sidebar-text-active);
   font-weight: 600;
   border-radius: 6px;
   margin: 0 10px;
@@ -117,30 +131,38 @@ h6 {
 .nav-sub-item {
   padding: 8px 20px 8px 50px;
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--sidebar-text-muted);
   cursor: pointer;
+  transition: color 0.2s;
 }
 
 .nav-sub-item:hover {
   color: var(--accent-primary);
 }
 
-.sidebar-stats {
-  padding: 20px;
-  border-top: 1px solid var(--border-color);
-  font-size: 0.9rem;
+/* Sidebar Stats Grey Box - Converted for Dark Mode */
+.sidebar-stats-box {
+  background: rgba(255, 255, 255, 0.05);
+  /* Translucent white overlay instead of grey */
+  margin: 15px;
+  padding: 15px;
+  border-radius: 10px;
+  color: var(--sidebar-text-active);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.stat-row {
+.sidebar-stats-box .stat-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 10px;
-  color: var(--text-muted);
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--sidebar-text-muted);
 }
 
-.stat-row strong {
-  color: var(--text-main);
+.sidebar-stats-box .stat-row strong {
   font-size: 1.1rem;
+  color: var(--sidebar-text-active);
 }
 
 /* Main Content Area */
