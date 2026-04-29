@@ -10,6 +10,9 @@ import ProfessorWorkload from './ProfessorWorkload';
 import ScheduleTable from './ScheduleTable';
 import ScheduleForm from './ScheduleForm';
 import AutoScheduler from './AutoScheduler';
+import RoomManagement from './RoomManagement';
+import FacultyManagement from './FacultyManagement';
+import SubjectManagement from './SubjectManagement';
 
 const Dashboard = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -242,35 +245,9 @@ const Dashboard = ({ user, onLogout }) => {
            </div>
         )}
 
-        {activeTab === 'rooms' && (
-          <div className="card">
-            <h3 className="card-title" style={{marginBottom: '15px'}}>System Rooms</h3>
-            <table className="data-table">
-              <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Capacity</th></tr></thead>
-              <tbody>{rooms.map(r => <tr key={r.id}><td>{r.id}</td><td><strong>{r.name}</strong></td><td>{r.type.toUpperCase()} {r.hasComputers && '💻'}</td><td>{r.capacity} pax</td></tr>)}</tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === 'faculty' && (
-          <div className="card">
-            <h3 className="card-title" style={{marginBottom: '15px'}}>Faculty Database</h3>
-            <table className="data-table">
-              <thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Max Load</th></tr></thead>
-              <tbody>{professors.map(p => <tr key={p.id}><td>{p.id}</td><td><strong>{p.name}</strong></td><td>{p.department}</td><td>{p.maxHours} hrs</td></tr>)}</tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === 'subjects' && (
-          <div className="card">
-            <h3 className="card-title" style={{marginBottom: '15px'}}>Subject Constraints</h3>
-            <table className="data-table">
-              <thead><tr><th>Code</th><th>Name</th><th>Lab Required</th><th>Capacity</th></tr></thead>
-              <tbody>{subjects.map(s => <tr key={s.id}><td><strong>{s.code}</strong></td><td>{s.name}</td><td>{s.requiredLab ? 'Yes 💻' : 'No'}</td><td>{s.capacity} pax</td></tr>)}</tbody>
-            </table>
-          </div>
-        )}
+        {activeTab === 'rooms' && <RoomManagement rooms={rooms} />}
+        {activeTab === 'faculty' && <FacultyManagement professors={professors} />}
+        {activeTab === 'subjects' && <SubjectManagement subjects={subjects} />}
       </div>
     </div>
   );
