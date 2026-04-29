@@ -230,3 +230,66 @@ body, html {
 .sidebar-stats-box .stat-row strong {
   font-size: 1.1rem;
 }
+
+/* =========================================
+   RESPONSIVE DESIGN (MOBILE & TABLET)
+   ========================================= */
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .smartsched-container {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .mobile-menu-btn {
+    display: block;
+  }
+
+  .sidebar {
+    position: absolute;
+    left: -250px;
+    top: 0;
+    height: 100vh;
+    transition: left 0.3s ease;
+    z-index: 1000;
+  }
+
+  .sidebar.open {
+    left: 0;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+  }
+
+  .main-content {
+    overflow-y: visible;
+  }
+
+  .dashboard-master-grid,
+  .grid-top-row,
+  .grid-bottom-row,
+  .analytics-row,
+  .dashboard-grid,
+  .dashboard-grid.bottom,
+  .schedule-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .login-box {
+    width: 90%;
+    padding: 20px;
+  }
+}

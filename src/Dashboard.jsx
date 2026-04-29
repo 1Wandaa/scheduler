@@ -12,6 +12,12 @@ import AutoScheduler from './AutoScheduler';
 const Dashboard = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isManageDataOpen, setIsManageDataOpen] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
+  };
 
   // --- STATE ---
   const [rooms] = useState(initialRooms);
@@ -39,31 +45,31 @@ const Dashboard = ({ user, onLogout }) => {
   return (
     <div className="smartsched-container">
       {/* ================= SIDEBAR ================= */}
-      <div className="sidebar" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <div className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         <div>
           <div className="logo-area" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
             <img src="/logo.jpg" alt="CAPSU Logo" onError={(e) => { e.target.src="https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Capiz_State_University_logo.png/220px-Capiz_State_University_logo.png"; }} style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #0288d1' }} />
           </div>
           
           <ul className="nav-menu">
-            <li className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>📊 Dashboard</li>
+            <li className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => handleTabClick('dashboard')}>📊 Dashboard</li>
             
             <li className="nav-item" onClick={() => setIsManageDataOpen(!isManageDataOpen)}>👥 Manage Data {isManageDataOpen ? '▴' : '▾'}</li>
             
             {isManageDataOpen && (
               <>
-                <li className="nav-sub-item" style={{ color: activeTab === 'faculty' ? '#0288d1' : '' }} onClick={() => setActiveTab('faculty')}>Faculty Profiles</li>
-                <li className="nav-sub-item" style={{ color: activeTab === 'rooms' ? '#0288d1' : '' }} onClick={() => setActiveTab('rooms')}>Room List</li>
+                <li className="nav-sub-item" style={{ color: activeTab === 'faculty' ? '#0288d1' : '' }} onClick={() => handleTabClick('faculty')}>Faculty Profiles</li>
+                <li className="nav-sub-item" style={{ color: activeTab === 'rooms' ? '#0288d1' : '' }} onClick={() => handleTabClick('rooms')}>Room List</li>
                 {/* FIXED CLICKS HERE */}
-                <li className="nav-sub-item" style={{ color: activeTab === 'subjects' ? '#0288d1' : '' }} onClick={() => setActiveTab('subjects')}>Subject Management</li>
-                <li className="nav-sub-item" style={{ color: activeTab === 'users' ? '#0288d1' : '' }} onClick={() => setActiveTab('users')}>User Management</li>
+                <li className="nav-sub-item" style={{ color: activeTab === 'subjects' ? '#0288d1' : '' }} onClick={() => handleTabClick('subjects')}>Subject Management</li>
+                <li className="nav-sub-item" style={{ color: activeTab === 'users' ? '#0288d1' : '' }} onClick={() => handleTabClick('users')}>User Management</li>
               </>
             )}
-            <li className={`nav-item ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => setActiveTab('schedule')}>📅 Schedule</li>
+            <li className={`nav-item ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => handleTabClick('schedule')}>📅 Schedule</li>
             
             {/* FIXED CLICKS HERE */}
-            <li className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>📈 Analytics</li>
-            <li className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => alert("Settings page coming soon!")}>⚙️ Settings</li>
+            <li className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => handleTabClick('analytics')}>📈 Analytics</li>
+            <li className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => { alert("Settings page coming soon!"); setIsMobileMenuOpen(false); }}>⚙️ Settings</li>
             
             <li className="nav-item" onClick={onLogout} style={{marginTop: '10px'}}>🚪 Log Out</li>
           </ul>
@@ -80,9 +86,14 @@ const Dashboard = ({ user, onLogout }) => {
 
       {/* ================= MAIN CONTENT ================= */}
       <div className="main-content">
-        <div className="header-title" style={{ marginBottom: '15px' }}>
-          <p style={{ margin: 0, fontSize: '0.85rem' }}>Capiz State University | Mambusao Satellite College</p>
-          <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold' }}>SMARTSCHED</h1>
+        <div className="header-title" style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <p style={{ margin: 0, fontSize: '0.85rem' }}>Capiz State University | Mambusao Satellite College</p>
+            <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold' }}>SMARTSCHED</h1>
+          </div>
+          <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+            ☰
+          </button>
         </div>
 
         {/* --- THE MASTER DASHBOARD VIEW --- */}
@@ -168,7 +179,7 @@ const Dashboard = ({ user, onLogout }) => {
         {activeTab === 'analytics' && <ProfessorWorkload professors={professors} schedules={schedules} />}
         
         {activeTab === 'schedule' && (
-           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', animation: 'fadeIn 0.5s' }}>
+           <div className="schedule-grid" style={{ animation: 'fadeIn 0.5s' }}>
              <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} onSchedule={(s) => setSchedules([...schedules, s])} validator={validator} />
              <AutoScheduler validator={validator} subjects={subjects} onAutoSchedule={() => {}} />
            </div>
