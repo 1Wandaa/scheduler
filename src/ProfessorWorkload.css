@@ -8,7 +8,7 @@
 
 .professor-workload-container h2 {
   margin-top: 0;
-  color: #333;
+  color: var(--text-main);
   margin-bottom: 1.5rem;
 }
 
@@ -19,48 +19,69 @@
 }
 
 .workload-card {
-  border: 2px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 1.5rem;
   transition: all 0.3s;
 }
 
 .workload-card.normal {
-  border-color: #4CAF50;
-  background-color: #f1f8f6;
+  border-color: var(--success);
+  background-color: var(--success-bg);
 }
 
 .workload-card.warning {
-  border-color: #ff9800;
-  background-color: #fff3e0;
+  border-color: var(--warning);
+  background-color: var(--warning-bg);
 }
 
 .workload-card.overload {
-  border-color: #f44336;
-  background-color: #ffebee;
+  border-color: var(--danger);
+  background-color: var(--danger-bg);
 }
 
 .workload-card h3 {
   margin: 0 0 0.5rem 0;
-  color: #333;
+  color: var(--text-main);
+  font-weight: 600;
 }
 
 .workload-card .department {
   margin: 0 0 1rem 0;
-  color: #666;
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
 .workload-bar {
   height: 24px;
-  background-color: #e0e0e0;
-  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 6px;
   overflow: hidden;
   margin-bottom: 0.75rem;
 }
 
 .bar-fill {
   height: 100%;
-  background-color: #4CAF50;
+  background-color: var(--accent-primary);
   transition: width 0.3s ease;
+  border-radius: 6px;
+}
+
+.workload-text {
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.schedule-item {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 4px 0;
+}
+
+.more-items {
+  font-size: 0.85rem;
+  color: var(--accent-primary);
+  font-weight: 600;
+  margin-top: 8px;
 }

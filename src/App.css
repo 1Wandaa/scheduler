@@ -1,111 +1,362 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap');
+
 :root {
-  --sidebar-bg: #e0f7fa;
-  --main-bg-gradient: linear-gradient(135deg, #4dd0e1 0%, #0288d1 100%);
-  --card-bg: rgba(255, 255, 255, 0.95);
-  --text-main: #333;
-  --text-muted: #666;
-  --accent-blue: #0288d1;
-  --table-header: #f0f0f0;
+  /* --- NEW LINEAR/STRIPE INSPIRED PALETTE --- */
+  --accent-dark: #2A265F;
+  /* Deep Navy/Purple - For headers, sidebars, active states */
+  --accent-primary: #5645EE;
+  /* Vibrant Purple - For primary buttons, links, highlights */
+  --success: #02B974;
+  /* Emerald Green - For success, available status */
+  --success-bg: #E6F8F0;
+  --danger: #EF2A66;
+  /* Rose Red - For errors, conflicts, delete buttons */
+  --danger-bg: #FDEAEF;
+  --warning: #F5A623;
+  /* Warm Orange - For warnings */
+  --warning-bg: #FEF6E9;
+
+  /* Structural Colors */
+  --bg-main: #F4F5F7;
+  --sidebar-bg: #FFFFFF;
+  --card-bg: rgba(255, 255, 255, 0.98);
+  --text-main: #1E293B;
+  --text-muted: #64748B;
+  --table-header: #F8FAFC;
+  --border-color: #E2E8F0;
 }
 
-/* Replace the top portion of App.css with this */
-:root {
-  --sidebar-bg: #e0f7fa;
-  --card-bg: rgba(255, 255, 255, 0.95); /* Keep cards slightly transparent white */
-  --text-main: #333;
-  --text-muted: #666;
-  --accent-blue: #0288d1;
-  --table-header: #f0f0f0;
-}
-
-body, html { 
-  margin: 0; 
-  padding: 0; 
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-  height: 100vh; 
+body,
+html {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', Tahoma, Geneva, Verdana, sans-serif;
+  height: 100vh;
   color: var(--text-main);
-
-  /* --- NEW BACKGROUND LOGIC --- */
-  background-image: url('/background.jpg'); /* You can replace this URL with your local file */
+  background-image: url('/background.jpg');
+  /* Keep your background image */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
 }
 
-/* Add a dark overlay so the white cards pop and text is readable */
-.smartsched-container { 
-  display: flex; 
-  height: 100vh; 
-  overflow: hidden; 
-  background-color: rgba(0, 40, 80, 0.6); /* Dark blue tint over the photo */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Poppins', sans-serif;
 }
 
 /* Dashboard Layout */
-.smartsched-container { display: flex; height: 100vh; overflow: hidden; }
+.smartsched-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background-color: rgba(42, 38, 95, 0.85);
+  /* Tinted with new Dark Navy */
+}
 
 /* Sidebar */
-.sidebar { width: 250px; background: white; display: flex; flex-direction: column; padding: 20px 0; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 10; overflow-y: auto; }
-.logo-area { text-align: center; margin-bottom: 20px; padding: 0 20px; }
-.logo-area img { width: 80px; }
-.logo-area h3 { margin: 10px 0 0; font-size: 1rem; color: var(--accent-blue); }
+.sidebar {
+  width: 250px;
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  overflow-y: auto;
+}
 
-.nav-menu { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
-.nav-item { padding: 12px 20px; cursor: pointer; color: var(--text-muted); font-weight: 500; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
-.nav-item:hover, .nav-item.active { background: #4dd0e1; color: white; font-weight: bold; }
-.nav-sub-item { padding: 8px 20px 8px 50px; font-size: 0.9rem; color: var(--text-muted); cursor: pointer; }
-.nav-sub-item:hover { color: var(--accent-blue); }
+.logo-area {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 0 20px;
+}
 
-.sidebar-stats { padding: 20px; border-top: 1px solid #eee; font-size: 0.9rem; }
-.stat-row { display: flex; justify-content: space-between; margin-bottom: 10px; color: var(--text-muted); }
-.stat-row strong { color: var(--text-main); font-size: 1.1rem; }
+.logo-area img {
+  width: 80px;
+}
+
+.logo-area h3 {
+  margin: 10px 0 0;
+  font-size: 1rem;
+  color: var(--accent-dark);
+}
+
+.nav-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.nav-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-weight: 500;
+  transition: 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  background: var(--accent-primary);
+  color: white;
+  font-weight: 600;
+  border-radius: 6px;
+  margin: 0 10px;
+}
+
+.nav-sub-item {
+  padding: 8px 20px 8px 50px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.nav-sub-item:hover {
+  color: var(--accent-primary);
+}
+
+.sidebar-stats {
+  padding: 20px;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.9rem;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: var(--text-muted);
+}
+
+.stat-row strong {
+  color: var(--text-main);
+  font-size: 1.1rem;
+}
 
 /* Main Content Area */
-.main-content { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
-.header-title { color: white; margin-bottom: 10px; }
-.header-title h1 { margin: 0; font-size: 1.8rem; text-shadow: 1px 1px 3px rgba(0,0,0,0.2); }
-.header-title p { margin: 5px 0 0; font-size: 0.9rem; opacity: 0.9; }
+.main-content {
+  flex-grow: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header-title {
+  color: white;
+  margin-bottom: 10px;
+}
+
+.header-title h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.header-title p {
+  margin: 5px 0 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
 
 /* Grid Layout for Cards */
-.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.dashboard-grid.bottom { grid-template-columns: 2fr 1fr; }
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.dashboard-grid.bottom {
+  grid-template-columns: 2fr 1fr;
+}
 
 /* Cards */
-.card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-.card-title { font-size: 1.1rem; font-weight: bold; color: var(--text-main); margin: 0; }
-.btn { background: var(--accent-blue); color: white; border: none; padding: 6px 15px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; font-weight: bold; }
+.card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.btn {
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background: var(--accent-dark);
+}
 
 /* Tables */
-.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.data-table th, .data-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
-.data-table th { background: var(--table-header); color: var(--text-muted); font-weight: 600; }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 12px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.data-table th {
+  background: var(--table-header);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--border-color);
+}
 
 /* Timetable */
-.timetable { width: 100%; border-collapse: collapse; font-size: 0.75rem; table-layout: fixed; }
-.timetable th, .timetable td { border: 1px solid #eee; padding: 5px; text-align: center; vertical-align: top; height: 60px; }
-.timetable th { background: #f8f9fa; }
-.time-col { font-weight: bold; color: var(--text-muted); width: 60px; vertical-align: middle !important; }
+.timetable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  table-layout: fixed;
+}
+
+.timetable th,
+.timetable td {
+  border: 1px solid var(--border-color);
+  padding: 5px;
+  text-align: center;
+  vertical-align: top;
+  height: 60px;
+}
+
+.timetable th {
+  background: var(--table-header);
+}
+
+.time-col {
+  font-weight: bold;
+  color: var(--text-muted);
+  width: 60px;
+  vertical-align: middle !important;
+}
 
 /* Class Blocks */
-.class-block { border-radius: 4px; padding: 5px; text-align: left; height: 100%; box-sizing: border-box; font-weight: 500; }
-.class-blue { background-color: #bbdefb; color: #0d47a1; }
-.class-green { background-color: #c8e6c9; color: #1b5e20; }
-.class-red { background-color: #ffcdd2; color: #b71c1c; }
+.class-block {
+  border-radius: 4px;
+  padding: 5px;
+  text-align: left;
+  height: 100%;
+  box-sizing: border-box;
+  font-weight: 500;
+}
+
+.class-blue {
+  background-color: #E0E7FF;
+  color: var(--accent-primary);
+}
+
+.class-green {
+  background-color: var(--success-bg);
+  color: var(--success);
+}
+
+.class-red {
+  background-color: var(--danger-bg);
+  color: var(--danger);
+}
 
 /* Alerts */
-.alert-item { padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 0.85rem; display: flex; gap: 10px; align-items: flex-start; }
-.alert-danger { background: #ffebee; color: #c62828; border-left: 4px solid #c62828; }
-.alert-warning { background: #fff8e1; color: #f57f17; border-left: 4px solid #f57f17; }
-.alert-info { background: #e3f2fd; color: #1565c0; border-left: 4px solid #1565c0; }
+.alert-item {
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 0.85rem;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.alert-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-left: 4px solid var(--danger);
+}
+
+.alert-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border-left: 4px solid var(--warning);
+}
+
+.alert-info {
+  background: #EEF2FF;
+  color: var(--accent-primary);
+  border-left: 4px solid var(--accent-primary);
+}
 
 /* Simple Fake Charts for UI Demo */
-.chart-container { display: flex; align-items: flex-end; justify-content: space-around; height: 150px; padding-top: 20px; }
-.bar { width: 30px; background: #00bcd4; border-radius: 3px 3px 0 0; }
-.pie-chart { width: 120px; height: 120px; border-radius: 50%; background: conic-gradient(#f44336 0% 20%, #ffeb3b 20% 40%, #2196f3 40% 100%); margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+.chart-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 150px;
+  padding-top: 20px;
+}
+
+.bar {
+  width: 30px;
+  background: var(--accent-primary);
+  border-radius: 3px 3px 0 0;
+}
+
+.pie-chart {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: conic-gradient(var(--danger) 0% 20%, var(--warning) 20% 40%, var(--accent-primary) 40% 100%);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+}
 
 /* =========================================
-   LOGIN SCREEN STYLES (SMARTSCHED THEME)
+   LOGIN SCREEN STYLES
    ========================================= */
 .login-container {
   display: flex;
@@ -115,13 +366,13 @@ body, html {
 }
 
 .login-box {
-  background: var(--card-bg, white);
+  background: var(--card-bg);
   padding: 40px;
   border-radius: 12px;
   width: 380px;
   text-align: center;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-  border-top: 5px solid var(--accent-blue);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border-top: 5px solid var(--accent-primary);
 }
 
 .login-box h2 {
@@ -143,19 +394,27 @@ body, html {
   color: var(--text-muted);
 }
 
-.input-group input, .input-group select {
+.input-group input,
+.input-group select {
   width: 100%;
   padding: 12px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   box-sizing: border-box;
   font-family: inherit;
   font-size: 0.95rem;
 }
 
+.input-group input:focus,
+.input-group select:focus {
+  border-color: var(--accent-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(86, 69, 238, 0.15);
+}
+
 .btn-login {
   width: 100%;
-  background: var(--accent-blue);
+  background: var(--accent-primary);
   color: white;
   padding: 12px;
   border: none;
@@ -168,55 +427,48 @@ body, html {
 }
 
 .btn-login:hover {
-  background: #016b9e;
-} 
+  background: var(--accent-dark);
+}
 
 /* =========================================
    SMARTSCHED REFERENCE LAYOUT (DASHBOARD)
    ========================================= */
-
-/* The new main grid container matching the image */
 .dashboard-master-grid {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* Top Row: Two equal tables */
 .grid-top-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
 
-/* Bottom Row: 60/40 Split */
 .grid-bottom-row {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
   gap: 20px;
 }
 
-/* Right Column Stack (Alerts over Analytics) */
 .right-column-stack {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* Analytics Row (Bar Chart next to Pie Chart) */
 .analytics-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
 
-/* Sidebar Stats Grey Box */
 .sidebar-stats-box {
   background: #f5f5f5;
   margin: 15px;
   padding: 15px;
   border-radius: 10px;
-  color: #333;
+  color: var(--text-main);
 }
 
 .sidebar-stats-box .stat-row {
@@ -234,7 +486,6 @@ body, html {
 /* =========================================
    RESPONSIVE DESIGN (MOBILE & TABLET)
    ========================================= */
-
 .schedule-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -271,7 +522,7 @@ body, html {
 
   .sidebar.open {
     left: 0;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
   }
 
   .main-content {

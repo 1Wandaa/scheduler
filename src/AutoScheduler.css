@@ -8,25 +8,25 @@
 
 .auto-scheduler-container h2 {
   margin-top: 0;
-  color: #333;
+  color: var(--text-main);
   margin-bottom: 1.5rem;
 }
 
 .auto-schedule-btn {
-  background-color: #0288d1;
+  background-color: var(--accent-dark);
   color: white;
   border: none;
   padding: 10px 20px;
   font-size: 1rem;
-  font-weight: bold;
-  border-radius: 5px;
+  font-weight: 600;
+  border-radius: 6px;
   cursor: pointer;
   transition: 0.3s;
   width: 100%;
 }
 
 .auto-schedule-btn:hover {
-  background-color: #016b9e;
+  background-color: var(--accent-primary);
 }
 
 .auto-schedule-btn:disabled {
@@ -44,23 +44,24 @@
 .result-section {
   padding: 15px;
   border-radius: 6px;
-  border-left: 5px solid #ccc;
+  border-left: 4px solid var(--border-color);
 }
 
 .result-section.success {
-  background-color: #e8f5e9;
-  border-color: #4CAF50;
+  background-color: var(--success-bg);
+  border-color: var(--success);
 }
 
 .result-section.error {
-  background-color: #ffebee;
-  border-color: #f44336;
+  background-color: var(--danger-bg);
+  border-color: var(--danger);
 }
 
 .result-section h3 {
   margin-top: 0;
   margin-bottom: 10px;
   font-size: 1.1rem;
+  color: var(--text-main);
 }
 
 .result-list {
@@ -72,18 +73,24 @@
 .result-item {
   background: white;
   padding: 10px;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color);
 }
 
 .result-item p {
   margin: 3px 0;
   font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.result-item p strong {
+  color: var(--text-main);
 }
 
 .warnings {
-  color: #ff9800;
-  font-weight: bold;
+  color: var(--warning);
+  font-weight: 600;
   font-size: 0.85rem !important;
   margin-top: 5px !important;
 }
