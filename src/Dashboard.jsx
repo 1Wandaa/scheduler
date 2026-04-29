@@ -57,59 +57,71 @@ const Dashboard = ({ user, onLogout }) => {
 
   // --- VALIDATOR ENGINE ---
   const validator = {
-    // ... existing validateAssignment, addSchedule, clearAllSchedules ...
+    validateAssignment: (room, professor, subject, day, timeSlot) => {
+      const errors = []; const warnings = [];
+      if (schedules.find(s => s.room.id === room.id && s.day === day && s.timeSlot.id === timeSlot.id)) errors.push(`Room occupied.`);
+      if (schedules.find(s => s.professor.id === professor.id && s.day === day && s.timeSlot.id === timeSlot.id)) errors.push(`Professor busy.`);
+      if (subject.requiredLab && !room.hasComputers) errors.push(`Requires Lab.`);
+      if (room.capacity < subject.capacity) warnings.push(`Capacity warning.`);
+      return { valid: errors.length === 0, errors, warnings };
+    },
+
+    addSchedule: (room, professor, subject, day, timeSlot) => ({ schedule: { room, professor, subject, day, timeSlot } }),
+
+    clearAllSchedules: () => {
+      schedules.forEach(s => deleteDoc(doc(db, 'schedules', s.id)));
+    },
 
     autoSchedule: (subjList, constraints) => {
       const results = [];
       const unscheduled = [];
 
-      // We need access to the current state arrays: rooms, professors, TIME_SLOTS, DAYS
-      const availableRooms = rooms;
-      const availableProfessors = professors;
+      // CRITICAL FIX: Track assignments in instant memory during the loop 
+      // because Firebase and React state take too long to update!
+      const tempSchedules = [...schedules];
 
-      // Iterate through every subject that needs scheduling
       for (const subject of subjList) {
         let scheduled = false;
 
-        // Find a professor suited for this subject (Basic logic: grab the first one from the same department)
-        const prof = availableProfessors.find(p => p.department === subject.department);
+        const prof = professors.find(p => p.department === subject.department);
 
         if (!prof) {
           unscheduled.push(subject);
-          continue; // Move to the next subject
+          continue;
         }
 
-        // The Greedy Approach: Loop through all possible permutations until a valid one is found
         searchLoop:
         for (const day of DAYS) {
           for (const timeSlot of TIME_SLOTS) {
-            for (const room of availableRooms) {
+            for (const room of rooms) {
 
-              // 1. Enforce Lab Constraints
               if (constraints.respectLabs && subject.requiredLab && !room.hasComputers) {
-                continue; // Skip this room, it doesn't have computers
+                continue;
               }
 
-              // 2. Validate Assignment against current schedules
-              const validation = validator.validateAssignment(room, prof, subject, day, timeSlot);
+              // Check our lightning-fast temporary array instead of the slow React state
+              const isRoomBusy = tempSchedules.some(s => s.room.id === room.id && s.day === day && s.timeSlot.id === timeSlot.id);
+              const isProfBusy = tempSchedules.some(s => s.professor.id === prof.id && s.day === day && s.timeSlot.id === timeSlot.id);
 
-              if (validation.valid) {
-                // If the slot is valid, officially add it to the schedule!
+              if (!isRoomBusy && !isProfBusy) {
                 const newSchedule = { room, professor: prof, subject, day, timeSlot };
 
-                // Save it to Firebase immediately
+                // 1. Save to instant memory so the next subject knows this slot is taken
+                tempSchedules.push(newSchedule);
+
+                // 2. Add to our UI results array
+                results.push(newSchedule);
+
+                // 3. Send to Firebase in the background
                 handleAddSchedule(newSchedule);
 
-                // Push to our local results array to show in the UI
-                results.push(newSchedule);
                 scheduled = true;
-                break searchLoop; // Stop searching for this subject, move to the next one
+                break searchLoop;
               }
             }
           }
         }
 
-        // If we exhausted all loops and couldn't schedule it, flag it as an error
         if (!scheduled) {
           unscheduled.push(subject);
         }

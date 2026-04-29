@@ -5,7 +5,6 @@ function AutoScheduler({ validator, subjects, onAutoSchedule }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
-  // UI States for Storyboard visualization
   const [algorithm] = useState('Deterministic Greedy Algorithm');
   const [respectLabs, setRespectLabs] = useState(true);
   const [preventDoubleBooking, setPreventDoubleBooking] = useState(true);
@@ -14,12 +13,10 @@ function AutoScheduler({ validator, subjects, onAutoSchedule }) {
     setLoading(true);
     setResult(null);
 
-    // Simulate a slight delay for a realistic loading effect in your presentation
     setTimeout(() => {
       try {
         validator.clearAllSchedules();
 
-        // Pass constraints to your deterministic logic
         const autoResult = validator.autoSchedule(subjects, {
           respectLabs,
           preventDoubleBooking
@@ -28,9 +25,10 @@ function AutoScheduler({ validator, subjects, onAutoSchedule }) {
         setResult(autoResult);
         onAutoSchedule();
       } catch (error) {
+        console.error("AutoSchedule Engine Error:", error);
         setResult({
           results: [],
-          unscheduled: subjects.map(s => s.name),
+          unscheduled: subjects, // FIX: Passing the full objects now!
           error: error.message
         });
       }
@@ -45,7 +43,6 @@ function AutoScheduler({ validator, subjects, onAutoSchedule }) {
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Configure parameters for the timetable generation</p>
       </div>
 
-      {/* Configuration Panel for Storyboard */}
       <div style={{ backgroundColor: 'var(--table-header)', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
         <div style={{ marginBottom: '15px' }}>
           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px' }}>Algorithm Method</label>
@@ -79,7 +76,6 @@ function AutoScheduler({ validator, subjects, onAutoSchedule }) {
         {loading ? 'Executing Algorithm...' : 'Generate Timetable'}
       </button>
 
-      {/* Results Rendering */}
       {result && (
         <div className="result-container" style={{ marginTop: '20px' }}>
           <div className={`result-section ${result.results.length > 0 ? 'success' : ''}`}>
@@ -99,7 +95,7 @@ function AutoScheduler({ validator, subjects, onAutoSchedule }) {
               <h3 style={{ fontSize: '1rem', color: 'var(--danger)', marginBottom: '10px' }}>Conflict Errors ({result.unscheduled.length})</h3>
               <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.85rem', color: 'var(--danger)' }}>
                 {result.unscheduled.map((subject, idx) => (
-                  <li key={idx}>{subject.code} - Insufficient valid slots</li>
+                  <li key={idx}>{subject.code ? subject.code : subject.name} - Insufficient valid slots</li>
                 ))}
               </ul>
             </div>
