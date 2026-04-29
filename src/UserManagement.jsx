@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 
 // Mock data (since we aren't using real Auth for this demo)
 const initialUsers = [
-  { id: 1, username: '@admin', name: 'Engr. Pablo Asi', role: 'Department Head' },
-  { id: 2, username: '@juan', name: 'Prof. Juan Dela Cruz', role: 'Faculty' },
-  { id: 3, username: '@maria', name: 'Maria Clara', role: 'Student' },
+  { id: 1, username: '@admin', name: 'Dr. Jelly L. Paredes', role: 'Department Head' },
+  { id: 2, username: '@olga', name: 'Prof. Olga Llanera', role: 'Faculty' },
+  { id: 3, username: '@ryan', name: 'Ryan James Mora', role: 'Student' },
 ];
 
 const UserManagement = () => {
