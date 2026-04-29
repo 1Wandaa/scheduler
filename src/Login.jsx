@@ -1,50 +1,96 @@
 import React, { useState } from 'react';
+import { auth, db } from './firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Admin'); // Changed default to Admin
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onLogin({ name: username || 'Authorized User', role: role });
+    setError('');
+    setLoading(true);
+
+    try {
+      // THE TRICK: Clean the username and append a dummy domain for Firebase Auth
+      // If a user types "@admin", Firebase checks "admin@smartsched.capsu.local"
+      const cleanUsername = username.replace('@', '').toLowerCase();
+      const dummyEmail = `${cleanUsername}@smartsched.capsu.local`;
+
+      // 1. Authenticate identity with Firebase Auth
+      await signInWithEmailAndPassword(auth, dummyEmail, password);
+
+      // 2. Fetch Authorization (Role) from Firestore 'users' collection using the original username
+      const q = query(collection(db, 'users'), where('username', '==', username));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        setError('Account found, but role data is missing. Contact an Administrator.');
+        auth.signOut();
+        setLoading(false);
+        return;
+      }
+
+      // 3. Extract user data and log them into the app
+      const userData = querySnapshot.docs[0].data();
+
+      onLogin({
+        name: userData.name || username,
+        role: userData.role || 'User',
+        username: username
+      });
+
+    } catch (err) {
+      console.error(err);
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('Invalid username or password. Please try again.');
+      } else {
+        setError('Failed to log in: ' + err.message);
+      }
+    }
+
+    setLoading(false);
   };
 
   return (
     <div className="login-container">
       <div className="login-box">
-
-        {/* --- OFFICIAL CAPSU LOGO --- */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
           <img
             src="logo.jpg"
             alt="CAPSU Logo"
             style={{
-              width: '90px',
-              height: '90px',
-              borderRadius: '50%',
-              objectFit: 'cover',
-              border: '3px solid var(--accent-primary)',
-              boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+              width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover',
+              border: '3px solid var(--accent-primary)', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
             }}
             onError={(e) => { e.target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Capiz_State_University_logo.png/220px-Capiz_State_University_logo.png"; }}
           />
         </div>
 
         <h2 style={{ marginTop: '0', color: 'var(--text-main)', letterSpacing: '1px' }}>SMARTSCHED</h2>
-        <p style={{ color: 'var(--text-muted)', marginBottom: '25px', fontSize: '0.9rem' }}>Capiz State University Room Scheduler</p>
+        <p style={{ color: 'var(--text-muted)', marginBottom: '20px', fontSize: '0.9rem' }}>Secure Portal | Mambusao Campus</p>
+
+        {/* Error Alert Box */}
+        {error && (
+          <div style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)', padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '0.85rem', borderLeft: '4px solid var(--danger)' }}>
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">
             <label>Username</label>
             <input
               required
+              type="text"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              placeholder="e.g. @admin or ryan"
             />
           </div>
-
           <div className="input-group">
             <label>Password</label>
             <input
@@ -56,16 +102,9 @@ const Login = ({ onLogin }) => {
             />
           </div>
 
-          <div className="input-group">
-            <label>Account Role</label>
-            <select value={role} onChange={e => setRole(e.target.value)} style={{ cursor: 'pointer' }}>
-              {/* --- RESTRICTED TO TWO CATEGORIES --- */}
-              <option value="Admin">Admin</option>
-              <option value="User">User</option>
-            </select>
-          </div>
-
-          <button type="submit" className="btn-login" style={{ marginTop: '20px' }}>Sign In</button>
+          <button type="submit" className="btn-login" style={{ marginTop: '10px' }} disabled={loading}>
+            {loading ? 'Authenticating...' : 'Secure Sign In'}
+          </button>
         </form>
       </div>
     </div>
