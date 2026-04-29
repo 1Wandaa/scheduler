@@ -2,11 +2,27 @@ import React from 'react';
 import { TIME_SLOTS, DAYS } from './index';
 import './ScheduleTable.css';
 
-function ScheduleTable({ schedules, onRemove, title = "ROOM SCHEDULE GRID" }) {
+function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID" }) {
   const getScheduleForSlot = (room, day, timeSlot) => {
     return schedules.find(
       s => s.room.id === room && s.day === day && s.timeSlot.id === timeSlot.id
     );
+  };
+
+  const handleDragStart = (e, scheduleId) => {
+    e.dataTransfer.setData('scheduleId', scheduleId);
+  };
+
+  const handleDrop = (e, day, timeSlotId) => {
+    e.preventDefault();
+    const scheduleId = e.dataTransfer.getData('scheduleId');
+    if (scheduleId && onUpdateSchedule) {
+      onUpdateSchedule(scheduleId, day, timeSlotId);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
   };
 
   return (
@@ -46,11 +62,22 @@ function ScheduleTable({ schedules, onRemove, title = "ROOM SCHEDULE GRID" }) {
                   <small>{timeSlot.time}</small>
                 </td>
                 {DAYS.map(day => (
-                  <td key={`${day}-${timeSlot.id}`} className="schedule-cell">
+                  <td 
+                    key={`${day}-${timeSlot.id}`} 
+                    className="schedule-cell"
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, day, timeSlot.id)}
+                  >
                     {schedules
                       .filter(s => s.day === day && s.timeSlot.id === timeSlot.id)
                       .map(schedule => (
-                        <div key={schedule.id} className="schedule-item">
+                        <div 
+                          key={schedule.id} 
+                          className="schedule-item"
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, schedule.id)}
+                          style={{ cursor: 'grab' }}
+                        >
                           <div className="schedule-content">
                             <p className="subject">{schedule.subject.code}</p>
                             <p className="professor">{schedule.professor.name.split(' ').pop()}</p>

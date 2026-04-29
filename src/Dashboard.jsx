@@ -42,6 +42,18 @@ const Dashboard = ({ user, onLogout }) => {
     }
   };
 
+  // --- DRAG AND DROP HANDLER ---
+  const handleUpdateSchedule = (scheduleId, newDay, newTimeSlotId) => {
+    setSchedules(prev => prev.map(s => {
+      if (s.id === scheduleId) {
+        const newTimeSlot = TIME_SLOTS.find(ts => ts.id === newTimeSlotId);
+        // Optionally add validation check here before allowing drop
+        return { ...s, day: newDay, timeSlot: newTimeSlot };
+      }
+      return s;
+    }));
+  };
+
   return (
     <div className="smartsched-container">
       {/* ================= SIDEBAR ================= */}
@@ -142,7 +154,11 @@ const Dashboard = ({ user, onLogout }) => {
                   </div>
                 </div>
                 <div style={{ padding: '10px', transform: 'scale(0.95)', transformOrigin: 'top left' }}>
-                  <ScheduleTable schedules={schedules} onRemove={(id) => setSchedules(schedules.filter(s => s.id !== id))} />
+                  <ScheduleTable 
+                    schedules={schedules} 
+                    onRemove={(id) => setSchedules(schedules.filter(s => s.id !== id))} 
+                    onUpdateSchedule={handleUpdateSchedule}
+                  />
                 </div>
               </div>
 
@@ -180,7 +196,12 @@ const Dashboard = ({ user, onLogout }) => {
         {activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
         {activeTab === 'room-utilization' && (
           <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
-            <ScheduleTable schedules={schedules} onRemove={(id) => setSchedules(schedules.filter(s => s.id !== id))} title="ROOM UTILIZATION SCHEDULE" />
+            <ScheduleTable 
+              schedules={schedules} 
+              onRemove={(id) => setSchedules(schedules.filter(s => s.id !== id))} 
+              onUpdateSchedule={handleUpdateSchedule}
+              title="ROOM UTILIZATION SCHEDULE" 
+            />
           </div>
         )}
         
