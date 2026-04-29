@@ -24,9 +24,9 @@ body, html {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
   height: 100vh; 
   color: var(--text-main);
-  
+
   /* --- NEW BACKGROUND LOGIC --- */
-  background-image: url('background.jpg'); /* You can replace this URL with your local file */
+  background-image: url('/background.jpg'); /* You can replace this URL with your local file */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -169,7 +169,7 @@ body, html {
 
 .btn-login:hover {
   background: #016b9e;
-}
+} 
 
 /* =========================================
    SMARTSCHED REFERENCE LAYOUT (DASHBOARD)
