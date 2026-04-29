@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { initialRooms, initialProfessors, initialSubjects } from './initial';
 import { TIME_SLOTS, DAYS } from './index';
+import { db } from './firebase';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
 
 // --- COMPONENTS ---
 import UserManagement from './UserManagement';
@@ -20,10 +22,31 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   // --- STATE ---
-  const [rooms] = useState(initialRooms);
-  const [professors] = useState(initialProfessors);
-  const [subjects] = useState(initialSubjects);
+  const [rooms, setRooms] = useState([]);
+  const [professors, setProfessors] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [schedules, setSchedules] = useState([]);
+
+  useEffect(() => {
+    const initializeData = async () => {
+      const roomsSnapshot = await getDocs(collection(db, 'rooms'));
+      if (roomsSnapshot.empty) {
+        const batch = writeBatch(db);
+        initialRooms.forEach(r => batch.set(doc(db, 'rooms', r.id.toString()), r));
+        initialProfessors.forEach(p => batch.set(doc(db, 'professors', p.id.toString()), p));
+        initialSubjects.forEach(s => batch.set(doc(db, 'subjects', s.id.toString()), s));
+        await batch.commit();
+      }
+    };
+    initializeData();
+
+    const unsubRooms = onSnapshot(collection(db, 'rooms'), (snap) => setRooms(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
+    const unsubProfs = onSnapshot(collection(db, 'professors'), (snap) => setProfessors(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
+    const unsubSubj = onSnapshot(collection(db, 'subjects'), (snap) => setSubjects(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
+    const unsubSched = onSnapshot(collection(db, 'schedules'), (snap) => setSchedules(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
+
+    return () => { unsubRooms(); unsubProfs(); unsubSubj(); unsubSched(); };
+  }, []);
 
   // --- VALIDATOR ENGINE ---
   const validator = {
@@ -35,23 +58,30 @@ const Dashboard = ({ user, onLogout }) => {
       if (room.capacity < subject.capacity) warnings.push(`Capacity warning.`);
       return { valid: errors.length === 0, errors, warnings };
     },
-    addSchedule: (room, professor, subject, day, timeSlot) => ({ schedule: { id: Date.now().toString(), room, professor, subject, day, timeSlot } }),
-    clearAllSchedules: () => setSchedules([]),
+    addSchedule: (room, professor, subject, day, timeSlot) => ({ schedule: { room, professor, subject, day, timeSlot } }),
+    clearAllSchedules: () => {
+      schedules.forEach(s => deleteDoc(doc(db, 'schedules', s.id)));
+    },
     autoSchedule: (subjList) => {
       return { results: [], unscheduled: [], error: null };
     }
   };
 
   // --- DRAG AND DROP HANDLER ---
-  const handleUpdateSchedule = (scheduleId, newDay, newTimeSlotId) => {
-    setSchedules(prev => prev.map(s => {
-      if (s.id === scheduleId) {
-        const newTimeSlot = TIME_SLOTS.find(ts => ts.id === newTimeSlotId);
-        // Optionally add validation check here before allowing drop
-        return { ...s, day: newDay, timeSlot: newTimeSlot };
-      }
-      return s;
-    }));
+  const handleUpdateSchedule = async (scheduleId, newDay, newTimeSlotId) => {
+    const newTimeSlot = TIME_SLOTS.find(ts => ts.id === newTimeSlotId);
+    await updateDoc(doc(db, 'schedules', scheduleId.toString()), {
+      day: newDay,
+      timeSlot: newTimeSlot
+    });
+  };
+
+  const handleAddSchedule = async (newSchedule) => {
+    await addDoc(collection(db, 'schedules'), newSchedule);
+  };
+
+  const handleRemoveSchedule = async (id) => {
+    await deleteDoc(doc(db, 'schedules', id.toString()));
   };
 
   return (
@@ -156,7 +186,7 @@ const Dashboard = ({ user, onLogout }) => {
                 <div style={{ padding: '10px', transform: 'scale(0.95)', transformOrigin: 'top left' }}>
                   <ScheduleTable 
                     schedules={schedules} 
-                    onRemove={(id) => setSchedules(schedules.filter(s => s.id !== id))} 
+                    onRemove={handleRemoveSchedule} 
                     onUpdateSchedule={handleUpdateSchedule}
                   />
                 </div>
@@ -198,7 +228,7 @@ const Dashboard = ({ user, onLogout }) => {
           <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
             <ScheduleTable 
               schedules={schedules} 
-              onRemove={(id) => setSchedules(schedules.filter(s => s.id !== id))} 
+              onRemove={handleRemoveSchedule} 
               onUpdateSchedule={handleUpdateSchedule}
               title="ROOM UTILIZATION SCHEDULE" 
             />
@@ -207,7 +237,7 @@ const Dashboard = ({ user, onLogout }) => {
         
         {activeTab === 'schedule' && (
            <div className="schedule-grid" style={{ animation: 'fadeIn 0.5s' }}>
-             <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} onSchedule={(s) => setSchedules([...schedules, s])} validator={validator} />
+             <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} onSchedule={handleAddSchedule} validator={validator} />
              <AutoScheduler validator={validator} subjects={subjects} onAutoSchedule={() => {}} />
            </div>
         )}

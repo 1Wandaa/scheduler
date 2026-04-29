@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from './firebase';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
 
-// Mock data (since we aren't using real Auth for this demo)
+// Mock data to initialize database
 const initialUsers = [
   { id: 1, username: '@admin', name: 'Dr. Jelly L. Paredes', role: 'Department Head' },
   { id: 2, username: '@olga', name: 'Prof. Olga Llanera', role: 'Faculty' },
@@ -8,14 +10,35 @@ const initialUsers = [
 ];
 
 const UserManagement = () => {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', name: '', role: 'Student' });
 
-  const handleAddUser = () => {
-    setUsers([...users, { ...newUser, id: Date.now() }]);
+  useEffect(() => {
+    const initializeUsers = async () => {
+      const usersSnap = await getDocs(collection(db, 'users'));
+      if (usersSnap.empty) {
+        const batch = writeBatch(db);
+        initialUsers.forEach(u => batch.set(doc(db, 'users', u.id.toString()), u));
+        await batch.commit();
+      }
+    };
+    initializeUsers();
+
+    const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+      setUsers(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+    });
+    return () => unsub();
+  }, []);
+
+  const handleAddUser = async () => {
+    await addDoc(collection(db, 'users'), newUser);
     setShowModal(false);
     setNewUser({ username: '', name: '', role: 'Student' });
+  };
+
+  const handleDeleteUser = async (id) => {
+    await deleteDoc(doc(db, 'users', id.toString()));
   };
 
   return (
@@ -43,7 +66,12 @@ const UserManagement = () => {
                 </span>
               </td>
               <td>
-                <button style={{ color: 'red', border: 'none', background: 'none' }}>Delete</button>
+                <button 
+                  style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}
+                  onClick={() => handleDeleteUser(u.id)}
+                >
+                  Delete
+                </button>
               </td>
             </tr>
           ))}
