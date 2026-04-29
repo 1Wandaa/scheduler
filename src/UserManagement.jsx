@@ -19,9 +19,9 @@ const UserManagement = () => {
   };
 
   return (
-    <div className="main-container">
-      <div className="section-title">👥 User Management</div>
-      <p style={{ color: '#666' }}>Manage system users and permissions</p>
+    <div className="main-container card">
+      <div className="section-title" style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '10px' }}>👥 User Management</div>
+      <p style={{ color: '#666', marginBottom: '20px' }}>Manage system users and permissions</p>
 
       <table className="user-table">
         <thead>

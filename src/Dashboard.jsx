@@ -68,7 +68,8 @@ const Dashboard = ({ user, onLogout }) => {
             <li className={`nav-item ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => handleTabClick('schedule')}>📅 Schedule</li>
             
             {/* FIXED CLICKS HERE */}
-            <li className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => handleTabClick('analytics')}>📈 Analytics</li>
+            <li className={`nav-item ${activeTab === 'workload' ? 'active' : ''}`} onClick={() => handleTabClick('workload')}>📈 Faculty Workload</li>
+            <li className={`nav-item ${activeTab === 'room-utilization' ? 'active' : ''}`} onClick={() => handleTabClick('room-utilization')}>🏫 Room Utilization</li>
             <li className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => { alert("Settings page coming soon!"); setIsMobileMenuOpen(false); }}>⚙️ Settings</li>
             
             <li className="nav-item" onClick={onLogout} style={{marginTop: '10px'}}>🚪 Log Out</li>
@@ -176,7 +177,12 @@ const Dashboard = ({ user, onLogout }) => {
 
         {/* --- ALL OTHER TABS --- */}
         {activeTab === 'users' && <UserManagement />}
-        {activeTab === 'analytics' && <ProfessorWorkload professors={professors} schedules={schedules} />}
+        {activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
+        {activeTab === 'room-utilization' && (
+          <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
+            <ScheduleTable schedules={schedules} onRemove={(id) => setSchedules(schedules.filter(s => s.id !== id))} title="ROOM UTILIZATION SCHEDULE" />
+          </div>
+        )}
         
         {activeTab === 'schedule' && (
            <div className="schedule-grid" style={{ animation: 'fadeIn 0.5s' }}>
