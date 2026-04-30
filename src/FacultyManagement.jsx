@@ -6,6 +6,7 @@ const FacultyManagement = ({ professors }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
+
   const [formData, setFormData] = useState({
     id: '', name: '', department: 'Computer Science', maxHours: 12, specialization: []
   });
@@ -35,7 +36,12 @@ const FacultyManagement = ({ professors }) => {
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this faculty member?')) {
-      await deleteDoc(doc(db, 'professors', id.toString()));
+      try {
+        await deleteDoc(doc(db, 'professors', id.toString()));
+      } catch (error) {
+        console.error("Error deleting faculty: ", error);
+        alert('Failed to delete faculty member. Please check your connection.');
+      }
     }
   };
 

@@ -6,6 +6,7 @@ const SubjectManagement = ({ subjects }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
+
   const [formData, setFormData] = useState({
     id: '', code: '', name: '', department: 'Computer Science', credits: 3, capacity: 40, requiredLab: false, hoursPerWeek: 3
   });
@@ -35,7 +36,12 @@ const SubjectManagement = ({ subjects }) => {
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this subject?')) {
-      await deleteDoc(doc(db, 'subjects', id.toString()));
+      try {
+        await deleteDoc(doc(db, 'subjects', id.toString()));
+      } catch (error) {
+        console.error("Error deleting subject: ", error);
+        alert('Failed to delete subject. Please check your connection.');
+      }
     }
   };
 

@@ -20,8 +20,8 @@ const Dashboard = ({ user, onLogout }) => {
   const [isManageDataOpen, setIsManageDataOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Determine if the current logged-in user is an admin
-  const isAdmin = user?.role === 'Admin';
+  // Determine if the current logged-in user is an admin or Department Head
+  const isAdmin = user?.role === 'Admin' || user?.role === 'Department Head';
 
   const handleTabClick = (tab) => {
     setActiveTab(tab);
@@ -65,26 +65,18 @@ const Dashboard = ({ user, onLogout }) => {
       if (room.capacity < subject.capacity) warnings.push(`Capacity warning.`);
       return { valid: errors.length === 0, errors, warnings };
     },
-
     addSchedule: (room, professor, subject, day, timeSlot) => ({ schedule: { room, professor, subject, day, timeSlot } }),
-
     clearAllSchedules: () => {
       schedules.forEach(s => deleteDoc(doc(db, 'schedules', s.id)));
     },
-
     autoSchedule: (subjList, constraints) => {
       const results = [];
       const unscheduled = [];
-
-      // CRITICAL FIX: Track assignments in instant memory during the loop 
-      // because Firebase and React state take too long to update!
       const tempSchedules = [...schedules];
 
       for (const subject of subjList) {
         let scheduled = false;
-
         const prof = professors.find(p => p.department === subject.department);
-
         if (!prof) {
           unscheduled.push(subject);
           continue;
@@ -94,27 +86,18 @@ const Dashboard = ({ user, onLogout }) => {
         for (const day of DAYS) {
           for (const timeSlot of TIME_SLOTS) {
             for (const room of rooms) {
-
               if (constraints.respectLabs && subject.requiredLab && !room.hasComputers) {
                 continue;
               }
 
-              // Check our lightning-fast temporary array instead of the slow React state
               const isRoomBusy = tempSchedules.some(s => s.room.id === room.id && s.day === day && s.timeSlot.id === timeSlot.id);
               const isProfBusy = tempSchedules.some(s => s.professor.id === prof.id && s.day === day && s.timeSlot.id === timeSlot.id);
 
               if (!isRoomBusy && !isProfBusy) {
                 const newSchedule = { room, professor: prof, subject, day, timeSlot };
-
-                // 1. Save to instant memory so the next subject knows this slot is taken
                 tempSchedules.push(newSchedule);
-
-                // 2. Add to our UI results array
                 results.push(newSchedule);
-
-                // 3. Send to Firebase in the background
                 handleAddSchedule(newSchedule);
-
                 scheduled = true;
                 break searchLoop;
               }
@@ -126,13 +109,12 @@ const Dashboard = ({ user, onLogout }) => {
           unscheduled.push(subject);
         }
       }
-
       return { results, unscheduled, error: null };
     }
   };
 
   const handleUpdateSchedule = async (scheduleId, newDay, newTimeSlotId) => {
-    if (!isAdmin) return; // Prevent non-admins from dragging/updating
+    if (!isAdmin) return;
     const newTimeSlot = TIME_SLOTS.find(ts => ts.id === newTimeSlotId);
     await updateDoc(doc(db, 'schedules', scheduleId.toString()), {
       day: newDay,
@@ -156,7 +138,7 @@ const Dashboard = ({ user, onLogout }) => {
       <div className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         <div>
           <div className="logo-area" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
-            <img src="/logo.jpg" alt="CAPSU Logo" onError={(e) => { e.target.src="https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Capiz_State_University_logo.png/220px-Capiz_State_University_logo.png"; }} style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #0288d1' }} />
+            <img src="/logo.jpg" alt="CAPSU Logo" onError={(e) => { e.target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Capiz_State_University_logo.png/220px-Capiz_State_University_logo.png"; }} style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #0288d1' }} />
             <h3>SMARTSCHED</h3>
             <span style={{ fontSize: '0.75rem', marginTop: '5px', padding: '3px 8px', borderRadius: '12px', backgroundColor: isAdmin ? 'var(--accent-primary)' : 'var(--success)', color: 'white', fontWeight: 'bold' }}>
               Logged in as: {user?.role}
@@ -169,7 +151,7 @@ const Dashboard = ({ user, onLogout }) => {
             {/* ONLY ADMINS SEE MANAGE DATA */}
             {isAdmin && (
               <>
-                <li className="nav-item" onClick={() => setIsManageDataOpen(!isManageDataOpen)}>Manage Data {isManageDataOpen ? '▾' : '▸'}</li>
+                <li className="nav-item" onClick={() => setIsManageDataOpen(!isManageDataOpen)}>Manage Data {isManageDataOpen ? '▼' : '▶'}</li>
                 {isManageDataOpen && (
                   <>
                     <li className="nav-sub-item" style={{ color: activeTab === 'faculty' ? 'var(--accent-primary)' : '' }} onClick={() => handleTabClick('faculty')}>Faculty Profiles</li>
@@ -184,7 +166,6 @@ const Dashboard = ({ user, onLogout }) => {
 
             <li className={`nav-item ${activeTab === 'workload' ? 'active' : ''}`} onClick={() => handleTabClick('workload')}>Faculty Workload</li>
             <li className={`nav-item ${activeTab === 'room-utilization' ? 'active' : ''}`} onClick={() => handleTabClick('room-utilization')}>Room Utilization</li>
-
             <li className="nav-item" onClick={onLogout} style={{ marginTop: '10px', color: 'var(--danger)' }}>Log Out</li>
           </ul>
         </div>
@@ -210,7 +191,6 @@ const Dashboard = ({ user, onLogout }) => {
 
         {activeTab === 'dashboard' && (
           <div className="dashboard-master-grid" style={{ animation: 'fadeIn 0.5s' }}>
-
             <div className="grid-top-row">
               <div className="card">
                 <div className="card-header">
@@ -222,7 +202,6 @@ const Dashboard = ({ user, onLogout }) => {
                   <tbody>{professors.slice(0, 2).map(p => <tr key={p.id}><td>{p.id}</td><td>{p.name}</td><td>{p.department}</td><td>{p.maxHours}</td></tr>)}</tbody>
                 </table>
               </div>
-
               <div className="card">
                 <div className="card-header">
                   <h3 className="card-title">Managed Data - Room List</h3>
@@ -275,7 +254,6 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} />}
         {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} />}
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} />}
-
         {activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
         {activeTab === 'room-utilization' && <RoomUtilization rooms={rooms} schedules={schedules} />}
 

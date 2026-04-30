@@ -39,8 +39,13 @@ const UserManagement = () => {
   };
 
   const handleDeleteUser = async (id) => {
-    if (window.confirm('Are you sure you want to remove this user?')) {
-      await deleteDoc(doc(db, 'users', id.toString()));
+    if (window.confirm('Are you sure you want to remove this user? This action cannot be undone.')) {
+      try {
+        await deleteDoc(doc(db, 'users', id.toString()));
+      } catch (error) {
+        console.error("Error deleting user: ", error);
+        alert('Failed to delete user. Please check your connection or permissions.');
+      }
     }
   };
 
@@ -67,7 +72,6 @@ const UserManagement = () => {
 
   return (
     <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
-
       {/* --- HEADER SECTION --- */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>

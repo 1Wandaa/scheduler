@@ -7,6 +7,7 @@ const RoomManagement = ({ rooms }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
+
   const [formData, setFormData] = useState({
     id: '', name: '', capacity: 30, type: ROOM_TYPES.LECTURE, hasComputers: false, hasProjector: true
   });
@@ -36,7 +37,12 @@ const RoomManagement = ({ rooms }) => {
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this room?')) {
-      await deleteDoc(doc(db, 'rooms', id.toString()));
+      try {
+        await deleteDoc(doc(db, 'rooms', id.toString()));
+      } catch (error) {
+        console.error("Error deleting room: ", error);
+        alert('Failed to delete room. Please check your connection.');
+      }
     }
   };
 
@@ -69,7 +75,7 @@ const RoomManagement = ({ rooms }) => {
                   color: r.type === 'lab' ? 'var(--warning)' : 'var(--success)',
                   padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase'
                 }}>
-                  {r.type} {r.hasComputers && '💻'}
+                  {r.type} {r.hasComputers && '🖥️'}
                 </span>
               </td>
               <td>{r.capacity} pax</td>
@@ -90,6 +96,7 @@ const RoomManagement = ({ rooms }) => {
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Room Code</label><input style={inputStyle} value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. R101" /></div>
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Room Name</label><input style={inputStyle} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Room 101" /></div>
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Capacity</label><input type="number" style={inputStyle} value={formData.capacity} onChange={e => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })} /></div>
+
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Room Type</label>
               <select style={inputStyle} value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
                 <option value={ROOM_TYPES.LECTURE}>Lecture</option>
