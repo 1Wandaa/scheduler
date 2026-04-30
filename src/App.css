@@ -86,18 +86,12 @@ h6 {
 
 .logo-area img {
   width: 80px;
-  border: 2px solid var(--accent-primary);
-  /* Gives the logo a bright ring to pop on dark BG */
-  border-radius: 50%;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .logo-area h3 {
   margin: 10px 0 0;
-  font-size: 1.1rem;
-  color: var(--sidebar-text-active);
-  /* Changed to white */
-  letter-spacing: 1px;
+  font-size: 1rem;
+  color: #0288d1;
 }
 
 .nav-menu {

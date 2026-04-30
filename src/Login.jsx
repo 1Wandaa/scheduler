@@ -58,20 +58,25 @@ const Login = ({ onLogin }) => {
   return (
     <div className="login-container">
       <div className="login-box">
+        {/* --- OFFICIAL CAPSU LOGO --- */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
-          <img
-            src="logo.jpg"
-            alt="CAPSU Logo"
-            style={{
-              width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover',
-              border: '3px solid var(--accent-primary)', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+          <img 
+            src="logo.jpg" 
+            alt="CAPSU Logo" 
+            style={{ 
+              width: '90px', 
+              height: '90px', 
+              borderRadius: '50%', 
+              objectFit: 'cover', 
+              border: '3px solid #0288d1', 
+              boxShadow: '0 4px 10px rgba(0,0,0,0.15)' 
             }}
             onError={(e) => { e.target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Capiz_State_University_logo.png/220px-Capiz_State_University_logo.png"; }}
           />
         </div>
 
-        <h2 style={{ marginTop: '0', color: 'var(--text-main)', letterSpacing: '1px' }}>SMARTSCHED</h2>
-        <p style={{ color: 'var(--text-muted)', marginBottom: '20px', fontSize: '0.9rem' }}>Secure Portal | Mambusao Campus</p>
+        <h2 style={{ marginTop: '0' }}>SMARTSCHED</h2>
+        <p style={{color: '#666', marginBottom: '25px', fontSize: '0.9rem'}}>Capiz State University Room Scheduler</p>
 
         {/* Error Alert Box */}
         {error && (
