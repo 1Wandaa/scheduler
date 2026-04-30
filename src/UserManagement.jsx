@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
-import { collection, onSnapshot, addDoc, deleteDoc, updateDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
 
 // Mock data to initialize database
 const initialUsers = [
@@ -9,7 +9,7 @@ const initialUsers = [
   { id: 3, username: '@ryan', name: 'Ryan James Mora', role: 'Student' },
 ];
 
-const ROLES = ['Student', 'Faculty', 'Department Head', 'Admin'];
+
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -40,15 +40,7 @@ const UserManagement = () => {
     setNewUser({ username: '', name: '', role: 'Student' });
   };
 
-  // --- EDIT ROLE FUNCTION ---
-  const handleRoleChange = async (userId, newRole) => {
-    try {
-      await updateDoc(doc(db, 'users', userId.toString()), { role: newRole });
-    } catch (error) {
-      console.error("Error updating role: ", error);
-      alert('Failed to update role. Please check your connection.');
-    }
-  };
+
 
   // --- UPDATED FORCED DELETE FUNCTION ---
   const handleDeleteUser = async (id) => {
@@ -113,7 +105,6 @@ const UserManagement = () => {
             <th>User</th>
             <th>Full Name</th>
             <th>Role</th>
-            <th>Change Role</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -123,24 +114,6 @@ const UserManagement = () => {
               <td style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>{u.username}</td>
               <td style={{ fontWeight: '500' }}>{u.name}</td>
               <td>{renderRoleBadge(u.role)}</td>
-              <td>
-                <select
-                  value={u.role}
-                  onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                  style={{
-                    padding: '5px 8px',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    backgroundColor: 'white'
-                  }}
-                >
-                  {ROLES.map(role => (
-                    <option key={role} value={role}>{role}</option>
-                  ))}
-                </select>
-              </td>
               <td>
                 <button
                   style={{
@@ -203,9 +176,9 @@ const UserManagement = () => {
                 value={newUser.role}
                 onChange={e => setNewUser({ ...newUser, role: e.target.value })}
               >
-                {ROLES.map(role => (
-                  <option key={role} value={role}>{role}</option>
-                ))}
+                <option>Student</option>
+                <option>Faculty</option>
+                <option>Department Head</option>
               </select>
             </div>
 
