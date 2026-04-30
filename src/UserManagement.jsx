@@ -38,14 +38,18 @@ const UserManagement = () => {
     setNewUser({ username: '', name: '', role: 'Student' });
   };
 
+  // --- UPDATED FORCED DELETE FUNCTION ---
   const handleDeleteUser = async (id) => {
-    if (window.confirm('Are you sure you want to remove this user? This action cannot be undone.')) {
-      try {
-        await deleteDoc(doc(db, 'users', id.toString()));
-      } catch (error) {
-        console.error("Error deleting user: ", error);
-        alert('Failed to delete user. Please check your connection or permissions.');
-      }
+    console.log("Delete button clicked for ID:", id); // This prints to your Inspect console
+
+    try {
+      // Bypassing the window.confirm popup to force the deletion
+      await deleteDoc(doc(db, 'users', id.toString()));
+      console.log("Firebase deletion successful!");
+      alert("User deleted successfully!"); // Simple alert to confirm it worked
+    } catch (error) {
+      console.error("Error deleting user: ", error);
+      alert("Error: " + error.message);
     }
   };
 
