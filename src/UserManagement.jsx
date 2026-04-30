@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, deleteDoc, updateDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
 
 // Mock data to initialize database
 const initialUsers = [
@@ -8,6 +8,8 @@ const initialUsers = [
   { id: 2, username: '@olga', name: 'Prof. Olga Llanera', role: 'Faculty' },
   { id: 3, username: '@ryan', name: 'Ryan James Mora', role: 'Student' },
 ];
+
+const ROLES = ['Student', 'Faculty', 'Department Head', 'Admin'];
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -38,15 +40,24 @@ const UserManagement = () => {
     setNewUser({ username: '', name: '', role: 'Student' });
   };
 
+  // --- EDIT ROLE FUNCTION ---
+  const handleRoleChange = async (userId, newRole) => {
+    try {
+      await updateDoc(doc(db, 'users', userId.toString()), { role: newRole });
+    } catch (error) {
+      console.error("Error updating role: ", error);
+      alert('Failed to update role. Please check your connection.');
+    }
+  };
+
   // --- UPDATED FORCED DELETE FUNCTION ---
   const handleDeleteUser = async (id) => {
-    console.log("Delete button clicked for ID:", id); // This prints to your Inspect console
+    console.log("Delete button clicked for ID:", id);
 
     try {
-      // Bypassing the window.confirm popup to force the deletion
       await deleteDoc(doc(db, 'users', id.toString()));
       console.log("Firebase deletion successful!");
-      alert("User deleted successfully!"); // Simple alert to confirm it worked
+      alert("User deleted successfully!");
     } catch (error) {
       console.error("Error deleting user: ", error);
       alert("Error: " + error.message);
@@ -63,7 +74,9 @@ const UserManagement = () => {
       display: 'inline-block'
     };
 
-    if (role === 'Department Head') {
+    if (role === 'Admin') {
+      badgeStyle = { ...badgeStyle, backgroundColor: 'var(--danger)', color: 'white' };
+    } else if (role === 'Department Head') {
       badgeStyle = { ...badgeStyle, backgroundColor: 'var(--accent-primary)', color: 'white' };
     } else if (role === 'Faculty') {
       badgeStyle = { ...badgeStyle, backgroundColor: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning)' };
@@ -100,6 +113,7 @@ const UserManagement = () => {
             <th>User</th>
             <th>Full Name</th>
             <th>Role</th>
+            <th>Change Role</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -109,6 +123,24 @@ const UserManagement = () => {
               <td style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>{u.username}</td>
               <td style={{ fontWeight: '500' }}>{u.name}</td>
               <td>{renderRoleBadge(u.role)}</td>
+              <td>
+                <select
+                  value={u.role}
+                  onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                  style={{
+                    padding: '5px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  {ROLES.map(role => (
+                    <option key={role} value={role}>{role}</option>
+                  ))}
+                </select>
+              </td>
               <td>
                 <button
                   style={{
@@ -171,9 +203,9 @@ const UserManagement = () => {
                 value={newUser.role}
                 onChange={e => setNewUser({ ...newUser, role: e.target.value })}
               >
-                <option>Student</option>
-                <option>Faculty</option>
-                <option>Department Head</option>
+                {ROLES.map(role => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
               </select>
             </div>
 
