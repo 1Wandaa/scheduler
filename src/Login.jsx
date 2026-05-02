@@ -119,7 +119,7 @@ const Login = ({ onLogin }) => {
                 type="text"
                 value={fullName}
                 onChange={e => setFullName(e.target.value)}
-                placeholder="e.g. Juan Dela Cruz"
+                placeholder="e.g. Ryan James Mora"
               />
             </div>
           )}
@@ -147,7 +147,7 @@ const Login = ({ onLogin }) => {
           </div>
 
           <button type="submit" className="btn-login" style={{ marginTop: '10px' }} disabled={loading}>
-            {loading ? 'Authenticating...' : (isSignUp ? 'Create Account' : 'Secure Sign In')}
+            {loading ? 'Authenticating...' : (isSignUp ? 'Create Account' : 'Sign In')}
           </button>
         </form>
 
