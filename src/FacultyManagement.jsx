@@ -8,11 +8,11 @@ const FacultyManagement = ({ professors }) => {
   const [currentId, setCurrentId] = useState(null);
 
   const [formData, setFormData] = useState({
-    id: '', name: '', department: 'Computer Science', maxHours: 12, specialization: []
+    id: '', name: '', department: 'Computer Science', maxUnits: 12, specialization: []
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', name: '', department: 'Computer Science', maxHours: 12, specialization: [] });
+    setFormData({ id: '', name: '', department: 'Computer Science', maxUnits: 12, specialization: [] });
     setEditMode(false);
     setShowModal(true);
   };
@@ -69,7 +69,7 @@ const FacultyManagement = ({ professors }) => {
               <td style={{ color: 'var(--text-muted)' }}>{p.id}</td>
               <td><strong style={{ color: 'var(--text-main)' }}>{p.name}</strong></td>
               <td>{p.department}</td>
-              <td><span style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>{p.maxHours} hrs</span></td>
+              <td><span style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>{p.maxUnits || p.maxHours || 12} units</span></td>
               <td>
                 <button style={{ color: 'var(--accent-primary)', border: 'none', background: 'none', cursor: 'pointer', marginRight: '15px', fontWeight: '500' }} onClick={() => handleOpenEdit(p)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Edit</button>
                 <button style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: '500' }} onClick={() => handleDelete(p.id)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Delete</button>
@@ -87,7 +87,7 @@ const FacultyManagement = ({ professors }) => {
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Faculty ID</label><input style={inputStyle} value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. P001" /></div>
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Full Name</label><input style={inputStyle} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Dr. John Smith" /></div>
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Department</label><input style={inputStyle} value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })} placeholder="e.g. Computer Science" /></div>
-            <div style={{ marginBottom: '25px' }}><label style={labelStyle}>Max Hours</label><input type="number" style={inputStyle} value={formData.maxHours} onChange={e => setFormData({ ...formData, maxHours: parseInt(e.target.value) || 0 })} /></div>
+            <div style={{ marginBottom: '25px' }}><label style={labelStyle}>Max Units</label><input type="number" style={inputStyle} value={formData.maxUnits} onChange={e => setFormData({ ...formData, maxUnits: parseInt(e.target.value) || 0 })} /></div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}>Cancel</button>

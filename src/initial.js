@@ -49,28 +49,28 @@ export const initialProfessors = [
     name: 'Dr. John Smith',
     department: 'Computer Science',
     specialization: ['Web Development', 'Databases'],
-    maxHours: 12
+    maxUnits: 12
   },
   {
     id: 'P002',
     name: 'Dr. Sarah Johnson',
     department: 'Computer Science',
     specialization: ['AI', 'Machine Learning'],
-    maxHours: 12
+    maxUnits: 12
   },
   {
     id: 'P003',
     name: 'Prof. Mike Davis',
     department: 'Computer Science',
     specialization: ['Networks', 'Security'],
-    maxHours: 10
+    maxUnits: 10
   },
   {
     id: 'P004',
     name: 'Dr. Emily Brown',
     department: 'Mathematics',
     specialization: ['Calculus', 'Linear Algebra'],
-    maxHours: 12
+    maxUnits: 12
   }
 ];
 

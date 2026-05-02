@@ -3,9 +3,11 @@ import './ProfessorWorkload.css';
 
 function ProfessorWorkload({ professors, schedules }) {
   const getProfessorWorkload = (professor) => {
-    // Assuming each scheduled slot is 1.5 hours
-    const hours = schedules.filter(s => s.professor.id === professor.id).length * 1.5;
-    return hours;
+    // Sum the credits (units) of each assigned subject
+    const units = schedules
+      .filter(s => s.professor.id === professor.id)
+      .reduce((total, s) => total + (s.subject.credits || 3), 0);
+    return units;
   };
 
   return (
@@ -29,8 +31,8 @@ function ProfessorWorkload({ professors, schedules }) {
 
       <div className="workload-list">
         {professors.map(professor => {
-          const hours = getProfessorWorkload(professor);
-          const utilization = (hours / professor.maxHours) * 100;
+          const units = getProfessorWorkload(professor);
+          const utilization = (units / (professor.maxUnits || professor.maxHours || 12)) * 100;
 
           let statusClass = 'normal';
           let statusColor = 'var(--success)';
@@ -54,7 +56,7 @@ function ProfessorWorkload({ professors, schedules }) {
               </div>
 
               <p className="workload-text" style={{ color: 'var(--text-main)' }}>
-                <strong>{hours.toFixed(1)}</strong> / {professor.maxHours} hours assigned
+                <strong>{units}</strong> / {professor.maxUnits || professor.maxHours || 12} units assigned
               </p>
 
               <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>

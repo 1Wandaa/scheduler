@@ -198,8 +198,8 @@ const Dashboard = ({ user, onLogout }) => {
                   {isAdmin && <button className="btn" onClick={() => setActiveTab('faculty')}>Manage Faculty</button>}
                 </div>
                 <table className="data-table">
-                  <thead><tr><th>ID</th><th>Full Name</th><th>Department</th><th>Max Hours</th></tr></thead>
-                  <tbody>{professors.slice(0, 2).map(p => <tr key={p.id}><td>{p.id}</td><td>{p.name}</td><td>{p.department}</td><td>{p.maxHours}</td></tr>)}</tbody>
+                  <thead><tr><th>ID</th><th>Full Name</th><th>Department</th><th>Max Units</th></tr></thead>
+                  <tbody>{professors.slice(0, 2).map(p => <tr key={p.id}><td>{p.id}</td><td>{p.name}</td><td>{p.department}</td><td>{p.maxUnits || p.maxHours || 12}</td></tr>)}</tbody>
                 </table>
               </div>
               <div className="card">
