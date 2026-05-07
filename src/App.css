@@ -582,4 +582,36 @@ h6 {
     width: 90%;
     padding: 20px;
   }
+
+  .modal-content {
+    width: 95% !important;
+    max-width: none !important;
+    padding: 20px !important;
+    margin: 10px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  /* Target inline flex headers that don't use .card-header */
+  .card > div[style*="justify-content: space-between"] {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 15px;
+  }
+
+  .card > div[style*="justify-content: space-between"] > div {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .data-table, .schedule-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }
