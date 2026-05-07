@@ -220,31 +220,29 @@ const Dashboard = ({ user, onLogout }) => {
               </div>
             </div>
 
-            <div className="grid-bottom-row">
-              <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
-                <div className="card-header" style={{ padding: '20px 20px 0 20px', border: 'none' }}>
-                  <h3 className="card-title">Weekly Room & Faculty Schedule</h3>
-                  <div>
-                    {isAdmin && <button className="btn" onClick={() => setActiveTab('schedule')} style={{ marginRight: '10px' }}>Go to Scheduler</button>}
-                    <button className="btn" onClick={() => window.print()} style={{ background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>Print</button>
-                  </div>
-                </div>
-                <div style={{ padding: '10px', transform: 'scale(0.95)', transformOrigin: 'top left' }}>
-                  <ScheduleTable
-                    schedules={schedules}
-                    onRemove={isAdmin ? handleRemoveSchedule : null}
-                    onUpdateSchedule={isAdmin ? handleUpdateSchedule : null}
-                  />
+            {/* Schedule Table - Full Width */}
+            <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+              <div className="card-header" style={{ padding: '20px 20px 0 20px', border: 'none' }}>
+                <h3 className="card-title">Weekly Room & Faculty Schedule</h3>
+                <div>
+                  {isAdmin && <button className="btn" onClick={() => setActiveTab('schedule')} style={{ marginRight: '10px' }}>Go to Scheduler</button>}
+                  <button className="btn" onClick={() => window.print()} style={{ background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>Print</button>
                 </div>
               </div>
+              <div style={{ padding: '10px', overflowX: 'auto' }}>
+                <ScheduleTable
+                  schedules={schedules}
+                  onRemove={isAdmin ? handleRemoveSchedule : null}
+                  onUpdateSchedule={isAdmin ? handleUpdateSchedule : null}
+                />
+              </div>
+            </div>
 
-              <div className="right-column-stack">
-                <div className="card">
-                  <h3 className="card-title" style={{ marginBottom: '15px' }}>System Alerts</h3>
-                  <div className="alert-item alert-info"><strong>Ready:</strong> Schedule data is up to date.</div>
-                  {!isAdmin && <div className="alert-item alert-warning"><strong>Notice:</strong> You are in View-Only mode. Contact an Admin for schedule changes.</div>}
-                </div>
-              </div>
+            {/* System Alerts */}
+            <div className="card">
+              <h3 className="card-title" style={{ marginBottom: '15px' }}>System Alerts</h3>
+              <div className="alert-item alert-info"><strong>Ready:</strong> Schedule data is up to date.</div>
+              {!isAdmin && <div className="alert-item alert-warning"><strong>Notice:</strong> You are in View-Only mode. Contact an Admin for schedule changes.</div>}
             </div>
           </div>
         )}
