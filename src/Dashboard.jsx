@@ -199,28 +199,30 @@ const Dashboard = ({ user, onLogout }) => {
 
         {activeTab === 'dashboard' && (
           <div className="dashboard-master-grid" style={{ animation: 'fadeIn 0.5s' }}>
-            <div className="grid-top-row">
-              <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title">Managed Data - Faculty Profiles</h3>
-                  {isAdmin && <button className="btn" onClick={() => setActiveTab('faculty')}>Manage Faculty</button>}
+            {isAdmin && (
+              <div className="grid-top-row">
+                <div className="card">
+                  <div className="card-header">
+                    <h3 className="card-title">Managed Data - Faculty Profiles</h3>
+                    <button className="btn" onClick={() => setActiveTab('faculty')}>Manage Faculty</button>
+                  </div>
+                  <table className="data-table">
+                    <thead><tr><th>ID</th><th>Full Name</th><th>Department</th><th>Max Units</th></tr></thead>
+                    <tbody>{professors.slice(0, 2).map(p => <tr key={p.id}><td>{p.id}</td><td>{p.name}</td><td>{p.department}</td><td>{p.maxUnits || p.maxHours || 12}</td></tr>)}</tbody>
+                  </table>
                 </div>
-                <table className="data-table">
-                  <thead><tr><th>ID</th><th>Full Name</th><th>Department</th><th>Max Units</th></tr></thead>
-                  <tbody>{professors.slice(0, 2).map(p => <tr key={p.id}><td>{p.id}</td><td>{p.name}</td><td>{p.department}</td><td>{p.maxUnits || p.maxHours || 12}</td></tr>)}</tbody>
-                </table>
-              </div>
-              <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title">Managed Data - Room List</h3>
-                  {isAdmin && <button className="btn" onClick={() => setActiveTab('rooms')}>Manage Rooms</button>}
+                <div className="card">
+                  <div className="card-header">
+                    <h3 className="card-title">Managed Data - Room List</h3>
+                    <button className="btn" onClick={() => setActiveTab('rooms')}>Manage Rooms</button>
+                  </div>
+                  <table className="data-table">
+                    <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Capacity</th></tr></thead>
+                    <tbody>{rooms.slice(0, 2).map(r => <tr key={r.id}><td>{r.id}</td><td>{r.name}</td><td style={{ textTransform: 'uppercase' }}>{r.type}</td><td>{r.capacity}</td></tr>)}</tbody>
+                  </table>
                 </div>
-                <table className="data-table">
-                  <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Capacity</th></tr></thead>
-                  <tbody>{rooms.slice(0, 2).map(r => <tr key={r.id}><td>{r.id}</td><td>{r.name}</td><td style={{ textTransform: 'uppercase' }}>{r.type}</td><td>{r.capacity}</td></tr>)}</tbody>
-                </table>
               </div>
-            </div>
+            )}
 
             {/* Schedule Table - Full Width */}
             <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
