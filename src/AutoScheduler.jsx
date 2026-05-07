@@ -59,14 +59,30 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
         setProgress({ gen, max: totalGens, fitness: bestFitness });
       });
 
-      // Save each schedule entry to Firestore via the onAutoSchedule handler
+      const savedSchedules = [];
+      const validResults = [];
+      const unscheduledResults = [];
+
+      // Save each schedule entry to Firestore ONLY if it does not conflict
       for (const entry of gaResult.schedule) {
-        await onAutoSchedule(entry);
+        // Strict Conflict Check
+        const isRoomBusy = savedSchedules.some(s => s.room.id === entry.room.id && s.day === entry.day && s.timeSlot.id === entry.timeSlot.id);
+        const isProfBusy = savedSchedules.some(s => s.professor.id === entry.professor.id && s.day === entry.day && s.timeSlot.id === entry.timeSlot.id);
+
+        if (!isRoomBusy && !isProfBusy) {
+          savedSchedules.push(entry);
+          validResults.push(entry);
+          await onAutoSchedule(entry);
+        } else {
+          // Double booked! Move to unscheduled
+          unscheduledResults.push(entry.subject);
+        }
       }
 
       setResult({
         ...gaResult,
-        unscheduled: [],
+        schedule: validResults,
+        unscheduled: unscheduledResults,
         usedLegacy: false
       });
 
