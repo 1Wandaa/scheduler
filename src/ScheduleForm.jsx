@@ -150,7 +150,7 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
               <option value="">Select a time</option>
               {TIME_SLOTS.map(slot => (
                 <option key={slot.id} value={slot.id}>
-                  {slot.label} ({slot.time})
+                  {slot.label}
                 </option>
               ))}
             </select>

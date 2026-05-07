@@ -229,7 +229,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
                     {item.subject.code} {item.section ? `— ${item.section.name}` : ''}
                   </p>
                   <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {item.day} | {item.timeSlot.label} ({item.timeSlot.time}) | {item.room.name} | {item.professor.name}
+                    {item.day} | {item.timeSlot.label} | {item.room.name} | {item.professor.name}
                   </p>
                 </div>
               ))}

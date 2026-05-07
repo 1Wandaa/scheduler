@@ -64,7 +64,7 @@ function ProfessorWorkload({ professors, schedules }) {
                 {schedules.filter(s => s.professor.id === professor.id).slice(0, 3).map((schedule, idx) => (
                   <div key={idx} className="schedule-item" style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--accent-primary)', fontWeight: '500' }}>{schedule.subject.code}</span>
-                    <span>{schedule.day.slice(0, 3)} • {schedule.timeSlot.time.split('-')[0]}</span>
+                    <span>{schedule.day.slice(0, 3)} • {schedule.timeSlot.time.split(' - ')[0]}</span>
                   </div>
                 ))}
                 {schedules.filter(s => s.professor.id === professor.id).length === 0 && (
