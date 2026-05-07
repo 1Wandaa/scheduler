@@ -141,3 +141,30 @@ export const initialSubjects = [
     assignedTimeSlots: []
   }
 ];
+
+export const initialSections = [
+  {
+    id: 'SEC001',
+    name: 'BSCS 1A',
+    program: 'BS Computer Science',
+    yearLevel: 1,
+    studentCount: 38,
+    subjects: ['S001', 'S002', 'S005']
+  },
+  {
+    id: 'SEC002',
+    name: 'BSCS 2A',
+    program: 'BS Computer Science',
+    yearLevel: 2,
+    studentCount: 35,
+    subjects: ['S003', 'S004']
+  },
+  {
+    id: 'SEC003',
+    name: 'BSIT 1A',
+    program: 'BS Information Technology',
+    yearLevel: 1,
+    studentCount: 40,
+    subjects: ['S001', 'S005']
+  }
+];

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { initialRooms, initialProfessors, initialSubjects } from './initial';
+import { initialRooms, initialProfessors, initialSubjects, initialSections } from './initial';
 import { TIME_SLOTS, DAYS } from './index';
 import { db } from './firebase';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
@@ -14,6 +14,7 @@ import RoomManagement from './RoomManagement';
 import FacultyManagement from './FacultyManagement';
 import SubjectManagement from './SubjectManagement';
 import RoomUtilization from './RoomUtilization';
+import SectionManagement from './SectionManagement';
 
 const Dashboard = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -32,6 +33,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [rooms, setRooms] = useState([]);
   const [professors, setProfessors] = useState([]);
   const [subjects, setSubjects] = useState([]);
+  const [sections, setSections] = useState([]);
   const [schedules, setSchedules] = useState([]);
 
   useEffect(() => {
@@ -42,6 +44,7 @@ const Dashboard = ({ user, onLogout }) => {
         initialRooms.forEach(r => batch.set(doc(db, 'rooms', r.id.toString()), r));
         initialProfessors.forEach(p => batch.set(doc(db, 'professors', p.id.toString()), p));
         initialSubjects.forEach(s => batch.set(doc(db, 'subjects', s.id.toString()), s));
+        initialSections.forEach(sec => batch.set(doc(db, 'sections', sec.id.toString()), sec));
         await batch.commit();
       }
     };
@@ -50,9 +53,10 @@ const Dashboard = ({ user, onLogout }) => {
     const unsubRooms = onSnapshot(collection(db, 'rooms'), (snap) => setRooms(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
     const unsubProfs = onSnapshot(collection(db, 'professors'), (snap) => setProfessors(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
     const unsubSubj = onSnapshot(collection(db, 'subjects'), (snap) => setSubjects(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
+    const unsubSec = onSnapshot(collection(db, 'sections'), (snap) => setSections(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
     const unsubSched = onSnapshot(collection(db, 'schedules'), (snap) => setSchedules(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
 
-    return () => { unsubRooms(); unsubProfs(); unsubSubj(); unsubSched(); };
+    return () => { unsubRooms(); unsubProfs(); unsubSubj(); unsubSec(); unsubSched(); };
   }, []);
 
   // --- VALIDATOR ENGINE ---
@@ -157,6 +161,7 @@ const Dashboard = ({ user, onLogout }) => {
                     <li className="nav-sub-item" style={{ color: activeTab === 'faculty' ? 'var(--accent-primary)' : '' }} onClick={() => handleTabClick('faculty')}>Faculty Profiles</li>
                     <li className="nav-sub-item" style={{ color: activeTab === 'rooms' ? 'var(--accent-primary)' : '' }} onClick={() => handleTabClick('rooms')}>Room List</li>
                     <li className="nav-sub-item" style={{ color: activeTab === 'subjects' ? 'var(--accent-primary)' : '' }} onClick={() => handleTabClick('subjects')}>Subject Constraints</li>
+                    <li className="nav-sub-item" style={{ color: activeTab === 'sections' ? 'var(--accent-primary)' : '' }} onClick={() => handleTabClick('sections')}>Section Management</li>
                     <li className="nav-sub-item" style={{ color: activeTab === 'users' ? 'var(--accent-primary)' : '' }} onClick={() => handleTabClick('users')}>User Management</li>
                   </>
                 )}
@@ -173,6 +178,7 @@ const Dashboard = ({ user, onLogout }) => {
         <div className="sidebar-stats-box">
           <div className="stat-row"><span>Faculty</span> <strong>{professors.length}</strong></div>
           <div className="stat-row"><span>Rooms</span> <strong>{rooms.length}</strong></div>
+          <div className="stat-row"><span>Sections</span> <strong>{sections.length}</strong></div>
           <div className="stat-row"><span>Classes</span> <strong>{schedules.length}</strong></div>
         </div>
       </div>
@@ -248,12 +254,13 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{ animation: 'fadeIn 0.5s' }}>
             <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} onSchedule={handleAddSchedule} validator={validator} />
-            <AutoScheduler validator={validator} subjects={subjects} onAutoSchedule={() => { }} />
+            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} onAutoSchedule={handleAddSchedule} />
           </div>
         )}
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} />}
         {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} />}
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} />}
+        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} />}
         {activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
         {activeTab === 'room-utilization' && <RoomUtilization rooms={rooms} schedules={schedules} />}
 
