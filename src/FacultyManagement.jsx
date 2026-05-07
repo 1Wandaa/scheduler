@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { db } from './firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 
-const FacultyManagement = ({ professors }) => {
+const FacultyManagement = ({ professors, subjects = [] }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -15,6 +15,17 @@ const FacultyManagement = ({ professors }) => {
     setFormData({ id: '', name: '', department: 'Computer Science', maxUnits: 12, specialization: [] });
     setEditMode(false);
     setShowModal(true);
+  };
+
+  const handleSubjectToggle = (subjectId) => {
+    setFormData(prev => {
+      const current = prev.specialization || [];
+      if (current.includes(subjectId)) {
+        return { ...prev, specialization: current.filter(s => s !== subjectId) };
+      } else {
+        return { ...prev, specialization: [...current, subjectId] };
+      }
+    });
   };
 
   const handleOpenEdit = (prof) => {
@@ -62,7 +73,7 @@ const FacultyManagement = ({ professors }) => {
       </div>
 
       <table className="data-table">
-        <thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Max Load</th><th>Actions</th></tr></thead>
+        <thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Max Load</th><th>Subjects</th><th>Actions</th></tr></thead>
         <tbody>
           {professors.map(p => (
             <tr key={p.id}>
@@ -70,6 +81,9 @@ const FacultyManagement = ({ professors }) => {
               <td><strong style={{ color: 'var(--text-main)' }}>{p.name}</strong></td>
               <td>{p.department}</td>
               <td><span style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>{p.maxUnits || p.maxHours || 12} units</span></td>
+              <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                {(p.specialization || []).length} subject{(p.specialization || []).length !== 1 ? 's' : ''}
+              </td>
               <td>
                 <button style={{ color: 'var(--accent-primary)', border: 'none', background: 'none', cursor: 'pointer', marginRight: '15px', fontWeight: '500' }} onClick={() => handleOpenEdit(p)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Edit</button>
                 <button style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: '500' }} onClick={() => handleDelete(p.id)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Delete</button>
@@ -87,7 +101,29 @@ const FacultyManagement = ({ professors }) => {
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Faculty ID</label><input style={inputStyle} value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. P001" /></div>
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Full Name</label><input style={inputStyle} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Dr. John Smith" /></div>
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Department</label><input style={inputStyle} value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })} placeholder="e.g. Computer Science" /></div>
-            <div style={{ marginBottom: '25px' }}><label style={labelStyle}>Max Units</label><input type="number" style={inputStyle} value={formData.maxUnits} onChange={e => setFormData({ ...formData, maxUnits: parseInt(e.target.value) || 0 })} /></div>
+            <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Max Units</label><input type="number" style={inputStyle} value={formData.maxUnits} onChange={e => setFormData({ ...formData, maxUnits: parseInt(e.target.value) || 0 })} /></div>
+
+            <div style={{ marginBottom: '25px' }}>
+              <label style={labelStyle}>Assigned Subjects</label>
+              <div style={{ marginTop: '8px', maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '10px' }}>
+                {subjects.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No subjects available.</p>}
+                {subjects.map(sub => (
+                  <label key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.88rem', borderBottom: '1px solid var(--bg-main)' }}>
+                    <input
+                      type="checkbox"
+                      checked={(formData.specialization || []).includes(sub.id)}
+                      onChange={() => handleSubjectToggle(sub.id)}
+                      style={{ accentColor: 'var(--accent-primary)', width: '15px', height: '15px' }}
+                    />
+                    <span style={{ fontWeight: '600', color: 'var(--accent-primary)' }}>{sub.code}</span>
+                    <span>{sub.name}</span>
+                  </label>
+                ))}
+              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '5px' }}>
+                Selected: {(formData.specialization || []).length} subject(s)
+              </p>
+            </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}>Cancel</button>

@@ -260,7 +260,7 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
         )}
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} />}
-        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} />}
+        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} />}
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} />}
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
