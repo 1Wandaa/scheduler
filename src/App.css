@@ -578,6 +578,31 @@ h6 {
     grid-template-columns: 1fr !important;
   }
 
+  body, html {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+
+  .smartsched-container {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  .main-content {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+    padding: 10px !important;
+    overflow-x: hidden !important;
+  }
+
+  .card {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 15px !important;
+  }
+
   .login-box {
     width: 90%;
     padding: 20px;
@@ -609,9 +634,10 @@ h6 {
   }
 
   .data-table, .schedule-table {
-    display: block;
-    width: 100%;
-    overflow-x: auto;
-    white-space: nowrap;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
   }
 }
