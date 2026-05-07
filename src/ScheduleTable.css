@@ -48,14 +48,24 @@
 .time-label {
   background-color: #f5f5f5;
   font-weight: 600;
-  width: 120px;
-  min-width: 120px;
+  width: 140px;
+  min-width: 140px;
   color: var(--text-main);
+  font-size: 0.82rem;
 }
 
+/* === Drag & Drop States === */
 .schedule-cell {
   position: relative;
   padding: 0.5rem;
+  min-height: 80px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.schedule-cell.drag-over {
+  background-color: rgba(86, 69, 238, 0.08);
+  box-shadow: inset 0 0 0 2px var(--accent-primary);
+  border-radius: 4px;
 }
 
 .schedule-item {
@@ -69,12 +79,23 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  user-select: none;
 }
 
 .schedule-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.schedule-item:active {
+  cursor: grabbing;
+}
+
+.schedule-item.dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+  box-shadow: none;
 }
 
 .schedule-content {

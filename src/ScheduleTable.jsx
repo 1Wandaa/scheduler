@@ -1,27 +1,80 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TIME_SLOTS, DAYS } from './index';
 import './ScheduleTable.css';
 
 function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID" }) {
-  const handleDragStart = (e, scheduleId) => {
-    e.dataTransfer.setData('scheduleId', scheduleId);
+  const [dragOverCell, setDragOverCell] = useState(null);
+  const [draggingId, setDraggingId] = useState(null);
+
+  const handleDragStart = (e, schedule) => {
+    setDraggingId(schedule.id);
+    e.dataTransfer.setData('scheduleId', schedule.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    setDraggingId(null);
+    setDragOverCell(null);
+  };
+
+  const handleDragOver = (e, day, timeSlotId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const cellKey = `${day}-${timeSlotId}`;
+    if (dragOverCell !== cellKey) {
+      setDragOverCell(cellKey);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverCell(null);
   };
 
   const handleDrop = (e, day, timeSlotId) => {
     e.preventDefault();
-    const scheduleId = e.dataTransfer.getData('scheduleId');
-    if (scheduleId && onUpdateSchedule) {
-      onUpdateSchedule(scheduleId, day, timeSlotId);
-    }
-  };
+    setDragOverCell(null);
+    setDraggingId(null);
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
+    const scheduleId = e.dataTransfer.getData('scheduleId');
+    if (!scheduleId || !onUpdateSchedule) return;
+
+    // Find the schedule being moved
+    const movingSchedule = schedules.find(s => s.id === scheduleId);
+    if (!movingSchedule) return;
+
+    // Skip if dropping on the same slot
+    if (movingSchedule.day === day && movingSchedule.timeSlot.id === timeSlotId) return;
+
+    // Check for conflicts: is the room already occupied in that slot?
+    const roomConflict = schedules.find(
+      s => s.id !== scheduleId &&
+           s.room.id === movingSchedule.room.id &&
+           s.day === day &&
+           s.timeSlot.id === timeSlotId
+    );
+
+    // Check for conflicts: is the professor already busy in that slot?
+    const profConflict = schedules.find(
+      s => s.id !== scheduleId &&
+           s.professor.id === movingSchedule.professor.id &&
+           s.day === day &&
+           s.timeSlot.id === timeSlotId
+    );
+
+    if (roomConflict || profConflict) {
+      const msgs = [];
+      if (roomConflict) msgs.push(`Room "${movingSchedule.room.name}" is already occupied`);
+      if (profConflict) msgs.push(`Prof. "${movingSchedule.professor.name}" is already teaching`);
+      alert(`Cannot move schedule:\n${msgs.join('\n')}`);
+      return;
+    }
+
+    onUpdateSchedule(scheduleId, day, timeSlotId);
   };
 
   return (
     <div className="schedule-table-container">
-      {/* MODERNIZED ISO FORMAT HEADER */}
+      {/* Header */}
       <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: 'var(--card-bg)', color: 'var(--text-main)', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 100px', padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid var(--border-color)', backgroundColor: 'var(--table-header)' }}>
           <img src="/logo.jpg" alt="Logo" style={{ width: '65px', height: '65px', objectFit: 'cover', borderRadius: '50%' }} onError={(e) => { e.target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Capiz_State_University_logo.png/220px-Capiz_State_University_logo.png"; }} />
@@ -49,27 +102,50 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
             {TIME_SLOTS.map(timeSlot => (
               <tr key={timeSlot.id}>
                 <td className="time-label">
-                  <strong>{timeSlot.label}</strong><br />
-                  <span style={{ color: 'var(--text-muted)', fontWeight: 'normal', fontSize: '0.8rem' }}>{timeSlot.time}</span>
+                  <strong>{timeSlot.label}</strong>
                 </td>
-                {DAYS.map(day => (
-                  <td key={`${day}-${timeSlot.id}`} className="schedule-cell" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, day, timeSlot.id)}>
-                    {schedules.filter(s => s.day === day && s.timeSlot.id === timeSlot.id).map(schedule => (
-                      <div key={schedule.id} className="schedule-item" draggable onDragStart={(e) => handleDragStart(e, schedule.id)} style={{ cursor: 'grab' }}>
-                        <div className="schedule-content">
-                          <p className="subject" style={{ color: 'var(--accent-primary)' }}>{schedule.subject.code}</p>
-                          <p className="professor" style={{ color: 'var(--text-main)' }}>{schedule.professor.name}</p>
-                          <p className="room" style={{ color: 'var(--text-muted)' }}>{schedule.room.name}</p>
+                {DAYS.map(day => {
+                  const cellKey = `${day}-${timeSlot.id}`;
+                  const isDropTarget = dragOverCell === cellKey;
+                  const cellSchedules = schedules.filter(
+                    s => s.day === day && s.timeSlot.id === timeSlot.id
+                  );
+
+                  return (
+                    <td
+                      key={cellKey}
+                      className={`schedule-cell ${isDropTarget ? 'drag-over' : ''}`}
+                      onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, day, timeSlot.id)}
+                    >
+                      {cellSchedules.map(schedule => (
+                        <div
+                          key={schedule.id}
+                          className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''}`}
+                          draggable={!!onUpdateSchedule}
+                          onDragStart={(e) => handleDragStart(e, schedule)}
+                          onDragEnd={handleDragEnd}
+                          style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
+                        >
+                          <div className="schedule-content">
+                            <p className="subject" style={{ color: 'var(--accent-primary)' }}>
+                              {schedule.subject.code}
+                              {schedule.section && <span style={{ fontWeight: '400', fontSize: '0.75rem', color: 'var(--text-muted)' }}> — {schedule.section.name}</span>}
+                            </p>
+                            <p className="professor" style={{ color: 'var(--text-main)' }}>{schedule.professor.name}</p>
+                            <p className="room" style={{ color: 'var(--text-muted)' }}>{schedule.room.name}</p>
+                          </div>
+                          {onRemove && (
+                            <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                          )}
                         </div>
-                        {onRemove && (
-                          <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </td>
-                ))}
+                      ))}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
