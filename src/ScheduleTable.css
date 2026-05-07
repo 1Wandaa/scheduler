@@ -70,9 +70,9 @@
 }
 
 .schedule-item {
-  background-color: var(--success-bg);
-  border: 1px solid var(--success);
-  border-left: 4px solid var(--success);
+  background-color: #EBF4FF;
+  border: 1px solid #BFDBFE;
+  border-left: 4px solid #2563EB;
   border-radius: 6px;
   padding: 0.75rem;
   margin-bottom: 0.5rem;
