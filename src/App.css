@@ -483,25 +483,7 @@ h6 {
   gap: 20px;
 }
 
-.sidebar-stats-box {
-  background: #f5f5f5;
-  margin: 15px;
-  padding: 15px;
-  border-radius: 10px;
-  color: var(--text-main);
-}
 
-.sidebar-stats-box .stat-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.sidebar-stats-box .stat-row strong {
-  font-size: 1.1rem;
-}
 
 /* =========================================
    RESPONSIVE DESIGN (MOBILE & TABLET)
