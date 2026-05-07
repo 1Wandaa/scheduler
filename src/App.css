@@ -483,7 +483,44 @@ h6 {
   gap: 20px;
 }
 
+/* =========================================
+   PRINT STYLES
+   ========================================= */
+@media print {
+  .sidebar, .mobile-menu-btn, .header-title, .no-print, button {
+    display: none !important;
+  }
+  
+  .smartsched-container {
+    background: white !important;
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  .main-content {
+    padding: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+  
+  .card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
 
+  body {
+    background: white !important;
+  }
+
+  /* Force landscape-friendly table printing */
+  @page {
+    size: landscape;
+    margin: 1cm;
+  }
+}
 
 /* =========================================
    RESPONSIVE DESIGN (MOBILE & TABLET)

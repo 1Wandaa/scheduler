@@ -13,7 +13,7 @@ import AutoScheduler from './AutoScheduler';
 import RoomManagement from './RoomManagement';
 import FacultyManagement from './FacultyManagement';
 import SubjectManagement from './SubjectManagement';
-import RoomUtilization from './RoomUtilization';
+import ScheduleViewer from './ScheduleViewer';
 import SectionManagement from './SectionManagement';
 
 const Dashboard = ({ user, onLogout }) => {
@@ -172,7 +172,7 @@ const Dashboard = ({ user, onLogout }) => {
             {isAdmin && (
               <li className={`nav-item ${activeTab === 'workload' ? 'active' : ''}`} onClick={() => handleTabClick('workload')}>Faculty Workload</li>
             )}
-            <li className={`nav-item ${activeTab === 'room-utilization' ? 'active' : ''}`} onClick={() => handleTabClick('room-utilization')}>Room Utilization</li>
+            <li className={`nav-item ${activeTab === 'room-utilization' ? 'active' : ''}`} onClick={() => handleTabClick('room-utilization')}>View Schedules</li>
             <li className="nav-item" onClick={onLogout} style={{ marginTop: '10px', color: 'var(--danger)' }}>Log Out</li>
           </ul>
         </div>
@@ -264,7 +264,7 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} />}
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
-        {activeTab === 'room-utilization' && <RoomUtilization rooms={rooms} schedules={schedules} />}
+        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} />}
 
       </div>
     </div>
