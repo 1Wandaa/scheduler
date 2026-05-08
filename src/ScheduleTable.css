@@ -65,7 +65,7 @@
 
 /* Sky blue background for cells that contain schedules — fills entire cell */
 .schedule-cell:has(.schedule-item) {
-  background-color: #7EC8E3;
+  background-color: #3B82A0;
   padding: 0;
 }
 
@@ -116,16 +116,16 @@
 
 .schedule-content .subject {
   font-weight: 700;
-  color: #1a365d;
+  color: #FFFFFF;
 }
 
 .schedule-content .professor {
   font-weight: 600;
-  color: #1e3a5f;
+  color: #E0F0FF;
 }
 
 .schedule-content .room {
-  color: #2c5282;
+  color: #B8D8F0;
   font-size: 0.8rem;
 }
 
