@@ -117,13 +117,19 @@ h6 {
   gap: 10px;
 }
 
+/* --- MODIFIED: Sidebar Hover & Active State (Around Line 76) --- */
 .nav-item:hover,
 .nav-item.active {
-  background: var(--sidebar-hover);
+  /* Beautiful fading gradient instead of a solid block */
+  background: linear-gradient(90deg, rgba(86, 69, 238, 0.2) 0%, rgba(86, 69, 238, 0) 100%);
   color: var(--sidebar-text-active);
   font-weight: 600;
-  border-radius: 6px;
-  margin: 0 10px;
+  border-radius: 0 6px 6px 0;
+  margin: 0 10px 0 0;
+  /* Adjusted margin to touch the left edge */
+  border-left: 3px solid var(--accent-primary);
+  padding-left: 27px;
+  /* Compensate for the margin shift */
 }
 
 .nav-sub-item {
@@ -201,12 +207,21 @@ h6 {
   grid-template-columns: 2fr 1fr;
 }
 
-/* Cards */
+/* --- MODIFIED: Cards & Card Hover (Around Line 140) --- */
 .card {
   background: var(--card-bg);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  /* Softer, layered shadow for a premium feel */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  /* Smooth transition for hover effects */
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
 }
 
 .card-header {
@@ -225,6 +240,7 @@ h6 {
   margin: 0;
 }
 
+/* --- MODIFIED: Buttons Base, Hover, and Active States (Around Line 165) --- */
 .btn {
   background: var(--accent-primary);
   color: white;
@@ -234,11 +250,20 @@ h6 {
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
-  transition: all 0.2s ease;
+  /* Smoother bezier curve for premium animation */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(86, 69, 238, 0.25);
 }
 
 .btn:hover {
   background: var(--accent-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(86, 69, 238, 0.35);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(86, 69, 238, 0.25);
 }
 
 /* Tables */
@@ -263,6 +288,16 @@ h6 {
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   border-bottom: 2px solid var(--border-color);
+}
+
+/* --- ADDED: Table Row Hover Effects (Around Line 205) --- */
+.data-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.data-table tbody tr:hover {
+  /* Subtle primary accent tint on hover */
+  background-color: rgba(86, 69, 238, 0.04);
 }
 
 /* Timetable */
@@ -487,23 +522,28 @@ h6 {
    PRINT STYLES
    ========================================= */
 @media print {
-  .sidebar, .mobile-menu-btn, .header-title, .no-print, button {
+
+  .sidebar,
+  .mobile-menu-btn,
+  .header-title,
+  .no-print,
+  button {
     display: none !important;
   }
-  
+
   .smartsched-container {
     background: white !important;
     display: block !important;
     height: auto !important;
     overflow: visible !important;
   }
-  
+
   .main-content {
     padding: 0 !important;
     overflow: visible !important;
     display: block !important;
   }
-  
+
   .card {
     box-shadow: none !important;
     border: none !important;
@@ -578,7 +618,8 @@ h6 {
     grid-template-columns: 1fr !important;
   }
 
-  body, html {
+  body,
+  html {
     overflow-x: hidden !important;
     max-width: 100vw !important;
   }
@@ -622,18 +663,19 @@ h6 {
   }
 
   /* Target inline flex headers that don't use .card-header */
-  .card > div[style*="justify-content: space-between"] {
+  .card>div[style*="justify-content: space-between"] {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 15px;
   }
 
-  .card > div[style*="justify-content: space-between"] > div {
+  .card>div[style*="justify-content: space-between"]>div {
     flex-wrap: wrap;
     gap: 10px;
   }
 
-  .data-table, .schedule-table {
+  .data-table,
+  .schedule-table {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
