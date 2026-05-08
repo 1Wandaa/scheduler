@@ -129,12 +129,12 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                           style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
                         >
                           <div className="schedule-content">
-                            <p className="subject" style={{ color: 'var(--accent-primary)' }}>
+                            <p className="subject">
                               {schedule.subject.code}
-                              {schedule.section && <span style={{ fontWeight: '400', fontSize: '0.75rem', color: 'var(--text-muted)' }}> — {schedule.section.name}</span>}
+                              {schedule.section && <span style={{ fontWeight: '400', fontSize: '0.75rem', color: '#94A3B8' }}> — {schedule.section.name}</span>}
                             </p>
-                            <p className="professor" style={{ color: 'var(--text-main)' }}>{schedule.professor.name}</p>
-                            <p className="room" style={{ color: 'var(--text-muted)' }}>{schedule.room.name}</p>
+                            <p className="professor">{schedule.professor.name}</p>
+                            <p className="room">{schedule.room.name}</p>
                           </div>
                           {onRemove && (
                             <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
