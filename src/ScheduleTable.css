@@ -25,15 +25,18 @@
 }
 
 .schedule-table th {
-  background-color: #2E5F8A;
-  color: #FFFFFF;
+  background-color: #F8FAFC;
+  /* Light gray/white background */
+  color: #64748B;
+  /* Muted dark text for contrast */
   padding: 1rem;
   text-align: center;
   font-weight: 600;
   text-transform: uppercase;
   font-size: 0.8rem;
   letter-spacing: 0.05em;
-  border: 1px solid #2E5F8A;
+  border: 1px solid #E2E8F0;
+  /* Light border */
 }
 
 .schedule-table td {
@@ -67,8 +70,10 @@
 }
 
 /* Light blue background for cells that contain schedules — fills entire cell */
+/* Light blue background for cells that contain schedules — fills entire cell */
 .schedule-cell:has(.schedule-item) {
-  background-color: #4a38eb;
+  background-color: #E0E7FF;
+  /* Changed to a soft, light blue */
   padding: 0;
 }
 
