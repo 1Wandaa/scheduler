@@ -189,12 +189,6 @@ const Dashboard = ({ user, onLogout }) => {
       {/* ================= MAIN CONTENT ================= */}
       <div className="main-content">
         <div className="header-title" style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <p style={{ margin: 0, fontSize: '0.85rem' }}>Capiz State University | Mambusao Satellite College</p>
-            <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold' }}>
-              Welcome, {user?.name.split(' ')[0]}
-            </h1>
-          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
               className="sidebar-toggle-btn"
@@ -202,15 +196,17 @@ const Dashboard = ({ user, onLogout }) => {
               title={isSidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {isSidebarCollapsed ? (
-                  <><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></>
-                ) : (
-                  <><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></>
-                )}
+                <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
               </svg>
             </button>
-            <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>☰</button>
+            <div>
+              <p style={{ margin: 0, fontSize: '0.85rem' }}>Capiz State University | Mambusao Satellite College</p>
+              <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold' }}>
+                Welcome, {user?.name.split(' ')[0]}
+              </h1>
+            </div>
           </div>
+          <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>☰</button>
         </div>
 
         {activeTab === 'dashboard' && (
