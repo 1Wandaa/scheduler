@@ -65,7 +65,7 @@
 
 /* Light blue background for cells that contain schedules — fills entire cell */
 .schedule-cell:has(.schedule-item) {
-  background-color: #C4DDF0;
+  background-color: #7FB3D8;
   padding: 0;
 }
 
