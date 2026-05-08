@@ -23,126 +23,153 @@ const Login = ({ onLogin }) => {
 
       if (isSignUp) {
         // ==========================================
-        // SIGN UP FLOW (For Demo/Admin creation)
+        // SIGN UP FLOW (For Regular Users Only)
         // ==========================================
 
-        // 1. Check if username already exists in Firestore
-        const q = query(collection(db, "users"), where("username", "==", cleanUsername));
-        const querySnapshot = await getDocs(q);
+        // 1. Create user identity in Firebase Auth
+        await createUserWithEmailAndPassword(auth, dummyEmail, password);
 
-        if (!querySnapshot.empty) {
-          setError("Username already exists.");
-          setLoading(false);
-          return;
-        }
+        // 2. Save user to Firestore with a forced 'Student' role
+        await addDoc(collection(db, 'users'), {
+          username: username,
+          name: fullName,
+          role: 'Student' // Admin accounts cannot be created here!
+        });
 
-        // 2. Create the user in Firebase Auth
-        const userCredential = await createUserWithEmailAndPassword(auth, dummyEmail, password);
-        const user = userCredential.user;
-
-        // 3. Save additional user details to Firestore
-        await addDoc(collection(db, "users"), {
-          uid: user.uid,
-          fullName: fullName,
-          username: cleanUsername,
-          role: 'admin', // Defaulting to admin for this system
-          createdAt: new Date().toISOString()
+        // 3. Log them in directly after sign up
+        onLogin({
+          name: fullName,
+          role: 'Student',
+          username: username
         });
 
       } else {
         // ==========================================
-        // SIGN IN FLOW
+        // LOGIN FLOW (Existing)
         // ==========================================
         await signInWithEmailAndPassword(auth, dummyEmail, password);
-        // onAuthStateChanged in App.jsx will catch the login
+
+        // Fetch Authorization (Role) from Firestore
+        const q = query(collection(db, 'users'), where('username', '==', username));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          setError('Account found, but role data is missing. Contact an Administrator.');
+          auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        const userData = querySnapshot.docs[0].data();
+        onLogin({
+          name: userData.name || username,
+          role: userData.role || 'User',
+          username: username
+        });
       }
     } catch (err) {
       console.error(err);
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        setError('Invalid username or password.');
-      } else if (err.code === 'auth/weak-password') {
-        setError('Password should be at least 6 characters.');
+        setError('Invalid username or password. Please try again.');
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError('That username is already taken. Please choose another.');
       } else {
-        setError('Failed to authenticate. Please check your credentials.');
+        setError(`Failed to ${isSignUp ? 'sign up' : 'log in'}: ` + err.message);
       }
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   return (
-    <div className="login-page-wrapper">
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <div className="card" style={{ maxWidth: '400px', width: '100%', margin: '0 20px', padding: '2rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{
-              background: 'var(--accent-primary)',
-              width: '60px', height: '60px',
-              borderRadius: '12px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '1.5rem',
-              fontWeight: 'bold',
-              marginBottom: '1rem'
-            }}>SS</div>
-            <h2 style={{ margin: 0, color: 'var(--accent-dark)' }}>SmartSched</h2>
-            <p style={{ color: 'var(--text-muted)', margin: '0.5rem 0 0 0' }}>{isSignUp ? 'Create an admin account' : 'Sign in to manage schedules'}</p>
-          </div>
-
-          {error && <div className="badge danger" style={{ display: 'block', marginBottom: '1rem', textAlign: 'center', padding: '0.75rem' }}>{error}</div>}
-
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-            {isSignUp && (
-              <div className="form-group">
-                <label>Full Name</label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  placeholder="e.g. Juan Dela Cruz"
-                />
-              </div>
-            )}
-
-            <div className="form-group">
-              <label>Username</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                placeholder="e.g. admin"
-              />
-            </div>
-            <div className="form-group">
-              <label>Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: '1rem' }}>
-              {loading ? 'Processing...' : (isSignUp ? 'Sign Up' : 'Sign In')}
-            </button>
-          </form>
-
-          <div style={{ textAlign: 'center', marginTop: '1.5rem', color: 'var(--text-muted)' }}>
-            {isSignUp ? "Already have an account? " : "Need an account? "}
-            <span
-              style={{ color: 'var(--accent-primary)', cursor: 'pointer', fontWeight: '600' }}
-              onClick={() => setIsSignUp(!isSignUp)}
-            >
-              {isSignUp ? 'Sign In' : 'Sign Up'}
-            </span>
-          </div>
+    <div className="login-container">
+      <div className="login-box">
+        {/* --- OFFICIAL CAPSU LOGO --- */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
+          <img
+            src="logo.jpg"
+            alt="CAPSU Logo"
+            style={{
+              width: '90px',
+              height: '90px',
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: '3px solid #0288d1',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
+            }}
+            onError={(e) => { e.target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Capiz_State_University_logo.png/220px-Capiz_State_University_logo.png"; }}
+          />
         </div>
+
+        <h2 style={{ marginTop: '0' }}>SMARTSCHED</h2>
+        <p style={{ color: '#666', marginBottom: '25px', fontSize: '0.9rem' }}>Capiz State University Room Scheduler</p>
+
+        {/* Error Alert Box */}
+        {error && (
+          <div style={{ backgroundColor: 'var(--danger-bg)', color: 'var(--danger)', padding: '10px', borderRadius: '6px', marginBottom: '15px', fontSize: '0.85rem', borderLeft: '4px solid var(--danger)' }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          {isSignUp && (
+            <div className="input-group">
+              <label>Full Name</label>
+              <input
+                required
+                type="text"
+                value={fullName}
+                onChange={e => setFullName(e.target.value)}
+                placeholder="e.g. Ryan James Mora"
+              />
+            </div>
+          )}
+
+          <div className="input-group">
+            <label>Username</label>
+            <input
+              required
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="e.g. @admin @jelly123"
+            />
+          </div>
+
+          <div className="input-group">
+            <label>Password</label>
+            <input
+              required
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder={isSignUp ? "Create a password (min 6 chars)" : "Enter your password"}
+            />
+          </div>
+
+          <button type="submit" className="btn-login" style={{ marginTop: '10px' }} disabled={loading}>
+            {loading ? 'Authenticating...' : (isSignUp ? 'Create Account' : 'Sign In')}
+          </button>
+        </form>
+
+        {/* Toggle between Login and Sign Up */}
+        <div style={{ marginTop: '20px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+          {isSignUp ? "Already have an account? " : "Don't have an account? "}
+          <span
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setError(''); // Clear errors when switching modes
+            }}
+            style={{
+              color: 'var(--accent-primary)',
+              fontWeight: '600',
+              cursor: 'pointer',
+              textDecoration: 'underline'
+            }}
+          >
+            {isSignUp ? 'Log in here' : 'Sign up here'}
+          </span>
+        </div>
+
       </div>
     </div>
   );
