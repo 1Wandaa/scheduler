@@ -123,16 +123,16 @@
 
 .schedule-content .subject {
   font-weight: 700;
-  color: #1a202c;
+  color: #030813;
 }
 
 .schedule-content .professor {
   font-weight: 600;
-  color: #2d3748;
+  color: #030813;
 }
 
 .schedule-content .room {
-  color: #4a5568;
+  color: #030813;
   font-size: 0.8rem;
 }
 
