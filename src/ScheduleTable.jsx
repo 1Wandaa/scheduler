@@ -131,7 +131,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                           <div className="schedule-content">
                             <p className="subject">
                               {schedule.subject.code}
-                              {schedule.section && <span style={{ fontWeight: '400', fontSize: '0.75rem', color: '#94A3B8' }}> — {schedule.section.name}</span>}
+                              {schedule.section && <span style={{ fontWeight: '400', fontSize: '0.75rem', color: '#2c5282' }}> — {schedule.section.name}</span>}
                             </p>
                             <p className="professor">{schedule.professor.name}</p>
                             <p className="room">{schedule.room.name}</p>
