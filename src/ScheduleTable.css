@@ -65,7 +65,7 @@
 
 /* Light blue background for cells that contain schedules — fills entire cell */
 .schedule-cell:has(.schedule-item) {
-  background-color: #7FB3D8;
+  background-color: #2b1da7;
   padding: 0;
 }
 
@@ -149,4 +149,3 @@
 .remove-btn:hover {
   background-color: rgba(197, 48, 48, 0.15);
 }
-
