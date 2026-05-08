@@ -48,17 +48,17 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     // Check for conflicts: is the room already occupied in that slot?
     const roomConflict = schedules.find(
       s => s.id !== scheduleId &&
-           s.room.id === movingSchedule.room.id &&
-           s.day === day &&
-           s.timeSlot.id === timeSlotId
+        s.room.id === movingSchedule.room.id &&
+        s.day === day &&
+        s.timeSlot.id === timeSlotId
     );
 
     // Check for conflicts: is the professor already busy in that slot?
     const profConflict = schedules.find(
       s => s.id !== scheduleId &&
-           s.professor.id === movingSchedule.professor.id &&
-           s.day === day &&
-           s.timeSlot.id === timeSlotId
+        s.professor.id === movingSchedule.professor.id &&
+        s.day === day &&
+        s.timeSlot.id === timeSlotId
     );
 
     if (roomConflict || profConflict) {
@@ -86,7 +86,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         <div style={{ flex: '0 0 180px', padding: '15px', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', backgroundColor: 'var(--table-header)', color: 'var(--text-muted)' }}>
           <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '4px', marginBottom: '4px' }}><strong>Doc. Code:</strong> CAPSU-F-045</div>
           <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '4px', marginBottom: '4px' }}><strong>Revision No.:</strong> 01</div>
-          <div><strong>Effectivity:</strong> Sept 2023</div>
+          <div><strong>Effectivity:</strong> August 2026</div>
         </div>
       </div>
 
@@ -131,7 +131,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                           <div className="schedule-content">
                             <p className="subject">
                               {schedule.subject.code}
-                              {schedule.section && <span style={{ fontWeight: '400', fontSize: '0.75rem', color: '#4a5568' }}> — {schedule.section.name}</span>}
+                              {schedule.section && <span style={{ fontWeight: '400', fontSize: '0.75rem', color: '#030813 }}> — {schedule.section.name}</span>}
                             </p>
                             <p className="professor">{schedule.professor.name}</p>
                             <p className="room">{schedule.room.name}</p>
