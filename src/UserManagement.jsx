@@ -145,7 +145,8 @@ const UserManagement = () => {
         }}>
           <div className="modal-content" style={{
             backgroundColor: 'var(--card-bg)', padding: '30px',
-            borderRadius: '12px', width: '400px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+            borderRadius: '12px', width: '400px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+            maxHeight: '90vh', overflowY: 'auto'
           }}>
             <h3 style={{ marginTop: 0, color: 'var(--accent-dark)' }}>Add New User</h3>
 
