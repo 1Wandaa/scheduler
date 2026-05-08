@@ -219,10 +219,7 @@ h6 {
   transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
-.card:hover {
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  transform: translateY(-2px);
-}
+
 
 .card-header {
   display: flex;
@@ -290,15 +287,7 @@ h6 {
   border-bottom: 2px solid var(--border-color);
 }
 
-/* --- ADDED: Table Row Hover Effects (Around Line 205) --- */
-.data-table tbody tr {
-  transition: background-color 0.2s ease;
-}
 
-.data-table tbody tr:hover {
-  /* Subtle primary accent tint on hover */
-  background-color: rgba(86, 69, 238, 0.04);
-}
 
 /* Timetable */
 .timetable {
