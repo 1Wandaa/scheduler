@@ -24,15 +24,15 @@
 }
 
 .schedule-table th {
-  background-color: var(--table-header);
-  color: var(--text-muted);
+  background-color: #2E5F8A;
+  color: #FFFFFF;
   padding: 1rem;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   text-transform: uppercase;
   font-size: 0.8rem;
   letter-spacing: 0.05em;
-  border-bottom: 2px solid var(--border-color);
+  border: 1px solid #2E5F8A;
 }
 
 .schedule-table td {
@@ -63,9 +63,9 @@
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Sky blue background for cells that contain schedules — fills entire cell */
+/* Light blue background for cells that contain schedules — fills entire cell */
 .schedule-cell:has(.schedule-item) {
-  background-color: #3B82A0;
+  background-color: #C4DDF0;
   padding: 0;
 }
 
@@ -116,16 +116,16 @@
 
 .schedule-content .subject {
   font-weight: 700;
-  color: #FFFFFF;
+  color: #1a202c;
 }
 
 .schedule-content .professor {
   font-weight: 600;
-  color: #E0F0FF;
+  color: #2d3748;
 }
 
 .schedule-content .room {
-  color: #B8D8F0;
+  color: #4a5568;
   font-size: 0.8rem;
 }
 
