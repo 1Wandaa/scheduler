@@ -29,117 +29,120 @@
   padding: 1rem;
   text-align: left;
   font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  letter-spacing: 0.05em;
   border-bottom: 2px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.schedule-table td:first-child,
+.schedule-table th:first-child {
+  position: sticky;
+  left: 0;
+  background-color: var(--table-header);
+  z-index: 3;
 }
 
 .schedule-table td {
-  border: 1px solid var(--border-color);
-  padding: 0.5rem;
-  min-height: 100px;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
   vertical-align: top;
+  min-width: 150px;
 }
 
-.schedule-table tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
+.schedule-table td:last-child {
+  border-right: none;
 }
 
-.time-label {
-  background-color: #f5f5f5;
-  font-weight: 600;
-  width: 140px;
-  min-width: 140px;
-  color: var(--text-main);
-  font-size: 0.82rem;
-}
-
-/* === Drag & Drop States === */
 .schedule-cell {
-  position: relative;
-  padding: 0.5rem;
-  min-height: 80px;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.schedule-cell.drag-over {
-  background-color: rgba(86, 69, 238, 0.08);
-  box-shadow: inset 0 0 0 2px var(--accent-primary);
-  border-radius: 4px;
-}
-
-.schedule-item {
-  background-color: #EBF4FF;
-  border: 1px solid #BFDBFE;
-  border-left: 4px solid #2563EB;
-  border-radius: 6px;
+  background-color: #f8f9fa;
+  border-left: 4px solid var(--accent-primary);
   padding: 0.75rem;
+  border-radius: 4px;
   margin-bottom: 0.5rem;
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
-  user-select: none;
-}
-
-.schedule-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.schedule-item:active {
-  cursor: grabbing;
-}
-
-.schedule-item.dragging {
-  opacity: 0.4;
-  transform: scale(0.95);
-  box-shadow: none;
-}
-
-.schedule-content {
-  flex: 1;
-}
-
-.schedule-content p {
-  margin: 0.25rem 0;
   font-size: 0.85rem;
 }
 
-.schedule-content .subject {
-  font-weight: 700;
+.schedule-cell:last-child {
+  margin-bottom: 0;
+}
+
+.schedule-cell strong {
+  display: block;
   color: var(--text-main);
+  margin-bottom: 0.25rem;
 }
 
-.schedule-content .professor {
-  font-weight: 600;
+.schedule-cell div {
   color: var(--text-muted);
+  margin-bottom: 0.15rem;
 }
 
-.schedule-content .room {
-  color: var(--text-muted);
-  font-size: 0.8rem;
+.empty-cell {
+  color: #ccc;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
 }
 
-.remove-btn {
-  background-color: transparent;
-  color: var(--danger);
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  font-size: 1.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  margin-left: 0.5rem;
-  flex-shrink: 0;
+/* Print Styles */
+@media print {
+  .schedule-table-container {
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .table-wrapper {
+    overflow: visible;
+  }
+
+  .schedule-table th {
+    background-color: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .schedule-cell {
+    border-left: 2px solid #000;
+    background-color: transparent !important;
+    padding: 0.5rem;
+    break-inside: avoid;
+  }
 }
 
-.remove-btn:hover {
-  background-color: var(--danger-bg);
+/* Minimalist Print Output Overrides */
+@media print {
+  body {
+    background-image: none !important;
+    background-color: white !important;
+    color: black !important;
+  }
+
+  .sidebar,
+  .mobile-menu-btn,
+  .print-hide,
+  .card-header button {
+    display: none !important;
+  }
+
+  .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  .smartsched-container {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    display: block !important;
+  }
+
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+  }
 }
