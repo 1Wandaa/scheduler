@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { auth, db } from './firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 
 const Login = ({ onLogin }) => {
@@ -80,6 +80,51 @@ const Login = ({ onLogin }) => {
     setLoading(false);
   };
 
+  const handleGoogleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const googleUser = result.user;
+      
+      const cleanUsername = googleUser.email.split('@')[0];
+      
+      // Check if user exists in Firestore
+      const q = query(collection(db, 'users'), where('username', 'in', [cleanUsername, `@${cleanUsername}`, googleUser.email]));
+      const querySnapshot = await getDocs(q);
+
+      let role = 'Student';
+      let name = googleUser.displayName || cleanUsername;
+      let finalUsername = googleUser.email;
+
+      if (querySnapshot.empty) {
+        // Register new Google user
+        await addDoc(collection(db, 'users'), {
+          username: finalUsername,
+          name: name,
+          role: role
+        });
+      } else {
+        const userData = querySnapshot.docs[0].data();
+        role = userData.role || 'Student';
+        name = userData.name || name;
+        finalUsername = userData.username || finalUsername;
+      }
+
+      onLogin({
+        name: name,
+        role: role,
+        username: finalUsername
+      });
+
+    } catch (err) {
+      console.error(err);
+      setError('Google Sign-In failed: ' + err.message);
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="login-container">
       <div className="login-box">
@@ -150,6 +195,30 @@ const Login = ({ onLogin }) => {
             {loading ? 'Authenticating...' : (isSignUp ? 'Create Account' : 'Sign In')}
           </button>
         </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
+          <span style={{ padding: '0 10px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>OR</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
+        </div>
+
+        <button 
+          onClick={handleGoogleLogin} 
+          className="btn-login" 
+          style={{ 
+            backgroundColor: 'white', 
+            color: '#333', 
+            border: '1px solid var(--border-color)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '10px' 
+          }} 
+          disabled={loading}
+        >
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '18px', height: '18px' }} />
+          Sign in with Google
+        </button>
 
         {/* Toggle between Login and Sign Up */}
         <div style={{ marginTop: '20px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>

@@ -20,7 +20,7 @@ function App() {
           // Extract the username from the dummy email
           const username = firebaseUser.email.split('@')[0];
 
-          const q = query(collection(db, 'users'), where('username', 'in', [username, `@${username}`]));
+          const q = query(collection(db, 'users'), where('username', 'in', [username, `@${username}`, firebaseUser.email]));
           const snapshot = await getDocs(q);
 
           if (!snapshot.empty) {
