@@ -8,6 +8,11 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
   const [result, setResult] = useState(null);
   const [progress, setProgress] = useState({ gen: 0, max: 0, fitness: null });
 
+  // Mode selection
+  const [engineMode, setEngineMode] = useState('ga'); // 'ga' | 'faculty' | 'room' | 'section'
+  const [targetId, setTargetId] = useState('');
+  const [clearBeforeRun, setClearBeforeRun] = useState(true);
+
   // GA Configuration
   const [populationSize, setPopulationSize] = useState(80);
   const [maxGenerations, setMaxGenerations] = useState(300);
@@ -17,7 +22,59 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
   const [respectLabs, setRespectLabs] = useState(true);
   const [preventDoubleBooking, setPreventDoubleBooking] = useState(true);
 
+  const runTargeted = async () => {
+    setLoading(true);
+    setResult(null);
+    setProgress({ gen: 0, max: 0, fitness: null });
+
+    await new Promise(r => setTimeout(r, 50));
+
+    try {
+      if (clearBeforeRun) await validator.clearAllSchedules();
+
+      const constraints = { respectLabs, preventDoubleBooking };
+      let r = null;
+
+      if (engineMode === 'faculty') {
+        r = await validator.autoScheduleForFaculty(targetId, constraints);
+      } else if (engineMode === 'room') {
+        r = await validator.autoScheduleForRoom(targetId, constraints);
+      } else if (engineMode === 'section') {
+        r = await validator.autoScheduleForSection(targetId, constraints);
+      } else {
+        r = { results: [], unscheduled: [], error: 'Invalid mode.' };
+      }
+
+      setResult({
+        schedule: r.results || [],
+        fitness: { score: 0, hardViolations: 0, softScore: 0 },
+        stats: { generations: 0, totalAssignments: (r.results || []).length, hardViolations: 0 },
+        unscheduled: r.unscheduled || [],
+        error: r.error || null,
+        usedLegacy: true,
+        targetedMode: engineMode,
+      });
+    } catch (e) {
+      setResult({
+        schedule: [],
+        fitness: { score: 0, hardViolations: 0, softScore: 0 },
+        stats: { generations: 0, totalAssignments: 0, hardViolations: 0 },
+        unscheduled: [],
+        error: e?.message || 'Targeted autoschedule failed.',
+        usedLegacy: true,
+        targetedMode: engineMode,
+      });
+    }
+
+    setLoading(false);
+  };
+
   const handleAutoSchedule = async () => {
+    if (engineMode !== 'ga') {
+      await runTargeted();
+      return;
+    }
+
     setLoading(true);
     setResult(null);
     setProgress({ gen: 0, max: maxGenerations, fitness: null });
@@ -27,7 +84,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
 
     try {
       // Clear existing schedules
-      await validator.clearAllSchedules();
+      if (clearBeforeRun) await validator.clearAllSchedules();
 
       if (!sections || sections.length === 0) {
         // Fallback: if no sections exist, run legacy greedy for backwards compat
@@ -128,30 +185,42 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
 
   const progressPct = progress.max > 0 ? Math.round((progress.gen / progress.max) * 100) : 0;
 
+  const targetOptions = engineMode === 'faculty'
+    ? (professors || []).map(p => ({ id: p.id, label: p.name }))
+    : engineMode === 'room'
+      ? (rooms || []).map(r => ({ id: r.id, label: `${r.name} (Cap: ${r.capacity})${r.hasComputers ? ' Lab' : ''}` }))
+      : (sections || []).map(s => ({ id: s.id, label: s.name }));
+
   return (
     <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
       {/* Header */}
       <div style={{ marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '15px' }}>
         <h2 style={{ margin: '0 0 5px 0', color: 'var(--accent-dark)' }}>Auto-Schedule Engine</h2>
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          Genetic Algorithm — optimized for university-scale timetabling
+          Genetic Algorithm (full) or Targeted (faculty/room/section) for small runs
         </p>
       </div>
 
       {/* Algorithm Info */}
       <div style={{ backgroundColor: 'var(--table-header)', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px' }}>Algorithm Method</label>
-          <input
-            type="text"
-            value="Genetic Algorithm (GA)"
-            disabled
-            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', color: 'var(--accent-primary)', fontWeight: 'bold', boxSizing: 'border-box' }}
-          />
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px' }}>Mode</label>
+          <select
+            value={engineMode}
+            onChange={(e) => { setEngineMode(e.target.value); setTargetId(''); }}
+            disabled={loading}
+            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', boxSizing: 'border-box' }}
+          >
+            <option value="ga">Full timetable (Genetic Algorithm)</option>
+            <option value="faculty">Targeted: One faculty</option>
+            <option value="room">Targeted: One room</option>
+            <option value="section">Targeted: One section (student group)</option>
+          </select>
         </div>
 
         {/* GA Parameters */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '15px' }}>
+        {engineMode === 'ga' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '15px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Population Size</label>
             <input type="number" min="20" max="200" value={populationSize} onChange={e => setPopulationSize(parseInt(e.target.value) || 80)}
@@ -167,7 +236,29 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
             <input type="number" min="0.01" max="0.5" step="0.01" value={mutationRate} onChange={e => setMutationRate(parseFloat(e.target.value) || 0.15)}
               style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box' }} />
           </div>
-        </div>
+          </div>
+        )}
+
+        {engineMode !== 'ga' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '15px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                Select {engineMode}
+              </label>
+              <select
+                value={targetId}
+                onChange={(e) => setTargetId(e.target.value)}
+                disabled={loading}
+                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', boxSizing: 'border-box' }}
+              >
+                <option value="">Choose...</option>
+                {targetOptions.map(o => (
+                  <option key={o.id} value={o.id}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
 
         {/* Constraints */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -179,6 +270,10 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
           <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', cursor: 'pointer' }}>
             <input type="checkbox" checked={respectLabs} onChange={(e) => setRespectLabs(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
             Enforce Computer Laboratory Requirements
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={clearBeforeRun} onChange={(e) => setClearBeforeRun(e.target.checked)} style={{ accentColor: 'var(--accent-primary)' }} />
+            Clear existing schedules before run
           </label>
         </div>
       </div>
@@ -208,11 +303,14 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
       {/* Generate Button */}
       <button
         onClick={handleAutoSchedule}
-        disabled={loading}
+        disabled={loading || (engineMode !== 'ga' && !targetId)}
         className="btn"
         style={{ width: '100%', padding: '14px', fontSize: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}
       >
-        {loading ? '🧬 Evolving Schedule...' : '🧬 Generate Timetable with GA'}
+        {loading
+          ? (engineMode === 'ga' ? '🧬 Evolving Schedule...' : '⚡ Scheduling...')
+          : (engineMode === 'ga' ? '🧬 Generate Timetable with GA' : '⚡ Run Targeted Auto-Schedule')
+        }
       </button>
 
       {/* Progress Bar */}
@@ -291,7 +389,12 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
               <h3 style={{ fontSize: '1rem', color: 'var(--danger)', marginBottom: '10px' }}>Unscheduled ({result.unscheduled.length})</h3>
               <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.85rem', color: 'var(--danger)' }}>
                 {result.unscheduled.map((s, idx) => (
-                  <li key={idx}>{s.code || s.name} — Insufficient valid slots</li>
+                  <li key={idx}>
+                    {(s?.subject?.code || s?.subject?.name || s?.code || s?.name || 'Unknown')}
+                    {s?.section?.name ? ` — ${s.section.name}` : ''}
+                    {' — '}
+                    {s?.reason || 'Insufficient valid slots'}
+                  </li>
                 ))}
               </ul>
             </div>
