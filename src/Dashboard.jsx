@@ -266,7 +266,7 @@ const Dashboard = ({ user, onLogout }) => {
 
       return { results, unscheduled, error: null };
     },
-    autoSchedule: (subjList, constraints) => {
+    autoSchedule: async (subjList, constraints) => {
       const results = [];
       const unscheduled = [];
       const tempSchedules = [...schedules];
@@ -297,9 +297,14 @@ const Dashboard = ({ user, onLogout }) => {
               if (!isRoomBusy && !isProfBusy) {
                 const newSchedule = { room, professor: prof, subject, day, timeSlot };
                 tempSchedules.push(newSchedule);
+                // Await persistence so returned results reflect actual DB state.
+                const writeResult = await handleAddSchedule(newSchedule);
+                if (writeResult && writeResult.ok === false) {
+                  // DB write rejected (conflict / non-admin / etc.), keep searching.
+                  continue;
+                }
+
                 results.push(newSchedule);
-                // Fire-and-forget for backwards compatibility (legacy mode only)
-                handleAddSchedule(newSchedule);
                 scheduled = true;
                 break searchLoop;
               }
@@ -316,11 +321,11 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const handleUpdateSchedule = async (scheduleId, newDay, newTimeSlotId) => {
-    if (!isAdmin) return;
+    if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
     const newTimeSlot = TIME_SLOTS.find(ts => ts.id === newTimeSlotId);
 
     const existing = schedules.find(s => s.id === scheduleId);
-    if (!existing) return;
+    if (!existing) return { ok: false, errors: ['Schedule not found.'] };
 
     const check = validateScheduleEntry({
       room: existing.room,
@@ -334,17 +339,18 @@ const Dashboard = ({ user, onLogout }) => {
 
     if (!check.valid) {
       alert(`Cannot move schedule:\n${check.errors.join('\n')}`);
-      return;
+      return { ok: false, errors: check.errors };
     }
 
     await updateDoc(doc(db, 'schedules', scheduleId.toString()), {
       day: newDay,
       timeSlot: newTimeSlot
     });
+    return { ok: true };
   };
 
   const handleAddSchedule = async (newSchedule) => {
-    if (!isAdmin) return;
+    if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
     const check = validateScheduleEntry({
       room: newSchedule?.room,
       professor: newSchedule?.professor,

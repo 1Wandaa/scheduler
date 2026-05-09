@@ -88,7 +88,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
 
       if (!sections || sections.length === 0) {
         // Fallback: if no sections exist, run legacy greedy for backwards compat
-        const autoResult = validator.autoSchedule(subjects, { respectLabs, preventDoubleBooking });
+        const autoResult = await validator.autoSchedule(subjects, { respectLabs, preventDoubleBooking });
         setResult({
           schedule: autoResult.results,
           fitness: { score: 0, hardViolations: 0, softScore: 0 },
