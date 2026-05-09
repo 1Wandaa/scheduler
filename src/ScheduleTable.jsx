@@ -61,10 +61,21 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         s.timeSlot.id === timeSlotId
     );
 
-    if (roomConflict || profConflict) {
+    // Check for conflicts: is the section already in class in that slot?
+    const sectionConflict = movingSchedule.section?.id
+      ? schedules.find(
+          s => s.id !== scheduleId &&
+            s.section?.id === movingSchedule.section.id &&
+            s.day === day &&
+            s.timeSlot.id === timeSlotId
+        )
+      : null;
+
+    if (roomConflict || profConflict || sectionConflict) {
       const msgs = [];
       if (roomConflict) msgs.push(`Room "${movingSchedule.room.name}" is already occupied`);
       if (profConflict) msgs.push(`Prof. "${movingSchedule.professor.name}" is already teaching`);
+      if (sectionConflict) msgs.push(`Section "${movingSchedule.section?.name || 'Unknown'}" already has a class`);
       alert(`Cannot move schedule:\n${msgs.join('\n')}`);
       return;
     }

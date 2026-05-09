@@ -45,8 +45,22 @@ export class ScheduleGA {
     this.days = days;
     this.timeSlots = timeSlots;
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this._validateInputs();
     this.assignments = this._buildAssignmentList();
     this._buildLookups();
+  }
+
+  _validateInputs() {
+    const problems = [];
+    if (!Array.isArray(this.subjects)) problems.push('subjects must be an array');
+    if (!Array.isArray(this.rooms)) problems.push('rooms must be an array');
+    if (!Array.isArray(this.professors)) problems.push('professors must be an array');
+    if (!Array.isArray(this.sections)) problems.push('sections must be an array');
+    if (!Array.isArray(this.days) || this.days.length === 0) problems.push('days must be a non-empty array');
+    if (!Array.isArray(this.timeSlots) || this.timeSlots.length === 0) problems.push('timeSlots must be a non-empty array');
+    if (problems.length > 0) {
+      throw new Error(`ScheduleGA: invalid inputs: ${problems.join(', ')}`);
+    }
   }
 
   _buildAssignmentList() {
@@ -218,8 +232,8 @@ export class ScheduleGA {
       const rooms = this._eligibleRoomsFor(a);
       const room = rooms[this._randInt(rooms.length)] || this.rooms[0];
       return {
-        professorId: prof.id,
-        roomId: room.id,
+        professorId: prof?.id,
+        roomId: room?.id,
         dayIdx: this._randInt(this.days.length),
         timeIdx: this._randInt(this.timeSlots.length),
       };

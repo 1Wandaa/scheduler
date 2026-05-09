@@ -37,10 +37,11 @@ const Dashboard = ({ user, onLogout }) => {
   const [sections, setSections] = useState([]);
   const [schedules, setSchedules] = useState([]);
 
-  const findScheduleConflicts = ({ roomId, professorId, day, timeSlotId, excludeScheduleId = null }) => {
+  const findScheduleConflicts = ({ roomId, professorId, sectionId, day, timeSlotId, excludeScheduleId = null }) => {
     const conflicts = {
       room: null,
       professor: null,
+      section: null,
     };
 
     for (const s of schedules) {
@@ -50,10 +51,46 @@ const Dashboard = ({ user, onLogout }) => {
 
       if (!conflicts.room && s.room?.id === roomId) conflicts.room = s;
       if (!conflicts.professor && s.professor?.id === professorId) conflicts.professor = s;
-      if (conflicts.room && conflicts.professor) break;
+      if (!conflicts.section && sectionId && s.section?.id === sectionId) conflicts.section = s;
+      if (conflicts.room && conflicts.professor && (!sectionId || conflicts.section)) break;
     }
 
     return conflicts;
+  };
+
+  const validateScheduleEntry = ({ room, professor, subject, section, day, timeSlot, excludeScheduleId = null }) => {
+    const errors = [];
+    const warnings = [];
+
+    if (!room?.id) errors.push('Room is required.');
+    if (!professor?.id) errors.push('Faculty is required.');
+    if (!subject?.id) errors.push('Subject is required.');
+    if (!day) errors.push('Day is required.');
+    if (!timeSlot?.id) errors.push('Time slot is required.');
+    if (errors.length > 0) return { valid: false, errors, warnings };
+
+    const conflicts = findScheduleConflicts({
+      roomId: room.id,
+      professorId: professor.id,
+      sectionId: section?.id || null,
+      day,
+      timeSlotId: timeSlot.id,
+      excludeScheduleId,
+    });
+
+    if (conflicts.room) errors.push(`Room "${room?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
+    if (conflicts.professor) errors.push(`Faculty "${professor?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
+    if (section?.id && conflicts.section) errors.push(`Section "${section?.name}" already has a class for ${day} (${timeSlot?.label}).`);
+
+    if (subject?.requiredLab && !room?.hasComputers) errors.push('Requires Lab.');
+
+    const roomCap = Number(room?.capacity);
+    const need = Number(subject?.capacity || section?.studentCount || 0);
+    if (Number.isFinite(roomCap) && Number.isFinite(need) && need > 0 && roomCap > 0 && roomCap < need) {
+      warnings.push('Capacity warning.');
+    }
+
+    return { valid: errors.length === 0, errors, warnings };
   };
 
   useEffect(() => {
@@ -82,18 +119,7 @@ const Dashboard = ({ user, onLogout }) => {
   // --- VALIDATOR ENGINE ---
   const validator = {
     validateAssignment: (room, professor, subject, day, timeSlot) => {
-      const errors = []; const warnings = [];
-      const conflicts = findScheduleConflicts({
-        roomId: room?.id,
-        professorId: professor?.id,
-        day,
-        timeSlotId: timeSlot?.id,
-      });
-      if (conflicts.room) errors.push(`Room "${room?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
-      if (conflicts.professor) errors.push(`Faculty "${professor?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
-      if (subject.requiredLab && !room.hasComputers) errors.push(`Requires Lab.`);
-      if (room.capacity < subject.capacity) warnings.push(`Capacity warning.`);
-      return { valid: errors.length === 0, errors, warnings };
+      return validateScheduleEntry({ room, professor, subject, section: null, day, timeSlot });
     },
     addSchedule: (room, professor, subject, day, timeSlot) => ({ schedule: { room, professor, subject, day, timeSlot } }),
     clearAllSchedules: async () => {
@@ -135,6 +161,7 @@ const Dashboard = ({ user, onLogout }) => {
                 const newSchedule = { room, professor: prof, subject, day, timeSlot };
                 tempSchedules.push(newSchedule);
                 results.push(newSchedule);
+                // Fire-and-forget for backwards compatibility (legacy mode only)
                 handleAddSchedule(newSchedule);
                 scheduled = true;
                 break searchLoop;
@@ -158,19 +185,18 @@ const Dashboard = ({ user, onLogout }) => {
     const existing = schedules.find(s => s.id === scheduleId);
     if (!existing) return;
 
-    const conflicts = findScheduleConflicts({
-      roomId: existing.room?.id,
-      professorId: existing.professor?.id,
+    const check = validateScheduleEntry({
+      room: existing.room,
+      professor: existing.professor,
+      subject: existing.subject,
+      section: existing.section || null,
       day: newDay,
-      timeSlotId: newTimeSlotId,
+      timeSlot: newTimeSlot,
       excludeScheduleId: scheduleId,
     });
 
-    if (conflicts.room || conflicts.professor) {
-      const msgs = [];
-      if (conflicts.room) msgs.push(`Room "${existing.room?.name}" is already occupied.`);
-      if (conflicts.professor) msgs.push(`Faculty "${existing.professor?.name}" is already busy.`);
-      alert(`Cannot move schedule:\n${msgs.join('\n')}`);
+    if (!check.valid) {
+      alert(`Cannot move schedule:\n${check.errors.join('\n')}`);
       return;
     }
 
@@ -182,18 +208,16 @@ const Dashboard = ({ user, onLogout }) => {
 
   const handleAddSchedule = async (newSchedule) => {
     if (!isAdmin) return;
-    const conflicts = findScheduleConflicts({
-      roomId: newSchedule?.room?.id,
-      professorId: newSchedule?.professor?.id,
+    const check = validateScheduleEntry({
+      room: newSchedule?.room,
+      professor: newSchedule?.professor,
+      subject: newSchedule?.subject,
+      section: newSchedule?.section || null,
       day: newSchedule?.day,
-      timeSlotId: newSchedule?.timeSlot?.id,
+      timeSlot: newSchedule?.timeSlot,
+      excludeScheduleId: null,
     });
-    if (conflicts.room || conflicts.professor) {
-      const msgs = [];
-      if (conflicts.room) msgs.push(`Room "${newSchedule?.room?.name}" is already occupied for ${newSchedule?.day} (${newSchedule?.timeSlot?.label}).`);
-      if (conflicts.professor) msgs.push(`Faculty "${newSchedule?.professor?.name}" is already teaching for ${newSchedule?.day} (${newSchedule?.timeSlot?.label}).`);
-      return { ok: false, errors: msgs };
-    }
+    if (!check.valid) return { ok: false, errors: check.errors };
     await addDoc(collection(db, 'schedules'), newSchedule);
     return { ok: true };
   };
