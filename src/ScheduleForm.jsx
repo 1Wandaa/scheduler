@@ -53,9 +53,13 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
     if (result.valid) {
       const scheduleResult = validator.addSchedule(room, professor, subject, formData.day, timeSlot);
       setValidation({ valid: true, warnings: result.warnings });
-      onSchedule(scheduleResult.schedule);
-      setFormData({ subject: '', professor: '', room: '', day: '', timeSlot: '' });
-      setTimeout(() => setValidation(null), 3000);
+      const addResult = await onSchedule(scheduleResult.schedule);
+      if (addResult && addResult.ok === false) {
+        setValidation({ valid: false, errors: addResult.errors || ['Schedule could not be added.'] });
+      } else {
+        setFormData({ subject: '', professor: '', room: '', day: '', timeSlot: '' });
+        setTimeout(() => setValidation(null), 3000);
+      }
     } else {
       setValidation(result);
     }

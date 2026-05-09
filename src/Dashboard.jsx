@@ -37,6 +37,25 @@ const Dashboard = ({ user, onLogout }) => {
   const [sections, setSections] = useState([]);
   const [schedules, setSchedules] = useState([]);
 
+  const findScheduleConflicts = ({ roomId, professorId, day, timeSlotId, excludeScheduleId = null }) => {
+    const conflicts = {
+      room: null,
+      professor: null,
+    };
+
+    for (const s of schedules) {
+      if (excludeScheduleId && s.id === excludeScheduleId) continue;
+      if (s.day !== day) continue;
+      if (s.timeSlot?.id !== timeSlotId) continue;
+
+      if (!conflicts.room && s.room?.id === roomId) conflicts.room = s;
+      if (!conflicts.professor && s.professor?.id === professorId) conflicts.professor = s;
+      if (conflicts.room && conflicts.professor) break;
+    }
+
+    return conflicts;
+  };
+
   useEffect(() => {
     const initializeData = async () => {
       const roomsSnapshot = await getDocs(collection(db, 'rooms'));
@@ -64,8 +83,14 @@ const Dashboard = ({ user, onLogout }) => {
   const validator = {
     validateAssignment: (room, professor, subject, day, timeSlot) => {
       const errors = []; const warnings = [];
-      if (schedules.find(s => s.room.id === room.id && s.day === day && s.timeSlot.id === timeSlot.id)) errors.push(`Room occupied.`);
-      if (schedules.find(s => s.professor.id === professor.id && s.day === day && s.timeSlot.id === timeSlot.id)) errors.push(`Professor busy.`);
+      const conflicts = findScheduleConflicts({
+        roomId: room?.id,
+        professorId: professor?.id,
+        day,
+        timeSlotId: timeSlot?.id,
+      });
+      if (conflicts.room) errors.push(`Room "${room?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
+      if (conflicts.professor) errors.push(`Faculty "${professor?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
       if (subject.requiredLab && !room.hasComputers) errors.push(`Requires Lab.`);
       if (room.capacity < subject.capacity) warnings.push(`Capacity warning.`);
       return { valid: errors.length === 0, errors, warnings };
@@ -121,6 +146,26 @@ const Dashboard = ({ user, onLogout }) => {
   const handleUpdateSchedule = async (scheduleId, newDay, newTimeSlotId) => {
     if (!isAdmin) return;
     const newTimeSlot = TIME_SLOTS.find(ts => ts.id === newTimeSlotId);
+
+    const existing = schedules.find(s => s.id === scheduleId);
+    if (!existing) return;
+
+    const conflicts = findScheduleConflicts({
+      roomId: existing.room?.id,
+      professorId: existing.professor?.id,
+      day: newDay,
+      timeSlotId: newTimeSlotId,
+      excludeScheduleId: scheduleId,
+    });
+
+    if (conflicts.room || conflicts.professor) {
+      const msgs = [];
+      if (conflicts.room) msgs.push(`Room "${existing.room?.name}" is already occupied.`);
+      if (conflicts.professor) msgs.push(`Faculty "${existing.professor?.name}" is already busy.`);
+      alert(`Cannot move schedule:\n${msgs.join('\n')}`);
+      return;
+    }
+
     await updateDoc(doc(db, 'schedules', scheduleId.toString()), {
       day: newDay,
       timeSlot: newTimeSlot
@@ -129,7 +174,20 @@ const Dashboard = ({ user, onLogout }) => {
 
   const handleAddSchedule = async (newSchedule) => {
     if (!isAdmin) return;
+    const conflicts = findScheduleConflicts({
+      roomId: newSchedule?.room?.id,
+      professorId: newSchedule?.professor?.id,
+      day: newSchedule?.day,
+      timeSlotId: newSchedule?.timeSlot?.id,
+    });
+    if (conflicts.room || conflicts.professor) {
+      const msgs = [];
+      if (conflicts.room) msgs.push(`Room "${newSchedule?.room?.name}" is already occupied for ${newSchedule?.day} (${newSchedule?.timeSlot?.label}).`);
+      if (conflicts.professor) msgs.push(`Faculty "${newSchedule?.professor?.name}" is already teaching for ${newSchedule?.day} (${newSchedule?.timeSlot?.label}).`);
+      return { ok: false, errors: msgs };
+    }
     await addDoc(collection(db, 'schedules'), newSchedule);
+    return { ok: true };
   };
 
   const handleRemoveSchedule = async (id) => {
