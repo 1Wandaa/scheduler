@@ -129,6 +129,143 @@ const Dashboard = ({ user, onLogout }) => {
       schedules.forEach(s => batch.delete(doc(db, 'schedules', s.id.toString())));
       await batch.commit();
     },
+    /**
+     * Greedy "small population" auto-scheduling helpers.
+     * These are intended for quick targeted runs (faculty OR room OR section).
+     *
+     * Returns:
+     * - results: schedules successfully placed
+     * - unscheduled: array of { subject, section, reason }
+     */
+    autoScheduleForSection: async (sectionId, constraints = { respectLabs: true, preventDoubleBooking: true }) => {
+      const section = sections.find(s => s.id === sectionId);
+      if (!section) return { results: [], unscheduled: [], error: `Section "${sectionId}" not found.` };
+
+      const subjectObjs = (section.subjects || [])
+        .map(subId => subjects.find(su => su.id === subId || su.code === subId))
+        .filter(Boolean);
+
+      const assignments = subjectObjs.map(subject => ({ subject, section }));
+      return validator._autoScheduleAssignments(assignments, { ...constraints });
+    },
+    autoScheduleForRoom: async (roomId, constraints = { respectLabs: true, preventDoubleBooking: true }) => {
+      const room = rooms.find(r => r.id === roomId);
+      if (!room) return { results: [], unscheduled: [], error: `Room "${roomId}" not found.` };
+
+      const assignments = [];
+      for (const section of sections) {
+        for (const subId of (section.subjects || [])) {
+          const subject = subjects.find(su => su.id === subId || su.code === subId);
+          if (subject) assignments.push({ subject, section });
+        }
+      }
+
+      return validator._autoScheduleAssignments(assignments, { ...constraints, fixedRoom: room });
+    },
+    autoScheduleForFaculty: async (professorId, constraints = { respectLabs: true, preventDoubleBooking: true }) => {
+      const professor = professors.find(p => p.id === professorId);
+      if (!professor) return { results: [], unscheduled: [], error: `Faculty "${professorId}" not found.` };
+
+      const assignments = [];
+      for (const section of sections) {
+        for (const subId of (section.subjects || [])) {
+          const subject = subjects.find(su => su.id === subId || su.code === subId);
+          if (subject) assignments.push({ subject, section });
+        }
+      }
+
+      return validator._autoScheduleAssignments(assignments, { ...constraints, fixedProfessor: professor });
+    },
+    _eligibleRoomsFor: (subject, section, constraints) => {
+      let pool = rooms;
+      if (constraints?.respectLabs && subject?.requiredLab) {
+        const labs = rooms.filter(r => r.hasComputers);
+        if (labs.length > 0) pool = labs;
+      }
+
+      const need = Number(subject?.capacity || section?.studentCount || 0) || 0;
+      const ok = pool.filter(r => {
+        const cap = Number(r?.capacity || 0);
+        return need <= 0 ? true : cap >= need;
+      });
+      return ok.length > 0 ? ok : pool;
+    },
+    _eligibleProfsFor: (subject) => {
+      if (!subject) return professors;
+      const dept = subject.department;
+      const deptProfs = professors.filter(p => (p.department || null) === dept);
+      return deptProfs.length > 0 ? deptProfs : professors;
+    },
+    _autoScheduleAssignments: async (assignments, constraints) => {
+      const results = [];
+      const unscheduled = [];
+
+      const fixedRoom = constraints?.fixedRoom || null;
+      const fixedProfessor = constraints?.fixedProfessor || null;
+
+      // Keep a local view of schedules so we can detect conflicts in-run.
+      const temp = [...schedules];
+
+      // Small bias: schedule "harder" things first.
+      const ordered = [...assignments].sort((a, b) => {
+        const aHard = (a.subject?.requiredLab ? 2 : 0) + (Number(a.subject?.capacity || a.section?.studentCount || 0) || 0);
+        const bHard = (b.subject?.requiredLab ? 2 : 0) + (Number(b.subject?.capacity || b.section?.studentCount || 0) || 0);
+        return bHard - aHard;
+      });
+
+      for (const a of ordered) {
+        const subject = a.subject;
+        const section = a.section || null;
+
+        const roomPool = fixedRoom ? [fixedRoom] : validator._eligibleRoomsFor(subject, section, constraints);
+        const profPool = fixedProfessor ? [fixedProfessor] : validator._eligibleProfsFor(subject);
+
+        let placed = false;
+
+        for (const day of DAYS) {
+          for (const timeSlot of TIME_SLOTS) {
+            for (const room of roomPool) {
+              for (const professor of profPool) {
+                // Strict non-overlap inside the same run (optional)
+                if (constraints?.preventDoubleBooking) {
+                  const roomBusy = temp.some(s => s.room?.id === room.id && s.day === day && s.timeSlot?.id === timeSlot.id);
+                  const profBusy = temp.some(s => s.professor?.id === professor.id && s.day === day && s.timeSlot?.id === timeSlot.id);
+                  const secBusy = section?.id ? temp.some(s => s.section?.id === section.id && s.day === day && s.timeSlot?.id === timeSlot.id) : false;
+                  if (roomBusy || profBusy || secBusy) continue;
+                }
+
+                const check = validateScheduleEntry({ room, professor, subject, section, day, timeSlot });
+                if (!check.valid) continue;
+
+                const newSchedule = { room, professor, subject, section, day, timeSlot };
+
+                // Try to persist via the same write path (also rechecks conflicts against live state).
+                const writeResult = await handleAddSchedule(newSchedule);
+                if (writeResult && writeResult.ok === false) continue;
+
+                temp.push(newSchedule);
+                results.push(newSchedule);
+                placed = true;
+                break;
+              }
+              if (placed) break;
+            }
+            if (placed) break;
+          }
+          if (placed) break;
+        }
+
+        if (!placed) {
+          let reason = 'Insufficient valid slots';
+          if (constraints?.respectLabs && subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
+            reason = 'Requires computer lab (selected room is not a lab)';
+          }
+          unscheduled.push({ subject, section, reason });
+        }
+      }
+
+      return { results, unscheduled, error: null };
+    },
     autoSchedule: (subjList, constraints) => {
       const results = [];
       const unscheduled = [];
