@@ -96,8 +96,12 @@ const Dashboard = ({ user, onLogout }) => {
       return { valid: errors.length === 0, errors, warnings };
     },
     addSchedule: (room, professor, subject, day, timeSlot) => ({ schedule: { room, professor, subject, day, timeSlot } }),
-    clearAllSchedules: () => {
-      schedules.forEach(s => deleteDoc(doc(db, 'schedules', s.id)));
+    clearAllSchedules: async () => {
+      // Batch delete to ensure "clear" completes before auto-scheduling writes.
+      if (!schedules || schedules.length === 0) return;
+      const batch = writeBatch(db);
+      schedules.forEach(s => batch.delete(doc(db, 'schedules', s.id.toString())));
+      await batch.commit();
     },
     autoSchedule: (subjList, constraints) => {
       const results = [];
@@ -120,8 +124,12 @@ const Dashboard = ({ user, onLogout }) => {
                 continue;
               }
 
-              const isRoomBusy = tempSchedules.some(s => s.room.id === room.id && s.day === day && s.timeSlot.id === timeSlot.id);
-              const isProfBusy = tempSchedules.some(s => s.professor.id === prof.id && s.day === day && s.timeSlot.id === timeSlot.id);
+              const isRoomBusy = constraints.preventDoubleBooking
+                ? tempSchedules.some(s => s.room.id === room.id && s.day === day && s.timeSlot.id === timeSlot.id)
+                : false;
+              const isProfBusy = constraints.preventDoubleBooking
+                ? tempSchedules.some(s => s.professor.id === prof.id && s.day === day && s.timeSlot.id === timeSlot.id)
+                : false;
 
               if (!isRoomBusy && !isProfBusy) {
                 const newSchedule = { room, professor: prof, subject, day, timeSlot };

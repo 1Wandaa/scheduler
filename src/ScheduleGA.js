@@ -13,6 +13,10 @@ const DEFAULT_CONFIG = {
   elitismCount: 4,
   tournamentSize: 5,
   stagnationLimit: 50,
+  // When true, we apply a repair pass to push chromosomes toward feasibility.
+  repair: true,
+  // How many random attempts per gene during repair.
+  repairTriesPerGene: 40,
 };
 
 const PENALTY = {
@@ -77,23 +81,150 @@ export class ScheduleGA {
     for (const p of this.professors) this.profMap[p.id] = p;
   }
 
-  _randomChromosome() {
-    return this.assignments.map(asgn => {
-      const deptProfs = this.profsByDept[asgn.subject.department] || this.professors;
-      const prof = deptProfs[Math.floor(Math.random() * deptProfs.length)] || this.professors[0];
-      let pool = this.rooms;
-      if (asgn.subject.requiredLab) {
-        const labs = this.rooms.filter(r => r.hasComputers);
-        if (labs.length > 0) pool = labs;
+  _randInt(n) {
+    return Math.floor(Math.random() * n);
+  }
+
+  _shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = this._randInt(i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  _eligibleRoomsFor(a) {
+    let pool = this.rooms;
+    if (a.subject.requiredLab) {
+      const labs = this.rooms.filter(r => r.hasComputers);
+      if (labs.length > 0) pool = labs;
+    }
+    const need = a.subject.capacity || a.section.studentCount || 30;
+    const ok = pool.filter(r => (r.capacity || 0) >= need);
+    // If no room can satisfy capacity, fall back to the best available pool (still allows GA to continue).
+    return ok.length > 0 ? ok : pool;
+  }
+
+  _eligibleProfsFor(a, profWork = null) {
+    const deptProfs = this.profsByDept[a.subject.department] || this.professors;
+    if (!deptProfs || deptProfs.length === 0) return this.professors;
+    if (!profWork) return deptProfs;
+
+    // Prefer professors who are not exceeding max workload.
+    const feasible = [];
+    const fallback = [];
+    for (const p of deptProfs) {
+      const max = Math.ceil((p.maxUnits || p.maxHours || 12) / 1.5);
+      const w = profWork[p.id] || 0;
+      if (w < max) feasible.push(p);
+      fallback.push(p);
+    }
+    return feasible.length > 0 ? feasible : fallback;
+  }
+
+  _isSlotFree({ roomId, professorId, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots) {
+    const rk = `${roomId}-${dayIdx}-${timeIdx}`;
+    const pk = `${professorId}-${dayIdx}-${timeIdx}`;
+    const sk = `${sectionId}-${dayIdx}-${timeIdx}`;
+    return !roomSlots[rk] && !profSlots[pk] && !secSlots[sk];
+  }
+
+  _occupy({ roomId, professorId, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots) {
+    roomSlots[`${roomId}-${dayIdx}-${timeIdx}`] = 1;
+    profSlots[`${professorId}-${dayIdx}-${timeIdx}`] = 1;
+    secSlots[`${sectionId}-${dayIdx}-${timeIdx}`] = 1;
+  }
+
+  _repair(chrom) {
+    // Greedy repair to reduce hard violations: try to re-place genes into conflict-free slots.
+    if (!chrom || chrom.length === 0) return chrom;
+
+    const roomSlots = {};
+    const profSlots = {};
+    const secSlots = {};
+    const profWork = {};
+
+    const idxs = this._shuffle(Array.from({ length: chrom.length }, (_, i) => i));
+
+    for (const i of idxs) {
+      const a = this.assignments[i];
+      const sectionId = a.section.id;
+
+      // Build candidate lists (shuffled) to diversify.
+      const rooms = this._shuffle([...this._eligibleRoomsFor(a)]);
+      const profs = this._shuffle([...this._eligibleProfsFor(a, profWork)]);
+
+      let placed = false;
+      let bestFallback = null;
+
+      for (let t = 0; t < this.config.repairTriesPerGene; t++) {
+        const prof = profs[this._randInt(profs.length)];
+        const room = rooms[this._randInt(rooms.length)];
+        const dayIdx = this._randInt(this.days.length);
+        const timeIdx = this._randInt(this.timeSlots.length);
+
+        const ok = this._isSlotFree(
+          { roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx },
+          roomSlots,
+          profSlots,
+          secSlots
+        );
+
+        // Track a fallback that minimizes conflicts in case we cannot find a perfect placement.
+        if (!ok) {
+          const rk = `${room.id}-${dayIdx}-${timeIdx}`;
+          const pk = `${prof.id}-${dayIdx}-${timeIdx}`;
+          const sk = `${sectionId}-${dayIdx}-${timeIdx}`;
+          const conflicts = (roomSlots[rk] ? 1 : 0) + (profSlots[pk] ? 1 : 0) + (secSlots[sk] ? 1 : 0);
+          if (!bestFallback || conflicts < bestFallback.conflicts) {
+            bestFallback = { roomId: room.id, professorId: prof.id, dayIdx, timeIdx, conflicts };
+          }
+          continue;
+        }
+
+        // Workload feasibility (softly enforced here, still penalized by fitness).
+        const p = this.profMap[prof.id];
+        const max = p ? Math.ceil((p.maxUnits || p.maxHours || 12) / 1.5) : Infinity;
+        const w = profWork[prof.id] || 0;
+        if (w + 1 > max) {
+          // Keep as fallback, but try to find another professor first.
+          if (!bestFallback) bestFallback = { roomId: room.id, professorId: prof.id, dayIdx, timeIdx, conflicts: 0 };
+          continue;
+        }
+
+        chrom[i] = { professorId: prof.id, roomId: room.id, dayIdx, timeIdx };
+        this._occupy({ roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots);
+        profWork[prof.id] = (profWork[prof.id] || 0) + 1;
+        placed = true;
+        break;
       }
-      const room = pool[Math.floor(Math.random() * pool.length)];
+
+      if (!placed) {
+        // Fall back to the least-conflicting option we saw.
+        const g = bestFallback || chrom[i];
+        chrom[i] = { professorId: g.professorId, roomId: g.roomId, dayIdx: g.dayIdx, timeIdx: g.timeIdx };
+        this._occupy({ roomId: chrom[i].roomId, professorId: chrom[i].professorId, sectionId, dayIdx: chrom[i].dayIdx, timeIdx: chrom[i].timeIdx }, roomSlots, profSlots, secSlots);
+        profWork[chrom[i].professorId] = (profWork[chrom[i].professorId] || 0) + 1;
+      }
+    }
+
+    return chrom;
+  }
+
+  _randomChromosome() {
+    const chrom = this.assignments.map(a => {
+      const profs = this._eligibleProfsFor(a);
+      const prof = profs[this._randInt(profs.length)] || this.professors[0];
+      const rooms = this._eligibleRoomsFor(a);
+      const room = rooms[this._randInt(rooms.length)] || this.rooms[0];
       return {
         professorId: prof.id,
         roomId: room.id,
-        dayIdx: Math.floor(Math.random() * this.days.length),
-        timeIdx: Math.floor(Math.random() * this.timeSlots.length),
+        dayIdx: this._randInt(this.days.length),
+        timeIdx: this._randInt(this.timeSlots.length),
       };
     });
+    return this.config.repair ? this._repair(chrom) : chrom;
   }
 
   _fitness(chrom) {
@@ -205,22 +336,21 @@ export class ScheduleGA {
         const g = chrom[i], a = this.assignments[i];
         switch (Math.floor(Math.random() * 4)) {
           case 0: {
-            let pool = this.rooms;
-            if (a.subject.requiredLab) { const labs = this.rooms.filter(r=>r.hasComputers); if (labs.length) pool = labs; }
-            g.roomId = pool[Math.floor(Math.random()*pool.length)].id;
+            const pool = this._eligibleRoomsFor(a);
+            g.roomId = pool[this._randInt(pool.length)].id;
             break;
           }
-          case 1: g.dayIdx = Math.floor(Math.random()*this.days.length); break;
-          case 2: g.timeIdx = Math.floor(Math.random()*this.timeSlots.length); break;
+          case 1: g.dayIdx = this._randInt(this.days.length); break;
+          case 2: g.timeIdx = this._randInt(this.timeSlots.length); break;
           case 3: {
-            const dp = this.profsByDept[a.subject.department] || this.professors;
-            if (dp.length) g.professorId = dp[Math.floor(Math.random()*dp.length)].id;
+            const dp = this._eligibleProfsFor(a);
+            if (dp.length) g.professorId = dp[this._randInt(dp.length)].id;
             break;
           }
         }
       }
     }
-    return chrom;
+    return this.config.repair ? this._repair(chrom) : chrom;
   }
 
   async solve(onProgress = null) {
@@ -232,6 +362,7 @@ export class ScheduleGA {
     let pop = Array.from({ length: populationSize }, () => this._randomChromosome());
     let bestEver = null, bestFit = { score: -Infinity, hardViolations: Infinity };
     let stag = 0, genRan = 0;
+    const baseMutation = this.config.mutationRate;
 
     for (let gen = 0; gen < maxGenerations; gen++) {
       genRan = gen + 1;
@@ -246,6 +377,11 @@ export class ScheduleGA {
       } else stag++;
 
       if (onProgress) onProgress(gen + 1, bestFit, maxGenerations);
+
+      // Adaptive mutation: increase exploration during stagnation or when still infeasible.
+      const stagFactor = Math.min(1, stag / Math.max(1, stagnationLimit));
+      const infeasibleBoost = bestFit.hardViolations > 0 ? 0.25 : 0;
+      this.config.mutationRate = Math.min(0.6, Math.max(0.05, baseMutation * (1 + 1.5 * stagFactor) + infeasibleBoost));
 
       if (bestFit.hardViolations === 0 && stag >= Math.floor(stagnationLimit/2)) break;
       if (stag >= stagnationLimit) break;
@@ -262,6 +398,9 @@ export class ScheduleGA {
 
       if (gen % 10 === 0) await new Promise(r => setTimeout(r, 0));
     }
+
+    // Restore base mutation (avoid surprising callers reusing config object).
+    this.config.mutationRate = baseMutation;
 
     return {
       schedule: this._toSchedule(bestEver),

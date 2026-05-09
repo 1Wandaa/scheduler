@@ -27,7 +27,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
 
     try {
       // Clear existing schedules
-      validator.clearAllSchedules();
+      await validator.clearAllSchedules();
 
       if (!sections || sections.length === 0) {
         // Fallback: if no sections exist, run legacy greedy for backwards compat
@@ -39,7 +39,6 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
           unscheduled: autoResult.unscheduled,
           usedLegacy: true
         });
-        onAutoSchedule();
         setLoading(false);
         return;
       }
@@ -65,14 +64,41 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
 
       // Save each schedule entry to Firestore ONLY if it does not conflict
       for (const entry of gaResult.schedule) {
-        // Strict Conflict Check
-        const isRoomBusy = savedSchedules.some(s => s.room.id === entry.room.id && s.day === entry.day && s.timeSlot.id === entry.timeSlot.id);
-        const isProfBusy = savedSchedules.some(s => s.professor.id === entry.professor.id && s.day === entry.day && s.timeSlot.id === entry.timeSlot.id);
+        // Respect lab constraint
+        if (respectLabs && entry?.subject?.requiredLab && !entry?.room?.hasComputers) {
+          unscheduledResults.push(entry.subject);
+          continue;
+        }
 
-        if (!isRoomBusy && !isProfBusy) {
+        // Strict conflict checks (room + faculty + section)
+        const shouldCheckConflicts = !!preventDoubleBooking;
+        const isRoomBusy = shouldCheckConflicts
+          ? savedSchedules.some(s => s.room.id === entry.room.id && s.day === entry.day && s.timeSlot.id === entry.timeSlot.id)
+          : false;
+        const isProfBusy = shouldCheckConflicts
+          ? savedSchedules.some(s => s.professor.id === entry.professor.id && s.day === entry.day && s.timeSlot.id === entry.timeSlot.id)
+          : false;
+        const isSectionBusy = shouldCheckConflicts && entry?.section?.id
+          ? savedSchedules.some(s => s.section?.id === entry.section.id && s.day === entry.day && s.timeSlot.id === entry.timeSlot.id)
+          : false;
+
+        if (!isRoomBusy && !isProfBusy && !isSectionBusy) {
           savedSchedules.push(entry);
           validResults.push(entry);
-          await onAutoSchedule(entry);
+          try {
+            const writeResult = await onAutoSchedule(entry);
+            if (writeResult && writeResult.ok === false) {
+              // Firestore write rejected by conflict validator (or other hard checks)
+              validResults.pop();
+              savedSchedules.pop();
+              unscheduledResults.push(entry.subject);
+            }
+          } catch (e) {
+            // Firestore error: keep the run alive and mark entry unscheduled
+            validResults.pop();
+            savedSchedules.pop();
+            unscheduledResults.push(entry.subject);
+          }
         } else {
           // Double booked! Move to unscheduled
           unscheduledResults.push(entry.subject);
