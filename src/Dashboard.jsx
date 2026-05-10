@@ -67,6 +67,18 @@ const Dashboard = ({ user, onLogout }) => {
     if (!subject?.id) errors.push('Subject is required.');
     if (!day) errors.push('Day is required.');
     if (!timeSlot?.id) errors.push('Time slot is required.');
+
+    // --- NEW: Hard check for authorized subjects ---
+    if (professor && subject) {
+      const specs = professor.specialization || [];
+      const isAuthorized = specs.includes(subject.id) ||
+        specs.includes(subject.code) ||
+        specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
+      if (!isAuthorized) {
+        errors.push(`Faculty "${professor.name}" is not authorized to teach "${subject.code}".`);
+      }
+    }
+
     if (errors.length > 0) return { valid: false, errors, warnings };
 
     const conflicts = findScheduleConflicts({
@@ -429,7 +441,7 @@ const Dashboard = ({ user, onLogout }) => {
               title={isSidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
             <div>
