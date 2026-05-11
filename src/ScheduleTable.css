@@ -1,5 +1,6 @@
 .schedule-table-container {
-  background: #109EEF;
+  /* Keep blue limited to grid cells, not the page background */
+  background: transparent;
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -15,6 +16,9 @@
 .table-wrapper {
   overflow-x: auto;
   max-width: 100%;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
 }
 
 .schedule-table {
@@ -22,6 +26,8 @@
   border-collapse: collapse;
   font-size: 0.9rem;
   table-layout: fixed;
+  background: #ffffff;
+  border-radius: 8px;
 }
 
 .schedule-table th {
@@ -72,7 +78,7 @@
 /* Light blue background for cells that contain schedules — fills entire cell */
 /* Light blue background for cells that contain schedules — fills entire cell */
 .schedule-cell:has(.schedule-item) {
-  background-color: 3cdfff;
+  background-color: #3cdfff;
   /* Changed to a soft, light blue */
   padding: 0;
 }
