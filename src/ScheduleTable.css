@@ -25,9 +25,9 @@
 }
 
 .schedule-table th {
-  background-color: #F8FAFC;
+  background-color: #109EEF;
   /* Light gray/white background */
-  color: #5793e7;
+  color: #000108;
   /* Muted dark text for contrast */
   padding: 1rem;
   text-align: center;
@@ -52,7 +52,7 @@
 }
 
 .time-label {
-  background-color: #109EEF;
+  background-color: #FFFFFF;
   font-weight: 600;
   width: 140px;
   min-width: 140px;
