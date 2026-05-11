@@ -37,7 +37,7 @@ html {
   font-family: 'Inter', Tahoma, Geneva, Verdana, sans-serif;
   height: 100vh;
   color: var(--text-main);
-  background-image: url('/background .jpg');
+  background-image: url('/background.jpg');
   /* Keep your background image */
   background-size: cover;
   background-position: center;
