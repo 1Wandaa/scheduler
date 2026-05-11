@@ -1,5 +1,5 @@
 .schedule-table-container {
-  background: white;
+  background: #109EEF;
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -25,7 +25,7 @@
 }
 
 .schedule-table th {
-  background-color: #109EEF;
+  background-color: #FFFFFF;
   /* Light gray/white background */
   color: #000108;
   /* Muted dark text for contrast */
