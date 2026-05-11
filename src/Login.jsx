@@ -4,6 +4,9 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthP
 import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 
 const Login = ({ onLogin }) => {
+  const LOGO_SRC = '/logo.jpg?v=1';
+  const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
+
   const [isSignUp, setIsSignUp] = useState(false);
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
@@ -131,7 +134,7 @@ const Login = ({ onLogin }) => {
         {/* --- OFFICIAL CAPSU LOGO --- */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
           <img
-            src="logo.jpg"
+            src={LOGO_SRC}
             alt="CAPSU Logo"
             style={{
               width: '90px',
@@ -141,7 +144,10 @@ const Login = ({ onLogin }) => {
               border: '3px solid #0288d1',
               boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
             }}
-            onError={(e) => { e.target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Capiz_State_University_logo.png/220px-Capiz_State_University_logo.png"; }}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = FALLBACK_LOGO;
+            }}
           />
         </div>
 

@@ -3,6 +3,9 @@ import { TIME_SLOTS, DAYS } from './index';
 import './ScheduleTable.css';
 
 function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID" }) {
+  const LOGO_SRC = '/logo.jpg?v=1';
+  const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
+
   const [dragOverCell, setDragOverCell] = useState(null);
   const [draggingId, setDraggingId] = useState(null);
 
@@ -88,7 +91,15 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       {/* Header */}
       <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: 'var(--card-bg)', color: 'var(--text-main)', overflow: 'hidden' }}>
         <div style={{ flex: '0 0 100px', padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid var(--border-color)', backgroundColor: 'var(--table-header)' }}>
-          <img src="/logo.jpg" alt="Logo" style={{ width: '65px', height: '65px', objectFit: 'cover', borderRadius: '50%' }} onError={(e) => { e.target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Capiz_State_University_logo.png/220px-Capiz_State_University_logo.png"; }} />
+          <img
+            src={LOGO_SRC}
+            alt="Logo"
+            style={{ width: '65px', height: '65px', objectFit: 'cover', borderRadius: '50%' }}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = FALLBACK_LOGO;
+            }}
+          />
         </div>
         <div style={{ flex: 1, padding: '15px', textAlign: 'center', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <h2 style={{ margin: '0 0 5px 0', fontSize: '1.2rem', fontWeight: '700', color: 'var(--accent-dark)', letterSpacing: '1px' }}>CAPIZ STATE UNIVERSITY</h2>

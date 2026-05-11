@@ -17,6 +17,9 @@ import ScheduleViewer from './ScheduleViewer';
 import SectionManagement from './SectionManagement';
 
 const Dashboard = ({ user, onLogout }) => {
+  const LOGO_SRC = '/logo.jpg?v=1';
+  const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isManageDataOpen, setIsManageDataOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -401,7 +404,15 @@ return (
     <div className={`sidebar ${isMobileMenuOpen ? 'open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
       <div>
         <div className="logo-area" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
-          <img src="/logo.jpg" alt="CAPSU Logo" onError={(e) => { e.target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Capiz_State_University_logo.png/220px-Capiz_State_University_logo.png"; }} style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #0288d1' }} />
+          <img
+            src={LOGO_SRC}
+            alt="CAPSU Logo"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = FALLBACK_LOGO;
+            }}
+            style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #0288d1' }}
+          />
           <h3>SMARTSCHED</h3>
           <span style={{ fontSize: '0.75rem', marginTop: '5px', padding: '3px 8px', borderRadius: '12px', backgroundColor: isAdmin ? 'var(--accent-primary)' : 'var(--success)', color: 'white', fontWeight: 'bold' }}>
             Logged in as: {user?.role}
