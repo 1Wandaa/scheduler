@@ -343,12 +343,6 @@ const Dashboard = ({ user, onLogout }) => {
       }
       return { results, unscheduled, error: null };
     }
-        if(!scheduled) {
-      unscheduled.push(subject);
-    }
-  }
-  return { results, unscheduled, error: null };
-}
   };
 
 const handleUpdateSchedule = async (scheduleId, newDay, newTimeSlotId) => {
