@@ -38,7 +38,7 @@ html {
   height: 100vh;
   color: var(--text-main);
   /* Cache-bust so updated image shows immediately */
-  background-image: url('/background.jpg?v=1');
+  background-image: url('/background2.jpg?v=1');
   /* Keep your background image */
   background-size: cover;
   background-position: center;
