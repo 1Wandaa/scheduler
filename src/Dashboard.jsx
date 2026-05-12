@@ -16,6 +16,15 @@ import SubjectManagement from './SubjectManagement';
 import ScheduleViewer from './ScheduleViewer';
 import SectionManagement from './SectionManagement';
 
+/** Mirrors Schedule GA / greedy picker: only enforce specialization when at least one faculty matches this subject. */
+function professorMatchesSubject(professor, subject) {
+  if (!professor || !subject) return false;
+  const specs = professor.specialization || [];
+  return specs.includes(subject.id) ||
+    specs.includes(subject.code) ||
+    specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
+}
+
 const Dashboard = ({ user, onLogout }) => {
   const LOGO_SRC = '/logo.jpg?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
@@ -50,11 +59,11 @@ const Dashboard = ({ user, onLogout }) => {
     for (const s of schedules) {
       if (excludeScheduleId && s.id === excludeScheduleId) continue;
       if (s.day !== day) continue;
-      if (s.timeSlot?.id !== timeSlotId) continue;
+      if (String(s.timeSlot?.id) !== String(timeSlotId)) continue;
 
-      if (!conflicts.room && s.room?.id === roomId) conflicts.room = s;
-      if (!conflicts.professor && s.professor?.id === professorId) conflicts.professor = s;
-      if (!conflicts.section && sectionId && s.section?.id === sectionId) conflicts.section = s;
+      if (!conflicts.room && String(s.room?.id) === String(roomId)) conflicts.room = s;
+      if (!conflicts.professor && String(s.professor?.id) === String(professorId)) conflicts.professor = s;
+      if (!conflicts.section && sectionId && String(s.section?.id) === String(sectionId)) conflicts.section = s;
       if (conflicts.room && conflicts.professor && (!sectionId || conflicts.section)) break;
     }
 
@@ -71,13 +80,9 @@ const Dashboard = ({ user, onLogout }) => {
     if (!day) errors.push('Day is required.');
     if (!timeSlot?.id) errors.push('Time slot is required.');
 
-    // --- NEW: Hard check for authorized subjects ---
     if (professor && subject) {
-      const specs = professor.specialization || [];
-      const isAuthorized = specs.includes(subject.id) ||
-        specs.includes(subject.code) ||
-        specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
-      if (!isAuthorized) {
+      const qualified = professors.filter(p => professorMatchesSubject(p, subject));
+      if (qualified.length > 0 && !professorMatchesSubject(professor, subject)) {
         errors.push(`Faculty "${professor.name}" is not authorized to teach "${subject.code}".`);
       }
     }
@@ -200,12 +205,7 @@ const Dashboard = ({ user, onLogout }) => {
     },
     _eligibleProfsFor: (subject) => {
       if (!subject) return professors;
-      const validProfs = professors.filter(p => {
-        const specs = p.specialization || [];
-        return specs.includes(subject.id) ||
-          specs.includes(subject.code) ||
-          specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
-      });
+      const validProfs = professors.filter(p => professorMatchesSubject(p, subject));
       return validProfs.length > 0 ? validProfs : professors;
     },
     _autoScheduleAssignments: async (assignments, constraints) => {
@@ -240,9 +240,12 @@ const Dashboard = ({ user, onLogout }) => {
               for (const professor of profPool) {
                 // Strict non-overlap inside the same run (optional)
                 if (constraints?.preventDoubleBooking) {
-                  const roomBusy = temp.some(s => s.room?.id === room.id && s.day === day && s.timeSlot?.id === timeSlot.id);
-                  const profBusy = temp.some(s => s.professor?.id === professor.id && s.day === day && s.timeSlot?.id === timeSlot.id);
-                  const secBusy = section?.id ? temp.some(s => s.section?.id === section.id && s.day === day && s.timeSlot?.id === timeSlot.id) : false;
+                  const roomBusy = temp.some(s =>
+                    String(s.room?.id) === String(room.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
+                  const profBusy = temp.some(s =>
+                    String(s.professor?.id) === String(professor.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
+                  const secBusy = section?.id ? temp.some(s =>
+                    String(s.section?.id) === String(section.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id)) : false;
                   if (roomBusy || profBusy || secBusy) continue;
                 }
 
@@ -287,20 +290,11 @@ const Dashboard = ({ user, onLogout }) => {
         let scheduled = false;
 
         // Find ALL authorized professors instead of picking the first one in the department
-        const validProfs = professors.filter(p => {
-          const specs = p.specialization || [];
-          return specs.includes(subject.id) ||
-            specs.includes(subject.code) ||
-            specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
-        });
-
-        if (validProfs.length === 0) {
-          unscheduled.push(subject);
-          continue;
-        }
+        const validProfs = professors.filter(p => professorMatchesSubject(p, subject));
+        const profPool = validProfs.length > 0 ? validProfs : professors;
 
         searchLoop:
-        for (const prof of validProfs) {
+        for (const prof of profPool) {
           for (const day of DAYS) {
             for (const timeSlot of TIME_SLOTS) {
               for (const room of rooms) {
@@ -309,10 +303,12 @@ const Dashboard = ({ user, onLogout }) => {
                 }
 
                 const isRoomBusy = constraints.preventDoubleBooking
-                  ? tempSchedules.some(s => s.room.id === room.id && s.day === day && s.timeSlot.id === timeSlot.id)
+                  ? tempSchedules.some(s =>
+                    String(s.room?.id) === String(room.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id))
                   : false;
                 const isProfBusy = constraints.preventDoubleBooking
-                  ? tempSchedules.some(s => s.professor.id === prof.id && s.day === day && s.timeSlot.id === timeSlot.id)
+                  ? tempSchedules.some(s =>
+                    String(s.professor?.id) === String(prof.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id))
                   : false;
 
                 if (!isRoomBusy && !isProfBusy) {
