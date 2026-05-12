@@ -118,8 +118,12 @@ export class ScheduleGA {
           specs.includes(subject.code) ||
           specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
       });
-      pool = validProfs.length > 0 ? validProfs : this.professors;
+
+      // Strict constraint: Enforce validProfs only. 
+      // If none are qualified, return an empty array to force an error.
+      pool = validProfs;
     }
+
     if (!profWork) return pool;
 
     const feasible = [];
@@ -254,9 +258,9 @@ export class ScheduleGA {
     }
 
     // Hard: conflicts
-    for (const k in roomSlots) if (roomSlots[k] > 1) { const o = roomSlots[k]-1; hardScore += PENALTY.ROOM_CONFLICT*o; hardViolations += o; }
-    for (const k in profSlots) if (profSlots[k] > 1) { const o = profSlots[k]-1; hardScore += PENALTY.PROF_CONFLICT*o; hardViolations += o; }
-    for (const k in secSlots) if (secSlots[k] > 1) { const o = secSlots[k]-1; hardScore += PENALTY.SECTION_CONFLICT*o; hardViolations += o; }
+    for (const k in roomSlots) if (roomSlots[k] > 1) { const o = roomSlots[k] - 1; hardScore += PENALTY.ROOM_CONFLICT * o; hardViolations += o; }
+    for (const k in profSlots) if (profSlots[k] > 1) { const o = profSlots[k] - 1; hardScore += PENALTY.PROF_CONFLICT * o; hardViolations += o; }
+    for (const k in secSlots) if (secSlots[k] > 1) { const o = secSlots[k] - 1; hardScore += PENALTY.SECTION_CONFLICT * o; hardViolations += o; }
 
     // Hard: per-gene
     for (let i = 0; i < chrom.length; i++) {
@@ -269,7 +273,7 @@ export class ScheduleGA {
       const prof = this.profMap[pid];
       if (prof) {
         const max = Math.ceil((prof.maxUnits || prof.maxHours || 12) / 1.5);
-        if (profWork[pid] > max) { const o = profWork[pid]-max; hardScore += PENALTY.WORKLOAD_EXCEEDED*o; hardViolations += o; }
+        if (profWork[pid] > max) { const o = profWork[pid] - max; hardScore += PENALTY.WORKLOAD_EXCEEDED * o; hardViolations += o; }
       }
     }
 
@@ -285,8 +289,8 @@ export class ScheduleGA {
     // Soft: workload balance
     const wv = Object.values(profWork);
     if (wv.length > 1) {
-      const avg = wv.reduce((a,b)=>a+b,0)/wv.length;
-      const variance = wv.reduce((s,v)=>s+(v-avg)**2,0)/wv.length;
+      const avg = wv.reduce((a, b) => a + b, 0) / wv.length;
+      const variance = wv.reduce((s, v) => s + (v - avg) ** 2, 0) / wv.length;
       softScore += Math.max(0, BONUS.WORKLOAD_BALANCE - variance * 2);
     }
 
@@ -307,9 +311,9 @@ export class ScheduleGA {
       profDay[key].push(chrom[i].timeIdx);
     }
     for (const key in profDay) {
-      const s = profDay[key].sort((a,b)=>a-b);
+      const s = profDay[key].sort((a, b) => a - b);
       let consec = 1, bad = false;
-      for (let i = 1; i < s.length; i++) { if (s[i]===s[i-1]+1) { consec++; if (consec>=3) bad=true; } else consec=1; }
+      for (let i = 1; i < s.length; i++) { if (s[i] === s[i - 1] + 1) { consec++; if (consec >= 3) bad = true; } else consec = 1; }
       if (!bad && s.length > 0) softScore += BONUS.NO_CONSECUTIVE_OVERLOAD;
     }
 
@@ -326,8 +330,8 @@ export class ScheduleGA {
   }
 
   _crossover(p1, p2) {
-    if (Math.random() > this.config.crossoverRate) return p1.map(g => ({...g}));
-    return p1.map((g, i) => Math.random() < 0.5 ? {...g} : {...p2[i]});
+    if (Math.random() > this.config.crossoverRate) return p1.map(g => ({ ...g }));
+    return p1.map((g, i) => Math.random() < 0.5 ? { ...g } : { ...p2[i] });
   }
 
   _mutate(chrom) {
@@ -372,7 +376,7 @@ export class ScheduleGA {
 
       if (fits[bIdx].score > bestFit.score) {
         bestFit = { ...fits[bIdx] };
-        bestEver = pop[bIdx].map(g => ({...g}));
+        bestEver = pop[bIdx].map(g => ({ ...g }));
         stag = 0;
       } else stag++;
 
@@ -383,12 +387,12 @@ export class ScheduleGA {
       const infeasibleBoost = bestFit.hardViolations > 0 ? 0.25 : 0;
       this.config.mutationRate = Math.min(0.6, Math.max(0.05, baseMutation * (1 + 1.5 * stagFactor) + infeasibleBoost));
 
-      if (bestFit.hardViolations === 0 && stag >= Math.floor(stagnationLimit/2)) break;
+      if (bestFit.hardViolations === 0 && stag >= Math.floor(stagnationLimit / 2)) break;
       if (stag >= stagnationLimit) break;
 
-      const sorted = fits.map((f,i)=>({f,i})).sort((a,b)=>b.f.score-a.f.score);
+      const sorted = fits.map((f, i) => ({ f, i })).sort((a, b) => b.f.score - a.f.score);
       const next = [];
-      for (let i = 0; i < elitismCount && i < sorted.length; i++) next.push(pop[sorted[i].i].map(g=>({...g})));
+      for (let i = 0; i < elitismCount && i < sorted.length; i++) next.push(pop[sorted[i].i].map(g => ({ ...g })));
       while (next.length < populationSize) {
         let child = this._crossover(this._selectParent(pop, fits), this._selectParent(pop, fits));
         child = this._mutate(child);
