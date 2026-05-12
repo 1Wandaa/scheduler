@@ -120,11 +120,15 @@ export class ScheduleGA {
 
     if (!profWork) return pool;
 
+    const credits = Number(a.subject?.credits) || 3;
+    const totalMeetings = a.totalMeetings || Math.max(1, Math.ceil(credits / 1.5));
+    const creditPerSlot = credits / totalMeetings;
+
     const feasible = [];
     for (const p of pool) {
       const max = p.maxUnits || p.maxHours || 12;
       const w = profWork[p.id] || 0;
-      if (w + 1.5 <= max) feasible.push(p);
+      if (w + creditPerSlot <= max) feasible.push(p);
     }
     return feasible;
   }
@@ -192,7 +196,8 @@ export class ScheduleGA {
 
         chrom[i] = { professorId: prof.id, roomId: room.id, dayIdx, timeIdx };
         this._occupy({ roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots);
-        profWork[prof.id] = (profWork[prof.id] || 0) + 1.5;
+        const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
+        profWork[prof.id] = (profWork[prof.id] || 0) + creditPerSlot;
         placed = true;
         break;
       }
@@ -201,7 +206,8 @@ export class ScheduleGA {
         if (bestFallback && bestFallback.professorId) {
           chrom[i] = { professorId: bestFallback.professorId, roomId: bestFallback.roomId, dayIdx: bestFallback.dayIdx, timeIdx: bestFallback.timeIdx };
           this._occupy({ roomId: chrom[i].roomId, professorId: chrom[i].professorId, sectionId, dayIdx: chrom[i].dayIdx, timeIdx: chrom[i].timeIdx }, roomSlots, profSlots, secSlots);
-          profWork[chrom[i].professorId] = (profWork[chrom[i].professorId] || 0) + 1.5;
+          const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
+          profWork[chrom[i].professorId] = (profWork[chrom[i].professorId] || 0) + creditPerSlot;
         } else {
           chrom[i] = { professorId: null, roomId: null, dayIdx: 0, timeIdx: 0 };
         }
@@ -246,7 +252,8 @@ export class ScheduleGA {
       roomSlots[rk] = (roomSlots[rk] || 0) + 1;
       profSlots[pk] = (profSlots[pk] || 0) + 1;
       secSlots[sk] = (secSlots[sk] || 0) + 1;
-      profWork[g.professorId] = (profWork[g.professorId] || 0) + 1.5;
+      const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
+      profWork[g.professorId] = (profWork[g.professorId] || 0) + creditPerSlot;
 
       const dailyKey = `${a.section.id}-${a.subject.id}-${g.dayIdx}`;
       if (dailySubjectCheck[dailyKey]) {

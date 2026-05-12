@@ -266,9 +266,17 @@ const Dashboard = ({ user, onLogout }) => {
             for (const room of roomPool) {
               for (const professor of profPool) {
                 // STRICT WORKLOAD CHECK FOR TARGETED ENGINE
-                const profCurrentLoad = temp.filter(s => String(s.professor?.id) === String(professor.id)).reduce((sum, s) => sum + 1.5, 0);
+                // Count unique subject-section pairs to get accurate workload
+                const profSchedules = temp.filter(s => String(s.professor?.id) === String(professor.id));
+                const uniqueLoad = new Map();
+                for (const s of profSchedules) {
+                  const subKey = `${s.subject?.id || 'x'}__${s.section?.id || 'x'}`;
+                  if (!uniqueLoad.has(subKey)) uniqueLoad.set(subKey, Number(s.subject?.credits) || 3);
+                }
+                const profCurrentLoad = Array.from(uniqueLoad.values()).reduce((sum, c) => sum + c, 0);
+                const subjectCredits = Number(subject.credits) || 3;
                 const profMax = professor.maxUnits || professor.maxHours || 12;
-                if (profCurrentLoad + 1.5 > profMax) continue; // Skip to next professor if adding 1.5 exceeds max
+                if (profCurrentLoad + subjectCredits > profMax) continue; // Skip if adding this subject exceeds max
 
                 if (constraints?.preventDoubleBooking) {
                   // ... (keep the rest of your preventDoubleBooking logic below this line)

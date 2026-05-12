@@ -40,7 +40,18 @@ function ProfessorWorkload({ professors, schedules }) {
       <div className="workload-list">
         {professors.map(professor => {
           const profSchedules = schedules.filter(s => matchesProfessor(s, professor));
-          const units = profSchedules.reduce((total, s) => total + (Number(s.subject?.credits) || 3), 0);
+
+          // Count unique subject-section pairs to avoid double-counting multi-meeting subjects
+          const uniqueSubjectSections = new Map();
+          for (const s of profSchedules) {
+            const subjectId = s.subject?.id || s.subject?.code || 'unknown';
+            const sectionId = s.section?.id || 'no-section';
+            const key = `${subjectId}__${sectionId}`;
+            if (!uniqueSubjectSections.has(key)) {
+              uniqueSubjectSections.set(key, Number(s.subject?.credits) || 3);
+            }
+          }
+          const units = Array.from(uniqueSubjectSections.values()).reduce((sum, c) => sum + c, 0);
           const cap = Math.max(1, Number(professor.maxUnits || professor.maxHours || 12));
           const utilization = (units / cap) * 100;
 
