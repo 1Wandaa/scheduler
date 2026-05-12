@@ -8,11 +8,11 @@ const SubjectManagement = ({ subjects }) => {
   const [currentId, setCurrentId] = useState(null);
 
   const [formData, setFormData] = useState({
-    id: '', code: '', name: '', department: 'Computer Science', credits: 3, capacity: 40, requiredLab: false, hoursPerWeek: 3
+    id: '', code: '', name: '', department: 'Computer Science', credits: 3, requiredLab: false, hoursPerWeek: 3
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', code: '', name: '', department: 'Computer Science', credits: 3, capacity: 40, requiredLab: false, hoursPerWeek: 3 });
+    setFormData({ id: '', code: '', name: '', department: 'Computer Science', credits: 3, requiredLab: false, hoursPerWeek: 3 });
     setEditMode(false);
     setShowModal(true);
   };
@@ -62,7 +62,7 @@ const SubjectManagement = ({ subjects }) => {
       </div>
 
       <table className="data-table">
-        <thead><tr><th>Code</th><th>Name</th><th>Lab Required</th><th>Capacity</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Code</th><th>Name</th><th>Lab Required</th><th>Actions</th></tr></thead>
         <tbody>
           {subjects.map(s => (
             <tr key={s.id}>
@@ -77,7 +77,6 @@ const SubjectManagement = ({ subjects }) => {
                   {s.requiredLab ? 'Yes' : 'No'}
                 </span>
               </td>
-              <td style={{ color: 'var(--text-muted)' }}>{s.capacity} pax</td>
               <td>
                 <button style={{ color: 'var(--accent-primary)', border: 'none', background: 'none', cursor: 'pointer', marginRight: '15px', fontWeight: '500' }} onClick={() => handleOpenEdit(s)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Edit</button>
                 <button style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: '500' }} onClick={() => handleDelete(s.id)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Delete</button>
@@ -94,7 +93,6 @@ const SubjectManagement = ({ subjects }) => {
 
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Subject Code</label><input style={inputStyle} value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. CS101" /></div>
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Subject Name</label><input style={inputStyle} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Intro to Programming" /></div>
-            <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Student Capacity</label><input type="number" style={inputStyle} value={formData.capacity} onChange={e => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })} /></div>
 
             <div style={{ marginBottom: '25px', padding: '10px', background: 'var(--bg-main)', borderRadius: '6px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}>

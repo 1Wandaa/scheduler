@@ -230,10 +230,10 @@ const Dashboard = ({ user, onLogout }) => {
       // Keep a local view of schedules so we can detect conflicts in-run.
       const temp = [...schedules];
 
-      // Small bias: schedule "harder" things first.
+      // Small bias: schedule "harder" things first (Labs get priority).
       const ordered = [...assignments].sort((a, b) => {
-        const aHard = (a.subject?.requiredLab ? 2 : 0) + (Number(a.subject?.capacity || a.section?.studentCount || 0) || 0);
-        const bHard = (b.subject?.requiredLab ? 2 : 0) + (Number(b.subject?.capacity || b.section?.studentCount || 0) || 0);
+        const aHard = (a.subject?.requiredLab ? 1 : 0);
+        const bHard = (b.subject?.requiredLab ? 1 : 0);
         return bHard - aHard;
       });
 

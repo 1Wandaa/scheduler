@@ -39,17 +39,14 @@ const RoomManagement = ({ rooms }) => {
       hasProjector: formData.hasProjector,
     };
     if (editMode) {
-      await updateDoc(doc(db, 'rooms', currentId.toString()), {
-        ...payload,
-        capacity: deleteField(),
-      });
+      // Replaced the deleteField workaround with a pure payload update
+      await updateDoc(doc(db, 'rooms', currentId.toString()), payload);
     } else {
       const newId = formData.id || `R${Date.now().toString().slice(-4)}`;
       await addDoc(collection(db, 'rooms'), { ...payload, id: newId });
     }
     setShowModal(false);
   };
-
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this room?')) {
       try {
