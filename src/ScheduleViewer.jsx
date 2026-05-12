@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ScheduleTable from './ScheduleTable';
+import PrintableSchedule from './PrintableSchedule';
 
 function ScheduleViewer({ schedules, rooms, professors, sections }) {
     const [viewType, setViewType] = useState('room'); // 'room', 'faculty', 'section'
@@ -70,48 +71,26 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
 
                     <button className="btn" onClick={() => window.print()} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                        Print Schedule
+                        Print ISO Schedule
                     </button>
                 </div>
             </div>
 
-            <div className="print-area">
+            {/* This standard view hides when printing */}
+            <div className="no-print">
                 <ScheduleTable
                     schedules={filteredSchedules}
                     title={`${titlePrefix} SCHEDULE: ${titleName}`}
                 />
             </div>
-        </div>
-        import PrintableSchedule from './PrintableSchedule'; // Import at the top
 
-    // ... inside your component where you render the schedule grid ...
-
-    const handlePrint = () => {
-        window.print();
-    };
-
-    return (
-        <div>
-            {/* Add a Print Button */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-                <button className="btn" onClick={handlePrint}>
-                    🖨️ Print ISO Schedule
-                </button>
-            </div>
-
-            {/* Your normal UI grid goes here */}
-            <div className="normal-ui-grid">
-                {/* ... your existing schedule rendering ... */}
-            </div>
-
-            {/* Drop the hidden ISO component here. Pass the filtered schedule items to it. */}
+            {/* This ISO view is hidden on screen, but shows when printing */}
             <PrintableSchedule
-                scheduleItems={filteredScheduleForSelectedSection}
-                sectionName="BSCS 4C" // Pass the actively selected section name
+                scheduleItems={filteredSchedules}
+                sectionName={titleName}
                 semesterInfo="2nd Sem 2025-2026"
             />
         </div>
-    );
     );
 }
 
