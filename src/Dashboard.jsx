@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { initialRooms, initialProfessors, initialSubjects, initialSections } from './initial';
+import { initialRooms, initialProfessors, initialSubjects, initialSections, SEED_VERSION } from './initial';
 import { TIME_SLOTS, DAYS } from './index';
 import { db } from './firebase';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, writeBatch } from 'firebase/firestore';
 
 // --- COMPONENTS ---
 import UserManagement from './UserManagement';
@@ -119,14 +119,35 @@ const Dashboard = ({ user, onLogout }) => {
 
   useEffect(() => {
     const initializeData = async () => {
-      const roomsSnapshot = await getDocs(collection(db, 'rooms'));
-      if (roomsSnapshot.empty) {
-        const batch = writeBatch(db);
-        initialRooms.forEach(r => batch.set(doc(db, 'rooms', r.id.toString()), r));
-        initialProfessors.forEach(p => batch.set(doc(db, 'professors', p.id.toString()), p));
-        initialSubjects.forEach(s => batch.set(doc(db, 'subjects', s.id.toString()), s));
-        initialSections.forEach(sec => batch.set(doc(db, 'sections', sec.id.toString()), sec));
-        await batch.commit();
+      // Check if the database has the correct seed version
+      const versionDoc = await getDoc(doc(db, 'meta', 'seedVersion'));
+      const storedVersion = versionDoc.exists() ? versionDoc.data().version : null;
+
+      if (storedVersion !== SEED_VERSION) {
+        console.log(`Seed version mismatch: "${storedVersion}" vs "${SEED_VERSION}". Clearing old data and re-seeding...`);
+
+        // Delete all existing documents in these collections
+        const collectionsToWipe = ['rooms', 'professors', 'subjects', 'sections', 'schedules'];
+        for (const colName of collectionsToWipe) {
+          const snap = await getDocs(collection(db, colName));
+          if (!snap.empty) {
+            const batch = writeBatch(db);
+            snap.docs.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+          }
+        }
+
+        // Re-seed with the new initial data
+        const seedBatch = writeBatch(db);
+        initialRooms.forEach(r => seedBatch.set(doc(db, 'rooms', r.id.toString()), r));
+        initialProfessors.forEach(p => seedBatch.set(doc(db, 'professors', p.id.toString()), p));
+        initialSubjects.forEach(s => seedBatch.set(doc(db, 'subjects', s.id.toString()), s));
+        initialSections.forEach(sec => seedBatch.set(doc(db, 'sections', sec.id.toString()), sec));
+        await seedBatch.commit();
+
+        // Save the new seed version so this doesn't run again
+        await setDoc(doc(db, 'meta', 'seedVersion'), { version: SEED_VERSION });
+        console.log('Re-seeding complete.');
       }
     };
     initializeData();
