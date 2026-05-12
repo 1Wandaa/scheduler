@@ -144,71 +144,86 @@ export class ScheduleGA {
     return !roomSlots[rk] && !profSlots[pk] && !secSlots[sk];
   }
 
-  _occupy({ roomId, professorId, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots) {
-    roomSlots[`${roomId}-${dayIdx}-${timeIdx}`] = 1;
-    profSlots[`${professorId}-${dayIdx}-${timeIdx}`] = 1;
-    secSlots[`${sectionId}-${dayIdx}-${timeIdx}`] = 1;
-  }
+  _repair(chrom) {
+    if (!chrom || chrom.length === 0) return chrom;
 
-  for(let t = 0; t <this.config.repairTriesPerGene; t++) {
-  const prof = profs[this._randInt(profs.length)];
-  // Safety check if no specialized professors exist
-  if (!prof) break;
+    const roomSlots = {};
+    const profSlots = {};
+    const secSlots = {};
+    const profWork = {};
 
-  const room = rooms[this._randInt(rooms.length)];
-  // Add this safety check for the room!
-  if (!room) break;
+    const idxs = this._shuffle(Array.from({ length: chrom.length }, (_, i) => i));
 
-  const dayIdx = this._randInt(this.days.length);
-  const timeIdx = this._randInt(this.timeSlots.length);
+    for (const i of idxs) {
+      const a = this.assignments[i];
+      const sectionId = a.section.id;
+      const subjectCredits = Number(a.subject.credits) || 3;
 
-  const ok = this._isSlotFree(
-    { roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx },
-    roomSlots,
-    profSlots,
-    secSlots
-  );
+      const rooms = this._shuffle([...this._eligibleRoomsFor(a)]);
+      const profs = this._shuffle([...this._eligibleProfsFor(a, profWork)]);
 
-  // Track a fallback that minimizes conflicts in case we cannot find a perfect placement.
-  if (!ok) {
-    const rk = `${room.id}-${dayIdx}-${timeIdx}`;
-    const pk = `${prof.id}-${dayIdx}-${timeIdx}`;
-    const sk = `${sectionId}-${dayIdx}-${timeIdx}`;
-    const conflicts = (roomSlots[rk] ? 1 : 0) + (profSlots[pk] ? 1 : 0) + (secSlots[sk] ? 1 : 0);
-    if (!bestFallback || conflicts < bestFallback.conflicts) {
-      bestFallback = { roomId: room.id, professorId: prof.id, dayIdx, timeIdx, conflicts };
+      let placed = false;
+      let bestFallback = null;
+
+      for (let t = 0; t < this.config.repairTriesPerGene; t++) {
+        const prof = profs[this._randInt(profs.length)];
+        // Safety check if no specialized professors exist
+        if (!prof) break;
+
+        const room = rooms[this._randInt(rooms.length)];
+        // Safety check for the room
+        if (!room) break;
+
+        const dayIdx = this._randInt(this.days.length);
+        const timeIdx = this._randInt(this.timeSlots.length);
+
+        const ok = this._isSlotFree(
+          { roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx },
+          roomSlots,
+          profSlots,
+          secSlots
+        );
+
+        if (!ok) {
+          const rk = `${room.id}-${dayIdx}-${timeIdx}`;
+          const pk = `${prof.id}-${dayIdx}-${timeIdx}`;
+          const sk = `${sectionId}-${dayIdx}-${timeIdx}`;
+          const conflicts = (roomSlots[rk] ? 1 : 0) + (profSlots[pk] ? 1 : 0) + (secSlots[sk] ? 1 : 0);
+          if (!bestFallback || conflicts < bestFallback.conflicts) {
+            bestFallback = { roomId: room.id, professorId: prof.id, dayIdx, timeIdx, conflicts };
+          }
+          continue;
+        }
+
+        const p = this.profMap[prof.id];
+        const max = p ? (p.maxUnits || p.maxHours || 12) : Infinity;
+        const w = profWork[prof.id] || 0;
+
+        if (w + subjectCredits > max) {
+          if (!bestFallback) bestFallback = { roomId: room.id, professorId: prof.id, dayIdx, timeIdx, conflicts: 0 };
+          continue;
+        }
+
+        chrom[i] = { professorId: prof.id, roomId: room.id, dayIdx, timeIdx };
+        this._occupy({ roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots);
+        profWork[prof.id] = w + subjectCredits;
+        placed = true;
+        break;
+      }
+
+      if (!placed) {
+        const g = bestFallback || chrom[i];
+        if (g && g.professorId) {
+          chrom[i] = { professorId: g.professorId, roomId: g.roomId, dayIdx: g.dayIdx, timeIdx: g.timeIdx };
+          this._occupy({ roomId: chrom[i].roomId, professorId: chrom[i].professorId, sectionId, dayIdx: chrom[i].dayIdx, timeIdx: chrom[i].timeIdx }, roomSlots, profSlots, secSlots);
+          profWork[chrom[i].professorId] = (profWork[chrom[i].professorId] || 0) + subjectCredits;
+        }
+      }
     }
-    continue;
-  }
 
-  // Workload feasibility (softly enforced here, still penalized by fitness).
-  const p = this.profMap[prof.id];
-  const max = p ? Math.ceil((p.maxUnits || p.maxHours || 12) / 1.5) : Infinity;
-  const w = profWork[prof.id] || 0;
-  if (w + 1 > max) {
-    // Keep as fallback, but try to find another professor first.
-    if (!bestFallback) bestFallback = { roomId: room.id, professorId: prof.id, dayIdx, timeIdx, conflicts: 0 };
-    continue;
+    return chrom;
   }
-
-  chrom[i] = { professorId: prof.id, roomId: room.id, dayIdx, timeIdx };
-  this._occupy({ roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots);
-  profWork[prof.id] = (profWork[prof.id] || 0) + 1;
-  placed = true;
-  break;
 }
-
-if (!placed) {
-  // Fall back to the least-conflicting option we saw.
-  const g = bestFallback || chrom[i];
-  chrom[i] = { professorId: g.professorId, roomId: g.roomId, dayIdx: g.dayIdx, timeIdx: g.timeIdx };
-  this._occupy({ roomId: chrom[i].roomId, professorId: chrom[i].professorId, sectionId, dayIdx: chrom[i].dayIdx, timeIdx: chrom[i].timeIdx }, roomSlots, profSlots, secSlots);
-  profWork[chrom[i].professorId] = (profWork[chrom[i].professorId] || 0) + 1;
-}
-    }
-
-return chrom;
-  }
 
 _randomChromosome() {
   const chrom = this.assignments.map(a => {
