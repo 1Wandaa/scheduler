@@ -18,7 +18,7 @@ const PENALTY = {
   ROOM_CONFLICT: -100,
   PROF_CONFLICT: -100,
   SECTION_CONFLICT: -100,
-  SAME_DAY_CONFLICT: -90, // Heavily penalize multiple meetings on the same day
+  SAME_DAY_CONFLICT: -90,
   LAB_MISMATCH: -80,
   WORKLOAD_EXCEEDED: -60,
 };
@@ -64,7 +64,6 @@ export class ScheduleGA {
         const sub = this.subjects.find(s => s.id === subId || s.code === subId);
         if (!sub) continue;
 
-        // Split subjects into 1.5-hour meetings. Example: 3 credits / 1.5 = 2 meetings.
         const credits = Number(sub.credits) || 3;
         const meetings = Math.max(1, Math.ceil(credits / 1.5));
 
@@ -112,28 +111,22 @@ export class ScheduleGA {
     const subject = a.subject;
     let pool = this.professors;
     if (subject) {
-      const validProfs = this.professors.filter(p => {
+      pool = this.professors.filter(p => {
         const specs = p.specialization || [];
-        return specs.includes(subject.id) ||
-          specs.includes(subject.code) ||
-          specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
+        return specs.includes(subject.id) || specs.includes(subject.code) || specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
       });
-      pool = validProfs;
     }
 
     if (!profWork) return pool;
 
     const feasible = [];
-    const fallback = [];
-
     for (const p of pool) {
       const max = p.maxUnits || p.maxHours || 12;
       const w = profWork[p.id] || 0;
-      // Compare against 1.5 hours per block
+      // STRICT WORKLOAD CHECK: No fallbacks allowed.
       if (w + 1.5 <= max) feasible.push(p);
-      fallback.push(p);
     }
-    return feasible.length > 0 ? feasible : fallback;
+    return feasible;
   }
 
   _isSlotFree({ roomId, professorId, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots) {
@@ -197,44 +190,36 @@ export class ScheduleGA {
           continue;
         }
 
-        const p = this.profMap[prof.id];
-        const max = p ? (p.maxUnits || p.maxHours || 12) : Infinity;
-        const w = profWork[prof.id] || 0;
-
-        if (w + 1.5 > max) {
-          if (!bestFallback) bestFallback = { roomId: room.id, professorId: prof.id, dayIdx, timeIdx, conflicts: 0 };
-          continue;
-        }
-
         chrom[i] = { professorId: prof.id, roomId: room.id, dayIdx, timeIdx };
         this._occupy({ roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots);
-        profWork[prof.id] = w + 1.5;
+        profWork[prof.id] = (profWork[prof.id] || 0) + 1.5;
         placed = true;
         break;
       }
 
       if (!placed) {
-        const g = bestFallback || chrom[i];
-        if (g && g.professorId) {
-          chrom[i] = { professorId: g.professorId, roomId: g.roomId, dayIdx: g.dayIdx, timeIdx: g.timeIdx };
+        if (bestFallback && bestFallback.professorId) {
+          chrom[i] = { professorId: bestFallback.professorId, roomId: bestFallback.roomId, dayIdx: bestFallback.dayIdx, timeIdx: bestFallback.timeIdx };
           this._occupy({ roomId: chrom[i].roomId, professorId: chrom[i].professorId, sectionId, dayIdx: chrom[i].dayIdx, timeIdx: chrom[i].timeIdx }, roomSlots, profSlots, secSlots);
           profWork[chrom[i].professorId] = (profWork[chrom[i].professorId] || 0) + 1.5;
+        } else {
+          // Nullify to strictly mark as unschedulable (e.g. all faculty full)
+          chrom[i] = { professorId: null, roomId: null, dayIdx: 0, timeIdx: 0 };
         }
       }
     }
-
     return chrom;
   }
 
   _randomChromosome() {
     const chrom = this.assignments.map(a => {
       const profs = this._eligibleProfsFor(a);
-      const prof = profs[this._randInt(profs.length)] || this.professors[0];
+      const prof = profs[this._randInt(profs.length)];
       const rooms = this._eligibleRoomsFor(a);
-      const room = rooms[this._randInt(rooms.length)] || this.rooms[0];
+      const room = rooms[this._randInt(rooms.length)];
       return {
-        professorId: prof?.id,
-        roomId: room?.id,
+        professorId: prof?.id || null,
+        roomId: room?.id || null,
         dayIdx: this._randInt(this.days.length),
         timeIdx: this._randInt(this.timeSlots.length),
       };
@@ -245,11 +230,15 @@ export class ScheduleGA {
   _fitness(chrom) {
     let hardScore = 0, softScore = 0, hardViolations = 0;
     const roomSlots = {}, profSlots = {}, secSlots = {}, profWork = {};
-    const dailySubjectCheck = {}; // Track to prevent same subject on same day
+    const dailySubjectCheck = {};
 
     for (let i = 0; i < chrom.length; i++) {
       const g = chrom[i], a = this.assignments[i];
-      if (!g || !g.professorId) continue;
+      if (!g || !g.professorId || !g.roomId) {
+        hardScore += PENALTY.PROF_CONFLICT * 2; // Punish unassigned classes
+        hardViolations++;
+        continue;
+      }
 
       const rk = `${g.roomId}-${g.dayIdx}-${g.timeIdx}`;
       const pk = `${g.professorId}-${g.dayIdx}-${g.timeIdx}`;
@@ -258,11 +247,8 @@ export class ScheduleGA {
       roomSlots[rk] = (roomSlots[rk] || 0) + 1;
       profSlots[pk] = (profSlots[pk] || 0) + 1;
       secSlots[sk] = (secSlots[sk] || 0) + 1;
-
-      // Each block = 1.5 hours of load
       profWork[g.professorId] = (profWork[g.professorId] || 0) + 1.5;
 
-      // Penalize heavily if the section is taking the exact same subject on the same day twice
       const dailyKey = `${a.section.id}-${a.subject.id}-${g.dayIdx}`;
       if (dailySubjectCheck[dailyKey]) {
         hardScore += PENALTY.SAME_DAY_CONFLICT;
@@ -271,20 +257,17 @@ export class ScheduleGA {
       dailySubjectCheck[dailyKey] = true;
     }
 
-    // Hard: conflicts
     for (const k in roomSlots) if (roomSlots[k] > 1) { const o = roomSlots[k] - 1; hardScore += PENALTY.ROOM_CONFLICT * o; hardViolations += o; }
     for (const k in profSlots) if (profSlots[k] > 1) { const o = profSlots[k] - 1; hardScore += PENALTY.PROF_CONFLICT * o; hardViolations += o; }
     for (const k in secSlots) if (secSlots[k] > 1) { const o = secSlots[k] - 1; hardScore += PENALTY.SECTION_CONFLICT * o; hardViolations += o; }
 
-    // Hard: per-gene
     for (let i = 0; i < chrom.length; i++) {
       const g = chrom[i], a = this.assignments[i];
-      if (!g) continue;
+      if (!g || !g.roomId) continue;
       const room = this.roomMap[g.roomId];
       if (a.subject.requiredLab && room && !room.hasComputers) { hardScore += PENALTY.LAB_MISMATCH; hardViolations++; }
     }
 
-    // Hard: workload tracked directly by 1.5hr increments
     for (const pid in profWork) {
       const prof = this.profMap[pid];
       if (prof) {
@@ -297,9 +280,8 @@ export class ScheduleGA {
       }
     }
 
-    // Soft: specialization
     for (let i = 0; i < chrom.length; i++) {
-      if (!chrom[i]) continue;
+      if (!chrom[i] || !chrom[i].professorId) continue;
       const specs = this.profSpecMap[chrom[i].professorId];
       if (specs && specs.size > 0) {
         const name = (this.assignments[i].subject.name || '').toLowerCase();
@@ -326,24 +308,20 @@ export class ScheduleGA {
 
   _mutate(chrom) {
     for (let i = 0; i < chrom.length; i++) {
-      if (!chrom[i]) continue;
+      if (!chrom[i] || !chrom[i].professorId) continue;
       if (Math.random() < this.config.mutationRate) {
         const g = chrom[i], a = this.assignments[i];
         switch (Math.floor(Math.random() * 4)) {
           case 0: {
             const pool = this._eligibleRoomsFor(a);
-            if (pool && pool.length > 0) {
-              g.roomId = pool[this._randInt(pool.length)].id;
-            }
+            if (pool && pool.length > 0) g.roomId = pool[this._randInt(pool.length)].id;
             break;
           }
           case 1: g.dayIdx = this._randInt(this.days.length); break;
           case 2: g.timeIdx = this._randInt(this.timeSlots.length); break;
           case 3: {
             const dp = this._eligibleProfsFor(a);
-            if (dp && dp.length > 0) {
-              g.professorId = dp[this._randInt(dp.length)].id;
-            }
+            if (dp && dp.length > 0) g.professorId = dp[this._randInt(dp.length)].id;
             break;
           }
         }
@@ -409,16 +387,18 @@ export class ScheduleGA {
   _toSchedule(chrom) {
     if (!chrom) return [];
     return chrom.map((g, i) => {
-      if (!g || !g.professorId) return null;
       const a = this.assignments[i];
+      if (!g || !g.professorId || !g.roomId) {
+        return { failed: true, subject: a.subject, section: a.section, reason: 'No available faculty (Workload full or missing specialization)' };
+      }
       return {
         subject: a.subject,
         section: a.section,
-        professor: this.profMap[g.professorId] || { id: g.professorId, name: 'Unknown' },
-        room: this.roomMap[g.roomId] || { id: g.roomId, name: 'Unknown' },
+        professor: this.profMap[g.professorId],
+        room: this.roomMap[g.roomId],
         day: this.days[g.dayIdx],
         timeSlot: this.timeSlots[g.timeIdx],
       };
-    }).filter(Boolean);
+    });
   }
 }

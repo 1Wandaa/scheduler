@@ -71,10 +71,16 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
 
       // Validate the GA output before claiming success
       for (const entry of gaResult.schedule) {
+        if (entry.failed) {
+          unscheduledResults.push(entry); // Captures overloaded faculty errors
+          continue;
+        }
+
         if (respectLabs && entry.subject?.requiredLab && !entry.room?.hasComputers) {
           unscheduledResults.push({ ...entry, reason: 'Subject requires a computer lab.' });
           continue;
         }
+        // ... (keep the rest of your isConflict logic below this line)
 
         const sameTimeSlot = (a, b) => a.day === b.day && String(a.timeSlot?.id) === String(b.timeSlot?.id);
 
@@ -140,7 +146,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '5px' }}>Engine Mode</label>
           <select value={engineMode} onChange={(e) => { setEngineMode(e.target.value); setTargetId(''); }} className="input-group select" style={{ width: '100%', padding: '10px', borderRadius: '6px' }}>
-            <option value="ga">Full Timetable (Genetic Algorithm)</option>
+            <option value="ga">Full Timetable (GA)</option>
             <option value="faculty">Targeted: Single Faculty</option>
             <option value="room">Targeted: Single Room</option>
             <option value="section">Targeted: Single Section</option>

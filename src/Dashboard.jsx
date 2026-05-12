@@ -265,7 +265,13 @@ const Dashboard = ({ user, onLogout }) => {
           for (const timeSlot of TIME_SLOTS) {
             for (const room of roomPool) {
               for (const professor of profPool) {
+                // STRICT WORKLOAD CHECK FOR TARGETED ENGINE
+                const profCurrentLoad = temp.filter(s => String(s.professor?.id) === String(professor.id)).reduce((sum, s) => sum + 1.5, 0);
+                const profMax = professor.maxUnits || professor.maxHours || 12;
+                if (profCurrentLoad + 1.5 > profMax) continue; // Skip to next professor if adding 1.5 exceeds max
+
                 if (constraints?.preventDoubleBooking) {
+                  // ... (keep the rest of your preventDoubleBooking logic below this line)
                   const roomBusy = temp.some(s =>
                     String(s.room?.id) === String(room.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
                   const profBusy = temp.some(s =>
