@@ -13,7 +13,18 @@ function App() {
 
   // Listen for Firebase Auth state changes (persists across reloads)
   useEffect(() => {
+    // --- ADD THIS BLOCK TO UPDATE THE FAVICON ---
+    let link = document.querySelector("link[rel~='icon']");
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    link.href = '/logo.jpg?v=1';
+    // --------------------------------------------
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // ... existing auth code ...
       if (firebaseUser) {
         // User is signed in — fetch their role from Firestore
         try {
