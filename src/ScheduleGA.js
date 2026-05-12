@@ -1,7 +1,6 @@
 /**
  * ScheduleGA - Genetic Algorithm for University Timetabling
- * 
- * Chromosome = array of genes, one per subject-section slot.
+ * * Chromosome = array of genes, one per subject-section slot.
  * Gene = { professorId, roomId, dayIdx, timeIdx }
  */
 
@@ -13,9 +12,7 @@ const DEFAULT_CONFIG = {
   elitismCount: 4,
   tournamentSize: 5,
   stagnationLimit: 50,
-  // When true, we apply a repair pass to push chromosomes toward feasibility.
   repair: true,
-  // How many random attempts per gene during repair.
   repairTriesPerGene: 40,
 };
 
@@ -67,10 +64,9 @@ export class ScheduleGA {
       for (const subId of (sec.subjects || [])) {
         const sub = this.subjects.find(s => s.id === subId || s.code === subId);
         if (!sub) continue;
-        const slots = Math.max(1, Math.ceil((sub.hoursPerWeek || sub.credits || 3) / 1.5));
-        for (let i = 0; i < slots; i++) {
-          list.push({ subject: sub, section: sec, slotIndex: i });
-        }
+
+        // 1 Subject = 1 Schedule Block.
+        list.push({ subject: sub, section: sec });
       }
     }
     return list;
@@ -118,9 +114,7 @@ export class ScheduleGA {
           specs.includes(subject.code) ||
           specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
       });
-
-      // Strict constraint: Enforce validProfs only. 
-      // If none are qualified, return an empty array to force an error.
+      // Strict constraint: Enforce validProfs only.
       pool = validProfs;
     }
 
@@ -128,10 +122,12 @@ export class ScheduleGA {
 
     const feasible = [];
     const fallback = [];
+    const subjectCredits = subject ? (Number(subject.credits) || 3) : 3;
+
     for (const p of pool) {
-      const max = Math.ceil((p.maxUnits || p.maxHours || 12) / 1.5);
+      const max = p.maxUnits || p.maxHours || 12;
       const w = profWork[p.id] || 0;
-      if (w < max) feasible.push(p);
+      if (w + subjectCredits <= max) feasible.push(p);
       fallback.push(p);
     }
     return feasible.length > 0 ? feasible : fallback;
@@ -142,6 +138,12 @@ export class ScheduleGA {
     const pk = `${professorId}-${dayIdx}-${timeIdx}`;
     const sk = `${sectionId}-${dayIdx}-${timeIdx}`;
     return !roomSlots[rk] && !profSlots[pk] && !secSlots[sk];
+  }
+
+  _occupy({ roomId, professorId, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots) {
+    roomSlots[`${roomId}-${dayIdx}-${timeIdx}`] = 1;
+    profSlots[`${professorId}-${dayIdx}-${timeIdx}`] = 1;
+    secSlots[`${sectionId}-${dayIdx}-${timeIdx}`] = 1;
   }
 
   _repair(chrom) {
@@ -167,11 +169,9 @@ export class ScheduleGA {
 
       for (let t = 0; t < this.config.repairTriesPerGene; t++) {
         const prof = profs[this._randInt(profs.length)];
-        // Safety check if no specialized professors exist
         if (!prof) break;
 
         const room = rooms[this._randInt(rooms.length)];
-        // Safety check for the room
         if (!room) break;
 
         const dayIdx = this._randInt(this.days.length);
@@ -223,213 +223,189 @@ export class ScheduleGA {
 
     return chrom;
   }
-}
 
-_randomChromosome() {
-  const chrom = this.assignments.map(a => {
-    const profs = this._eligibleProfsFor(a);
-    const prof = profs[this._randInt(profs.length)] || this.professors[0];
-    const rooms = this._eligibleRoomsFor(a);
-    const room = rooms[this._randInt(rooms.length)] || this.rooms[0];
-    return {
-      professorId: prof?.id,
-      roomId: room?.id,
-      dayIdx: this._randInt(this.days.length),
-      timeIdx: this._randInt(this.timeSlots.length),
-    };
-  });
-  return this.config.repair ? this._repair(chrom) : chrom;
-}
-
-_fitness(chrom) {
-  let hardScore = 0, softScore = 0, hardViolations = 0;
-  const roomSlots = {}, profSlots = {}, secSlots = {}, profWork = {};
-
-  for (let i = 0; i < chrom.length; i++) {
-    const g = chrom[i], a = this.assignments[i];
-    const rk = `${g.roomId}-${g.dayIdx}-${g.timeIdx}`;
-    const pk = `${g.professorId}-${g.dayIdx}-${g.timeIdx}`;
-    const sk = `${a.section.id}-${g.dayIdx}-${g.timeIdx}`;
-    roomSlots[rk] = (roomSlots[rk] || 0) + 1;
-    profSlots[pk] = (profSlots[pk] || 0) + 1;
-    secSlots[sk] = (secSlots[sk] || 0) + 1;
-    profWork[g.professorId] = (profWork[g.professorId] || 0) + 1;
+  _randomChromosome() {
+    const chrom = this.assignments.map(a => {
+      const profs = this._eligibleProfsFor(a);
+      const prof = profs[this._randInt(profs.length)] || this.professors[0];
+      const rooms = this._eligibleRoomsFor(a);
+      const room = rooms[this._randInt(rooms.length)] || this.rooms[0];
+      return {
+        professorId: prof?.id,
+        roomId: room?.id,
+        dayIdx: this._randInt(this.days.length),
+        timeIdx: this._randInt(this.timeSlots.length),
+      };
+    });
+    return this.config.repair ? this._repair(chrom) : chrom;
   }
 
-  // Hard: conflicts
-  for (const k in roomSlots) if (roomSlots[k] > 1) { const o = roomSlots[k] - 1; hardScore += PENALTY.ROOM_CONFLICT * o; hardViolations += o; }
-  for (const k in profSlots) if (profSlots[k] > 1) { const o = profSlots[k] - 1; hardScore += PENALTY.PROF_CONFLICT * o; hardViolations += o; }
-  for (const k in secSlots) if (secSlots[k] > 1) { const o = secSlots[k] - 1; hardScore += PENALTY.SECTION_CONFLICT * o; hardViolations += o; }
+  _fitness(chrom) {
+    let hardScore = 0, softScore = 0, hardViolations = 0;
+    const roomSlots = {}, profSlots = {}, secSlots = {}, profWork = {};
 
-  // Hard: per-gene
-  for (let i = 0; i < chrom.length; i++) {
-    const g = chrom[i], a = this.assignments[i], room = this.roomMap[g.roomId];
-    if (a.subject.requiredLab && room && !room.hasComputers) { hardScore += PENALTY.LAB_MISMATCH; hardViolations++; }
-  }
-
-  // Hard: workload
-  for (const pid in profWork) {
-    const prof = this.profMap[pid];
-    if (prof) {
-      const max = Math.ceil((prof.maxUnits || prof.maxHours || 12) / 1.5);
-      if (profWork[pid] > max) { const o = profWork[pid] - max; hardScore += PENALTY.WORKLOAD_EXCEEDED * o; hardViolations += o; }
-    }
-  }
-
-  // Soft: specialization
-  for (let i = 0; i < chrom.length; i++) {
-    const specs = this.profSpecMap[chrom[i].professorId];
-    if (specs && specs.size > 0) {
-      const name = (this.assignments[i].subject.name || '').toLowerCase();
-      for (const sp of specs) { if (name.includes(sp)) { softScore += BONUS.SPECIALIZATION_MATCH; break; } }
-    }
-  }
-
-  // Soft: workload balance
-  const wv = Object.values(profWork);
-  if (wv.length > 1) {
-    const avg = wv.reduce((a, b) => a + b, 0) / wv.length;
-    const variance = wv.reduce((s, v) => s + (v - avg) ** 2, 0) / wv.length;
-    softScore += Math.max(0, BONUS.WORKLOAD_BALANCE - variance * 2);
-  }
-
-  // Soft: section day spread
-  const secDays = {};
-  for (let i = 0; i < chrom.length; i++) {
-    const sid = this.assignments[i].section.id;
-    if (!secDays[sid]) secDays[sid] = new Set();
-    secDays[sid].add(chrom[i].dayIdx);
-  }
-  for (const sid in secDays) if (secDays[sid].size >= 3) softScore += BONUS.SPREAD_ACROSS_WEEK;
-
-  // Soft: no consecutive overload for professors
-  const profDay = {};
-  for (let i = 0; i < chrom.length; i++) {
-    const key = `${chrom[i].professorId}-${chrom[i].dayIdx}`;
-    if (!profDay[key]) profDay[key] = [];
-    profDay[key].push(chrom[i].timeIdx);
-  }
-  for (const key in profDay) {
-    const s = profDay[key].sort((a, b) => a - b);
-    let consec = 1, bad = false;
-    for (let i = 1; i < s.length; i++) { if (s[i] === s[i - 1] + 1) { consec++; if (consec >= 3) bad = true; } else consec = 1; }
-    if (!bad && s.length > 0) softScore += BONUS.NO_CONSECUTIVE_OVERLOAD;
-  }
-
-  return { score: hardScore + softScore, hardViolations, hardScore, softScore };
-}
-
-_selectParent(pop, fits) {
-  let best = Math.floor(Math.random() * pop.length);
-  for (let i = 1; i < this.config.tournamentSize; i++) {
-    const idx = Math.floor(Math.random() * pop.length);
-    if (fits[idx].score > fits[best].score) best = idx;
-  }
-  return pop[best];
-}
-
-_crossover(p1, p2) {
-  if (Math.random() > this.config.crossoverRate) return p1.map(g => ({ ...g }));
-  return p1.map((g, i) => Math.random() < 0.5 ? { ...g } : { ...p2[i] });
-}
-
-_mutate(chrom) {
-  for (let i = 0; i < chrom.length; i++) {
-    if (!chrom[i]) continue;
-    if (Math.random() < this.config.mutationRate) {
+    for (let i = 0; i < chrom.length; i++) {
       const g = chrom[i], a = this.assignments[i];
-      switch (Math.floor(Math.random() * 4)) {
-        case 0: {
-          const pool = this._eligibleRoomsFor(a);
-          // Add a check to ensure the pool isn't empty before reading .id
-          if (pool && pool.length > 0) {
-            g.roomId = pool[this._randInt(pool.length)].id;
-          }
-          break;
-        }
-        case 1: g.dayIdx = this._randInt(this.days.length); break;
-        case 2: g.timeIdx = this._randInt(this.timeSlots.length); break;
-        case 3: {
-          const dp = this._eligibleProfsFor(a);
-          if (dp && dp.length > 0) {
-            g.professorId = dp[this._randInt(dp.length)].id;
-          }
-          break;
+      if (!g || !g.professorId) continue;
+
+      const rk = `${g.roomId}-${g.dayIdx}-${g.timeIdx}`;
+      const pk = `${g.professorId}-${g.dayIdx}-${g.timeIdx}`;
+      const sk = `${a.section.id}-${g.dayIdx}-${g.timeIdx}`;
+
+      roomSlots[rk] = (roomSlots[rk] || 0) + 1;
+      profSlots[pk] = (profSlots[pk] || 0) + 1;
+      secSlots[sk] = (secSlots[sk] || 0) + 1;
+      profWork[g.professorId] = (profWork[g.professorId] || 0) + (Number(a.subject.credits) || 3);
+    }
+
+    // Hard: conflicts
+    for (const k in roomSlots) if (roomSlots[k] > 1) { const o = roomSlots[k] - 1; hardScore += PENALTY.ROOM_CONFLICT * o; hardViolations += o; }
+    for (const k in profSlots) if (profSlots[k] > 1) { const o = profSlots[k] - 1; hardScore += PENALTY.PROF_CONFLICT * o; hardViolations += o; }
+    for (const k in secSlots) if (secSlots[k] > 1) { const o = secSlots[k] - 1; hardScore += PENALTY.SECTION_CONFLICT * o; hardViolations += o; }
+
+    // Hard: per-gene
+    for (let i = 0; i < chrom.length; i++) {
+      const g = chrom[i], a = this.assignments[i];
+      if (!g) continue;
+      const room = this.roomMap[g.roomId];
+      if (a.subject.requiredLab && room && !room.hasComputers) { hardScore += PENALTY.LAB_MISMATCH; hardViolations++; }
+    }
+
+    // Hard: workload tracked directly by credits
+    for (const pid in profWork) {
+      const prof = this.profMap[pid];
+      if (prof) {
+        const max = prof.maxUnits || prof.maxHours || 12;
+        if (profWork[pid] > max) {
+          const o = profWork[pid] - max;
+          hardScore += PENALTY.WORKLOAD_EXCEEDED * o;
+          hardViolations += 1;
         }
       }
     }
+
+    // Soft: specialization
+    for (let i = 0; i < chrom.length; i++) {
+      if (!chrom[i]) continue;
+      const specs = this.profSpecMap[chrom[i].professorId];
+      if (specs && specs.size > 0) {
+        const name = (this.assignments[i].subject.name || '').toLowerCase();
+        for (const sp of specs) { if (name.includes(sp)) { softScore += BONUS.SPECIALIZATION_MATCH; break; } }
+      }
+    }
+
+    return { score: hardScore + softScore, hardViolations, hardScore, softScore };
   }
-  return this.config.repair ? this._repair(chrom) : chrom;
-}
+
+  _selectParent(pop, fits) {
+    let best = Math.floor(Math.random() * pop.length);
+    for (let i = 1; i < this.config.tournamentSize; i++) {
+      const idx = Math.floor(Math.random() * pop.length);
+      if (fits[idx].score > fits[best].score) best = idx;
+    }
+    return pop[best];
+  }
+
+  _crossover(p1, p2) {
+    if (Math.random() > this.config.crossoverRate) return p1.map(g => ({ ...g }));
+    return p1.map((g, i) => Math.random() < 0.5 ? { ...g } : { ...p2[i] });
+  }
+
+  _mutate(chrom) {
+    for (let i = 0; i < chrom.length; i++) {
+      if (!chrom[i]) continue;
+      if (Math.random() < this.config.mutationRate) {
+        const g = chrom[i], a = this.assignments[i];
+        switch (Math.floor(Math.random() * 4)) {
+          case 0: {
+            const pool = this._eligibleRoomsFor(a);
+            if (pool && pool.length > 0) {
+              g.roomId = pool[this._randInt(pool.length)].id;
+            }
+            break;
+          }
+          case 1: g.dayIdx = this._randInt(this.days.length); break;
+          case 2: g.timeIdx = this._randInt(this.timeSlots.length); break;
+          case 3: {
+            const dp = this._eligibleProfsFor(a);
+            if (dp && dp.length > 0) {
+              g.professorId = dp[this._randInt(dp.length)].id;
+            }
+            break;
+          }
+        }
+      }
+    }
+    return this.config.repair ? this._repair(chrom) : chrom;
+  }
 
   async solve(onProgress = null) {
-  const { populationSize, maxGenerations, elitismCount, stagnationLimit } = this.config;
-  if (this.assignments.length === 0) {
-    return { schedule: [], fitness: { score: 0, hardViolations: 0 }, stats: { generations: 0, totalAssignments: 0, hardViolations: 0 } };
-  }
-
-  let pop = Array.from({ length: populationSize }, () => this._randomChromosome());
-  let bestEver = null, bestFit = { score: -Infinity, hardViolations: Infinity };
-  let stag = 0, genRan = 0;
-  const baseMutation = this.config.mutationRate;
-
-  for (let gen = 0; gen < maxGenerations; gen++) {
-    genRan = gen + 1;
-    const fits = pop.map(ch => this._fitness(ch));
-    let bIdx = 0;
-    for (let i = 1; i < fits.length; i++) if (fits[i].score > fits[bIdx].score) bIdx = i;
-
-    if (fits[bIdx].score > bestFit.score) {
-      bestFit = { ...fits[bIdx] };
-      bestEver = pop[bIdx].map(g => ({ ...g }));
-      stag = 0;
-    } else stag++;
-
-    if (onProgress) onProgress(gen + 1, bestFit, maxGenerations);
-
-    // Adaptive mutation: increase exploration during stagnation or when still infeasible.
-    const stagFactor = Math.min(1, stag / Math.max(1, stagnationLimit));
-    const infeasibleBoost = bestFit.hardViolations > 0 ? 0.25 : 0;
-    this.config.mutationRate = Math.min(0.6, Math.max(0.05, baseMutation * (1 + 1.5 * stagFactor) + infeasibleBoost));
-
-    if (bestFit.hardViolations === 0 && stag >= Math.floor(stagnationLimit / 2)) break;
-    if (stag >= stagnationLimit) break;
-
-    const sorted = fits.map((f, i) => ({ f, i })).sort((a, b) => b.f.score - a.f.score);
-    const next = [];
-    for (let i = 0; i < elitismCount && i < sorted.length; i++) next.push(pop[sorted[i].i].map(g => ({ ...g })));
-    while (next.length < populationSize) {
-      let child = this._crossover(this._selectParent(pop, fits), this._selectParent(pop, fits));
-      child = this._mutate(child);
-      next.push(child);
+    const { populationSize, maxGenerations, elitismCount, stagnationLimit } = this.config;
+    if (this.assignments.length === 0) {
+      return { schedule: [], fitness: { score: 0, hardViolations: 0 }, stats: { generations: 0, totalAssignments: 0, hardViolations: 0 } };
     }
-    pop = next;
 
-    if (gen % 10 === 0) await new Promise(r => setTimeout(r, 0));
+    let pop = Array.from({ length: populationSize }, () => this._randomChromosome());
+    let bestEver = null, bestFit = { score: -Infinity, hardViolations: Infinity };
+    let stag = 0, genRan = 0;
+    const baseMutation = this.config.mutationRate;
+
+    for (let gen = 0; gen < maxGenerations; gen++) {
+      genRan = gen + 1;
+      const fits = pop.map(ch => this._fitness(ch));
+      let bIdx = 0;
+      for (let i = 1; i < fits.length; i++) if (fits[i].score > fits[bIdx].score) bIdx = i;
+
+      if (fits[bIdx].score > bestFit.score) {
+        bestFit = { ...fits[bIdx] };
+        bestEver = pop[bIdx].map(g => ({ ...g }));
+        stag = 0;
+      } else stag++;
+
+      if (onProgress) onProgress(gen + 1, bestFit, maxGenerations);
+
+      const stagFactor = Math.min(1, stag / Math.max(1, stagnationLimit));
+      const infeasibleBoost = bestFit.hardViolations > 0 ? 0.25 : 0;
+      this.config.mutationRate = Math.min(0.6, Math.max(0.05, baseMutation * (1 + 1.5 * stagFactor) + infeasibleBoost));
+
+      if (bestFit.hardViolations === 0 && stag >= Math.floor(stagnationLimit / 2)) break;
+      if (stag >= stagnationLimit) break;
+
+      const sorted = fits.map((f, i) => ({ f, i })).sort((a, b) => b.f.score - a.f.score);
+      const next = [];
+      for (let i = 0; i < elitismCount && i < sorted.length; i++) next.push(pop[sorted[i].i].map(g => ({ ...g })));
+      while (next.length < populationSize) {
+        let child = this._crossover(this._selectParent(pop, fits), this._selectParent(pop, fits));
+        child = this._mutate(child);
+        next.push(child);
+      }
+      pop = next;
+
+      if (gen % 10 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+
+    this.config.mutationRate = baseMutation;
+
+    return {
+      schedule: this._toSchedule(bestEver),
+      fitness: bestFit,
+      stats: { generations: genRan, totalAssignments: this.assignments.length, hardViolations: bestFit.hardViolations },
+    };
   }
 
-  // Restore base mutation (avoid surprising callers reusing config object).
-  this.config.mutationRate = baseMutation;
-
-  return {
-    schedule: this._toSchedule(bestEver),
-    fitness: bestFit,
-    stats: { generations: genRan, totalAssignments: this.assignments.length, hardViolations: bestFit.hardViolations },
-  };
-}
-
-_toSchedule(chrom) {
-  if (!chrom) return [];
-  return chrom.map((g, i) => {
-    const a = this.assignments[i];
-    return {
-      subject: a.subject,
-      section: a.section,
-      professor: this.profMap[g.professorId] || { id: g.professorId, name: 'Unknown' },
-      room: this.roomMap[g.roomId] || { id: g.roomId, name: 'Unknown' },
-      day: this.days[g.dayIdx],
-      timeSlot: this.timeSlots[g.timeIdx],
-    };
-  });
-}
+  _toSchedule(chrom) {
+    if (!chrom) return [];
+    return chrom.map((g, i) => {
+      if (!g || !g.professorId) return null;
+      const a = this.assignments[i];
+      return {
+        subject: a.subject,
+        section: a.section,
+        professor: this.profMap[g.professorId] || { id: g.professorId, name: 'Unknown' },
+        room: this.roomMap[g.roomId] || { id: g.roomId, name: 'Unknown' },
+        day: this.days[g.dayIdx],
+        timeSlot: this.timeSlots[g.timeIdx],
+      };
+    }).filter(Boolean);
+  }
 }
