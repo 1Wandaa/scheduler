@@ -16,9 +16,9 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
     // Filter schedules
     const filteredSchedules = schedules.filter(s => {
         if (!selectedId) return false;
-        if (viewType === 'room') return s.room && s.room.id === selectedId;
-        if (viewType === 'faculty') return s.professor && s.professor.id === selectedId;
-        if (viewType === 'section') return s.section && s.section.id === selectedId;
+        if (viewType === 'room') return s.room != null && String(s.room.id) === String(selectedId);
+        if (viewType === 'faculty') return s.professor != null && String(s.professor.id) === String(selectedId);
+        if (viewType === 'section') return s.section != null && String(s.section.id) === String(selectedId);
         return false;
     });
 

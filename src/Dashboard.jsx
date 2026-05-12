@@ -460,7 +460,7 @@ return (
           <div>
             <p style={{ margin: 0, fontSize: '0.85rem' }}>Capiz State University | Mambusao Satellite College</p>
             <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold' }}>
-              Welcome, {user?.name.split(' ')[0]}
+              Welcome, {user?.name?.split?.(/\s+/)?.[0] ?? 'there'}
             </h1>
           </div>
         </div>

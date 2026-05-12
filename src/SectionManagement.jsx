@@ -102,8 +102,15 @@ const SectionManagement = ({ sections, subjects }) => {
                 </span>
               </td>
               <td style={{ color: 'var(--text-muted)' }}>{sec.studentCount} pax</td>
-              <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '200px' }}>
-                {(sec.subjects || []).length} subject{(sec.subjects || []).length !== 1 ? 's' : ''}
+              <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '280px' }}>
+                {(sec.subjects || []).length === 0 ? (
+                  <span style={{ fontStyle: 'italic' }}>None</span>
+                ) : (
+                  <span title={(sec.subjects || []).map(getSubjectName).join(', ')}>
+                    {(sec.subjects || []).slice(0, 3).map(getSubjectName).join('; ')}
+                    {(sec.subjects || []).length > 3 ? ` +${(sec.subjects || []).length - 3}` : ''}
+                  </span>
+                )}
               </td>
               <td>
                 <button style={{ color: 'var(--accent-primary)', border: 'none', background: 'none', cursor: 'pointer', marginRight: '15px', fontWeight: '500' }} onClick={() => handleOpenEdit(sec)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Edit</button>

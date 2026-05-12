@@ -46,38 +46,40 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     if (!movingSchedule) return;
 
     // Skip if dropping on the same slot
-    if (movingSchedule.day === day && movingSchedule.timeSlot.id === timeSlotId) return;
+    if (movingSchedule.day === day && String(movingSchedule.timeSlot?.id) === String(timeSlotId)) return;
 
     // Check for conflicts: is the room already occupied in that slot?
     const roomConflict = schedules.find(
       s => s.id !== scheduleId &&
-        s.room.id === movingSchedule.room.id &&
+        movingSchedule.room?.id != null &&
+        String(s.room?.id) === String(movingSchedule.room.id) &&
         s.day === day &&
-        s.timeSlot.id === timeSlotId
+        String(s.timeSlot?.id) === String(timeSlotId)
     );
 
     // Check for conflicts: is the professor already busy in that slot?
     const profConflict = schedules.find(
       s => s.id !== scheduleId &&
-        s.professor.id === movingSchedule.professor.id &&
+        movingSchedule.professor?.id != null &&
+        String(s.professor?.id) === String(movingSchedule.professor.id) &&
         s.day === day &&
-        s.timeSlot.id === timeSlotId
+        String(s.timeSlot?.id) === String(timeSlotId)
     );
 
     // Check for conflicts: is the section already in class in that slot?
     const sectionConflict = movingSchedule.section?.id
       ? schedules.find(
           s => s.id !== scheduleId &&
-            s.section?.id === movingSchedule.section.id &&
+            String(s.section?.id) === String(movingSchedule.section.id) &&
             s.day === day &&
-            s.timeSlot.id === timeSlotId
+            String(s.timeSlot?.id) === String(timeSlotId)
         )
       : null;
 
     if (roomConflict || profConflict || sectionConflict) {
       const msgs = [];
-      if (roomConflict) msgs.push(`Room "${movingSchedule.room.name}" is already occupied`);
-      if (profConflict) msgs.push(`Prof. "${movingSchedule.professor.name}" is already teaching`);
+      if (roomConflict) msgs.push(`Room "${movingSchedule.room?.name ?? 'Unknown'}" is already occupied`);
+      if (profConflict) msgs.push(`Prof. "${movingSchedule.professor?.name ?? 'Unknown'}" is already teaching`);
       if (sectionConflict) msgs.push(`Section "${movingSchedule.section?.name || 'Unknown'}" already has a class`);
       alert(`Cannot move schedule:\n${msgs.join('\n')}`);
       return;
@@ -130,7 +132,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                   const cellKey = `${day}-${timeSlot.id}`;
                   const isDropTarget = dragOverCell === cellKey;
                   const cellSchedules = schedules.filter(
-                    s => s.day === day && s.timeSlot.id === timeSlot.id
+                    s => s.day === day && String(s.timeSlot?.id) === String(timeSlot.id)
                   );
 
                   return (
@@ -152,11 +154,11 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                         >
                           <div className="schedule-content">
                             <p className="subject">
-                              {schedule.subject.code}
+                              {schedule.subject?.code ?? '—'}
                               {schedule.section && <span style={{ fontWeight: '500', fontSize: '0.75rem', color: '#000000' }}> — {schedule.section.name}</span>}
                             </p>
-                            <p className="professor">{schedule.professor.name}</p>
-                            <p className="room">{schedule.room.name}</p>
+                            <p className="professor">{schedule.professor?.name ?? '—'}</p>
+                            <p className="room">{schedule.room?.name ?? '—'}</p>
                           </div>
                           {onRemove && (
                             <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">

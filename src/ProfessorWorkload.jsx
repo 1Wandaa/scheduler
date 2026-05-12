@@ -5,13 +5,10 @@ function ProfessorWorkload({ professors, schedules }) {
   const LOGO_SRC = '/logo.jpg?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
-  const getProfessorWorkload = (professor) => {
-    // Sum the credits (units) of each assigned subject
-    const units = schedules
-      .filter(s => s.professor.id === professor.id)
-      .reduce((total, s) => total + (s.subject.credits || 3), 0);
-    return units;
-  };
+  const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
+
+  const matchesProfessor = (s, professor) =>
+    professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);
 
   return (
     <div className="professor-workload-container card" style={{ animation: 'fadeIn 0.5s' }}>
@@ -42,8 +39,10 @@ function ProfessorWorkload({ professors, schedules }) {
 
       <div className="workload-list">
         {professors.map(professor => {
-          const units = getProfessorWorkload(professor);
-          const utilization = (units / (professor.maxUnits || professor.maxHours || 12)) * 100;
+          const profSchedules = schedules.filter(s => matchesProfessor(s, professor));
+          const units = profSchedules.reduce((total, s) => total + (Number(s.subject?.credits) || 3), 0);
+          const cap = Math.max(1, Number(professor.maxUnits || professor.maxHours || 12));
+          const utilization = (units / cap) * 100;
 
           let statusClass = 'normal';
           let statusColor = 'var(--success)';
@@ -67,22 +66,29 @@ function ProfessorWorkload({ professors, schedules }) {
               </div>
 
               <p className="workload-text" style={{ color: 'var(--text-main)' }}>
-                <strong>{units}</strong> / {professor.maxUnits || professor.maxHours || 12} units assigned
+                <strong>{units}</strong> / {cap} units assigned
               </p>
 
               <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
                 <p style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>Recent Assignments</p>
-                {schedules.filter(s => s.professor.id === professor.id).slice(0, 3).map((schedule, idx) => (
-                  <div key={idx} className="schedule-item" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--accent-primary)', fontWeight: '500' }}>{schedule.subject.code}</span>
-                    <span>{schedule.day.slice(0, 3)} • {schedule.timeSlot.time.split(' - ')[0]}</span>
+                {profSchedules.slice(0, 3).map((schedule, idx) => {
+                  const dayShort = typeof schedule.day === 'string' ? schedule.day.slice(0, 3) : '—';
+                  const timeStr = schedule.timeSlot?.time ?? schedule.timeSlot?.label ?? '';
+                  const timeStart = typeof timeStr === 'string' && timeStr.includes(' - ')
+                    ? timeStr.split(' - ')[0]
+                    : timeStr || '—';
+                  return (
+                  <div key={schedule.id ?? idx} className="schedule-item" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--accent-primary)', fontWeight: '500' }}>{schedule.subject?.code ?? '—'}</span>
+                    <span>{dayShort} • {timeStart}</span>
                   </div>
-                ))}
-                {schedules.filter(s => s.professor.id === professor.id).length === 0 && (
+                  );
+                })}
+                {profSchedules.length === 0 && (
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No classes assigned yet.</p>
                 )}
-                {schedules.filter(s => s.professor.id === professor.id).length > 3 && (
-                  <p className="more-items">+{schedules.filter(s => s.professor.id === professor.id).length - 3} more classes</p>
+                {profSchedules.length > 3 && (
+                  <p className="more-items">+{profSchedules.length - 3} more classes</p>
                 )}
               </div>
             </div>
