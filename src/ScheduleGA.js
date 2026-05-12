@@ -25,6 +25,7 @@ const PENALTY = {
 
 const BONUS = {
   SPECIALIZATION_MATCH: 20,
+  ROOM_PREFERENCE: 15, // NEW: Bonus points if assigned to a preferred room
   WORKLOAD_BALANCE: 15,
   NO_CONSECUTIVE_OVERLOAD: 10,
   SPREAD_ACROSS_WEEK: 5,
@@ -123,7 +124,6 @@ export class ScheduleGA {
     for (const p of pool) {
       const max = p.maxUnits || p.maxHours || 12;
       const w = profWork[p.id] || 0;
-      // STRICT WORKLOAD CHECK: No fallbacks allowed.
       if (w + 1.5 <= max) feasible.push(p);
     }
     return feasible;
@@ -203,7 +203,6 @@ export class ScheduleGA {
           this._occupy({ roomId: chrom[i].roomId, professorId: chrom[i].professorId, sectionId, dayIdx: chrom[i].dayIdx, timeIdx: chrom[i].timeIdx }, roomSlots, profSlots, secSlots);
           profWork[chrom[i].professorId] = (profWork[chrom[i].professorId] || 0) + 1.5;
         } else {
-          // Nullify to strictly mark as unschedulable (e.g. all faculty full)
           chrom[i] = { professorId: null, roomId: null, dayIdx: 0, timeIdx: 0 };
         }
       }
@@ -235,7 +234,7 @@ export class ScheduleGA {
     for (let i = 0; i < chrom.length; i++) {
       const g = chrom[i], a = this.assignments[i];
       if (!g || !g.professorId || !g.roomId) {
-        hardScore += PENALTY.PROF_CONFLICT * 2; // Punish unassigned classes
+        hardScore += PENALTY.PROF_CONFLICT * 2;
         hardViolations++;
         continue;
       }
@@ -282,10 +281,18 @@ export class ScheduleGA {
 
     for (let i = 0; i < chrom.length; i++) {
       if (!chrom[i] || !chrom[i].professorId) continue;
+      const prof = this.profMap[chrom[i].professorId];
+
+      // Soft: Specialization Bonus
       const specs = this.profSpecMap[chrom[i].professorId];
       if (specs && specs.size > 0) {
         const name = (this.assignments[i].subject.name || '').toLowerCase();
         for (const sp of specs) { if (name.includes(sp)) { softScore += BONUS.SPECIALIZATION_MATCH; break; } }
+      }
+
+      // Soft: Room Preference Bonus
+      if (prof && prof.preferredRooms && prof.preferredRooms.includes(chrom[i].roomId)) {
+        softScore += BONUS.ROOM_PREFERENCE;
       }
     }
 
