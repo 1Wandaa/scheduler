@@ -79,12 +79,6 @@ export class ScheduleGA {
   }
 
   _buildLookups() {
-    this.profsByDept = {};
-    for (const p of this.professors) {
-      const d = p.department || 'General';
-      if (!this.profsByDept[d]) this.profsByDept[d] = [];
-      this.profsByDept[d].push(p);
-    }
     this.profSpecMap = {};
     for (const p of this.professors) {
       this.profSpecMap[p.id] = new Set((p.specialization || []).map(s => s.toLowerCase()));
@@ -120,14 +114,22 @@ export class ScheduleGA {
   }
 
   _eligibleProfsFor(a, profWork = null) {
-    const deptProfs = this.profsByDept[a.subject.department] || this.professors;
-    if (!deptProfs || deptProfs.length === 0) return this.professors;
-    if (!profWork) return deptProfs;
+    const subject = a.subject;
+    let pool = this.professors;
+    if (subject) {
+      const validProfs = this.professors.filter(p => {
+        const specs = p.specialization || [];
+        return specs.includes(subject.id) ||
+          specs.includes(subject.code) ||
+          specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
+      });
+      pool = validProfs.length > 0 ? validProfs : this.professors;
+    }
+    if (!profWork) return pool;
 
-    // Prefer professors who are not exceeding max workload.
     const feasible = [];
     const fallback = [];
-    for (const p of deptProfs) {
+    for (const p of pool) {
       const max = Math.ceil((p.maxUnits || p.maxHours || 12) / 1.5);
       const w = profWork[p.id] || 0;
       if (w < max) feasible.push(p);

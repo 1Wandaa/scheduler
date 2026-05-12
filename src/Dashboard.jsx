@@ -138,11 +138,16 @@ const Dashboard = ({ user, onLogout }) => {
     },
     addSchedule: (room, professor, subject, day, timeSlot) => ({ schedule: { room, professor, subject, day, timeSlot } }),
     clearAllSchedules: async () => {
-      // Batch delete to ensure "clear" completes before auto-scheduling writes.
-      if (!schedules || schedules.length === 0) return;
+      // Delete every schedule doc from Firestore (do not rely on possibly stale React state).
+      const snap = await getDocs(collection(db, 'schedules'));
+      if (snap.empty) {
+        setSchedules([]);
+        return;
+      }
       const batch = writeBatch(db);
-      schedules.forEach(s => batch.delete(doc(db, 'schedules', s.id.toString())));
+      snap.docs.forEach(d => batch.delete(d.ref));
       await batch.commit();
+      setSchedules([]);
     },
     /**
      * Greedy "small population" auto-scheduling helpers.
