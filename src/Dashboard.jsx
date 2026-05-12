@@ -174,7 +174,15 @@ const Dashboard = ({ user, onLogout }) => {
         .map(subId => subjects.find(su => su.id === subId || su.code === subId))
         .filter(Boolean);
 
-      const assignments = subjectObjs.map(subject => ({ subject, section }));
+      const assignments = [];
+      for (const subject of subjectObjs) {
+        const credits = Number(subject.credits) || 3;
+        const meetings = Math.max(1, Math.ceil(credits / 1.5));
+        for (let i = 0; i < meetings; i++) {
+          assignments.push({ subject, section, meetingIndex: i + 1 });
+        }
+      }
+
       return validator._autoScheduleAssignments(assignments, { ...constraints });
     },
     autoScheduleForRoom: async (roomId, constraints = { respectLabs: true, preventDoubleBooking: true }) => {
@@ -185,7 +193,13 @@ const Dashboard = ({ user, onLogout }) => {
       for (const section of sections) {
         for (const subId of (section.subjects || [])) {
           const subject = subjects.find(su => su.id === subId || su.code === subId);
-          if (subject) assignments.push({ subject, section });
+          if (subject) {
+            const credits = Number(subject.credits) || 3;
+            const meetings = Math.max(1, Math.ceil(credits / 1.5));
+            for (let i = 0; i < meetings; i++) {
+              assignments.push({ subject, section, meetingIndex: i + 1 });
+            }
+          }
         }
       }
 
@@ -199,7 +213,13 @@ const Dashboard = ({ user, onLogout }) => {
       for (const section of sections) {
         for (const subId of (section.subjects || [])) {
           const subject = subjects.find(su => su.id === subId || su.code === subId);
-          if (subject) assignments.push({ subject, section });
+          if (subject) {
+            const credits = Number(subject.credits) || 3;
+            const meetings = Math.max(1, Math.ceil(credits / 1.5));
+            for (let i = 0; i < meetings; i++) {
+              assignments.push({ subject, section, meetingIndex: i + 1 });
+            }
+          }
         }
       }
 
@@ -214,10 +234,8 @@ const Dashboard = ({ user, onLogout }) => {
       return pool;
     },
     _eligibleProfsFor: (subject) => {
-      if (!subject) return []; // Require a subject
+      if (!subject) return [];
       const validProfs = professors.filter(p => professorMatchesSubject(p, subject));
-
-      // Strict constraint: Do NOT fallback to all 'professors'
       return validProfs;
     },
     _autoScheduleAssignments: async (assignments, constraints) => {
@@ -226,11 +244,8 @@ const Dashboard = ({ user, onLogout }) => {
 
       const fixedRoom = constraints?.fixedRoom || null;
       const fixedProfessor = constraints?.fixedProfessor || null;
-
-      // Keep a local view of schedules so we can detect conflicts in-run.
       const temp = [...schedules];
 
-      // Small bias: schedule "harder" things first (Labs get priority).
       const ordered = [...assignments].sort((a, b) => {
         const aHard = (a.subject?.requiredLab ? 1 : 0);
         const bHard = (b.subject?.requiredLab ? 1 : 0);
@@ -250,7 +265,6 @@ const Dashboard = ({ user, onLogout }) => {
           for (const timeSlot of TIME_SLOTS) {
             for (const room of roomPool) {
               for (const professor of profPool) {
-                // Strict non-overlap inside the same run (optional)
                 if (constraints?.preventDoubleBooking) {
                   const roomBusy = temp.some(s =>
                     String(s.room?.id) === String(room.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
@@ -258,7 +272,13 @@ const Dashboard = ({ user, onLogout }) => {
                     String(s.professor?.id) === String(professor.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
                   const secBusy = section?.id ? temp.some(s =>
                     String(s.section?.id) === String(section.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id)) : false;
-                  if (roomBusy || profBusy || secBusy) continue;
+
+                  // NEW: Prevent scheduling the same subject for the same section on the SAME DAY twice
+                  const sameDaySubjectBusy = section?.id ? temp.some(s =>
+                    String(s.section?.id) === String(section.id) && String(s.subject?.id) === String(subject.id) && s.day === day
+                  ) : false;
+
+                  if (roomBusy || profBusy || secBusy || sameDaySubjectBusy) continue;
                 }
 
                 const check = validateScheduleEntry({ room, professor, subject, section, day, timeSlot });
@@ -266,7 +286,6 @@ const Dashboard = ({ user, onLogout }) => {
 
                 const newSchedule = { room, professor, subject, section, day, timeSlot };
 
-                // Try to persist via the same write path (also rechecks conflicts against live state).
                 const writeResult = await handleAddSchedule(newSchedule);
                 if (writeResult && writeResult.ok === false) continue;
 
@@ -283,7 +302,7 @@ const Dashboard = ({ user, onLogout }) => {
         }
 
         if (!placed) {
-          let reason = 'Insufficient valid slots';
+          let reason = 'Insufficient valid slots or missing qualified faculty';
           if (constraints?.respectLabs && subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
             reason = 'Requires computer lab (selected room is not a lab)';
           }

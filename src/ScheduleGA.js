@@ -1,7 +1,5 @@
 /**
  * ScheduleGA - Genetic Algorithm for University Timetabling
- * * Chromosome = array of genes, one per subject-section slot.
- * Gene = { professorId, roomId, dayIdx, timeIdx }
  */
 
 const DEFAULT_CONFIG = {
@@ -20,6 +18,7 @@ const PENALTY = {
   ROOM_CONFLICT: -100,
   PROF_CONFLICT: -100,
   SECTION_CONFLICT: -100,
+  SAME_DAY_CONFLICT: -90, // Heavily penalize multiple meetings on the same day
   LAB_MISMATCH: -80,
   WORKLOAD_EXCEEDED: -60,
 };
@@ -65,8 +64,13 @@ export class ScheduleGA {
         const sub = this.subjects.find(s => s.id === subId || s.code === subId);
         if (!sub) continue;
 
-        // 1 Subject = 1 Schedule Block.
-        list.push({ subject: sub, section: sec });
+        // Split subjects into 1.5-hour meetings. Example: 3 credits / 1.5 = 2 meetings.
+        const credits = Number(sub.credits) || 3;
+        const meetings = Math.max(1, Math.ceil(credits / 1.5));
+
+        for (let i = 0; i < meetings; i++) {
+          list.push({ subject: sub, section: sec, meetingIndex: i + 1, totalMeetings: meetings });
+        }
       }
     }
     return list;
@@ -114,7 +118,6 @@ export class ScheduleGA {
           specs.includes(subject.code) ||
           specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
       });
-      // Strict constraint: Enforce validProfs only.
       pool = validProfs;
     }
 
@@ -122,12 +125,12 @@ export class ScheduleGA {
 
     const feasible = [];
     const fallback = [];
-    const subjectCredits = subject ? (Number(subject.credits) || 3) : 3;
 
     for (const p of pool) {
       const max = p.maxUnits || p.maxHours || 12;
       const w = profWork[p.id] || 0;
-      if (w + subjectCredits <= max) feasible.push(p);
+      // Compare against 1.5 hours per block
+      if (w + 1.5 <= max) feasible.push(p);
       fallback.push(p);
     }
     return feasible.length > 0 ? feasible : fallback;
@@ -159,7 +162,6 @@ export class ScheduleGA {
     for (const i of idxs) {
       const a = this.assignments[i];
       const sectionId = a.section.id;
-      const subjectCredits = Number(a.subject.credits) || 3;
 
       const rooms = this._shuffle([...this._eligibleRoomsFor(a)]);
       const profs = this._shuffle([...this._eligibleProfsFor(a, profWork)]);
@@ -199,14 +201,14 @@ export class ScheduleGA {
         const max = p ? (p.maxUnits || p.maxHours || 12) : Infinity;
         const w = profWork[prof.id] || 0;
 
-        if (w + subjectCredits > max) {
+        if (w + 1.5 > max) {
           if (!bestFallback) bestFallback = { roomId: room.id, professorId: prof.id, dayIdx, timeIdx, conflicts: 0 };
           continue;
         }
 
         chrom[i] = { professorId: prof.id, roomId: room.id, dayIdx, timeIdx };
         this._occupy({ roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots);
-        profWork[prof.id] = w + subjectCredits;
+        profWork[prof.id] = w + 1.5;
         placed = true;
         break;
       }
@@ -216,7 +218,7 @@ export class ScheduleGA {
         if (g && g.professorId) {
           chrom[i] = { professorId: g.professorId, roomId: g.roomId, dayIdx: g.dayIdx, timeIdx: g.timeIdx };
           this._occupy({ roomId: chrom[i].roomId, professorId: chrom[i].professorId, sectionId, dayIdx: chrom[i].dayIdx, timeIdx: chrom[i].timeIdx }, roomSlots, profSlots, secSlots);
-          profWork[chrom[i].professorId] = (profWork[chrom[i].professorId] || 0) + subjectCredits;
+          profWork[chrom[i].professorId] = (profWork[chrom[i].professorId] || 0) + 1.5;
         }
       }
     }
@@ -243,6 +245,7 @@ export class ScheduleGA {
   _fitness(chrom) {
     let hardScore = 0, softScore = 0, hardViolations = 0;
     const roomSlots = {}, profSlots = {}, secSlots = {}, profWork = {};
+    const dailySubjectCheck = {}; // Track to prevent same subject on same day
 
     for (let i = 0; i < chrom.length; i++) {
       const g = chrom[i], a = this.assignments[i];
@@ -255,7 +258,17 @@ export class ScheduleGA {
       roomSlots[rk] = (roomSlots[rk] || 0) + 1;
       profSlots[pk] = (profSlots[pk] || 0) + 1;
       secSlots[sk] = (secSlots[sk] || 0) + 1;
-      profWork[g.professorId] = (profWork[g.professorId] || 0) + (Number(a.subject.credits) || 3);
+
+      // Each block = 1.5 hours of load
+      profWork[g.professorId] = (profWork[g.professorId] || 0) + 1.5;
+
+      // Penalize heavily if the section is taking the exact same subject on the same day twice
+      const dailyKey = `${a.section.id}-${a.subject.id}-${g.dayIdx}`;
+      if (dailySubjectCheck[dailyKey]) {
+        hardScore += PENALTY.SAME_DAY_CONFLICT;
+        hardViolations++;
+      }
+      dailySubjectCheck[dailyKey] = true;
     }
 
     // Hard: conflicts
@@ -271,7 +284,7 @@ export class ScheduleGA {
       if (a.subject.requiredLab && room && !room.hasComputers) { hardScore += PENALTY.LAB_MISMATCH; hardViolations++; }
     }
 
-    // Hard: workload tracked directly by credits
+    // Hard: workload tracked directly by 1.5hr increments
     for (const pid in profWork) {
       const prof = this.profMap[pid];
       if (prof) {
