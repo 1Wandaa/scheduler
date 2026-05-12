@@ -45,17 +45,16 @@
   /* Light border */
 }
 
-/* 1. Update the main table cells */
+/* Revert table cells back to strict 80px height with overflow hidden */
 .schedule-table td {
   border: 1px solid var(--border-color);
   padding: 0;
   height: 80px;
-  /* The standard baseline size */
   vertical-align: top;
-  /* REMOVED: overflow: hidden; so it can grow if needed */
+  overflow: hidden;
 }
 
-/* 2. Keep the time label standard */
+/* Revert time-label to its original state */
 .time-label {
   background-color: #FFFFFF;
   font-weight: 600;
@@ -65,27 +64,21 @@
   font-size: 0.82rem;
 }
 
-/* 3. Update the drop-zone to act as a flexible container */
+/* Revert drag-and-drop cells back to their exact original padding and hidden overflow */
 .schedule-cell {
   position: relative;
-  height: 100%;
-  /* Fill the td naturally */
-  min-height: 80px;
-  /* Enforce the standard size */
+  padding: 0.5rem;
+  height: 80px;
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .schedule-cell:has(.schedule-item) {
   background-color: #109EEF;
-  padding: 4px;
-  /* Give a neat uniform border inside */
+  padding: 0;
 }
 
-/* 4. Allow the class block itself to grow only when its content is long */
+/* Revert schedule items back to 100% height */
 .schedule-item {
   background-color: transparent;
   border: none;
@@ -98,13 +91,8 @@
   align-items: flex-start;
   transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
   user-select: none;
-
-  min-height: 72px;
-  /* Fits perfectly inside the 80px cell with padding */
-  height: auto;
-  /* Will stretch only if the text inside is too long */
+  height: 100%;
   box-sizing: border-box;
-  flex: 1;
 }
 
 
