@@ -1,0 +1,95 @@
+/* src/PrintableSchedule.css */
+
+@media screen {
+
+    /* Hide the print layout entirely on normal screens */
+    .printable-iso-document {
+        display: none;
+    }
+}
+
+@media print {
+    @page {
+        size: letter landscape;
+        /* or portrait depending on preference */
+        margin: 0.5in;
+    }
+
+    body * {
+        visibility: hidden;
+        /* Hide the rest of the app */
+    }
+
+    .printable-iso-document,
+    .printable-iso-document * {
+        visibility: visible;
+    }
+
+    .printable-iso-document {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        font-family: "Times New Roman", Times, serif;
+        /* Formal ISO font */
+        color: #000;
+    }
+
+    /* ISO Header Table */
+    .iso-header-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        font-size: 10pt;
+    }
+
+    .iso-header-table td,
+    .iso-header-table th {
+        border: 1px solid #000;
+        padding: 6px;
+        text-align: left;
+    }
+
+    .iso-header-table .bold {
+        font-weight: bold;
+    }
+
+    .iso-header-table .center {
+        text-align: center;
+    }
+
+    /* Meta Info Header */
+    .meta-info {
+        font-size: 11pt;
+        font-weight: bold;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+    }
+
+    /* Main Schedule Table */
+    .iso-schedule-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11pt;
+    }
+
+    .iso-schedule-table th,
+    .iso-schedule-table td {
+        border: 1px solid #000;
+        padding: 10px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .iso-schedule-table th {
+        background-color: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .lunch-break {
+        background-color: #e0e0e0 !important;
+        -webkit-print-color-adjust: exact;
+        font-weight: bold;
+        letter-spacing: 5px;
+    }
+}

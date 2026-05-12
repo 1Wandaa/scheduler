@@ -82,6 +82,36 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
                 />
             </div>
         </div>
+        import PrintableSchedule from './PrintableSchedule'; // Import at the top
+
+    // ... inside your component where you render the schedule grid ...
+
+    const handlePrint = () => {
+        window.print();
+    };
+
+    return (
+        <div>
+            {/* Add a Print Button */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+                <button className="btn" onClick={handlePrint}>
+                    🖨️ Print ISO Schedule
+                </button>
+            </div>
+
+            {/* Your normal UI grid goes here */}
+            <div className="normal-ui-grid">
+                {/* ... your existing schedule rendering ... */}
+            </div>
+
+            {/* Drop the hidden ISO component here. Pass the filtered schedule items to it. */}
+            <PrintableSchedule
+                scheduleItems={filteredScheduleForSelectedSection}
+                sectionName="BSCS 4C" // Pass the actively selected section name
+                semesterInfo="2nd Sem 2025-2026"
+            />
+        </div>
+    );
     );
 }
 
