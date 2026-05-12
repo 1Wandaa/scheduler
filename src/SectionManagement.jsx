@@ -142,12 +142,10 @@ const SectionManagement = ({ sections, subjects }) => {
               <label style={labelStyle}>Program</label>
               <select style={inputStyle} value={formData.program} onChange={e => setFormData({ ...formData, program: e.target.value })}>
                 <option value="">Select Program</option>
-                <option value="BS Computer Science">BS Computer Science</option>
-                <option value="BS Information Technology">BS Information Technology</option>
-                <option value="BS Information Systems">BS Information Systems</option>
-                <option value="BS Education">BS Education</option>
-                <option value="BS Business Administration">BS Business Administration</option>
-                <option value="BS Agriculture">BS Agriculture</option>
+                <option value="Bachelor of Science in Computer Science">Bachelor of Science in Computer Science</option>
+                <option value="Bachelor of Science in Food Technology">Bachelor of Science in Food Technology</option>
+                <option value="Bachelor of Science in Office Administration">Bachelor of Science in Office Administration</option>
+                <option value="Bachelor of Arts in English Language">Bachelor of Arts in English Language</option>
               </select>
             </div>
 
