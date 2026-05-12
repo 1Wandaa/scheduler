@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { db } from './firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { DEPARTMENTS } from './index';
 
 const SubjectManagement = ({ subjects }) => {
   const [showModal, setShowModal] = useState(false);
@@ -8,11 +9,11 @@ const SubjectManagement = ({ subjects }) => {
   const [currentId, setCurrentId] = useState(null);
 
   const [formData, setFormData] = useState({
-    id: '', code: '', name: '', department: 'Computer Science', credits: 3, requiredLab: false, hoursPerWeek: 3
+    id: '', code: '', name: '', department: 'BSCS', credits: 3, requiredLab: false, hoursPerWeek: 3
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', code: '', name: '', department: 'Computer Science', credits: 3, requiredLab: false, hoursPerWeek: 3 });
+    setFormData({ id: '', code: '', name: '', department: 'BSCS', credits: 3, requiredLab: false, hoursPerWeek: 3 });
     setEditMode(false);
     setShowModal(true);
   };
@@ -62,12 +63,13 @@ const SubjectManagement = ({ subjects }) => {
       </div>
 
       <table className="data-table">
-        <thead><tr><th>Code</th><th>Name</th><th>Lab Required</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Code</th><th>Name</th><th>Department</th><th>Lab Required</th><th>Actions</th></tr></thead>
         <tbody>
           {subjects.map(s => (
             <tr key={s.id}>
               <td><strong style={{ color: 'var(--accent-primary)' }}>{s.code}</strong></td>
               <td style={{ fontWeight: '500' }}>{s.name}</td>
+              <td><span style={{ background: 'var(--bg-main)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent-primary)' }}>{s.department || '—'}</span></td>
               <td>
                 <span style={{
                   background: s.requiredLab ? 'var(--danger-bg)' : 'var(--success-bg)',
@@ -93,6 +95,14 @@ const SubjectManagement = ({ subjects }) => {
 
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Subject Code</label><input style={inputStyle} value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. CS101" /></div>
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Subject Name</label><input style={inputStyle} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Intro to Programming" /></div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={labelStyle}>Department</label>
+              <select style={inputStyle} value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
+                {DEPARTMENTS.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+            </div>
 
             <div style={{ marginBottom: '25px', padding: '10px', background: 'var(--bg-main)', borderRadius: '6px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}>

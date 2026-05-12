@@ -43,28 +43,28 @@ export const initialProfessors = [
   {
     id: 'P001',
     name: 'Dr. Jelly Paredes',
-    department: 'Computer Science',
+    department: 'BSCS',
     specialization: ['Web Development', 'Databases'],
     maxUnits: 12
   },
   {
     id: 'P002',
     name: 'Prof. Art Jayson Osuyos',
-    department: 'Computer Science',
+    department: 'BSCS',
     specialization: ['AI', 'Machine Learning'],
     maxUnits: 12
   },
   {
     id: 'P003',
     name: 'Prof. Olga Llanera',
-    department: 'Computer Science',
+    department: 'BSCS',
     specialization: ['Networks', 'Security'],
     maxUnits: 10
   },
   {
     id: 'P004',
     name: 'Prof, Judith Vista',
-    department: 'Mathematics',
+    department: 'BSCS',
     specialization: ['Calculus', 'Linear Algebra'],
     maxUnits: 12
   }
@@ -75,7 +75,7 @@ export const initialSubjects = [
     id: 'S001',
     code: 'CS101',
     name: 'Introduction to Programming',
-    department: 'Computer Science',
+    department: 'BSCS',
     credits: 3,
     requiredLab: false,
     capacity: 40,
@@ -88,7 +88,7 @@ export const initialSubjects = [
     id: 'S002',
     code: 'CS102',
     name: 'Web Development',
-    department: 'Computer Science',
+    department: 'BSCS',
     credits: 3,
     requiredLab: true,
     capacity: 30,
@@ -101,7 +101,7 @@ export const initialSubjects = [
     id: 'S003',
     code: 'CS201',
     name: 'Database Systems',
-    department: 'Computer Science',
+    department: 'BSCS',
     credits: 3,
     requiredLab: true,
     capacity: 25,
@@ -114,7 +114,7 @@ export const initialSubjects = [
     id: 'S004',
     code: 'CS301',
     name: 'Artificial Intelligence',
-    department: 'Computer Science',
+    department: 'BSCS',
     credits: 3,
     requiredLab: false,
     capacity: 35,
@@ -127,7 +127,7 @@ export const initialSubjects = [
     id: 'S005',
     code: 'MATH101',
     name: 'Calculus I',
-    department: 'Mathematics',
+    department: 'BSCS',
     credits: 4,
     requiredLab: false,
     capacity: 40,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { db } from './firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { DEPARTMENTS } from './index';
 
 const FacultyManagement = ({ professors, subjects = [], rooms = [] }) => {
   const [showModal, setShowModal] = useState(false);
@@ -8,11 +9,11 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [] }) => {
   const [currentId, setCurrentId] = useState(null);
 
   const [formData, setFormData] = useState({
-    id: '', name: '', department: 'Computer Science', maxUnits: 12, specialization: [], preferredRooms: []
+    id: '', name: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: []
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', name: '', department: 'Computer Science', maxUnits: 12, specialization: [], preferredRooms: [] });
+    setFormData({ id: '', name: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: [] });
     setEditMode(false);
     setShowModal(true);
   };
@@ -121,7 +122,11 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [] }) => {
             <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>Department</label>
-                <input style={inputStyle} value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })} placeholder="e.g. Computer Science" />
+                <select style={inputStyle} value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
+                  {DEPARTMENTS.map(dept => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
               </div>
               <div style={{ width: '120px' }}>
                 <label style={labelStyle}>Max Units</label>
