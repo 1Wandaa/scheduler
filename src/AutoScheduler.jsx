@@ -188,7 +188,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
   const targetOptions = engineMode === 'faculty'
     ? (professors || []).map(p => ({ id: p.id, label: p.name }))
     : engineMode === 'room'
-      ? (rooms || []).map(r => ({ id: r.id, label: `${r.name} (Cap: ${r.capacity})${r.hasComputers ? ' Lab' : ''}` }))
+      ? (rooms || []).map(r => ({ id: r.id, label: `${r.name}${r.hasComputers ? ' (Lab)' : ''}` }))
       : (sections || []).map(s => ({ id: s.id, label: s.name }));
 
   return (

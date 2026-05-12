@@ -118,8 +118,7 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
             <option value="">Select a room</option>
             {rooms.map(room => (
               <option key={room.id} value={room.id}>
-                {room.name} - Cap: {room.capacity}
-                {room.hasComputers && ' (Lab)'} 
+                {room.name}{room.hasComputers ? ' (Lab)' : ''}
               </option>
             ))}
           </select>

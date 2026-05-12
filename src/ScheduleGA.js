@@ -24,7 +24,6 @@ const PENALTY = {
   PROF_CONFLICT: -100,
   SECTION_CONFLICT: -100,
   LAB_MISMATCH: -80,
-  CAPACITY_EXCEEDED: -50,
   WORKLOAD_EXCEEDED: -60,
 };
 
@@ -33,7 +32,6 @@ const BONUS = {
   WORKLOAD_BALANCE: 15,
   NO_CONSECUTIVE_OVERLOAD: 10,
   SPREAD_ACROSS_WEEK: 5,
-  ROOM_SIZE_FIT: 3,
 };
 
 export class ScheduleGA {
@@ -107,10 +105,7 @@ export class ScheduleGA {
       const labs = this.rooms.filter(r => r.hasComputers);
       if (labs.length > 0) pool = labs;
     }
-    const need = a.subject.capacity || a.section.studentCount || 30;
-    const ok = pool.filter(r => (r.capacity || 0) >= need);
-    // If no room can satisfy capacity, fall back to the best available pool (still allows GA to continue).
-    return ok.length > 0 ? ok : pool;
+    return pool;
   }
 
   _eligibleProfsFor(a, profWork = null) {
@@ -267,8 +262,6 @@ export class ScheduleGA {
     for (let i = 0; i < chrom.length; i++) {
       const g = chrom[i], a = this.assignments[i], room = this.roomMap[g.roomId];
       if (a.subject.requiredLab && room && !room.hasComputers) { hardScore += PENALTY.LAB_MISMATCH; hardViolations++; }
-      const need = a.subject.capacity || a.section.studentCount || 30;
-      if (room && room.capacity < need) { hardScore += PENALTY.CAPACITY_EXCEEDED; hardViolations++; }
     }
 
     // Hard: workload
@@ -295,15 +288,6 @@ export class ScheduleGA {
       const avg = wv.reduce((a,b)=>a+b,0)/wv.length;
       const variance = wv.reduce((s,v)=>s+(v-avg)**2,0)/wv.length;
       softScore += Math.max(0, BONUS.WORKLOAD_BALANCE - variance * 2);
-    }
-
-    // Soft: room fit
-    for (let i = 0; i < chrom.length; i++) {
-      const room = this.roomMap[chrom[i].roomId];
-      if (room) {
-        const need = this.assignments[i].subject.capacity || this.assignments[i].section.studentCount || 30;
-        if (room.capacity - need >= 0 && room.capacity - need <= 10) softScore += BONUS.ROOM_SIZE_FIT;
-      }
     }
 
     // Soft: section day spread

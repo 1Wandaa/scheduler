@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { db } from './firebase';
-import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, updateDoc, deleteField } from 'firebase/firestore';
 import { ROOM_TYPES } from './index';
 
 const RoomManagement = ({ rooms }) => {
@@ -9,28 +9,43 @@ const RoomManagement = ({ rooms }) => {
   const [currentId, setCurrentId] = useState(null);
 
   const [formData, setFormData] = useState({
-    id: '', name: '', capacity: 30, type: ROOM_TYPES.LECTURE, hasComputers: false, hasProjector: true
+    id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, hasProjector: true
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', name: '', capacity: 30, type: ROOM_TYPES.LECTURE, hasComputers: false, hasProjector: true });
+    setFormData({ id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, hasProjector: true });
     setEditMode(false);
     setShowModal(true);
   };
 
   const handleOpenEdit = (room) => {
-    setFormData(room);
+    setFormData({
+      id: room.id,
+      name: room.name || '',
+      type: room.type || ROOM_TYPES.LECTURE,
+      hasComputers: !!room.hasComputers,
+      hasProjector: room.hasProjector !== false,
+    });
     setCurrentId(room.id);
     setEditMode(true);
     setShowModal(true);
   };
 
   const handleSave = async () => {
+    const payload = {
+      name: formData.name,
+      type: formData.type,
+      hasComputers: formData.hasComputers,
+      hasProjector: formData.hasProjector,
+    };
     if (editMode) {
-      await updateDoc(doc(db, 'rooms', currentId.toString()), formData);
+      await updateDoc(doc(db, 'rooms', currentId.toString()), {
+        ...payload,
+        capacity: deleteField(),
+      });
     } else {
       const newId = formData.id || `R${Date.now().toString().slice(-4)}`;
-      await addDoc(collection(db, 'rooms'), { ...formData, id: newId });
+      await addDoc(collection(db, 'rooms'), { ...payload, id: newId });
     }
     setShowModal(false);
   };
@@ -57,13 +72,13 @@ const RoomManagement = ({ rooms }) => {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
             Manage Rooms
           </h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Configure campus facilities and capacities</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Configure campus facilities</p>
         </div>
         <button className="btn" onClick={handleOpenAdd}>+ Add Room</button>
       </div>
 
       <table className="data-table">
-        <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Capacity</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Actions</th></tr></thead>
         <tbody>
           {rooms.map(r => (
             <tr key={r.id}>
@@ -78,7 +93,6 @@ const RoomManagement = ({ rooms }) => {
                   {r.type} {r.hasComputers && '🖥️'}
                 </span>
               </td>
-              <td>{r.capacity} pax</td>
               <td>
                 <button style={{ color: 'var(--accent-primary)', border: 'none', background: 'none', cursor: 'pointer', marginRight: '15px', fontWeight: '500' }} onClick={() => handleOpenEdit(r)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Edit</button>
                 <button style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: '500' }} onClick={() => handleDelete(r.id)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Delete</button>
@@ -95,7 +109,6 @@ const RoomManagement = ({ rooms }) => {
 
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Room Code</label><input style={inputStyle} value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. R101" /></div>
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Room Name</label><input style={inputStyle} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Room 101" /></div>
-            <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Capacity</label><input type="number" style={inputStyle} value={formData.capacity} onChange={e => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })} /></div>
 
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Room Type</label>
               <select style={inputStyle} value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>

@@ -4,7 +4,6 @@ export const initialRooms = [
   {
     id: 'R101',
     name: 'Room 101',
-    capacity: 40,
     type: ROOM_TYPES.LECTURE,
     hasComputers: false,
     hasProjector: true
@@ -12,7 +11,6 @@ export const initialRooms = [
   {
     id: 'R102',
     name: 'Room 102',
-    capacity: 35,
     type: ROOM_TYPES.LECTURE,
     hasComputers: false,
     hasProjector: true
@@ -28,7 +26,6 @@ export const initialRooms = [
   {
     id: 'LAB2',
     name: 'Computer Lab 2',
-    capacity: 25,
     type: ROOM_TYPES.LAB,
     hasComputers: true,
     hasProjector: true
@@ -36,7 +33,6 @@ export const initialRooms = [
   {
     id: 'SEM1',
     name: 'Seminar Room 1',
-    capacity: 20,
     type: ROOM_TYPES.SEMINAR,
     hasComputers: false,
     hasProjector: false

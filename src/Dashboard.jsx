@@ -99,12 +99,6 @@ const Dashboard = ({ user, onLogout }) => {
 
     if (subject?.requiredLab && !room?.hasComputers) errors.push('Requires Lab.');
 
-    const roomCap = Number(room?.capacity);
-    const need = Number(subject?.capacity || section?.studentCount || 0);
-    if (Number.isFinite(roomCap) && Number.isFinite(need) && need > 0 && roomCap > 0 && roomCap < need) {
-      warnings.push('Capacity warning.');
-    }
-
     return { valid: errors.length === 0, errors, warnings };
   };
 
@@ -202,13 +196,7 @@ const Dashboard = ({ user, onLogout }) => {
         const labs = rooms.filter(r => r.hasComputers);
         if (labs.length > 0) pool = labs;
       }
-
-      const need = Number(subject?.capacity || section?.studentCount || 0) || 0;
-      const ok = pool.filter(r => {
-        const cap = Number(r?.capacity || 0);
-        return need <= 0 ? true : cap >= need;
-      });
-      return ok.length > 0 ? ok : pool;
+      return pool;
     },
     _eligibleProfsFor: (subject) => {
       if (!subject) return professors;
@@ -503,8 +491,8 @@ return (
                   <button className="btn" onClick={() => setActiveTab('rooms')}>Manage Rooms</button>
                 </div>
                 <table className="data-table">
-                  <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Capacity</th></tr></thead>
-                  <tbody>{rooms.slice(0, 2).map(r => <tr key={r.id}><td>{r.id}</td><td>{r.name}</td><td style={{ textTransform: 'uppercase' }}>{r.type}</td><td>{r.capacity}</td></tr>)}</tbody>
+                  <thead><tr><th>ID</th><th>Name</th><th>Type</th></tr></thead>
+                  <tbody>{rooms.slice(0, 2).map(r => <tr key={r.id}><td>{r.id}</td><td>{r.name}</td><td style={{ textTransform: 'uppercase' }}>{r.type}</td></tr>)}</tbody>
                 </table>
               </div>
             </div>
