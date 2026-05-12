@@ -136,7 +136,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Generate conflict-free timetables automatically.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: engineMode === 'ga' ? '1fr' : '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '5px' }}>Engine Mode</label>
           <select value={engineMode} onChange={(e) => { setEngineMode(e.target.value); setTargetId(''); }} className="input-group select" style={{ width: '100%', padding: '10px', borderRadius: '6px' }}>
