@@ -252,7 +252,10 @@ h6 {
   transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
-
+.btn-sm {
+  padding: 5px 12px;
+  font-size: 0.82rem;
+}
 
 .card-header {
   display: flex;
