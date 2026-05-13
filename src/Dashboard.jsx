@@ -1,3 +1,4 @@
+// src/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { initialRooms, initialProfessors, initialSubjects, initialSections, SEED_VERSION } from './initial';
 import { TIME_SLOTS, DAYS } from './index';
@@ -119,12 +120,16 @@ const Dashboard = ({ user, onLogout }) => {
   const LOGO_SRC = '/logo.jpg?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // --- ROLE IDENTIFICATION ---
+  const isAdmin = user?.role === 'Admin' || user?.role === 'Department Head';
+  const isStudent = user?.role === 'Student' || user?.role === 'User';
+
+  // Make students default to the 'room-utilization' (View Schedules) tab
+  const [activeTab, setActiveTab] = useState(isStudent ? 'room-utilization' : 'dashboard');
+
   const [isManageDataOpen, setIsManageDataOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
-  const isAdmin = user?.role === 'Admin' || user?.role === 'Department Head';
 
   const handleTabClick = (tab) => { setActiveTab(tab); setIsMobileMenuOpen(false); };
 
@@ -134,7 +139,6 @@ const Dashboard = ({ user, onLogout }) => {
   const [sections, setSections] = useState([]);
   const [schedules, setSchedules] = useState([]);
 
-  // ── All your existing logic (unchanged) ──────────────────────────────────
   const findScheduleConflicts = ({ roomId, professorId, sectionId, day, timeSlotId, excludeScheduleId = null }) => {
     const conflicts = { room: null, professor: null, section: null };
     for (const s of schedules) {
@@ -466,7 +470,10 @@ const Dashboard = ({ user, onLogout }) => {
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '12px 8px' }}>
           <ul style={{ margin: 0, padding: 0 }}>
-            <NavItem label="Dashboard" iconPath={NAV_ICONS.dashboard} active={activeTab === 'dashboard'} onClick={() => handleTabClick('dashboard')} />
+            {/* HIDE DASHBOARD TAB FOR STUDENTS */}
+            {!isStudent && (
+              <NavItem label="Dashboard" iconPath={NAV_ICONS.dashboard} active={activeTab === 'dashboard'} onClick={() => handleTabClick('dashboard')} />
+            )}
 
             {isAdmin && (
               <>
@@ -533,7 +540,7 @@ const Dashboard = ({ user, onLogout }) => {
         </header>
 
         {/* ── Dashboard Tab ── */}
-        {activeTab === 'dashboard' && (
+        {!isStudent && activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.4s' }}>
 
             {/* KPI row */}
@@ -696,6 +703,8 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
+
+        {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
         {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} />}
 
       </div>
