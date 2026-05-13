@@ -1,29 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ScheduleTable from './ScheduleTable';
 import PrintableSchedule from './PrintableSchedule';
 import { DEPARTMENTS } from './index';
 
 function ScheduleViewer({ schedules, rooms, professors, sections }) {
-    // Set 'department' as the default view for a better user experience
     const [viewType, setViewType] = useState('department');
     const [selectedId, setSelectedId] = useState('');
+    const [deptSectionId, setDeptSectionId] = useState(''); // Secondary filter for sections
 
     // Ensure selectedId is valid when switching view types
-    React.useEffect(() => {
+    useEffect(() => {
         if (viewType === 'department' && DEPARTMENTS.length > 0) setSelectedId(DEPARTMENTS[0]);
         else if (viewType === 'room' && rooms.length > 0) setSelectedId(rooms[0].id);
         else if (viewType === 'faculty' && professors.length > 0) setSelectedId(professors[0].id);
         else if (viewType === 'section' && sections.length > 0) setSelectedId(sections[0].id);
         else setSelectedId('');
+
+        setDeptSectionId(''); // Reset section sub-filter on view change
     }, [viewType, rooms, professors, sections]);
 
-    // Filter schedules based on the selected view type
+    // Reset section filter when department changes
+    useEffect(() => {
+        setDeptSectionId('');
+    }, [selectedId]);
+
+    // Compute sections that belong to the selected department (e.g., "BSCS 1A" starts with "BSCS")
+    const deptSections = viewType === 'department' && selectedId
+        ? sections.filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()))
+        : [];
+
+    // Filter schedules based on the selected view type and sub-filters
     const filteredSchedules = schedules.filter(s => {
         if (!selectedId) return false;
 
         if (viewType === 'department') {
-            // Match if either the subject or the professor belongs to the selected department
-            return (s.subject?.department === selectedId) || (s.professor?.department === selectedId);
+            const matchesDept = (s.subject?.department === selectedId) || (s.professor?.department === selectedId);
+            if (!matchesDept) return false;
+
+            // If a specific section inside the department is chosen, filter by it
+            if (deptSectionId) {
+                return s.section != null && String(s.section.id) === String(deptSectionId);
+            }
+            return true;
         }
         if (viewType === 'room') return s.room != null && String(s.room.id) === String(selectedId);
         if (viewType === 'faculty') return s.professor != null && String(s.professor.id) === String(selectedId);
@@ -34,17 +52,27 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
 
     // Determine the active entity for the title
     let activeEntity = null;
-    if (viewType === 'department') activeEntity = { name: selectedId };
-    if (viewType === 'room') activeEntity = rooms.find(r => r.id === selectedId);
-    if (viewType === 'faculty') activeEntity = professors.find(p => p.id === selectedId);
-    if (viewType === 'section') activeEntity = sections.find(s => s.id === selectedId);
+    if (viewType === 'department') {
+        if (deptSectionId) {
+            const sec = sections.find(s => s.id === deptSectionId);
+            activeEntity = { name: `${selectedId} — ${sec ? sec.name : ''}` };
+        } else {
+            activeEntity = { name: `${selectedId} (ALL SECTIONS)` };
+        }
+    } else if (viewType === 'room') {
+        activeEntity = rooms.find(r => r.id === selectedId);
+    } else if (viewType === 'faculty') {
+        activeEntity = professors.find(p => p.id === selectedId);
+    } else if (viewType === 'section') {
+        activeEntity = sections.find(s => s.id === selectedId);
+    }
 
     const titlePrefix = viewType === 'department' ? 'DEPARTMENT' : viewType === 'room' ? 'ROOM' : viewType === 'faculty' ? 'FACULTY' : 'SECTION';
     const titleName = activeEntity ? activeEntity.name.toUpperCase() : 'SELECT ITEM';
 
     return (
         <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '15px', borderBottom: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', paddingBottom: '15px', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '15px' }}>
                 <div className="no-print">
                     <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
@@ -53,7 +81,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Filter schedules by department, room, faculty, or section</p>
                 </div>
 
-                <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)', alignSelf: 'center' }}>Filter By:</label>
                         <select
@@ -82,6 +110,21 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
                         </select>
                     </div>
 
+                    {/* NEW: Secondary Dropdown for Sections inside a Department */}
+                    {viewType === 'department' && deptSections.length > 0 && (
+                        <div style={{ display: 'flex', gap: '10px', paddingLeft: '10px', borderLeft: '2px solid var(--border-color)' }}>
+                            <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)', alignSelf: 'center' }}>Section:</label>
+                            <select
+                                value={deptSectionId}
+                                onChange={(e) => setDeptSectionId(e.target.value)}
+                                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--accent-primary)', backgroundColor: deptSectionId ? 'var(--warning-bg)' : 'white', color: 'var(--accent-dark)', fontWeight: deptSectionId ? 'bold' : 'normal', outline: 'none', cursor: 'pointer' }}
+                            >
+                                <option value="">All {selectedId} Sections</option>
+                                {deptSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        </div>
+                    )}
+
                     <button className="btn" onClick={() => window.print()} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                         Print ISO Schedule
@@ -89,7 +132,6 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
                 </div>
             </div>
 
-            {/* This standard view hides when printing */}
             <div className="no-print">
                 <ScheduleTable
                     schedules={filteredSchedules}
@@ -97,7 +139,6 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
                 />
             </div>
 
-            {/* This ISO view is hidden on screen, but shows when printing */}
             <PrintableSchedule
                 scheduleItems={filteredSchedules}
                 sectionName={titleName}
