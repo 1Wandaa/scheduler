@@ -504,37 +504,30 @@ const Dashboard = ({ user, onLogout }) => {
             {/* --- NEW: Appropriate Dashboard Widgets (Quick Actions & Recent Activity) --- */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
 
-              {/* Quick Actions Panel */}
+              {/* System Reminders Panel (Replaced Redundant Quick Actions) */}
               {isAdmin && (
                 <div className="card" style={{ padding: '20px' }}>
                   <h3 className="card-title" style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Icon d={NAV_ICONS.manage} size={16} /> Quick Actions
+                    <Icon d={NAV_ICONS.manage} size={16} /> System Reminders
                   </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <button
-                      className="btn"
-                      onClick={() => setActiveTab('schedule')}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success)', boxShadow: 'none' }}
-                    >
-                      <span style={{ fontWeight: 600 }}>Create New Schedule</span>
-                      <Icon d={NAV_ICONS.chevronRight} size={16} />
-                    </button>
-                    <button
-                      className="btn"
-                      onClick={() => setActiveTab('workload')}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: 'rgba(86, 69, 238, 0.1)', color: 'var(--accent-primary)', border: '1px solid rgba(86, 69, 238, 0.2)', boxShadow: 'none' }}
-                    >
-                      <span style={{ fontWeight: 600 }}>Review Faculty Workload</span>
-                      <Icon d={NAV_ICONS.chevronRight} size={16} />
-                    </button>
-                    <button
-                      className="btn"
-                      onClick={() => setActiveTab('room-utilization')}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning)', boxShadow: 'none' }}
-                    >
-                      <span style={{ fontWeight: 600 }}>Analyze Room Utilization</span>
-                      <Icon d={NAV_ICONS.chevronRight} size={16} />
-                    </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+                    <div className="alert-item alert-info" style={{ margin: 0 }}>
+                      <Icon d={NAV_ICONS.subjects} size={18} />
+                      <div>
+                        <strong style={{ display: 'block', marginBottom: '3px' }}>Pre-Scheduling Checklist</strong>
+                        Ensure all faculty specializations and computer lab requirements are accurate before running the algorithm.
+                      </div>
+                    </div>
+
+                    <div className="alert-item alert-warning" style={{ margin: 0 }}>
+                      <Icon d={NAV_ICONS.workload} size={18} />
+                      <div>
+                        <strong style={{ display: 'block', marginBottom: '3px' }}>Monitor Workloads</strong>
+                        Regularly check the Workload Report. Assignments exceeding maximum allowed units will be flagged.
+                      </div>
+                    </div>
+
                   </div>
                 </div>
               )}
