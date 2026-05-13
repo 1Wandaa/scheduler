@@ -4,8 +4,18 @@ import './PrintableSchedule.css';
 const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-    // Create a sorted list of unique time slots from the schedule data
-    const timeSlots = Array.from(new Set(scheduleItems.map(item => item.timeSlot.label))).sort();
+    // FIX: Extract unique time slots and sort them chronologically by their ID
+    const uniqueSlotsMap = new Map();
+    scheduleItems.forEach(item => {
+        if (item.timeSlot && item.timeSlot.label) {
+            uniqueSlotsMap.set(item.timeSlot.label, item.timeSlot.id);
+        }
+    });
+
+    // Sort by ID (1, 2, 3...) and extract just the label array
+    const timeSlots = Array.from(uniqueSlotsMap.entries())
+        .sort((a, b) => a[1] - b[1])
+        .map(entry => entry[0]);
 
     // Helper to find class at a specific day/time
     const getClass = (day, timeLabel) => {
