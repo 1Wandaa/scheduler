@@ -572,17 +572,17 @@ const Dashboard = ({ user, onLogout }) => {
         )}
 
         {/* ── Other Tabs (unchanged) ── */}
-        {isAdmin && activeTab === 'users' && <UserManagement />}
+        {isAdmin && activeTab === 'users' && <UserManagement onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
             <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} onSchedule={handleAddSchedule} validator={validator} />
             <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} onAutoSchedule={handleAddSchedule} />
           </div>
         )}
-        {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} />}
-        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} />}
-        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} />}
-        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} />}
+        {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
         {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} />}
 

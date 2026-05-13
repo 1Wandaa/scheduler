@@ -3,7 +3,7 @@ import { db } from './firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc, deleteField } from 'firebase/firestore';
 import { ROOM_TYPES } from './index';
 
-const RoomManagement = ({ rooms }) => {
+const RoomManagement = ({ rooms, onBack }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -64,12 +64,23 @@ const RoomManagement = ({ rooms }) => {
   return (
     <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div>
-          <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-            Manage Rooms
-          </h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Configure campus facilities</p>
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+          {onBack && (
+            <button 
+              onClick={onBack} 
+              style={{ background: 'transparent', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-muted)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              Back
+            </button>
+          )}
+          <div>
+            <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+              Manage Rooms
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Configure campus facilities</p>
+          </div>
         </div>
         <button className="btn" onClick={handleOpenAdd}>+ Add Room</button>
       </div>
