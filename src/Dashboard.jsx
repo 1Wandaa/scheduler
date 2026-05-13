@@ -602,20 +602,6 @@ const Dashboard = ({ user, onLogout }) => {
 
             </div>
 
-            {/* Alerts */}
-            <div className="card" style={{ padding: '20px' }}>
-              <h3 className="card-title" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                System Alerts
-              </h3>
-              <div className="alert-item alert-info">
-                <strong>Ready:</strong> Schedule data is live and up to date.
-              </div>
-              {!isAdmin && (
-                <div className="alert-item alert-warning" style={{ marginTop: 8 }}>
-                  <strong>Notice:</strong> You are in View-Only mode. Contact an Admin to make schedule changes.
-                </div>
-              )}
-            </div>
 
           </div>
         )}
