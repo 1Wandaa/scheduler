@@ -86,9 +86,9 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
 
         const isConflict = savedSchedules.some(s =>
           sameTimeSlot(s, entry) && (
-            String(s.room?.id) === String(entry.room?.id) ||
-            String(s.professor?.id) === String(entry.professor?.id) ||
-            String(s.section?.id) === String(entry.section?.id)
+            (s.room?.id && entry.room?.id && String(s.room.id) === String(entry.room.id)) ||
+            (s.professor?.id && entry.professor?.id && String(s.professor.id) === String(entry.professor.id)) ||
+            (s.section?.id && entry.section?.id && String(s.section.id) === String(entry.section.id))
           )
         );
 

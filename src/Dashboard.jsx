@@ -45,9 +45,17 @@ const NAV_ICONS = {
 function professorMatchesSubject(professor, subject) {
   if (!professor || !subject) return false;
   const specs = professor.specialization || [];
-  return specs.includes(subject.id) ||
-    specs.includes(subject.code) ||
-    specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
+  const subId = String(subject.id).toLowerCase();
+  const subCode = String(subject.code).toLowerCase();
+  const subName = (subject.name || '').toLowerCase();
+
+  return specs.some(s => {
+    const spec = String(s).toLowerCase();
+    return spec === subId ||
+      spec === subCode ||
+      (subName && subName.includes(spec)) ||
+      (spec && subName && spec.includes(subName));
+  });
 }
 
 // ─── KPI Tile ─────────────────────────────────────────────────────────────────

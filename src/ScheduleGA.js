@@ -114,7 +114,17 @@ export class ScheduleGA {
     if (subject) {
       pool = this.professors.filter(p => {
         const specs = p.specialization || [];
-        return specs.includes(subject.id) || specs.includes(subject.code) || specs.some(s => typeof s === 'string' && subject.name?.toLowerCase().includes(s.toLowerCase()));
+        const subId = String(subject.id).toLowerCase();
+        const subCode = String(subject.code).toLowerCase();
+        const subName = (subject.name || '').toLowerCase();
+
+        return specs.some(s => {
+          const spec = String(s).toLowerCase();
+          return spec === subId ||
+            spec === subCode ||
+            (subName && subName.includes(spec)) ||
+            (spec && subName && spec.includes(subName));
+        });
       });
     }
 
@@ -126,9 +136,12 @@ export class ScheduleGA {
 
     const feasible = [];
     for (const p of pool) {
-      const max = p.maxUnits || p.maxHours || 12;
-      const w = profWork[p.id] || 0;
-      if (w + creditPerSlot <= max) feasible.push(p);
+      // Force Number casting to avoid string comparison bugs
+      const max = Number(p.maxUnits) || Number(p.maxHours) || 12;
+      const w = Number(profWork[p.id]) || 0;
+
+      // Add +0.01 to prevent floating-point precision rejections (e.g., 12.00000000001 <= 12)
+      if (w + creditPerSlot <= max + 0.01) feasible.push(p);
     }
     return feasible;
   }
@@ -197,7 +210,7 @@ export class ScheduleGA {
         chrom[i] = { professorId: prof.id, roomId: room.id, dayIdx, timeIdx };
         this._occupy({ roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots);
         const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
-        profWork[prof.id] = (profWork[prof.id] || 0) + creditPerSlot;
+        profWork[prof.id] = (Number(profWork[prof.id]) || 0) + creditPerSlot;
         placed = true;
         break;
       }
