@@ -514,106 +514,130 @@ const Dashboard = ({ user, onLogout }) => {
                       ))}
                     </tbody>
                   </table>
-
-                  {/* --- NEW: Appropriate Dashboard Widgets (Quick Actions & Recent Activity) --- */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-
-                    {/* Quick Actions Panel */}
-                    {isAdmin && (
-                      <div className="card" style={{ padding: '20px' }}>
-                        <h3 className="card-title" style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Icon d={NAV_ICONS.manage} size={16} /> Quick Actions
-                        </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          <button
-                            className="btn"
-                            onClick={() => setActiveTab('schedule')}
-                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success)', boxShadow: 'none' }}
-                          >
-                            <span style={{ fontWeight: 600 }}>Create New Schedule</span>
-                            <Icon d={NAV_ICONS.chevronRight} size={16} />
-                          </button>
-                          <button
-                            className="btn"
-                            onClick={() => setActiveTab('workload')}
-                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: 'rgba(86, 69, 238, 0.1)', color: 'var(--accent-primary)', border: '1px solid rgba(86, 69, 238, 0.2)', boxShadow: 'none' }}
-                          >
-                            <span style={{ fontWeight: 600 }}>Review Faculty Workload</span>
-                            <Icon d={NAV_ICONS.chevronRight} size={16} />
-                          </button>
-                          <button
-                            className="btn"
-                            onClick={() => setActiveTab('room-utilization')}
-                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning)', boxShadow: 'none' }}
-                          >
-                            <span style={{ fontWeight: 600 }}>Analyze Room Utilization</span>
-                            <Icon d={NAV_ICONS.chevronRight} size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Recently Scheduled Feed */}
-                    <div className="card" style={{ padding: '20px' }}>
-                      <div className="card-header" style={{ marginBottom: '14px', borderBottom: 'none', paddingBottom: 0 }}>
-                        <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Icon d={NAV_ICONS.schedule} size={16} /> Recently Scheduled
-                        </h3>
-                        <button className="btn btn-sm" onClick={() => setActiveTab('room-utilization')} style={{ background: 'transparent', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', boxShadow: 'none' }}>
-                          View All
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {schedules.slice(-4).reverse().map((s, i) => (
-                          <div key={s.id || i} style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-main)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                                {s.subject?.code} {s.section && <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>({s.section?.name})</span>}
-                              </div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500 }}>
-                                {s.professor?.name} • {s.room?.name}
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'right', background: 'white', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
-                                {typeof s.day === 'string' ? s.day.slice(0, 3).toUpperCase() : s.day}
-                              </div>
-                              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                                {s.timeSlot?.label?.split(' - ')[0]}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                        {schedules.length === 0 && (
-                          <div style={{ textAlign: 'center', padding: '30px 0', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No classes scheduled yet.</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                  </div>
-
-
-
-                  {/* ── Other Tabs (unchanged) ── */}
-                  {isAdmin && activeTab === 'users' && <UserManagement onBack={() => setActiveTab('dashboard')} />}
-                  {isAdmin && activeTab === 'schedule' && (
-                    <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
-                      <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} onSchedule={handleAddSchedule} validator={validator} />
-                      <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} onAutoSchedule={handleAddSchedule} />
-                    </div>
+                  {rooms.length > 3 && (
+                    <p style={{ margin: '10px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'right' }}>
+                      +{rooms.length - 3} more
+                    </p>
                   )}
-                  {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
-                  {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
-                  {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
-                  {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
-                  {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
-                  {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} />}
-
                 </div>
               </div>
-            );
+            )}
+
+            {/* --- NEW: Appropriate Dashboard Widgets (Quick Actions & Recent Activity) --- */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+
+              {/* Quick Actions Panel */}
+              {isAdmin && (
+                <div className="card" style={{ padding: '20px' }}>
+                  <h3 className="card-title" style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Icon d={NAV_ICONS.manage} size={16} /> Quick Actions
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <button
+                      className="btn"
+                      onClick={() => setActiveTab('schedule')}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success)', boxShadow: 'none' }}
+                    >
+                      <span style={{ fontWeight: 600 }}>Create New Schedule</span>
+                      <Icon d={NAV_ICONS.chevronRight} size={16} />
+                    </button>
+                    <button
+                      className="btn"
+                      onClick={() => setActiveTab('workload')}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: 'rgba(86, 69, 238, 0.1)', color: 'var(--accent-primary)', border: '1px solid rgba(86, 69, 238, 0.2)', boxShadow: 'none' }}
+                    >
+                      <span style={{ fontWeight: 600 }}>Review Faculty Workload</span>
+                      <Icon d={NAV_ICONS.chevronRight} size={16} />
+                    </button>
+                    <button
+                      className="btn"
+                      onClick={() => setActiveTab('room-utilization')}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning)', boxShadow: 'none' }}
+                    >
+                      <span style={{ fontWeight: 600 }}>Analyze Room Utilization</span>
+                      <Icon d={NAV_ICONS.chevronRight} size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Recently Scheduled Feed */}
+              <div className="card" style={{ padding: '20px' }}>
+                <div className="card-header" style={{ marginBottom: '14px', borderBottom: 'none', paddingBottom: 0 }}>
+                  <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Icon d={NAV_ICONS.schedule} size={16} /> Recently Scheduled
+                  </h3>
+                  <button className="btn btn-sm" onClick={() => setActiveTab('room-utilization')} style={{ background: 'transparent', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', boxShadow: 'none' }}>
+                    View All
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {schedules.slice(-4).reverse().map((s, i) => (
+                    <div key={s.id || i} style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-main)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                          {s.subject?.code} {s.section && <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>({s.section?.name})</span>}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500 }}>
+                          {s.professor?.name} • {s.room?.name}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right', background: 'white', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                          {typeof s.day === 'string' ? s.day.slice(0, 3).toUpperCase() : s.day}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                          {s.timeSlot?.label?.split(' - ')[0]}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {schedules.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '30px 0', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No classes scheduled yet.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Alerts */}
+            <div className="card" style={{ padding: '20px' }}>
+              <h3 className="card-title" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                System Alerts
+              </h3>
+              <div className="alert-item alert-info">
+                <strong>Ready:</strong> Schedule data is live and up to date.
+              </div>
+              {!isAdmin && (
+                <div className="alert-item alert-warning" style={{ marginTop: 8 }}>
+                  <strong>Notice:</strong> You are in View-Only mode. Contact an Admin to make schedule changes.
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* ── Other Tabs (unchanged) ── */}
+        {isAdmin && activeTab === 'users' && <UserManagement onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'schedule' && (
+          <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
+            <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} onSchedule={handleAddSchedule} validator={validator} />
+            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} onAutoSchedule={handleAddSchedule} />
+          </div>
+        )}
+        {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
+        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} />}
+
+      </div>
+    </div>
+  );
 };
 
-            export default Dashboard;
+export default Dashboard;
