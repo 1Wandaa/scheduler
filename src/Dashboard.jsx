@@ -53,7 +53,7 @@ function professorMatchesSubject(professor, subject) {
 // ─── KPI Tile ─────────────────────────────────────────────────────────────────
 const KpiTile = ({ label, value, iconPath, color }) => (
   <div style={{
-    background: 'var(--card-bg)',
+    background: 'var(--bg-card)',
     border: '1px solid var(--border-color)',
     borderRadius: '12px',
     padding: '18px 20px',
@@ -92,13 +92,13 @@ const NavItem = ({ label, iconPath, active, onClick, danger, indent }) => (
       cursor: 'pointer',
       fontWeight: active ? 600 : 400,
       fontSize: indent ? '0.85rem' : '0.9rem',
-      color: danger ? 'var(--danger)' : active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text-muted)',
-      background: active ? 'rgba(86, 69, 238, 0.2)' : 'transparent',
+      color: danger ? 'var(--danger)' : active ? 'var(--accent-primary)' : 'var(--text-main)',
+      background: active ? 'var(--accent-primary)18' : 'transparent',
       transition: 'background 0.15s, color 0.15s',
       userSelect: 'none',
       listStyle: 'none',
     }}
-    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; }}
+    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--border-color)'; }}
     onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
   >
     {iconPath && <Icon d={iconPath} size={indent ? 15 : 17} />}
@@ -335,7 +335,7 @@ const Dashboard = ({ user, onLogout }) => {
       <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
 
         {/* Logo block */}
-        <div style={{ padding: '24px 16px 20px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', textAlign: 'center' }}>
+        <div style={{ padding: '24px 16px 20px', borderBottom: '1px solid var(--border-color)', textAlign: 'center' }}>
           <img
             src={LOGO_SRC}
             alt="CAPSU Logo"
@@ -344,7 +344,7 @@ const Dashboard = ({ user, onLogout }) => {
           />
           {!isSidebarCollapsed && (
             <>
-              <div style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '0.08em', color: 'var(--sidebar-text-active)' }}>SMARTSCHED</div>
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '0.08em', color: 'var(--text-main)' }}>SMARTSCHED</div>
               <span style={{
                 display: 'inline-block', marginTop: 6,
                 fontSize: '0.72rem', padding: '3px 10px', borderRadius: '20px',
@@ -384,7 +384,7 @@ const Dashboard = ({ user, onLogout }) => {
           </ul>
 
           {/* Divider + Logout */}
-          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', margin: '10px 0' }} />
+          <div style={{ borderTop: '1px solid var(--border-color)', margin: '10px 0' }} />
           <ul style={{ margin: 0, padding: 0 }}>
             <NavItem label="Log Out" iconPath={NAV_ICONS.logout} danger onClick={onLogout} />
           </ul>
@@ -394,9 +394,9 @@ const Dashboard = ({ user, onLogout }) => {
         {!isSidebarCollapsed && (
           <div style={{
             margin: '0 8px 12px',
-            background: 'rgba(255, 255, 255, 0.05)',
+            background: 'var(--bg-main)',
             borderRadius: '10px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: '1px solid var(--border-color)',
             padding: '12px 14px',
             fontSize: '0.82rem',
           }}>
@@ -406,9 +406,9 @@ const Dashboard = ({ user, onLogout }) => {
               { label: 'Sections', val: sections.length },
               { label: 'Classes', val: schedules.length },
             ].map(s => (
-              <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'var(--sidebar-text-muted)' }}>
+              <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'var(--text-muted)' }}>
                 <span>{s.label}</span>
-                <strong style={{ color: 'var(--sidebar-text-active)' }}>{s.val}</strong>
+                <strong style={{ color: 'var(--text-main)' }}>{s.val}</strong>
               </div>
             ))}
           </div>
@@ -422,7 +422,7 @@ const Dashboard = ({ user, onLogout }) => {
         <header style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '0 0 18px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+          borderBottom: '1px solid var(--border-color)',
           marginBottom: '24px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -435,10 +435,10 @@ const Dashboard = ({ user, onLogout }) => {
               <Icon d={NAV_ICONS.menu} size={20} />
             </button>
             <div>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500, letterSpacing: '0.02em' }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.02em' }}>
                 Capiz State University · Mambusao Satellite College
               </p>
-              <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#ffffff' }}>
+              <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)' }}>
                 Welcome back, {firstName} 👋
               </h1>
             </div>
@@ -538,7 +538,7 @@ const Dashboard = ({ user, onLogout }) => {
                   <button
                     className="btn btn-sm"
                     onClick={() => window.print()}
-                    style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'var(--table-header)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
                   >
                     <Icon d={NAV_ICONS.print} size={14} /> Print
                   </button>
@@ -572,17 +572,17 @@ const Dashboard = ({ user, onLogout }) => {
         )}
 
         {/* ── Other Tabs (unchanged) ── */}
-        {isAdmin && activeTab === 'users' && <UserManagement onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'users' && <UserManagement />}
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
             <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} onSchedule={handleAddSchedule} validator={validator} />
             <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} onAutoSchedule={handleAddSchedule} />
           </div>
         )}
-        {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} />}
+        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} />}
+        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} />}
+        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
         {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} />}
 
