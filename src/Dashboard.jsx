@@ -53,7 +53,7 @@ function professorMatchesSubject(professor, subject) {
 // ─── KPI Tile ─────────────────────────────────────────────────────────────────
 const KpiTile = ({ label, value, iconPath, color }) => (
   <div style={{
-    background: 'var(--bg-card)',
+    background: 'var(--card-bg)',
     border: '1px solid var(--border-color)',
     borderRadius: '12px',
     padding: '18px 20px',
@@ -92,13 +92,13 @@ const NavItem = ({ label, iconPath, active, onClick, danger, indent }) => (
       cursor: 'pointer',
       fontWeight: active ? 600 : 400,
       fontSize: indent ? '0.85rem' : '0.9rem',
-      color: danger ? 'var(--danger)' : active ? 'var(--accent-primary)' : 'var(--text-main)',
-      background: active ? 'var(--accent-primary)18' : 'transparent',
+      color: danger ? 'var(--danger)' : active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text-muted)',
+      background: active ? 'rgba(86, 69, 238, 0.2)' : 'transparent',
       transition: 'background 0.15s, color 0.15s',
       userSelect: 'none',
       listStyle: 'none',
     }}
-    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--border-color)'; }}
+    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; }}
     onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
   >
     {iconPath && <Icon d={iconPath} size={indent ? 15 : 17} />}
@@ -335,7 +335,7 @@ const Dashboard = ({ user, onLogout }) => {
       <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
 
         {/* Logo block */}
-        <div style={{ padding: '24px 16px 20px', borderBottom: '1px solid var(--border-color)', textAlign: 'center' }}>
+        <div style={{ padding: '24px 16px 20px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', textAlign: 'center' }}>
           <img
             src={LOGO_SRC}
             alt="CAPSU Logo"
@@ -344,7 +344,7 @@ const Dashboard = ({ user, onLogout }) => {
           />
           {!isSidebarCollapsed && (
             <>
-              <div style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '0.08em', color: 'var(--text-main)' }}>SMARTSCHED</div>
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '0.08em', color: 'var(--sidebar-text-active)' }}>SMARTSCHED</div>
               <span style={{
                 display: 'inline-block', marginTop: 6,
                 fontSize: '0.72rem', padding: '3px 10px', borderRadius: '20px',
@@ -384,7 +384,7 @@ const Dashboard = ({ user, onLogout }) => {
           </ul>
 
           {/* Divider + Logout */}
-          <div style={{ borderTop: '1px solid var(--border-color)', margin: '10px 0' }} />
+          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', margin: '10px 0' }} />
           <ul style={{ margin: 0, padding: 0 }}>
             <NavItem label="Log Out" iconPath={NAV_ICONS.logout} danger onClick={onLogout} />
           </ul>
@@ -394,9 +394,9 @@ const Dashboard = ({ user, onLogout }) => {
         {!isSidebarCollapsed && (
           <div style={{
             margin: '0 8px 12px',
-            background: 'var(--bg-main)',
+            background: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '10px',
-            border: '1px solid var(--border-color)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
             padding: '12px 14px',
             fontSize: '0.82rem',
           }}>
@@ -406,9 +406,9 @@ const Dashboard = ({ user, onLogout }) => {
               { label: 'Sections', val: sections.length },
               { label: 'Classes', val: schedules.length },
             ].map(s => (
-              <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'var(--text-muted)' }}>
+              <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'var(--sidebar-text-muted)' }}>
                 <span>{s.label}</span>
-                <strong style={{ color: 'var(--text-main)' }}>{s.val}</strong>
+                <strong style={{ color: 'var(--sidebar-text-active)' }}>{s.val}</strong>
               </div>
             ))}
           </div>
@@ -422,7 +422,7 @@ const Dashboard = ({ user, onLogout }) => {
         <header style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '0 0 18px',
-          borderBottom: '1px solid var(--border-color)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
           marginBottom: '24px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -435,10 +435,10 @@ const Dashboard = ({ user, onLogout }) => {
               <Icon d={NAV_ICONS.menu} size={20} />
             </button>
             <div>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.02em' }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500, letterSpacing: '0.02em' }}>
                 Capiz State University · Mambusao Satellite College
               </p>
-              <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)' }}>
+              <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#ffffff' }}>
                 Welcome back, {firstName} 👋
               </h1>
             </div>
