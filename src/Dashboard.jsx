@@ -390,29 +390,7 @@ const Dashboard = ({ user, onLogout }) => {
           </ul>
         </nav>
 
-        {/* Stats strip */}
-        {!isSidebarCollapsed && (
-          <div style={{
-            margin: '0 8px 12px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '10px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            padding: '12px 14px',
-            fontSize: '0.82rem',
-          }}>
-            {[
-              { label: 'Faculty', val: professors.length },
-              { label: 'Rooms', val: rooms.length },
-              { label: 'Sections', val: sections.length },
-              { label: 'Classes', val: schedules.length },
-            ].map(s => (
-              <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'var(--sidebar-text-muted)' }}>
-                <span>{s.label}</span>
-                <strong style={{ color: 'var(--sidebar-text-active)' }}>{s.val}</strong>
-              </div>
-            ))}
-          </div>
-        )}
+
       </aside>
 
       {/* ═══════════════ MAIN CONTENT ═══════════════ */}
