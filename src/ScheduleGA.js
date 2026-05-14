@@ -29,6 +29,7 @@ const BONUS = {
   WORKLOAD_BALANCE: 15,
   NO_CONSECUTIVE_OVERLOAD: 10,
   SPREAD_ACROSS_WEEK: 5,
+  SAME_ROOM_TIME_DIFFERENT_DAYS: 30,
 };
 
 export class ScheduleGA {
@@ -143,13 +144,14 @@ export class ScheduleGA {
       pool = this.professors.filter(p => {
         const specs = p.specialization || [];
         const subId = String(subject.id).toLowerCase();
-        const subCode = String(subject.code).toLowerCase();
+        const subCode = (subject.code ? String(subject.code).toLowerCase() : '');
+        const subName = (subject.name ? String(subject.name).toLowerCase() : '');
 
         return specs.some(s => {
           const spec = String(s).toLowerCase().trim();
           if (!spec) return false;
-          // Strict match on Subject ID or Code only
-          return spec === subId || spec === subCode;
+          // Fuzzy match on Subject ID, Code, or Name
+          return subId.includes(spec) || subCode.includes(spec) || subName.includes(spec) || spec === subId || spec === subCode;
         });
       });
     }
@@ -192,12 +194,15 @@ export class ScheduleGA {
     const profSlots = {};
     const secSlots = {};
     const profWork = {};
+    const assignedSecSub = {};
 
     const idxs = this._shuffle(Array.from({ length: chrom.length }, (_, i) => i));
 
     for (const i of idxs) {
       const a = this.assignments[i];
       const sectionId = a.section.id;
+      const secSubKey = `${sectionId}-${a.subject.id}`;
+      const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
 
       const rooms = this._shuffle([...this._eligibleRoomsFor(a)]);
       const profs = this._shuffle([...this._eligibleProfsFor(a, profWork)]);
@@ -205,15 +210,55 @@ export class ScheduleGA {
       let placed = false;
       let bestFallback = null;
 
+      const g = chrom[i];
+      let validExisting = false;
+      if (g && g.professorId && g.roomId) {
+        const isProfEligible = profs.some(p => p.id === g.professorId);
+        const isRoomEligible = rooms.some(r => r.id === g.roomId);
+        if (isProfEligible && isRoomEligible) {
+          const ok = this._isSlotFree(
+            { roomId: g.roomId, professorId: g.professorId, sectionId, dayIdx: g.dayIdx, timeIdx: g.timeIdx },
+            roomSlots, profSlots, secSlots
+          );
+          if (ok) validExisting = true;
+        }
+      }
+
+      if (validExisting) {
+        this._occupy({ roomId: g.roomId, professorId: g.professorId, sectionId, dayIdx: g.dayIdx, timeIdx: g.timeIdx }, roomSlots, profSlots, secSlots);
+        profWork[g.professorId] = (Number(profWork[g.professorId]) || 0) + creditPerSlot;
+        
+        if (!assignedSecSub[secSubKey]) {
+          assignedSecSub[secSubKey] = { roomId: g.roomId, timeIdx: g.timeIdx, daysUsed: new Set([g.dayIdx]) };
+        } else {
+          assignedSecSub[secSubKey].daysUsed.add(g.dayIdx);
+        }
+        continue;
+      }
+
+      const pref = assignedSecSub[secSubKey];
+
       for (let t = 0; t < this.config.repairTriesPerGene; t++) {
         const prof = profs[this._randInt(profs.length)];
         if (!prof) break;
 
-        const room = rooms[this._randInt(rooms.length)];
+        let room, timeIdx;
+        const usePref = pref && t < this.config.repairTriesPerGene / 2;
+
+        if (usePref) {
+          room = this.roomMap[pref.roomId];
+          if (!room || !rooms.find(r => r.id === room.id)) {
+            room = rooms[this._randInt(rooms.length)];
+          }
+          timeIdx = pref.timeIdx;
+        } else {
+          room = rooms[this._randInt(rooms.length)];
+          timeIdx = this._randInt(this.timeSlots.length);
+        }
+
         if (!room) break;
 
         const dayIdx = this._randInt(this.days.length);
-        const timeIdx = this._randInt(this.timeSlots.length);
 
         const ok = this._isSlotFree(
           { roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx },
@@ -222,11 +267,16 @@ export class ScheduleGA {
           secSlots
         );
 
-        if (!ok) {
+        let sameDayConflict = false;
+        if (usePref && pref.daysUsed && pref.daysUsed.has(dayIdx)) {
+          sameDayConflict = true;
+        }
+
+        if (!ok || sameDayConflict) {
           const rk = `${room.id}-${dayIdx}-${timeIdx}`;
           const pk = `${prof.id}-${dayIdx}-${timeIdx}`;
           const sk = `${sectionId}-${dayIdx}-${timeIdx}`;
-          const conflicts = (roomSlots[rk] ? 1 : 0) + (profSlots[pk] ? 1 : 0) + (secSlots[sk] ? 1 : 0);
+          const conflicts = (roomSlots[rk] ? 1 : 0) + (profSlots[pk] ? 1 : 0) + (secSlots[sk] ? 1 : 0) + (sameDayConflict ? 1 : 0);
           if (!bestFallback || conflicts < bestFallback.conflicts) {
             bestFallback = { roomId: room.id, professorId: prof.id, dayIdx, timeIdx, conflicts };
           }
@@ -235,8 +285,14 @@ export class ScheduleGA {
 
         chrom[i] = { professorId: prof.id, roomId: room.id, dayIdx, timeIdx };
         this._occupy({ roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots);
-        const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
         profWork[prof.id] = (Number(profWork[prof.id]) || 0) + creditPerSlot;
+
+        if (!assignedSecSub[secSubKey]) {
+          assignedSecSub[secSubKey] = { roomId: room.id, timeIdx, daysUsed: new Set([dayIdx]) };
+        } else {
+          assignedSecSub[secSubKey].daysUsed.add(dayIdx);
+        }
+
         placed = true;
         break;
       }
@@ -245,8 +301,13 @@ export class ScheduleGA {
         if (bestFallback && bestFallback.professorId) {
           chrom[i] = { professorId: bestFallback.professorId, roomId: bestFallback.roomId, dayIdx: bestFallback.dayIdx, timeIdx: bestFallback.timeIdx };
           this._occupy({ roomId: chrom[i].roomId, professorId: chrom[i].professorId, sectionId, dayIdx: chrom[i].dayIdx, timeIdx: chrom[i].timeIdx }, roomSlots, profSlots, secSlots);
-          const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
           profWork[chrom[i].professorId] = (profWork[chrom[i].professorId] || 0) + creditPerSlot;
+          
+          if (!assignedSecSub[secSubKey]) {
+            assignedSecSub[secSubKey] = { roomId: bestFallback.roomId, timeIdx: bestFallback.timeIdx, daysUsed: new Set([bestFallback.dayIdx]) };
+          } else {
+            assignedSecSub[secSubKey].daysUsed.add(bestFallback.dayIdx);
+          }
         } else {
           chrom[i] = { professorId: null, roomId: null, dayIdx: 0, timeIdx: 0 };
         }
@@ -276,6 +337,10 @@ export class ScheduleGA {
     const roomSlots = {}, profSlots = {}, secSlots = {};
     const dailySubjectCheck = {};
     const profAssignedSubjects = {};
+    const sectionSubjectMeetings = {};
+    const profTimeline = {};
+    const secTimeline = {};
+    const profWork = {};
 
     // Base Workload Seed
     for (const s of this.existingSchedules) {
@@ -297,6 +362,17 @@ export class ScheduleGA {
       const pk = `${g.professorId}-${g.dayIdx}-${g.timeIdx}`;
       const sk = `${a.section.id}-${g.dayIdx}-${g.timeIdx}`;
 
+      if (!profTimeline[g.professorId]) profTimeline[g.professorId] = {};
+      if (!secTimeline[a.section.id]) secTimeline[a.section.id] = {};
+      if (!profTimeline[g.professorId][g.dayIdx]) profTimeline[g.professorId][g.dayIdx] = [];
+      if (!secTimeline[a.section.id][g.dayIdx]) secTimeline[a.section.id][g.dayIdx] = [];
+      
+      profTimeline[g.professorId][g.dayIdx].push({ timeIdx: g.timeIdx, roomId: g.roomId });
+      secTimeline[a.section.id][g.dayIdx].push({ timeIdx: g.timeIdx, roomId: g.roomId });
+
+      const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
+      profWork[g.professorId] = (profWork[g.professorId] || 0) + creditPerSlot;
+
       if (this.existingRoomSlots[rk]) { hardScore += PENALTY.ROOM_CONFLICT; hardViolations++; }
       if (this.existingProfSlots[pk]) { hardScore += PENALTY.PROF_CONFLICT; hardViolations++; }
       if (this.existingSecSlots[sk]) { hardScore += PENALTY.SECTION_CONFLICT; hardViolations++; }
@@ -308,9 +384,27 @@ export class ScheduleGA {
       if (!profAssignedSubjects[g.professorId]) profAssignedSubjects[g.professorId] = new Set();
       profAssignedSubjects[g.professorId].add(`${a.subject.id}_${a.section.id}`);
 
+      const secSubKey = `${a.section.id}-${a.subject.id}`;
+      if (!sectionSubjectMeetings[secSubKey]) sectionSubjectMeetings[secSubKey] = [];
+      sectionSubjectMeetings[secSubKey].push(g);
+
       const dailyKey = `${a.section.id}-${a.subject.id}-${g.dayIdx}`;
-      if (dailySubjectCheck[dailyKey]) { hardScore += PENALTY.SAME_DAY_CONFLICT; hardViolations++; }
-      dailySubjectCheck[dailyKey] = true;
+      if (!dailySubjectCheck[dailyKey]) {
+        dailySubjectCheck[dailyKey] = [];
+      }
+      
+      const prevTimes = dailySubjectCheck[dailyKey];
+      let conflict = false;
+      if (prevTimes.length > 0) {
+        const isConsecutive = prevTimes.some(t => Math.abs(t - g.timeIdx) === 1);
+        if (!isConsecutive) {
+           conflict = true; // non-consecutive on the same day is bad
+        }
+      }
+      if (conflict) {
+        hardScore += PENALTY.SAME_DAY_CONFLICT; hardViolations++;
+      }
+      dailySubjectCheck[dailyKey].push(g.timeIdx);
     }
 
     for (const k in roomSlots) if (roomSlots[k] > 1) { const o = roomSlots[k] - 1; hardScore += PENALTY.ROOM_CONFLICT * o; hardViolations += o; }
@@ -338,6 +432,83 @@ export class ScheduleGA {
         softScore += BONUS.ROOM_PREFERENCE;
       }
     }
+
+    // Add bonus for multiple meetings of the same subject-section having the same room and time
+    for (const key in sectionSubjectMeetings) {
+      const meetings = sectionSubjectMeetings[key];
+      if (meetings.length > 1) {
+        const first = meetings[0];
+        if (!first || !first.roomId) continue;
+
+        let allSameTimeAndRoom = true;
+        let allDifferentDays = true;
+        const daysUsed = new Set([first.dayIdx]);
+
+        for (let i = 1; i < meetings.length; i++) {
+          const m = meetings[i];
+          if (!m || !m.roomId) {
+            allSameTimeAndRoom = false;
+            break;
+          }
+          if (m.roomId !== first.roomId || m.timeIdx !== first.timeIdx) {
+            allSameTimeAndRoom = false;
+          }
+          if (daysUsed.has(m.dayIdx)) {
+            allDifferentDays = false;
+          }
+          daysUsed.add(m.dayIdx);
+        }
+
+        if (allSameTimeAndRoom && allDifferentDays) {
+          // Bonus per additional meeting that successfully matches the pattern
+          softScore += BONUS.SAME_ROOM_TIME_DIFFERENT_DAYS * (meetings.length - 1);
+        }
+      }
+    }
+
+    // Check Professor Workload
+    for (const pk in profWork) {
+      const p = this.profMap[pk];
+      if (p) {
+        const max = Number(p.maxUnits) || Number(p.maxHours) || 12;
+        if (profWork[pk] > max) {
+          hardScore += PENALTY.WORKLOAD_EXCEEDED * Math.ceil(profWork[pk] - max);
+          hardViolations++;
+        } else {
+          softScore += BONUS.WORKLOAD_BALANCE;
+        }
+      }
+    }
+
+    // Check consecutive classes and travel time
+    const checkTimeline = (timeline, isProf) => {
+      for (const id in timeline) {
+        for (const day in timeline[id]) {
+          const classes = timeline[id][day].sort((a, b) => a.timeIdx - b.timeIdx);
+          let consecutive = 1;
+          for (let i = 1; i < classes.length; i++) {
+            const prev = classes[i-1];
+            const curr = classes[i];
+            if (curr.timeIdx === prev.timeIdx + 1) {
+               consecutive++;
+               if (consecutive > 4) {
+                  if (isProf) hardScore += PENALTY.WORKLOAD_EXCEEDED / 2;
+               }
+               if (curr.roomId !== prev.roomId) {
+                  softScore -= 10; // penalty for back-to-back different rooms
+               }
+            } else {
+               consecutive = 1;
+            }
+          }
+          if (consecutive <= 3 && classes.length > 0) {
+            if (isProf) softScore += BONUS.NO_CONSECUTIVE_OVERLOAD;
+          }
+        }
+      }
+    };
+    checkTimeline(profTimeline, true);
+    checkTimeline(secTimeline, false);
 
     return { score: hardScore + softScore, hardViolations, hardScore, softScore };
   }
