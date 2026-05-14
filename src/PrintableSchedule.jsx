@@ -92,7 +92,7 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
                                     <td className="bold" style={{ whiteSpace: 'nowrap' }}>{timeLabel}</td>
                                     {days.map(day => {
                                         const cellKey = `${day}-${timeLabel}`;
-                                        
+
                                         if (window[`print_skip_${cellKey}`]) {
                                             delete window[`print_skip_${cellKey}`];
                                             return null;
@@ -109,31 +109,36 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
                                         }
 
                                         return (
-                                            <td key={cellKey} rowSpan={rowSpan}>
-                                                {cls ? (
-                                                    <div>
-                                                        <div style={{ fontWeight: 'bold' }}>{cls.subject.code}</div>
-                                                        <div style={{ fontSize: '9pt' }}>{cls.room.name}</div>
-                                                        <div style={{ fontSize: '9pt', fontStyle: 'italic' }}>Prof. {cls.professor.name}</div>
-                                                    </div>
-                                                ) : null}
-                                            </td>
-                                        );
-                                    })}
-                                </tr>
-                            </React.Fragment>
-                        );
-                    })}
-                </tbody>
-            </table>
+                                            {/* In PrintableSchedule.jsx, scroll down to the table cell rendering */ }
 
-            {/* Footer / Signatures could go here if needed in the future */}
-            <div style={{ marginTop: '40px', fontSize: '10pt', display: 'flex', justifyContent: 'space-between' }}>
+                                            < td key = { cellKey } rowSpan = { rowSpan } >
+                                            {
+                                                cls?(
+        <div>
+                                                {/* Added ?. to safely handle missing data without crashing */ }
+                                                < div style = {{ fontWeight: 'bold' }
+                                    }> { cls.subject?.code || 'N/A' }</div>
+                                <div style={{ fontSize: '9pt' }}>{cls.room?.name || 'TBA'}</div>
+                                <div style={{ fontSize: '9pt', fontStyle: 'italic' }}>Prof. {cls.professor?.name || 'TBA'}</div>
+                            </div>
+                        ) : null}
+                </td>
+                );
+                                    })}
+            </tr>
+        </React.Fragment>
+    );
+})}
+                </tbody >
+            </table >
+
+    {/* Footer / Signatures could go here if needed in the future */ }
+    < div style = {{ marginTop: '40px', fontSize: '10pt', display: 'flex', justifyContent: 'space-between' }}>
                 <div>Prepared by: ________________________</div>
                 <div>Approved by: ________________________</div>
-            </div>
+            </div >
 
-        </div>
+        </div >
     );
 };
 
