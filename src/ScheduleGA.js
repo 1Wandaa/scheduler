@@ -144,14 +144,12 @@ export class ScheduleGA {
         const specs = p.specialization || [];
         const subId = String(subject.id).toLowerCase();
         const subCode = String(subject.code).toLowerCase();
-        const subName = (subject.name || '').toLowerCase();
 
         return specs.some(s => {
-          const spec = String(s).toLowerCase();
-          return spec === subId ||
-            spec === subCode ||
-            (subName && subName.includes(spec)) ||
-            (spec && subName && spec.includes(subName));
+          const spec = String(s).toLowerCase().trim();
+          if (!spec) return false;
+          // Strict match on Subject ID or Code only
+          return spec === subId || spec === subCode;
         });
       });
     }

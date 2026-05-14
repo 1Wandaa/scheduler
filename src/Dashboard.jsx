@@ -48,14 +48,12 @@ function professorMatchesSubject(professor, subject) {
   const specs = professor.specialization || [];
   const subId = String(subject.id).toLowerCase();
   const subCode = String(subject.code).toLowerCase();
-  const subName = (subject.name || '').toLowerCase();
 
   return specs.some(s => {
-    const spec = String(s).toLowerCase();
-    return spec === subId ||
-      spec === subCode ||
-      (subName && subName.includes(spec)) ||
-      (spec && subName && spec.includes(subName));
+    const spec = String(s).toLowerCase().trim();
+    if (!spec) return false;
+    // Strict match on Subject ID or Code only
+    return spec === subId || spec === subCode;
   });
 }
 
@@ -231,8 +229,20 @@ const Dashboard = ({ user, onLogout }) => {
     autoScheduleForFaculty: async (professorId, constraints = { respectLabs: true, preventDoubleBooking: true }) => {
       const professor = professors.find(p => p.id === professorId);
       if (!professor) return { results: [], unscheduled: [], error: `Faculty "${professorId}" not found.` };
+
       const assignments = [];
-      for (const section of sections) for (const subId of (section.subjects || [])) { const subject = subjects.find(su => su.id === subId || su.code === subId); if (subject) { const credits = Number(subject.credits) || 3; const meetings = Math.max(1, Math.ceil(credits / 1.5)); for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1 }); } }
+      for (const section of sections) {
+        for (const subId of (section.subjects || [])) {
+          const subject = subjects.find(su => su.id === subId || su.code === subId);
+
+          // FIX: Only add to assignments if the professor actually teaches this subject!
+          if (subject && professorMatchesSubject(professor, subject)) {
+            const credits = Number(subject.credits) || 3;
+            const meetings = Math.max(1, Math.ceil(credits / 1.5));
+            for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1 });
+          }
+        }
+      }
       return validator._autoScheduleAssignments(assignments, { ...constraints, fixedProfessor: professor });
     },
     _eligibleRoomsFor: (subject, section, constraints) => {
