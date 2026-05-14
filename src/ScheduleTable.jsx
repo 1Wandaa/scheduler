@@ -1,190 +1,198 @@
-import React, { useState, useEffect } from 'react';
-import ScheduleTable from './ScheduleTable';
-import { DEPARTMENTS } from './index';
+import React, { useState } from 'react';
+import { TIME_SLOTS, DAYS } from './index';
+import './ScheduleTable.css';
 
-function ScheduleViewer({ schedules, rooms, professors, sections }) {
-  const [viewType, setViewType] = useState('department');
-  const [selectedId, setSelectedId] = useState('');
-  const [deptSectionId, setDeptSectionId] = useState('');
+function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID" }) {
+  const LOGO_SRC = '/logo.jpg?v=1';
+  const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
-  // --- FIX: Prevent infinite loops by tracking lengths and verifying changes ---
-  useEffect(() => {
-    let newTargetId = '';
-    if (viewType === 'department' && DEPARTMENTS.length > 0) newTargetId = DEPARTMENTS[0];
-    else if (viewType === 'room' && rooms.length > 0) newTargetId = rooms[0].id;
-    else if (viewType === 'faculty' && professors.length > 0) newTargetId = professors[0].id;
-    else if (viewType === 'section' && sections.length > 0) newTargetId = sections[0].id;
+  const [dragOverCell, setDragOverCell] = useState(null);
+  const [draggingId, setDraggingId] = useState(null);
 
-    // Only trigger a state update if the ID actually needs to change
-    if (selectedId !== newTargetId) {
-      setSelectedId(newTargetId);
-      setDeptSectionId('');
+  const handleDragStart = (e, schedule) => {
+    setDraggingId(schedule.id);
+    e.dataTransfer.setData('scheduleId', schedule.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    setDraggingId(null);
+    setDragOverCell(null);
+  };
+
+  const handleDragOver = (e, day, timeSlotId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const cellKey = `${day}-${timeSlotId}`;
+    if (dragOverCell !== cellKey) {
+      setDragOverCell(cellKey);
     }
-  }, [viewType, selectedId, rooms.length, professors.length, sections.length]);
+  };
 
-  const deptSections = viewType === 'department' && selectedId
-    ? sections.filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()))
-    : [];
+  const handleDragLeave = () => {
+    setDragOverCell(null);
+  };
 
-  const filteredSchedules = schedules.filter(s => {
-    if (!selectedId) return false;
+  const handleDrop = (e, day, timeSlotId) => {
+    e.preventDefault();
+    setDragOverCell(null);
+    setDraggingId(null);
 
-    if (viewType === 'department') {
-      const matchesDept = (s.subject?.department === selectedId) || (s.professor?.department === selectedId);
-      if (!matchesDept) return false;
+    const scheduleId = e.dataTransfer.getData('scheduleId');
+    if (!scheduleId || !onUpdateSchedule) return;
 
-      if (deptSectionId) {
-        return s.section != null && String(s.section.id) === String(deptSectionId);
-      }
-      return true;
-    }
-    if (viewType === 'room') return s.room != null && String(s.room.id) === String(selectedId);
-    if (viewType === 'faculty') return s.professor != null && String(s.professor.id) === String(selectedId);
-    if (viewType === 'section') return s.section != null && String(s.section.id) === String(selectedId);
+    // Find the schedule being moved
+    const movingSchedule = schedules.find(s => s.id === scheduleId);
+    if (!movingSchedule) return;
 
-    return false;
-  });
+    // Skip if dropping on the same slot
+    if (movingSchedule.day === day && String(movingSchedule.timeSlot?.id) === String(timeSlotId)) return;
 
-  let activeEntity = null;
-  if (viewType === 'department') {
-    if (deptSectionId) {
-      const sec = sections.find(s => s.id === deptSectionId);
-      activeEntity = { name: `${selectedId} — ${sec ? sec.name : ''}` };
-    } else {
-      activeEntity = { name: `${selectedId} (ALL SECTIONS)` };
-    }
-  } else if (viewType === 'room') {
-    activeEntity = rooms.find(r => r.id === selectedId);
-  } else if (viewType === 'faculty') {
-    activeEntity = professors.find(p => p.id === selectedId);
-  } else if (viewType === 'section') {
-    activeEntity = sections.find(s => s.id === selectedId);
-  }
+    // Check for conflicts: is the room already occupied in that slot?
+    const roomConflict = schedules.find(
+      s => s.id !== scheduleId &&
+        movingSchedule.room?.id != null &&
+        String(s.room?.id) === String(movingSchedule.room.id) &&
+        s.day === day &&
+        String(s.timeSlot?.id) === String(timeSlotId)
+    );
 
-  const titlePrefix = viewType === 'department' ? 'DEPARTMENT' : viewType === 'room' ? 'ROOM' : viewType === 'faculty' ? 'FACULTY' : 'SECTION';
-  const titleName = activeEntity ? activeEntity.name.toUpperCase() : 'SELECT ITEM';
+    // Check for conflicts: is the professor already busy in that slot?
+    const profConflict = schedules.find(
+      s => s.id !== scheduleId &&
+        movingSchedule.professor?.id != null &&
+        String(s.professor?.id) === String(movingSchedule.professor.id) &&
+        s.day === day &&
+        String(s.timeSlot?.id) === String(timeSlotId)
+    );
 
-  // --- DOWNLOAD CSV EXPORT FUNCTION ---
-  const handleDownloadCSV = () => {
-    if (filteredSchedules.length === 0) {
-      alert("No schedules available to download for this selection.");
+    // Check for conflicts: is the section already in class in that slot?
+    const sectionConflict = movingSchedule.section?.id
+      ? schedules.find(
+        s => s.id !== scheduleId &&
+          String(s.section?.id) === String(movingSchedule.section.id) &&
+          s.day === day &&
+          String(s.timeSlot?.id) === String(timeSlotId)
+      )
+      : null;
+
+    if (roomConflict || profConflict || sectionConflict) {
+      const msgs = [];
+      if (roomConflict) msgs.push(`Room "${movingSchedule.room?.name ?? 'Unknown'}" is already occupied`);
+      if (profConflict) msgs.push(`Prof. "${movingSchedule.professor?.name ?? 'Unknown'}" is already teaching`);
+      if (sectionConflict) msgs.push(`Section "${movingSchedule.section?.name || 'Unknown'}" already has a class`);
+      alert(`Cannot move schedule:\n${msgs.join('\n')}`);
       return;
     }
 
-    const DAYS_ORDER = { 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5 };
-    const sortedSchedules = [...filteredSchedules].sort((a, b) => {
-      if (DAYS_ORDER[a.day] !== DAYS_ORDER[b.day]) return DAYS_ORDER[a.day] - DAYS_ORDER[b.day];
-      return (a.timeSlot?.id || 0) - (b.timeSlot?.id || 0);
-    });
-
-    const headers = ['Day', 'Time', 'Subject', 'Section', 'Professor', 'Room'];
-    const rows = sortedSchedules.map(s => [
-      s.day || '',
-      s.timeSlot?.label || '',
-      s.subject?.code || '',
-      s.section?.name || 'N/A',
-      s.professor?.name || '',
-      s.room?.name || ''
-    ]);
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${titleName.replace(/[^a-zA-Z0-9]/g, '_')}_Schedule.csv`);
-    link.style.visibility = 'hidden';
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Clean up the URL object to free browser memory
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    onUpdateSchedule(scheduleId, day, timeSlotId);
   };
 
   return (
-    <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
-
-      {/* Header Row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingBottom: '15px', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '15px' }}>
-        <div className="no-print">
-          <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
-            Schedule Viewer
-          </h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Filter schedules by department, room, faculty, or section</p>
+    <div className="schedule-table-container">
+      {/* Header */}
+      <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: 'var(--card-bg)', color: 'var(--text-main)', overflow: 'hidden' }}>
+        <div style={{ flex: '0 0 100px', padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid var(--border-color)', backgroundColor: 'var(--table-header)' }}>
+          <img
+            src={LOGO_SRC}
+            alt="Logo"
+            style={{ width: '65px', height: '65px', objectFit: 'cover', borderRadius: '50%' }}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = FALLBACK_LOGO;
+            }}
+          />
         </div>
-
-        <div className="no-print">
-          <button className="btn" onClick={handleDownloadCSV} style={{ background: 'var(--success)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Download Schedule
-          </button>
+        <div style={{ flex: 1, padding: '15px', textAlign: 'center', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <h2 style={{ margin: '0 0 5px 0', fontSize: '1.2rem', fontWeight: '700', color: 'var(--accent-dark)', letterSpacing: '1px' }}>CAPIZ STATE UNIVERSITY</h2>
+          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px' }}>{title}</h3>
+        </div>
+        <div style={{ flex: '0 0 180px', padding: '15px', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', backgroundColor: 'var(--table-header)', color: 'var(--text-muted)' }}>
+          <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '4px', marginBottom: '4px' }}><strong>Doc. Code:</strong> CAPSU-F-045</div>
+          <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '4px', marginBottom: '4px' }}><strong>Revision No.:</strong> 01</div>
+          <div><strong>Effectivity:</strong> August 2026</div>
         </div>
       </div>
 
-      {/* Filters Row */}
-      <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', marginBottom: '20px', padding: '12px 15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)', alignSelf: 'center' }}>Filter By:</label>
-          <select
-            value={viewType}
-            onChange={(e) => setViewType(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', outline: 'none', cursor: 'pointer', minWidth: '140px' }}
-          >
-            <option value="department">Department</option>
-            <option value="section">Section</option>
-            <option value="faculty">Faculty</option>
-            <option value="room">Room</option>
-          </select>
-        </div>
+      <div className="table-wrapper">
+        <table className="schedule-table">
+          <thead>
+            <tr>
+              <th>Time Slot</th>
+              {DAYS.map(day => <th key={day}>{day}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {TIME_SLOTS.map((timeSlot, tIdx) => (
+              <tr key={timeSlot.id}>
+                <td className="time-label">
+                  <strong>{timeSlot.label}</strong>
+                </td>
+                {DAYS.map(day => {
+                  const cellKey = `${day}-${timeSlot.id}`;
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)', alignSelf: 'center' }}>Target:</label>
-          <select
-            value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--accent-primary)', backgroundColor: 'var(--success-bg)', color: 'var(--accent-dark)', fontWeight: 'bold', outline: 'none', cursor: 'pointer', minWidth: '200px' }}
-          >
-            {viewType === 'department' && DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-            {viewType === 'room' && rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-            {viewType === 'faculty' && professors.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            {viewType === 'section' && sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
+                  // If this cell was merged by a 2-hr class from the previous row, skip rendering it
+                  if (window[`skip_cell_${cellKey}`]) {
+                    delete window[`skip_cell_${cellKey}`];
+                    return null;
+                  }
 
-        {viewType === 'department' && deptSections.length > 0 && (
-          <div style={{ display: 'flex', gap: '10px', paddingLeft: '15px', borderLeft: '2px solid var(--border-color)' }}>
-            <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)', alignSelf: 'center' }}>Section:</label>
-            <select
-              value={deptSectionId}
-              onChange={(e) => setDeptSectionId(e.target.value)}
-              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--accent-primary)', backgroundColor: deptSectionId ? 'var(--warning-bg)' : 'white', color: 'var(--accent-dark)', fontWeight: deptSectionId ? 'bold' : 'normal', outline: 'none', cursor: 'pointer', minWidth: '200px' }}
-            >
-              <option value="">All {selectedId} Sections</option>
-              {deptSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-        )}
-      </div>
+                  const isDropTarget = dragOverCell === cellKey;
+                  const cellSchedules = schedules.filter(
+                    s => s.day === day && String(s.timeSlot?.id) === String(timeSlot.id)
+                  );
 
-      <div className="no-print">
-        <ScheduleTable
-          schedules={filteredSchedules}
-          title={`${titlePrefix} SCHEDULE: ${titleName}`}
-        />
+                  let rowSpan = 1;
+                  const has2HrClass = cellSchedules.some(s => s.subject?.hoursPerMeeting === 2);
+                  if (has2HrClass && tIdx < TIME_SLOTS.length - 1) {
+                    rowSpan = 2;
+                    // Mark the cell immediately below this one to be skipped
+                    window[`skip_cell_${day}-${TIME_SLOTS[tIdx + 1].id}`] = true;
+                  }
+
+                  return (
+                    <td
+                      key={cellKey}
+                      rowSpan={rowSpan}
+                      className={`schedule-cell ${isDropTarget ? 'drag-over' : ''}`}
+                      onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, day, timeSlot.id)}
+                    >
+                      {cellSchedules.map(schedule => (
+                        <div
+                          key={schedule.id}
+                          className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''}`}
+                          draggable={!!onUpdateSchedule}
+                          onDragStart={(e) => handleDragStart(e, schedule)}
+                          onDragEnd={handleDragEnd}
+                          style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
+                        >
+                          <div className="schedule-content">
+                            <p className="subject">
+                              {schedule.subject?.code ?? '—'}
+                              {schedule.section && <span style={{ fontWeight: '500', fontSize: '0.75rem', color: '#000000' }}> — {schedule.section.name}</span>}
+                            </p>
+                            <p className="professor">{schedule.professor?.name ?? '—'}</p>
+                            <p className="room">{schedule.room?.name ?? '—'}</p>
+                          </div>
+                          {onRemove && (
+                            <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-export default ScheduleViewer;
+export default ScheduleTable;
