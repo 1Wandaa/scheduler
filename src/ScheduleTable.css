@@ -41,14 +41,12 @@
 .cal-body {
   position: relative;
   min-width: 800px;
-  /* Prevents columns from getting too squished */
 }
 
 .cal-bg-row {
   display: grid;
   grid-template-columns: 100px repeat(5, 1fr);
   height: 80px;
-  /* Exactly 80px per hour */
   box-sizing: border-box;
 }
 
@@ -73,7 +71,6 @@
   border-right: none;
 }
 
-/* OVERLAY FOR EXACT POSITIONING */
 .cal-events-overlay {
   position: absolute;
   top: 0;
@@ -83,19 +80,18 @@
   display: grid;
   grid-template-columns: 100px repeat(5, 1fr);
   pointer-events: none;
-  /* Let empty space clicks fall through to background */
 }
 
 .cal-day-col {
   position: relative;
   pointer-events: auto;
-  /* Re-enable for interactions */
 }
 
+/* --- THE FIX IS IN THIS CLASS --- */
 .cal-event {
+  box-sizing: border-box;
+  /* THIS PREVENTS VERTICAL BLEEDING */
   position: absolute;
-  left: 4px;
-  right: 6px;
   background-color: #109EEF;
   border-left: 4px solid #0b7bc1;
   border-radius: 6px;
@@ -103,7 +99,7 @@
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s, width 0.2s, left 0.2s;
   display: flex;
   flex-direction: column;
 }
