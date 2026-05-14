@@ -4,7 +4,7 @@ import './PrintableSchedule.css';
 const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-    // FIX: Extract unique time slots and sort them chronologically by their ID
+    // Extract unique time slots and sort them chronologically by their ID
     const uniqueSlotsMap = new Map();
     scheduleItems.forEach(item => {
         if (item.timeSlot && item.timeSlot.label) {
@@ -109,36 +109,32 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
                                         }
 
                                         return (
-                                            {/* In PrintableSchedule.jsx, scroll down to the table cell rendering */ }
-
-                                            < td key = { cellKey } rowSpan = { rowSpan } >
-                                            {
-                                                cls?(
-        <div>
-                                                {/* Added ?. to safely handle missing data without crashing */ }
-                                                < div style = {{ fontWeight: 'bold' }
-                                    }> { cls.subject?.code || 'N/A' }</div>
-                                <div style={{ fontSize: '9pt' }}>{cls.room?.name || 'TBA'}</div>
-                                <div style={{ fontSize: '9pt', fontStyle: 'italic' }}>Prof. {cls.professor?.name || 'TBA'}</div>
-                            </div>
-                        ) : null}
-                </td>
-                );
+                                            <td key={cellKey} rowSpan={rowSpan}>
+                                                {cls ? (
+                                                    <div>
+                                                        {/* FIX APPLIED HERE: Using optional chaining to prevent undefined crashes */}
+                                                        <div style={{ fontWeight: 'bold' }}>{cls.subject?.code || 'N/A'}</div>
+                                                        <div style={{ fontSize: '9pt' }}>{cls.room?.name || 'TBA'}</div>
+                                                        <div style={{ fontSize: '9pt', fontStyle: 'italic' }}>Prof. {cls.professor?.name || 'TBA'}</div>
+                                                    </div>
+                                                ) : null}
+                                            </td>
+                                        );
                                     })}
-            </tr>
-        </React.Fragment>
-    );
-})}
-                </tbody >
-            </table >
+                                </tr>
+                            </React.Fragment>
+                        );
+                    })}
+                </tbody>
+            </table>
 
-    {/* Footer / Signatures could go here if needed in the future */ }
-    < div style = {{ marginTop: '40px', fontSize: '10pt', display: 'flex', justifyContent: 'space-between' }}>
+            {/* Footer / Signatures could go here if needed in the future */}
+            <div style={{ marginTop: '40px', fontSize: '10pt', display: 'flex', justifyContent: 'space-between' }}>
                 <div>Prepared by: ________________________</div>
                 <div>Approved by: ________________________</div>
-            </div >
+            </div>
 
-        </div >
+        </div>
     );
 };
 
