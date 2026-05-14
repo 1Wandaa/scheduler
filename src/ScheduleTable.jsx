@@ -123,7 +123,59 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
             </tr>
           </thead>
           <tbody>
-            {TIME_SLOTS.map(timeSlot => (
+            <tr><td colSpan="6" style={{ background: 'var(--table-header)', textAlign: 'center', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--text-muted)', padding: '8px' }}>Standard 1.5-Hour Blocks</td></tr>
+            {TIME_SLOTS.filter(t => t.duration === 1.5 || !t.duration).map(timeSlot => (
+              <tr key={timeSlot.id}>
+                <td className="time-label">
+                  <strong>{timeSlot.label}</strong>
+                </td>
+                {DAYS.map(day => {
+                  const cellKey = `${day}-${timeSlot.id}`;
+                  const isDropTarget = dragOverCell === cellKey;
+                  const cellSchedules = schedules.filter(
+                    s => s.day === day && String(s.timeSlot?.id) === String(timeSlot.id)
+                  );
+
+                  return (
+                    <td
+                      key={cellKey}
+                      className={`schedule-cell ${isDropTarget ? 'drag-over' : ''}`}
+                      onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, day, timeSlot.id)}
+                    >
+                      {cellSchedules.map(schedule => (
+                        <div
+                          key={schedule.id}
+                          className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''}`}
+                          draggable={!!onUpdateSchedule}
+                          onDragStart={(e) => handleDragStart(e, schedule)}
+                          onDragEnd={handleDragEnd}
+                          style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
+                        >
+                          <div className="schedule-content">
+                            <p className="subject">
+                              {schedule.subject?.code ?? '—'}
+                              {schedule.section && <span style={{ fontWeight: '500', fontSize: '0.75rem', color: '#000000' }}> — {schedule.section.name}</span>}
+                            </p>
+                            <p className="professor">{schedule.professor?.name ?? '—'}</p>
+                            <p className="room">{schedule.room?.name ?? '—'}</p>
+                          </div>
+                          {onRemove && (
+                            <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+            
+            <tr><td colSpan="6" style={{ background: 'var(--table-header)', textAlign: 'center', fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--text-muted)', padding: '8px' }}>Extended 2.0-Hour Blocks</td></tr>
+            {TIME_SLOTS.filter(t => t.duration === 2).map(timeSlot => (
               <tr key={timeSlot.id}>
                 <td className="time-label">
                   <strong>{timeSlot.label}</strong>
