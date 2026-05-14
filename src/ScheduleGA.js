@@ -138,14 +138,8 @@ export class ScheduleGA {
         if (!sub) continue;
 
         const credits = Number(sub.credits) || 3;
-        let meetings = 1;
-        let targetDuration = 1.5;
-
-        if (credits === 3) { meetings = 2; targetDuration = 1.5; }
-        else if (credits === 4) { meetings = 2; targetDuration = 2; }
-        else if (credits === 2) { meetings = 1; targetDuration = 2; }
-        else if (credits === 1) { meetings = 1; targetDuration = 1.5; }
-        else { meetings = Math.max(1, Math.ceil(credits / 1.5)); targetDuration = 1.5; }
+        const targetDuration = Number(sub.hoursPerMeeting) || 1.5;
+        const meetings = Math.max(1, Math.ceil(credits / targetDuration));
 
         const alreadyScheduled = existingCounts[`${sec.id}-${sub.id}`] || 0;
         const needed = meetings - alreadyScheduled;

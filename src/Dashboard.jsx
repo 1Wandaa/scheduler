@@ -216,14 +216,29 @@ const Dashboard = ({ user, onLogout }) => {
       if (!section) return { results: [], unscheduled: [], error: `Section "${sectionId}" not found.` };
       const subjectObjs = (section.subjects || []).map(subId => subjects.find(su => su.id === subId || su.code === subId)).filter(Boolean);
       const assignments = [];
-      for (const subject of subjectObjs) { const credits = Number(subject.credits) || 3; const meetings = Math.max(1, Math.ceil(credits / 1.5)); for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1 }); }
+      for (const subject of subjectObjs) { 
+        const credits = Number(subject.credits) || 3; 
+        const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
+        const meetings = Math.max(1, Math.ceil(credits / targetDuration)); 
+        for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1, targetDuration }); 
+      }
       return validator._autoScheduleAssignments(assignments, { ...constraints });
     },
     autoScheduleForRoom: async (roomId, constraints = { respectLabs: true, preventDoubleBooking: true }) => {
       const room = rooms.find(r => r.id === roomId);
       if (!room) return { results: [], unscheduled: [], error: `Room "${roomId}" not found.` };
       const assignments = [];
-      for (const section of sections) for (const subId of (section.subjects || [])) { const subject = subjects.find(su => su.id === subId || su.code === subId); if (subject) { const credits = Number(subject.credits) || 3; const meetings = Math.max(1, Math.ceil(credits / 1.5)); for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1 }); } }
+      for (const section of sections) {
+        for (const subId of (section.subjects || [])) { 
+          const subject = subjects.find(su => su.id === subId || su.code === subId); 
+          if (subject) { 
+            const credits = Number(subject.credits) || 3; 
+            const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
+            const meetings = Math.max(1, Math.ceil(credits / targetDuration)); 
+            for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1, targetDuration }); 
+          } 
+        }
+      }
       return validator._autoScheduleAssignments(assignments, { ...constraints, fixedRoom: room });
     },
     autoScheduleForFaculty: async (professorId, constraints = { respectLabs: true, preventDoubleBooking: true }) => {
@@ -238,8 +253,9 @@ const Dashboard = ({ user, onLogout }) => {
           // FIX: Only add to assignments if the professor actually teaches this subject!
           if (subject && professorMatchesSubject(professor, subject)) {
             const credits = Number(subject.credits) || 3;
-            const meetings = Math.max(1, Math.ceil(credits / 1.5));
-            for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1 });
+            const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
+            const meetings = Math.max(1, Math.ceil(credits / targetDuration));
+            for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1, targetDuration });
           }
         }
       }
