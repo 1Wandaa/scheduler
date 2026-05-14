@@ -1,6 +1,5 @@
-/* src/ScheduleTable.css */
-
 .schedule-table-container {
+  /* Keep blue limited to grid cells, not the page background */
   background: transparent;
   padding: 2rem;
   border-radius: 8px;
@@ -8,158 +7,145 @@
   margin-bottom: 2rem;
 }
 
+.schedule-table-container h2 {
+  margin-top: 0;
+  color: var(--text-main);
+  margin-bottom: 1.5rem;
+}
+
 .table-wrapper {
   overflow-x: auto;
   max-width: 100%;
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  position: relative;
 }
 
-.cal-header-row {
-  display: grid;
-  grid-template-columns: 100px repeat(5, 1fr);
-  border-bottom: 2px solid var(--border-color);
-  background: #F8FAFC;
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  table-layout: fixed;
+  background: #ffffff;
+  border-radius: 8px;
 }
 
-.cal-header-cell {
-  padding: 12px;
+.schedule-table th {
+  background-color: #FFFFFF;
+  /* Light gray/white background */
+  color: #000108;
+  /* Muted dark text for contrast */
+  padding: 1rem;
   text-align: center;
   font-weight: 600;
-  color: #1E293B;
   text-transform: uppercase;
   font-size: 0.8rem;
-  border-right: 1px solid var(--border-color);
+  letter-spacing: 0.05em;
+  border: 1px solid #E2E8F0;
+  /* Light border */
 }
 
-.cal-header-cell:last-child {
-  border-right: none;
-}
-
-.cal-body {
-  position: relative;
-  min-width: 800px;
-}
-
-.cal-bg-row {
-  display: grid;
-  grid-template-columns: 100px repeat(5, 1fr);
+/* Revert table cells back to strict 80px height with overflow hidden */
+.schedule-table td {
+  border: 1px solid var(--border-color);
+  padding: 0;
   height: 80px;
-  box-sizing: border-box;
-}
-
-.cal-time-label {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: 5px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  border-right: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.cal-bg-cell {
-  border-right: 1px solid var(--border-color);
-  border-bottom: 1px dashed #E2E8F0;
-}
-
-.cal-bg-cell:last-child {
-  border-right: none;
-}
-
-.cal-events-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: grid;
-  grid-template-columns: 100px repeat(5, 1fr);
-  pointer-events: none;
-}
-
-.cal-day-col {
-  position: relative;
-  pointer-events: auto;
-}
-
-/* --- THE FIX IS IN THIS CLASS --- */
-.cal-event {
-  box-sizing: border-box;
-  /* THIS PREVENTS VERTICAL BLEEDING */
-  position: absolute;
-  background-color: #109EEF;
-  border-left: 4px solid #0b7bc1;
-  border-radius: 6px;
-  padding: 8px;
-  color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  vertical-align: top;
   overflow: hidden;
-  transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s, width 0.2s, left 0.2s;
-  display: flex;
-  flex-direction: column;
 }
 
-.cal-event:hover {
-  transform: scale(1.02);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  z-index: 10;
-}
-
-.cal-event.dragging {
-  opacity: 0.5;
-  transform: scale(0.95);
-}
-
-.cal-event-content {
-  font-size: 0.75rem;
-  line-height: 1.4;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.cal-event .subj {
-  font-weight: 800;
-  font-size: 0.85rem;
-  letter-spacing: 0.02em;
-}
-
-.cal-event .prof {
+/* Revert time-label to its original state */
+.time-label {
+  background-color: #FFFFFF;
   font-weight: 600;
+  width: 140px;
+  min-width: 140px;
+  color: var(--text-main);
+  font-size: 0.82rem;
 }
 
-.cal-event .room {
-  opacity: 0.95;
+/* Revert drag-and-drop cells back to their exact original padding and hidden overflow */
+.schedule-cell {
+  position: relative;
+  padding: 0.5rem;
+  height: 80px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
 }
 
-.cal-event .sec {
-  opacity: 0.9;
-  font-style: italic;
-  margin-top: 2px;
+.schedule-cell:has(.schedule-item) {
+  background-color: #109EEF;
+  padding: 0;
+}
+
+/* Revert schedule items back to 100% height */
+.schedule-item {
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0.5rem 0.6rem;
+  margin: 0;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  user-select: none;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.schedule-item:active {
+  cursor: grabbing;
+}
+
+.schedule-item.dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+  box-shadow: none;
+}
+
+.schedule-content {
+  flex: 1;
+}
+
+.schedule-content p {
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+}
+
+.schedule-content .subject {
+  font-weight: 700;
+  color: #030813;
+}
+
+.schedule-content .professor {
+  font-weight: 600;
+  color: #030813;
+}
+
+.schedule-content .room {
+  color: #030813;
+  font-size: 0.8rem;
 }
 
 .remove-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background-color: transparent;
+  color: #c53030;
   border: none;
   border-radius: 50%;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   cursor: pointer;
+  font-size: 1.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
 }
 
 .remove-btn:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background-color: rgba(197, 48, 48, 0.15);
 }
