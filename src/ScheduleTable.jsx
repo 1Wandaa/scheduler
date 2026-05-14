@@ -1,6 +1,30 @@
+// src/ScheduleTable.jsx
 import React, { useState } from 'react';
 import { TIME_SLOTS, DAYS } from './index';
 import './ScheduleTable.css';
+
+// Configurable grid constants
+const START_HOUR = 7; // 7:00 AM
+const END_HOUR = 19;  // 7:00 PM (19:00)
+const MINUTE_HEIGHT = 1.3; // 1.3 pixels per minute = 78px per hour
+const HOUR_HEIGHT = 60 * MINUTE_HEIGHT;
+
+// Convert "HH:MM AM/PM" to total minutes since midnight
+const parseTime = (timeStr) => {
+  const parts = timeStr.trim().split(' ');
+  if (parts.length < 2) return 0;
+  let [h, m] = parts[0].split(':').map(Number);
+  if (parts[1].toUpperCase() === 'PM' && h !== 12) h += 12;
+  if (parts[1].toUpperCase() === 'AM' && h === 12) h = 0;
+  return h * 60 + m;
+};
+
+// Format 24hr integer back to 12hr AM/PM string
+const formatHour = (h) => {
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hr = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+  return `${hr}:00 ${ampm}`;
+};
 
 function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID" }) {
   const LOGO_SRC = '/logo.jpg?v=1';
@@ -8,6 +32,8 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
   const [dragOverCell, setDragOverCell] = useState(null);
   const [draggingId, setDraggingId] = useState(null);
+
+  const hoursArray = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
   const handleDragStart = (e, schedule) => {
     setDraggingId(schedule.id);
@@ -41,14 +67,11 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     const scheduleId = e.dataTransfer.getData('scheduleId');
     if (!scheduleId || !onUpdateSchedule) return;
 
-    // Find the schedule being moved
     const movingSchedule = schedules.find(s => s.id === scheduleId);
     if (!movingSchedule) return;
 
-    // Skip if dropping on the same slot
     if (movingSchedule.day === day && String(movingSchedule.timeSlot?.id) === String(timeSlotId)) return;
 
-    // Check for conflicts: is the room already occupied in that slot?
     const roomConflict = schedules.find(
       s => s.id !== scheduleId &&
         movingSchedule.room?.id != null &&
@@ -57,7 +80,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         String(s.timeSlot?.id) === String(timeSlotId)
     );
 
-    // Check for conflicts: is the professor already busy in that slot?
     const profConflict = schedules.find(
       s => s.id !== scheduleId &&
         movingSchedule.professor?.id != null &&
@@ -66,14 +88,13 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         String(s.timeSlot?.id) === String(timeSlotId)
     );
 
-    // Check for conflicts: is the section already in class in that slot?
     const sectionConflict = movingSchedule.section?.id
       ? schedules.find(
-          s => s.id !== scheduleId &&
-            String(s.section?.id) === String(movingSchedule.section.id) &&
-            s.day === day &&
-            String(s.timeSlot?.id) === String(timeSlotId)
-        )
+        s => s.id !== scheduleId &&
+          String(s.section?.id) === String(movingSchedule.section.id) &&
+          s.day === day &&
+          String(s.timeSlot?.id) === String(timeSlotId)
+      )
       : null;
 
     if (roomConflict || profConflict || sectionConflict) {
@@ -89,107 +110,138 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   };
 
   return (
-    <div className="schedule-table-container">
-      {/* Header */}
-      <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: 'var(--card-bg)', color: 'var(--text-main)', overflow: 'hidden' }}>
-        <div style={{ flex: '0 0 100px', padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid var(--border-color)', backgroundColor: 'var(--table-header)' }}>
+    <div className="schedule-table-container" style={{ animation: 'fadeIn 0.4s' }}>
+      {/* Header Panel */}
+      <div className="iso-header-panel">
+        <div className="iso-logo-container">
           <img
             src={LOGO_SRC}
             alt="Logo"
-            style={{ width: '65px', height: '65px', objectFit: 'cover', borderRadius: '50%' }}
             onError={(e) => {
               e.currentTarget.onerror = null;
               e.currentTarget.src = FALLBACK_LOGO;
             }}
           />
         </div>
-        <div style={{ flex: 1, padding: '15px', textAlign: 'center', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <h2 style={{ margin: '0 0 5px 0', fontSize: '1.2rem', fontWeight: '700', color: 'var(--accent-dark)', letterSpacing: '1px' }}>CAPIZ STATE UNIVERSITY</h2>
-          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px' }}>{title}</h3>
+        <div className="iso-title-container">
+          <h2>CAPIZ STATE UNIVERSITY</h2>
+          <h3>{title}</h3>
         </div>
-        <div style={{ flex: '0 0 180px', padding: '15px', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', backgroundColor: 'var(--table-header)', color: 'var(--text-muted)' }}>
-          <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '4px', marginBottom: '4px' }}><strong>Doc. Code:</strong> CAPSU-F-045</div>
-          <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '4px', marginBottom: '4px' }}><strong>Revision No.:</strong> 01</div>
+        <div className="iso-meta-container">
+          <div><strong>Doc. Code:</strong> CAPSU-F-045</div>
+          <div><strong>Revision No.:</strong> 01</div>
           <div><strong>Effectivity:</strong> August 2026</div>
         </div>
       </div>
 
+      {/* Main Timetable */}
       <div className="table-wrapper">
-        <table className="schedule-table">
-          <thead>
-            <tr>
-              <th>Time Slot</th>
-              {DAYS.map(day => <th key={day}>{day}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {TIME_SLOTS.map((timeSlot, tIdx) => (
-              <tr key={timeSlot.id}>
-                <td className="time-label">
-                  <strong>{timeSlot.label}</strong>
-                </td>
-                {DAYS.map(day => {
-                  const cellKey = `${day}-${timeSlot.id}`;
-                  
-                  // If this cell was merged by a 2-hr class from the previous row, skip rendering it
-                  if (window[`skip_cell_${cellKey}`]) {
-                      delete window[`skip_cell_${cellKey}`];
-                      return null;
-                  }
+        <div className="timetable-modern">
+          {/* Grid Header (Days) */}
+          <div className="timetable-header">
+            <div className="time-header-cell">Time</div>
+            {DAYS.map(day => (
+              <div key={day} className="day-header-cell">{day}</div>
+            ))}
+          </div>
 
-                  const isDropTarget = dragOverCell === cellKey;
-                  const cellSchedules = schedules.filter(
-                    s => s.day === day && String(s.timeSlot?.id) === String(timeSlot.id)
-                  );
+          {/* Grid Body */}
+          <div className="timetable-body" style={{ height: (END_HOUR - START_HOUR) * HOUR_HEIGHT }}>
 
-                  let rowSpan = 1;
-                  const has2HrClass = cellSchedules.some(s => s.subject?.hoursPerMeeting === 2);
-                  if (has2HrClass && tIdx < TIME_SLOTS.length - 1) {
-                      rowSpan = 2;
-                      // Mark the cell immediately below this one to be skipped
-                      window[`skip_cell_${day}-${TIME_SLOTS[tIdx + 1].id}`] = true;
-                  }
+            {/* Background Grid Lines & Y-Axis Labels */}
+            <div className="timetable-bg">
+              {hoursArray.slice(0, -1).map(h => (
+                <div key={h} className="timetable-row" style={{ height: HOUR_HEIGHT }}>
+                  <div className="time-label">{formatHour(h)}</div>
+                  <div className="row-line"></div>
+                </div>
+              ))}
+              {/* Final boundary line */}
+              <div className="timetable-row" style={{ height: 0 }}>
+                <div className="time-label">{formatHour(END_HOUR)}</div>
+                <div className="row-line"></div>
+              </div>
+            </div>
 
-                  return (
-                    <td
-                      key={cellKey}
-                      rowSpan={rowSpan}
-                      className={`schedule-cell ${isDropTarget ? 'drag-over' : ''}`}
-                      onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, day, timeSlot.id)}
-                    >
-                      {cellSchedules.map(schedule => (
+            {/* Foreground Overlay columns (Days) */}
+            <div className="timetable-columns">
+              {DAYS.map(day => {
+                const daySchedules = schedules.filter(s => s.day === day);
+
+                return (
+                  <div key={day} className="timetable-column">
+
+                    {/* Invisible Drop Zones for Drag-and-Drop */}
+                    {TIME_SLOTS.map(ts => {
+                      const timeLabel = ts.time || ts.label || "";
+                      const [startStr, endStr] = timeLabel.split(' - ');
+                      if (!startStr || !endStr) return null;
+
+                      const startMin = parseTime(startStr);
+                      const endMin = parseTime(endStr);
+
+                      const top = (startMin - START_HOUR * 60) * MINUTE_HEIGHT;
+                      const height = (endMin - startMin) * MINUTE_HEIGHT;
+                      const cellKey = `${day}-${ts.id}`;
+                      const isDropTarget = dragOverCell === cellKey;
+
+                      return (
+                        <div
+                          key={`drop-${ts.id}`}
+                          className={`drop-zone ${isDropTarget ? 'active' : ''}`}
+                          style={{ top, height }}
+                          onDragOver={(e) => handleDragOver(e, day, ts.id)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, day, ts.id)}
+                        ></div>
+                      );
+                    })}
+
+                    {/* Deterministically Overlaid Cards */}
+                    {daySchedules.map(schedule => {
+                      const timeLabel = schedule.timeSlot?.time || schedule.timeSlot?.label || "";
+                      const [startStr, endStr] = timeLabel.split(' - ');
+                      if (!startStr || !endStr) return null;
+
+                      const startMin = parseTime(startStr);
+                      const endMin = parseTime(endStr);
+
+                      const top = (startMin - START_HOUR * 60) * MINUTE_HEIGHT;
+                      const height = (endMin - startMin) * MINUTE_HEIGHT;
+
+                      return (
                         <div
                           key={schedule.id}
-                          className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''}`}
+                          className={`schedule-card ${draggingId === schedule.id ? 'dragging' : ''}`}
+                          style={{ top, height }}
                           draggable={!!onUpdateSchedule}
                           onDragStart={(e) => handleDragStart(e, schedule)}
                           onDragEnd={handleDragEnd}
-                          style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
                         >
-                          <div className="schedule-content">
-                            <p className="subject">
+                          <div className="card-indicator"></div>
+                          <div className="card-content">
+                            <div className="card-title" title={`${schedule.subject?.code ?? '—'} ${schedule.section ? `— ${schedule.section.name}` : ''}`}>
                               {schedule.subject?.code ?? '—'}
-                              {schedule.section && <span style={{ fontWeight: '500', fontSize: '0.75rem', color: '#000000' }}> — {schedule.section.name}</span>}
-                            </p>
-                            <p className="professor">{schedule.professor?.name ?? '—'}</p>
-                            <p className="room">{schedule.room?.name ?? '—'}</p>
+                              {schedule.section && <span> — {schedule.section.name}</span>}
+                            </div>
+                            <div className="card-subtitle" title={schedule.professor?.name}>{schedule.professor?.name ?? '—'}</div>
+                            <div className="card-location" title={schedule.room?.name}>{schedule.room?.name ?? '—'}</div>
                           </div>
                           {onRemove && (
                             <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                              ×
                             </button>
                           )}
                         </div>
-                      ))}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+
+          </div>
+        </div>
       </div>
     </div>
   );
