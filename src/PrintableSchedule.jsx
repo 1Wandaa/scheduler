@@ -12,10 +12,23 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
         }
     });
 
-    // Sort by ID (1, 2, 3...) and extract just the label array
-    const timeSlots = Array.from(uniqueSlotsMap.entries())
-        .sort((a, b) => a[1] - b[1])
-        .map(entry => entry[0]);
+    // Parse time strings (e.g. "7:30 AM") into minutes for chronological sorting
+    const parseTime = (timeStr) => {
+        const parts = timeStr.trim().split(' ');
+        if (parts.length < 2) return 0;
+        let [h, m] = parts[0].split(':').map(Number);
+        if (parts[1].toUpperCase() === 'PM' && h !== 12) h += 12;
+        if (parts[1].toUpperCase() === 'AM' && h === 12) h = 0;
+        return h * 60 + m;
+    };
+
+    // Sort chronologically based on the actual start time
+    const timeSlots = Array.from(uniqueSlotsMap.keys())
+        .sort((a, b) => {
+            const startA = parseTime(a.split('-')[0]);
+            const startB = parseTime(b.split('-')[0]);
+            return startA - startB;
+        });
 
     // Helper to find class at a specific day/time
     const getClass = (day, timeLabel) => {
@@ -73,17 +86,8 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
                 <tbody>
                     {timeSlots.map((timeLabel, index) => {
 
-                        // Insert Lunch Break visually if time transitions past 12:00
-                        const isAfterLunch = timeLabel.includes('1:00') || timeLabel.includes('1:30');
-                        const prevWasMorning = index > 0 && (timeSlots[index - 1].includes('11:') || timeSlots[index - 1].includes('12:'));
-
                         return (
                             <React.Fragment key={timeLabel}>
-                                {isAfterLunch && prevWasMorning && (
-                                    <tr>
-                                        <td colSpan="6" className="lunch-break">LUNCH BREAK</td>
-                                    </tr>
-                                )}
                                 <tr>
                                     <td className="bold" style={{ whiteSpace: 'nowrap' }}>{timeLabel}</td>
                                     {days.map(day => {

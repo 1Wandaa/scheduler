@@ -84,6 +84,40 @@ export class ScheduleGA {
         if (s.section) this.existingSecSlots[`${s.section.id}-${dIdx}-${tIdx}`] = true;
       }
     }
+
+    // Overlap Matrix for Time Slots
+    this.overlapMatrix = {};
+    const parseTime = (timeStr) => {
+        if (!timeStr) return 0;
+        const parts = timeStr.trim().split(' ');
+        if (parts.length < 2) return 0;
+        let [h, m] = parts[0].split(':').map(Number);
+        if (parts[1].toUpperCase() === 'PM' && h !== 12) h += 12;
+        if (parts[1].toUpperCase() === 'AM' && h === 12) h = 0;
+        return h * 60 + m;
+    };
+
+    for (let i = 0; i < this.timeSlots.length; i++) {
+        this.overlapMatrix[i] = [];
+        const t1 = this.timeSlots[i].time || this.timeSlots[i].label || '';
+        if (!t1) continue;
+        const [start1Str, end1Str] = t1.split('-');
+        const start1 = parseTime(start1Str);
+        const end1 = parseTime(end1Str);
+
+        for (let j = 0; j < this.timeSlots.length; j++) {
+            const t2 = this.timeSlots[j].time || this.timeSlots[j].label || '';
+            if (!t2) continue;
+            const [start2Str, end2Str] = t2.split('-');
+            const start2 = parseTime(start2Str);
+            const end2 = parseTime(end2Str);
+            
+            // Overlap condition (exclusive of exact boundaries)
+            if (start1 < end2 && start2 < end1) {
+                this.overlapMatrix[i].push(j);
+            }
+        }
+    }
   }
 
   _buildAssignmentList() {
@@ -104,12 +138,20 @@ export class ScheduleGA {
         if (!sub) continue;
 
         const credits = Number(sub.credits) || 3;
-        const meetings = Math.max(1, Math.ceil(credits / 1.5));
+        let meetings = 1;
+        let targetDuration = 1.5;
+
+        if (credits === 3) { meetings = 2; targetDuration = 1.5; }
+        else if (credits === 4) { meetings = 2; targetDuration = 2; }
+        else if (credits === 2) { meetings = 1; targetDuration = 2; }
+        else if (credits === 1) { meetings = 1; targetDuration = 1.5; }
+        else { meetings = Math.max(1, Math.ceil(credits / 1.5)); targetDuration = 1.5; }
+
         const alreadyScheduled = existingCounts[`${sec.id}-${sub.id}`] || 0;
         const needed = meetings - alreadyScheduled;
 
         for (let i = 0; i < needed; i++) {
-          list.push({ subject: sub, section: sec, meetingIndex: alreadyScheduled + i + 1, totalMeetings: meetings });
+          list.push({ subject: sub, section: sec, meetingIndex: alreadyScheduled + i + 1, totalMeetings: meetings, targetDuration });
         }
       }
     }
@@ -135,6 +177,16 @@ export class ScheduleGA {
       if (labs.length > 0) pool = labs;
     }
     return pool;
+  }
+
+  _eligibleTimeSlotsFor(a) {
+    const dur = a.targetDuration || 1.5;
+    return this.timeSlots.map((ts, idx) => ({ ts, idx }))
+      .filter(item => {
+        const slotDur = item.ts.duration || 1.5;
+        return slotDur === dur;
+      })
+      .map(item => item.idx);
   }
 
   _eligibleProfsFor(a, profWork = null) {
@@ -172,13 +224,16 @@ export class ScheduleGA {
   }
 
   _isSlotFree({ roomId, professorId, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots) {
-    const rk = `${roomId}-${dayIdx}-${timeIdx}`;
-    const pk = `${professorId}-${dayIdx}-${timeIdx}`;
-    const sk = `${sectionId}-${dayIdx}-${timeIdx}`;
+    const overlaps = this.overlapMatrix[timeIdx] || [timeIdx];
+    for (const t of overlaps) {
+      const rk = `${roomId}-${dayIdx}-${t}`;
+      const pk = `${professorId}-${dayIdx}-${t}`;
+      const sk = `${sectionId}-${dayIdx}-${t}`;
 
-    // Respect existing database schedules
-    if (this.existingRoomSlots[rk] || this.existingProfSlots[pk] || this.existingSecSlots[sk]) return false;
-    return !roomSlots[rk] && !profSlots[pk] && !secSlots[sk];
+      if (this.existingRoomSlots[rk] || this.existingProfSlots[pk] || this.existingSecSlots[sk]) return false;
+      if (roomSlots[rk] || profSlots[pk] || secSlots[sk]) return false;
+    }
+    return true;
   }
 
   _occupy({ roomId, professorId, sectionId, dayIdx, timeIdx }, roomSlots, profSlots, secSlots) {
@@ -253,7 +308,8 @@ export class ScheduleGA {
           timeIdx = pref.timeIdx;
         } else {
           room = rooms[this._randInt(rooms.length)];
-          timeIdx = this._randInt(this.timeSlots.length);
+          const validTimes = this._eligibleTimeSlotsFor(a);
+          timeIdx = validTimes[this._randInt(validTimes.length)];
         }
 
         if (!room) break;
@@ -322,11 +378,12 @@ export class ScheduleGA {
       const prof = profs[this._randInt(profs.length)];
       const rooms = this._eligibleRoomsFor(a);
       const room = rooms[this._randInt(rooms.length)];
+      const validTimes = this._eligibleTimeSlotsFor(a);
       return {
         professorId: prof?.id || null,
         roomId: room?.id || null,
         dayIdx: this._randInt(this.days.length),
-        timeIdx: this._randInt(this.timeSlots.length),
+        timeIdx: validTimes[this._randInt(validTimes.length)],
       };
     });
     return this.config.repair ? this._repair(chrom) : chrom;
@@ -340,6 +397,7 @@ export class ScheduleGA {
     const sectionSubjectMeetings = {};
     const profTimeline = {};
     const secTimeline = {};
+    const roomTimeline = {};
     const profWork = {};
 
     // Base Workload Seed
@@ -364,11 +422,14 @@ export class ScheduleGA {
 
       if (!profTimeline[g.professorId]) profTimeline[g.professorId] = {};
       if (!secTimeline[a.section.id]) secTimeline[a.section.id] = {};
+      if (!roomTimeline[g.roomId]) roomTimeline[g.roomId] = {};
       if (!profTimeline[g.professorId][g.dayIdx]) profTimeline[g.professorId][g.dayIdx] = [];
       if (!secTimeline[a.section.id][g.dayIdx]) secTimeline[a.section.id][g.dayIdx] = [];
+      if (!roomTimeline[g.roomId][g.dayIdx]) roomTimeline[g.roomId][g.dayIdx] = [];
       
       profTimeline[g.professorId][g.dayIdx].push({ timeIdx: g.timeIdx, roomId: g.roomId });
       secTimeline[a.section.id][g.dayIdx].push({ timeIdx: g.timeIdx, roomId: g.roomId });
+      roomTimeline[g.roomId][g.dayIdx].push({ timeIdx: g.timeIdx });
 
       const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
       profWork[g.professorId] = (profWork[g.professorId] || 0) + creditPerSlot;
@@ -486,19 +547,32 @@ export class ScheduleGA {
         for (const day in timeline[id]) {
           const classes = timeline[id][day].sort((a, b) => a.timeIdx - b.timeIdx);
           let consecutive = 1;
-          for (let i = 1; i < classes.length; i++) {
-            const prev = classes[i-1];
+          for (let i = 0; i < classes.length; i++) {
             const curr = classes[i];
-            if (curr.timeIdx === prev.timeIdx + 1) {
-               consecutive++;
-               if (consecutive > 4) {
-                  if (isProf) hardScore += PENALTY.WORKLOAD_EXCEEDED / 2;
-               }
-               if (curr.roomId !== prev.roomId) {
-                  softScore -= 10; // penalty for back-to-back different rooms
-               }
-            } else {
-               consecutive = 1;
+            
+            // Check true overlap using the precomputed matrix
+            for (let j = i + 1; j < classes.length; j++) {
+              const next = classes[j];
+              if (this.overlapMatrix[curr.timeIdx] && this.overlapMatrix[curr.timeIdx].includes(next.timeIdx)) {
+                 hardScore += isProf ? PENALTY.PROF_CONFLICT : PENALTY.SECTION_CONFLICT;
+                 hardViolations++;
+              }
+            }
+
+            if (i > 0) {
+              const prev = classes[i-1];
+              // Use index adjacency as a proxy for consecutive logic
+              if (curr.timeIdx === prev.timeIdx + 1) {
+                 consecutive++;
+                 if (consecutive > 4) {
+                    if (isProf) hardScore += PENALTY.WORKLOAD_EXCEEDED / 2;
+                 }
+                 if (curr.roomId !== prev.roomId) {
+                    softScore -= 10; // penalty for back-to-back different rooms
+                 }
+              } else {
+                 consecutive = 1;
+              }
             }
           }
           if (consecutive <= 3 && classes.length > 0) {
@@ -507,8 +581,26 @@ export class ScheduleGA {
         }
       }
     };
+    
+    const checkRoomTimeline = (timeline) => {
+      for (const id in timeline) {
+        for (const day in timeline[id]) {
+          const classes = timeline[id][day];
+          for (let i = 0; i < classes.length; i++) {
+            for (let j = i + 1; j < classes.length; j++) {
+               if (this.overlapMatrix[classes[i].timeIdx] && this.overlapMatrix[classes[i].timeIdx].includes(classes[j].timeIdx)) {
+                   hardScore += PENALTY.ROOM_CONFLICT;
+                   hardViolations++;
+               }
+            }
+          }
+        }
+      }
+    };
+
     checkTimeline(profTimeline, true);
     checkTimeline(secTimeline, false);
+    checkRoomTimeline(roomTimeline);
 
     return { score: hardScore + softScore, hardViolations, hardScore, softScore };
   }
@@ -539,7 +631,11 @@ export class ScheduleGA {
             break;
           }
           case 1: g.dayIdx = this._randInt(this.days.length); break;
-          case 2: g.timeIdx = this._randInt(this.timeSlots.length); break;
+          case 2: {
+            const validTimes = this._eligibleTimeSlotsFor(a);
+            if (validTimes.length > 0) g.timeIdx = validTimes[this._randInt(validTimes.length)];
+            break;
+          }
           case 3: {
             const dp = this._eligibleProfsFor(a);
             if (dp && dp.length > 0) g.professorId = dp[this._randInt(dp.length)].id;
