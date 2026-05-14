@@ -7,19 +7,20 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
   const [selectedId, setSelectedId] = useState('');
   const [deptSectionId, setDeptSectionId] = useState('');
 
+  // --- FIX: Prevent infinite loops by tracking lengths and verifying changes ---
   useEffect(() => {
-    if (viewType === 'department' && DEPARTMENTS.length > 0) setSelectedId(DEPARTMENTS[0]);
-    else if (viewType === 'room' && rooms.length > 0) setSelectedId(rooms[0].id);
-    else if (viewType === 'faculty' && professors.length > 0) setSelectedId(professors[0].id);
-    else if (viewType === 'section' && sections.length > 0) setSelectedId(sections[0].id);
-    else setSelectedId('');
+    let newTargetId = '';
+    if (viewType === 'department' && DEPARTMENTS.length > 0) newTargetId = DEPARTMENTS[0];
+    else if (viewType === 'room' && rooms.length > 0) newTargetId = rooms[0].id;
+    else if (viewType === 'faculty' && professors.length > 0) newTargetId = professors[0].id;
+    else if (viewType === 'section' && sections.length > 0) newTargetId = sections[0].id;
 
-    setDeptSectionId('');
-  }, [viewType, rooms, professors, sections]);
-
-  useEffect(() => {
-    setDeptSectionId('');
-  }, [selectedId]);
+    // Only trigger a state update if the ID actually needs to change
+    if (selectedId !== newTargetId) {
+      setSelectedId(newTargetId);
+      setDeptSectionId('');
+    }
+  }, [viewType, selectedId, rooms.length, professors.length, sections.length]);
 
   const deptSections = viewType === 'department' && selectedId
     ? sections.filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()))
@@ -63,21 +64,19 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
   const titlePrefix = viewType === 'department' ? 'DEPARTMENT' : viewType === 'room' ? 'ROOM' : viewType === 'faculty' ? 'FACULTY' : 'SECTION';
   const titleName = activeEntity ? activeEntity.name.toUpperCase() : 'SELECT ITEM';
 
-  // --- NEW DOWNLOAD FUNCTION ---
+  // --- DOWNLOAD CSV EXPORT FUNCTION ---
   const handleDownloadCSV = () => {
     if (filteredSchedules.length === 0) {
       alert("No schedules available to download for this selection.");
       return;
     }
 
-    // Sort chronologically (Mon -> Fri, Morning -> Afternoon)
     const DAYS_ORDER = { 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5 };
     const sortedSchedules = [...filteredSchedules].sort((a, b) => {
       if (DAYS_ORDER[a.day] !== DAYS_ORDER[b.day]) return DAYS_ORDER[a.day] - DAYS_ORDER[b.day];
       return (a.timeSlot?.id || 0) - (b.timeSlot?.id || 0);
     });
 
-    // Format into a spreadsheet
     const headers = ['Day', 'Time', 'Subject', 'Section', 'Professor', 'Room'];
     const rows = sortedSchedules.map(s => [
       s.day || '',
@@ -93,21 +92,25 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
       ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
-    // Trigger the automatic download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
     link.setAttribute('download', `${titleName.replace(/[^a-zA-Z0-9]/g, '_')}_Schedule.csv`);
     link.style.visibility = 'hidden';
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    // Clean up the URL object to free browser memory
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
     <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
 
+      {/* Header Row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingBottom: '15px', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '15px' }}>
         <div className="no-print">
           <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -118,7 +121,6 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
         </div>
 
         <div className="no-print">
-          {/* Replaced Print Button with Download Button */}
           <button className="btn" onClick={handleDownloadCSV} style={{ background: 'var(--success)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -130,6 +132,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
         </div>
       </div>
 
+      {/* Filters Row */}
       <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', marginBottom: '20px', padding: '12px 15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', gap: '10px' }}>
           <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)', alignSelf: 'center' }}>Filter By:</label>
