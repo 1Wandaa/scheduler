@@ -248,7 +248,7 @@ const Dashboard = ({ user, onLogout }) => {
       const fixedProfessor = constraints?.fixedProfessor || null;
       const temp = [...schedules];
 
-      // 1. GROUP ASSIGNMENTS: Group by Section + Subject to ensure consistent scheduling
+      // 1. GROUP ASSIGNMENTS: Group by Section + Subject
       const groupsMap = new Map();
       for (const a of assignments) {
         const key = `${a.section?.id || 'none'}_${a.subject?.id}`;
@@ -258,16 +258,20 @@ const Dashboard = ({ user, onLogout }) => {
         groupsMap.get(key).count++;
       }
 
-      // Sort groups: Lab subjects first (they are harder to place)
-      const groups = Array.from(groupsMap.values()).sort((a, b) =>
-        (b.subject?.requiredLab ? 1 : 0) - (a.subject?.requiredLab ? 1 : 0)
-      );
+      // REDUCE counts by what is already scheduled to prevent duplicates
+      for (const s of temp) {
+        const key = `${s.section?.id || 'none'}_${s.subject?.id}`;
+        if (groupsMap.has(key)) {
+          groupsMap.get(key).count--;
+        }
+      }
 
-      // 2. DEFINE UNIVERSITY DAY PAIRINGS
-      const PREFERRED_PAIRS = [
-        ['Monday', 'Thursday'],
-        ['Tuesday', 'Friday']
-      ];
+      // Sort remaining groups: Lab subjects first
+      const groups = Array.from(groupsMap.values())
+        .filter(g => g.count > 0)
+        .sort((a, b) => (b.subject?.requiredLab ? 1 : 0) - (a.subject?.requiredLab ? 1 : 0));
+
+      const PREFERRED_PAIRS = [['Monday', 'Thursday'], ['Tuesday', 'Friday']];
 
       for (const group of groups) {
         const { subject, section, count } = group;
@@ -277,7 +281,6 @@ const Dashboard = ({ user, onLogout }) => {
         let placedCount = 0;
 
         searchLoop: for (const professor of profPool) {
-          // Check Workload Limits
           const profSchedules = temp.filter(s => String(s.professor?.id) === String(professor.id));
           const uniqueLoad = new Map();
           for (const s of profSchedules) {
@@ -286,36 +289,29 @@ const Dashboard = ({ user, onLogout }) => {
           }
           const profCurrentLoad = Array.from(uniqueLoad.values()).reduce((s, c) => s + c, 0);
 
-          // Apply precision buffer (+0.01) to avoid strict equality drops for faculty workload
           if (profCurrentLoad + (Number(subject.credits) || 3) > (Number(professor.maxUnits) || Number(professor.maxHours) || 12) + 0.01) {
             continue;
           }
 
           for (const room of roomPool) {
             for (const timeSlot of TIME_SLOTS) {
-
-              // Helper to check if a specific day/time is completely free
               const isFree = (d) => {
                 if (constraints?.preventDoubleBooking) {
                   const rBusy = temp.some(s => String(s.room?.id) === String(room.id) && s.day === d && String(s.timeSlot?.id) === String(timeSlot.id));
                   const pBusy = temp.some(s => String(s.professor?.id) === String(professor.id) && s.day === d && String(s.timeSlot?.id) === String(timeSlot.id));
                   const sBusy = section?.id ? temp.some(s => String(s.section?.id) === String(section.id) && s.day === d && String(s.timeSlot?.id) === String(timeSlot.id)) : false;
-                  const sameDaySubj = section?.id ? temp.some(s => String(s.section?.id) === String(section.id) && String(s.subject?.id) === String(subject.id) && s.day === d) : false;
-
-                  if (rBusy || pBusy || sBusy || sameDaySubj) return false;
+                  if (rBusy || pBusy || sBusy) return false;
                 }
                 const chk = validateScheduleEntry({ room, professor, subject, section, day: d, timeSlot });
                 return chk.valid;
               };
 
-              // 3. ATTEMPT TO SCHEDULE BASED ON MEETING COUNT
+              // Try preferred pairs first
               if (count === 2) {
-                // Try University Paired Days (Mon/Thu or Tue/Fri) at the EXACT SAME TIME
                 for (const pair of PREFERRED_PAIRS) {
                   if (isFree(pair[0]) && isFree(pair[1])) {
                     const s1 = { room, professor, subject, section, day: pair[0], timeSlot };
                     const s2 = { room, professor, subject, section, day: pair[1], timeSlot };
-
                     const w1 = await handleAddSchedule(s1);
                     const w2 = await handleAddSchedule(s2);
 
@@ -323,26 +319,14 @@ const Dashboard = ({ user, onLogout }) => {
                       temp.push(s1, s2);
                       results.push(s1, s2);
                       placedCount = 2;
-                      break searchLoop; // Successfully placed both, move to next subject
-                    }
-                  }
-                }
-              } else if (count === 1) {
-                // 1 Meeting: Find any single open day
-                for (const day of DAYS) {
-                  if (isFree(day)) {
-                    const s1 = { room, professor, subject, section, day, timeSlot };
-                    const w1 = await handleAddSchedule(s1);
-                    if (w1?.ok !== false) {
-                      temp.push(s1);
-                      results.push(s1);
-                      placedCount = 1;
                       break searchLoop;
                     }
                   }
                 }
-              } else {
-                // 3+ Meetings: Find any X distinct days at the same time
+              }
+
+              // FALLBACK: If preferred pairs failed, or count !== 2, find ANY available combination
+              if (placedCount === 0) {
                 const validDays = [];
                 for (const day of DAYS) {
                   if (isFree(day)) validDays.push(day);
@@ -366,15 +350,14 @@ const Dashboard = ({ user, onLogout }) => {
                   }
                 }
               }
-            } // end timeSlot loop
-          } // end room loop
-        } // end prof loop
+            }
+          }
+        }
 
-        // If we couldn't find a consistent pair/slot for all required meetings
         if (placedCount < count) {
-          let reason = 'Insufficient consistent slots (pairing failed) or missing qualified faculty.';
+          let reason = 'Insufficient slots available or missing qualified faculty.';
           if (constraints?.respectLabs && subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
-            reason = 'Requires computer lab (Selected room is not a lab).';
+            reason = 'Requires computer lab.';
           }
           unscheduled.push({ subject, section, reason });
         }
@@ -695,7 +678,7 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
             <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} onSchedule={handleAddSchedule} validator={validator} />
-            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} onAutoSchedule={handleAddSchedule} />
+            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={schedules} onAutoSchedule={handleAddSchedule} />
           </div>
         )}
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}

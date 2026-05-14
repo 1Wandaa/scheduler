@@ -3,7 +3,8 @@ import { ScheduleGA } from './ScheduleGA';
 import { TIME_SLOTS, DAYS } from './index';
 import './AutoScheduler.css';
 
-function AutoScheduler({ validator, subjects, sections, professors, rooms, onAutoSchedule }) {
+// 1. ADDED 'schedules' to the props list
+function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, onAutoSchedule }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [progress, setProgress] = useState({ gen: 0, max: 0, fitness: null });
@@ -56,8 +57,11 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
         throw new Error("No sections defined. Please add sections in Section Management first.");
       }
 
+      // 2. Pass existing schedules if we are not clearing them
+      const existingSchedules = clearBeforeRun ? [] : (schedules || []);
+
       const ga = new ScheduleGA(
-        subjects, rooms, professors, sections, DAYS, TIME_SLOTS,
+        subjects, rooms, professors, sections, DAYS, TIME_SLOTS, existingSchedules,
         { populationSize: 80, maxGenerations: 100, mutationRate: 0.15 }
       );
 
@@ -67,7 +71,9 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
 
       const validResults = [];
       const unscheduledResults = [];
-      const savedSchedules = [];
+
+      // 3. Initialize saved schedules with existing ones to accurately check overlaps
+      const savedSchedules = [...existingSchedules];
 
       // Validate the GA output before claiming success
       for (const entry of gaResult.schedule) {
@@ -80,7 +86,6 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
           unscheduledResults.push({ ...entry, reason: 'Subject requires a computer lab.' });
           continue;
         }
-        // ... (keep the rest of your isConflict logic below this line)
 
         const sameTimeSlot = (a, b) => a.day === b.day && String(a.timeSlot?.id) === String(b.timeSlot?.id);
 
@@ -201,7 +206,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, onAut
         </div>
       )}
 
-      {/* REBUILT RESULTS SECTION */}
+      {/* Results Section */}
       {result && !loading && (
         <div style={{ marginTop: '30px', animation: 'fadeIn 0.5s' }}>
 
