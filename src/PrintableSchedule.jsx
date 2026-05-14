@@ -91,9 +91,25 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
                                 <tr>
                                     <td className="bold" style={{ whiteSpace: 'nowrap' }}>{timeLabel}</td>
                                     {days.map(day => {
+                                        const cellKey = `${day}-${timeLabel}`;
+                                        
+                                        if (window[`print_skip_${cellKey}`]) {
+                                            delete window[`print_skip_${cellKey}`];
+                                            return null;
+                                        }
+
                                         const cls = getClass(day, timeLabel);
+                                        let rowSpan = 1;
+
+                                        if (cls && cls.subject?.hoursPerMeeting === 2) {
+                                            if (index < timeSlots.length - 1) {
+                                                rowSpan = 2;
+                                                window[`print_skip_${day}-${timeSlots[index + 1]}`] = true;
+                                            }
+                                        }
+
                                         return (
-                                            <td key={`${day}-${timeLabel}`}>
+                                            <td key={cellKey} rowSpan={rowSpan}>
                                                 {cls ? (
                                                     <div>
                                                         <div style={{ fontWeight: 'bold' }}>{cls.subject.code}</div>

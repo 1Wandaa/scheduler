@@ -123,21 +123,37 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
             </tr>
           </thead>
           <tbody>
-            {TIME_SLOTS.map(timeSlot => (
+            {TIME_SLOTS.map((timeSlot, tIdx) => (
               <tr key={timeSlot.id}>
                 <td className="time-label">
                   <strong>{timeSlot.label}</strong>
                 </td>
                 {DAYS.map(day => {
                   const cellKey = `${day}-${timeSlot.id}`;
+                  
+                  // If this cell was merged by a 2-hr class from the previous row, skip rendering it
+                  if (window[`skip_cell_${cellKey}`]) {
+                      delete window[`skip_cell_${cellKey}`];
+                      return null;
+                  }
+
                   const isDropTarget = dragOverCell === cellKey;
                   const cellSchedules = schedules.filter(
                     s => s.day === day && String(s.timeSlot?.id) === String(timeSlot.id)
                   );
 
+                  let rowSpan = 1;
+                  const has2HrClass = cellSchedules.some(s => s.subject?.hoursPerMeeting === 2);
+                  if (has2HrClass && tIdx < TIME_SLOTS.length - 1) {
+                      rowSpan = 2;
+                      // Mark the cell immediately below this one to be skipped
+                      window[`skip_cell_${day}-${TIME_SLOTS[tIdx + 1].id}`] = true;
+                  }
+
                   return (
                     <td
                       key={cellKey}
+                      rowSpan={rowSpan}
                       className={`schedule-cell ${isDropTarget ? 'drag-over' : ''}`}
                       onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
                       onDragLeave={handleDragLeave}
