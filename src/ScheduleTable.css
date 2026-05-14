@@ -1,324 +1,154 @@
-/* src/ScheduleTable.css */
-
 .schedule-table-container {
+  /* Keep blue limited to grid cells, not the page background */
   background: transparent;
-  padding: 0;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 2rem;
 }
 
-/* Header Panel Styling */
-.iso-header-panel {
-  display: flex;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  margin-bottom: 20px;
-  background-color: var(--card-bg);
+.schedule-table-container h2 {
+  margin-top: 0;
   color: var(--text-main);
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+  margin-bottom: 1.5rem;
 }
 
-.iso-logo-container {
-  flex: 0 0 100px;
-  padding: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-right: 1px solid var(--border-color);
-  background-color: var(--table-header);
-}
-
-.iso-logo-container img {
-  width: 65px;
-  height: 65px;
-  object-fit: cover;
-  border-radius: 50%;
-}
-
-.iso-title-container {
-  flex: 1;
-  padding: 15px;
-  text-align: center;
-  border-right: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.iso-title-container h2 {
-  margin: 0 0 5px 0;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--accent-dark);
-  letter-spacing: 1px;
-}
-
-.iso-title-container h3 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 2px;
-}
-
-.iso-meta-container {
-  flex: 0 0 180px;
-  padding: 15px;
-  font-size: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  background-color: var(--table-header);
-  color: var(--text-muted);
-}
-
-.iso-meta-container div {
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 4px;
-  margin-bottom: 4px;
-}
-
-.iso-meta-container div:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-/* Main Timetable Structure */
 .table-wrapper {
   overflow-x: auto;
   max-width: 100%;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-}
-
-.timetable-modern {
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  min-width: 800px;
-  /* Ensure layout doesn't break on extremely small screens */
 }
 
-/* Grid Header */
-.timetable-header {
-  display: grid;
-  grid-template-columns: 80px repeat(5, 1fr);
-  background-color: var(--table-header);
-  border-bottom: 1px solid var(--border-color);
-  z-index: 3;
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  table-layout: fixed;
+  background: #ffffff;
+  border-radius: 8px;
 }
 
-.time-header-cell,
-.day-header-cell {
-  padding: 14px 10px;
+.schedule-table th {
+  background-color: #FFFFFF;
+  /* Light gray/white background */
+  color: #000108;
+  /* Muted dark text for contrast */
+  padding: 1rem;
   text-align: center;
   font-weight: 600;
-  font-size: 0.8rem;
-  color: var(--text-muted);
   text-transform: uppercase;
+  font-size: 0.8rem;
   letter-spacing: 0.05em;
-  border-left: 1px solid var(--border-color);
+  border: 1px solid #E2E8F0;
+  /* Light border */
 }
 
-.time-header-cell {
-  border-left: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Grid Body */
-.timetable-body {
-  position: relative;
-  background: #ffffff;
-}
-
-/* Background Lines */
-.timetable-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  pointer-events: none;
-  /* Allows clicks to pass through to the drop zones */
-}
-
-.timetable-row {
-  display: flex;
-  position: relative;
-}
-
-.time-label {
-  width: 80px;
-  text-align: right;
-  padding-right: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  transform: translateY(-50%);
-  background: transparent;
-}
-
-.row-line {
-  flex: 1;
-  border-top: 1px solid var(--border-color);
-  opacity: 0.6;
-  /* Subtle grid lines */
-}
-
-/* Overlay Columns & Cards */
-.timetable-columns {
-  position: absolute;
-  top: 0;
-  left: 80px;
-  right: 0;
-  bottom: 0;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  z-index: 2;
-}
-
-.timetable-column {
-  position: relative;
-  border-left: 1px solid var(--border-color);
-}
-
-/* Class Card Overlays */
-.schedule-card {
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  background-color: #EEF2FF;
-  /* Clean, light indigo background */
-  border: 1px solid #C7D2FE;
-  border-radius: 6px;
-  padding: 8px 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
+/* Revert table cells back to strict 80px height with overflow hidden */
+.schedule-table td {
+  border: 1px solid var(--border-color);
+  padding: 0;
+  height: 80px;
+  vertical-align: top;
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
-  cursor: grab;
-  z-index: 10;
 }
 
-.schedule-card:active {
+/* Revert time-label to its original state */
+.time-label {
+  background-color: #FFFFFF;
+  font-weight: 600;
+  width: 140px;
+  min-width: 140px;
+  color: var(--text-main);
+  font-size: 0.82rem;
+}
+
+/* Revert drag-and-drop cells back to their exact original padding and hidden overflow */
+.schedule-cell {
+  position: relative;
+  padding: 0.5rem;
+  height: 80px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+.schedule-cell:has(.schedule-item) {
+  background-color: #109EEF;
+  padding: 0;
+}
+
+/* Revert schedule items back to 100% height */
+.schedule-item {
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0.5rem 0.6rem;
+  margin: 0;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  user-select: none;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+
+
+
+.schedule-item:active {
   cursor: grabbing;
 }
 
-.schedule-card.dragging {
-  opacity: 0.6;
-  transform: scale(0.98);
-  z-index: 100;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+.schedule-item.dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+  box-shadow: none;
 }
 
-.card-indicator {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background-color: var(--accent-primary);
-  border-radius: 6px 0 0 6px;
+.schedule-content {
+  flex: 1;
 }
 
-.card-content {
-  padding-left: 6px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.card-title {
-  font-weight: 700;
+.schedule-content p {
+  margin: 0.25rem 0;
   font-size: 0.85rem;
-  color: var(--text-main);
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.card-title span {
-  font-weight: 500;
-  color: var(--text-muted);
+.schedule-content .subject {
+  font-weight: 700;
+  color: #030813;
 }
 
-.card-subtitle {
+.schedule-content .professor {
   font-weight: 600;
-  font-size: 0.75rem;
-  color: var(--accent-primary);
-  margin-bottom: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #030813;
 }
 
-.card-location {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: auto;
-  /* Push location to bottom if card is tall */
+.schedule-content .room {
+  color: #030813;
+  font-size: 0.8rem;
 }
 
-/* Drop Zones (for preserving Drag & Drop logic) */
-.drop-zone {
-  position: absolute;
-  left: 0;
-  right: 0;
-  background: transparent;
-  z-index: 5;
-  border: 2px dashed transparent;
-  border-radius: 6px;
-  transition: border-color 0.2s, background-color 0.2s;
-}
-
-.drop-zone.active {
-  border-color: var(--accent-primary);
-  background-color: rgba(86, 69, 238, 0.08);
-  z-index: 6;
-}
-
-/* Remove button */
 .remove-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  background: rgba(255, 255, 255, 0.7);
+  background-color: transparent;
+  color: #c53030;
   border: none;
-  color: var(--danger);
-  width: 22px;
-  height: 22px;
   border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 1.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  font-size: 1.1rem;
-  opacity: 0;
-  transition: opacity 0.2s, background 0.2s;
-  line-height: 1;
-  padding-bottom: 2px;
-}
-
-.schedule-card:hover .remove-btn {
-  opacity: 1;
+  transition: all 0.2s;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
 }
 
 .remove-btn:hover {
-  background: rgba(255, 255, 255, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  background-color: rgba(197, 48, 48, 0.15);
 }
