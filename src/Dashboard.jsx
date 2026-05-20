@@ -216,11 +216,11 @@ const Dashboard = ({ user, onLogout }) => {
       if (!section) return { results: [], unscheduled: [], error: `Section "${sectionId}" not found.` };
       const subjectObjs = (section.subjects || []).map(subId => subjects.find(su => su.id === subId || su.code === subId)).filter(Boolean);
       const assignments = [];
-      for (const subject of subjectObjs) { 
-        const credits = Number(subject.credits) || 3; 
+      for (const subject of subjectObjs) {
+        const credits = Number(subject.credits) || 3;
         const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
-        const meetings = Math.max(1, Math.ceil(credits / targetDuration)); 
-        for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1, targetDuration }); 
+        const meetings = Math.max(1, Math.ceil(credits / targetDuration));
+        for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1, targetDuration });
       }
       return validator._autoScheduleAssignments(assignments, { ...constraints });
     },
@@ -229,14 +229,14 @@ const Dashboard = ({ user, onLogout }) => {
       if (!room) return { results: [], unscheduled: [], error: `Room "${roomId}" not found.` };
       const assignments = [];
       for (const section of sections) {
-        for (const subId of (section.subjects || [])) { 
-          const subject = subjects.find(su => su.id === subId || su.code === subId); 
-          if (subject) { 
-            const credits = Number(subject.credits) || 3; 
+        for (const subId of (section.subjects || [])) {
+          const subject = subjects.find(su => su.id === subId || su.code === subId);
+          if (subject) {
+            const credits = Number(subject.credits) || 3;
             const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
-            const meetings = Math.max(1, Math.ceil(credits / targetDuration)); 
-            for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1, targetDuration }); 
-          } 
+            const meetings = Math.max(1, Math.ceil(credits / targetDuration));
+            for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1, targetDuration });
+          }
         }
       }
       return validator._autoScheduleAssignments(assignments, { ...constraints, fixedRoom: room });
@@ -539,7 +539,7 @@ const Dashboard = ({ user, onLogout }) => {
                 Capiz State University · Mambusao Satellite College
               </p>
               <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#ffffff' }}>
-                Welcome back, {firstName} 👋
+                Welcome, {firstName} 👋
               </h1>
             </div>
           </div>
