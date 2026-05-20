@@ -735,12 +735,12 @@ h6 {
     gap: 10px;
   }
 
-  .data-table,
-  .schedule-table {
+  .data-table {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     overflow-x: auto !important;
     white-space: nowrap !important;
   }
+  /* schedule-table keeps its table display — it has min-width + wrapper overflow-x */
 }
