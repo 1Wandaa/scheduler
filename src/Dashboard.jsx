@@ -714,7 +714,7 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
 
         {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
-        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} />}
+        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} isAdmin={isAdmin} />}
 
       </div>
     </div>

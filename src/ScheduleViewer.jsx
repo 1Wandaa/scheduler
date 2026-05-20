@@ -3,7 +3,7 @@ import ScheduleTable from './ScheduleTable';
 import PrintableSchedule from './PrintableSchedule';
 import { DEPARTMENTS } from './index';
 
-function ScheduleViewer({ schedules, rooms, professors, sections }) {
+function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
     const [viewType, setViewType] = useState('department');
     const [selectedId, setSelectedId] = useState('');
     const [deptSectionId, setDeptSectionId] = useState('');
@@ -18,9 +18,19 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
         setDeptSectionId('');
     }, [viewType, rooms, professors, sections]);
 
+    // When selectedId changes, reset section filter and auto-select first matching section
     useEffect(() => {
-        setDeptSectionId('');
-    }, [selectedId]);
+        if (viewType === 'department' && selectedId) {
+            const matching = sections.filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()));
+            if (matching.length > 0) {
+                setDeptSectionId(matching[0].id);
+            } else {
+                setDeptSectionId('');
+            }
+        } else {
+            setDeptSectionId('');
+        }
+    }, [viewType, selectedId, sections]);
 
     const deptSections = viewType === 'department' && selectedId
         ? sections.filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()))
@@ -51,7 +61,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
             const sec = sections.find(s => s.id === deptSectionId);
             activeEntity = { name: `${selectedId} — ${sec ? sec.name : ''}` };
         } else {
-            activeEntity = { name: `${selectedId} (ALL SECTIONS)` };
+            activeEntity = { name: selectedId };
         }
     } else if (viewType === 'room') {
         activeEntity = rooms.find(r => r.id === selectedId);
@@ -74,7 +84,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
                         Schedule Viewer
                     </h3>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Filter schedules by department, room, faculty, or section</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Filter schedules by department, section{isAdmin ? ', faculty, or room' : ', or faculty'}</p>
                 </div>
 
                 <div className="no-print">
@@ -98,7 +108,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
                         <option value="department">Department</option>
                         <option value="section">Section</option>
                         <option value="faculty">Faculty</option>
-                        <option value="room">Room</option>
+                        {isAdmin && <option value="room">Room</option>}
                     </select>
                 </div>
 
@@ -124,7 +134,6 @@ function ScheduleViewer({ schedules, rooms, professors, sections }) {
                             onChange={(e) => setDeptSectionId(e.target.value)}
                             style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--accent-primary)', backgroundColor: deptSectionId ? 'var(--warning-bg)' : 'white', color: 'var(--accent-dark)', fontWeight: deptSectionId ? 'bold' : 'normal', outline: 'none', cursor: 'pointer', minWidth: '200px' }}
                         >
-                            <option value="">All {selectedId} Sections</option>
                             {deptSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
