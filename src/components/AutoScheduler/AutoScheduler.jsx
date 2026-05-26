@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ScheduleGA } from './ScheduleGA';
-import { TIME_SLOTS, DAYS } from './index';
-import './AutoScheduler.css';
+import { ScheduleGA } from '../../utils/ScheduleGA';
+import { TIME_SLOTS, DAYS } from '../../config/constants';
+import '../../styles/AutoScheduler.css';
 
 // 1. ADDED 'schedules' to the props list
 function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, onAutoSchedule }) {

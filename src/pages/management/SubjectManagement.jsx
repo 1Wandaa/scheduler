@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { db } from './firebase';
+import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { DEPARTMENTS } from './index';
+import { DEPARTMENTS } from '../../config/constants';
 
 const SubjectManagement = ({ subjects, onBack }) => {
   const [showModal, setShowModal] = useState(false);

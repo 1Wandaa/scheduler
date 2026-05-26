@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { TIME_SLOTS, DAYS } from './index';
-import './ScheduleTable.css';
+import { TIME_SLOTS, DAYS } from '../../config/constants';
+import '../../styles/ScheduleTable.css';
 
 function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID" }) {
   const LOGO_SRC = '/logo.jpg?v=1';

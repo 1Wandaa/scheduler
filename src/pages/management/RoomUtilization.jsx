@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import ScheduleTable from './ScheduleTable';
+import ScheduleTable from '../../components/ScheduleTable/ScheduleTable';
 
 function RoomUtilization({ rooms, schedules }) {
     const [selectedRoomId, setSelectedRoomId] = useState(rooms.length > 0 ? rooms[0].id : '');

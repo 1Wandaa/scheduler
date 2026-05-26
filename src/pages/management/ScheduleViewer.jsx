@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import ScheduleTable from './ScheduleTable';
-import PrintableSchedule from './PrintableSchedule';
-import { DEPARTMENTS } from './index';
+import ScheduleTable from '../../components/ScheduleTable/ScheduleTable';
+import PrintableSchedule from '../../components/PrintableSchedule/PrintableSchedule';
+import { DEPARTMENTS } from '../../config/constants';
 
 function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
     const [viewType, setViewType] = useState('department');

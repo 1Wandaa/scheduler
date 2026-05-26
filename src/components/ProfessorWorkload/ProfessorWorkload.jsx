@@ -1,5 +1,5 @@
 import React from 'react';
-import './ProfessorWorkload.css';
+import '../../styles/ProfessorWorkload.css';
 
 function ProfessorWorkload({ professors, schedules }) {
   const LOGO_SRC = '/logo.jpg?v=1';

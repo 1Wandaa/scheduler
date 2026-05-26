@@ -1,20 +1,20 @@
 // src/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
-import { initialRooms, initialProfessors, initialSubjects, initialSections, SEED_VERSION } from './initial';
-import { TIME_SLOTS, DAYS } from './index';
-import { db } from './firebase';
+import { initialRooms, initialProfessors, initialSubjects, initialSections, SEED_VERSION } from '../../config/initialData';
+import { TIME_SLOTS, DAYS } from '../../config/constants';
+import { db } from '../../config/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, writeBatch } from 'firebase/firestore';
 
-import UserManagement from './UserManagement';
-import ProfessorWorkload from './ProfessorWorkload';
-import ScheduleTable from './ScheduleTable';
-import ScheduleForm from './ScheduleForm';
-import AutoScheduler from './AutoScheduler';
-import RoomManagement from './RoomManagement';
-import FacultyManagement from './FacultyManagement';
-import SubjectManagement from './SubjectManagement';
-import ScheduleViewer from './ScheduleViewer';
-import SectionManagement from './SectionManagement';
+import UserManagement from '../management/UserManagement';
+import ProfessorWorkload from '../../components/ProfessorWorkload/ProfessorWorkload';
+import ScheduleTable from '../../components/ScheduleTable/ScheduleTable';
+import ScheduleForm from '../../components/ScheduleForm/ScheduleForm';
+import AutoScheduler from '../../components/AutoScheduler/AutoScheduler';
+import RoomManagement from '../management/RoomManagement';
+import FacultyManagement from '../management/FacultyManagement';
+import SubjectManagement from '../management/SubjectManagement';
+import ScheduleViewer from '../management/ScheduleViewer';
+import SectionManagement from '../management/SectionManagement';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Icon = ({ d, size = 18 }) => (

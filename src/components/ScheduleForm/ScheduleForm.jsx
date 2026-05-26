@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { TIME_SLOTS, DAYS } from './index';
-import './SchedulerForm.css';
+import { TIME_SLOTS, DAYS } from '../../config/constants';
+import '../../styles/SchedulerForm.css';
 
 function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
   const [formData, setFormData] = useState({

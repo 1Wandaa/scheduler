@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { db } from './firebase';
+import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 
 const SectionManagement = ({ sections, subjects, onBack }) => {

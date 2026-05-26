@@ -1,5 +1,5 @@
 import React from 'react';
-import './PrintableSchedule.css';
+import '../../styles/PrintableSchedule.css';
 
 const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];

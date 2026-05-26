@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from './firebase';
+import { auth, db } from './config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import Login from './Login';
-import Dashboard from './Dashboard';
-import './App.css';
+import Login from './pages/Login/Login';
+import Dashboard from './pages/Dashboard/Dashboard';
+import './styles/App.css';
 
 
 function App() {
