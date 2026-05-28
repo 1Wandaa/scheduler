@@ -89,6 +89,20 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     Friday: '#0288d1',
   };
 
+  // Department color mapping
+  const DEPT_COLORS = {
+    BSCS: { bg: '#109EEF', text: '#030813' },  // Blue (original)
+    BSFT: { bg: '#16A34A', text: '#030813' },  // Green
+    BSOA: { bg: '#8B5CF6', text: '#FFFFFF' },  // Purple
+    BAEL: { bg: '#EAB308', text: '#030813' },  // Yellow
+  };
+  const DEFAULT_DEPT_COLOR = { bg: '#109EEF', text: '#030813' };
+
+  const getDeptColor = (schedule) => {
+    const dept = schedule?.subject?.department;
+    return DEPT_COLORS[dept] || DEFAULT_DEPT_COLOR;
+  };
+
   const GridView = () => (
     <div className="table-wrapper">
       <table className="schedule-table">
@@ -122,35 +136,39 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                   <td
                     key={cellKey}
                     rowSpan={rowSpan}
-                    className={`schedule-cell ${isDropTarget ? 'drag-over' : ''}`}
+                    className={`schedule-cell ${isDropTarget ? 'drag-over' : ''} ${cellSchedules.length > 0 ? 'has-schedule' : ''}`}
                     onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, day, timeSlot.id)}
+                    style={cellSchedules.length > 0 ? { backgroundColor: getDeptColor(cellSchedules[0]).bg, padding: 0 } : {}}
                   >
-                    {cellSchedules.map(schedule => (
-                      <div
-                        key={schedule.id}
-                        className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''}`}
-                        draggable={!!onUpdateSchedule}
-                        onDragStart={(e) => handleDragStart(e, schedule)}
-                        onDragEnd={handleDragEnd}
-                        style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
-                      >
-                        <div className="schedule-content">
-                          <p className="subject">
-                            {schedule.subject?.code ?? '—'}
-                            {schedule.section && <span style={{ fontWeight: '500', fontSize: '0.75rem', color: '#000000' }}> — {schedule.section.name}</span>}
-                          </p>
-                          <p className="professor">{schedule.professor?.name ?? '—'}</p>
-                          <p className="room">{schedule.room?.name ?? '—'}</p>
+                    {cellSchedules.map(schedule => {
+                      const deptColor = getDeptColor(schedule);
+                      return (
+                        <div
+                          key={schedule.id}
+                          className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''}`}
+                          draggable={!!onUpdateSchedule}
+                          onDragStart={(e) => handleDragStart(e, schedule)}
+                          onDragEnd={handleDragEnd}
+                          style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
+                        >
+                          <div className="schedule-content">
+                            <p className="subject" style={{ color: deptColor.text }}>
+                              {schedule.subject?.code ?? '—'}
+                              {schedule.section && <span style={{ fontWeight: '500', fontSize: '0.75rem', color: deptColor.text }}> — {schedule.section.name}</span>}
+                            </p>
+                            <p className="professor" style={{ color: deptColor.text }}>{schedule.professor?.name ?? '—'}</p>
+                            <p className="room" style={{ color: deptColor.text }}>{schedule.room?.name ?? '—'}</p>
+                          </div>
+                          {onRemove && (
+                            <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                          )}
                         </div>
-                        {onRemove && (
-                          <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </td>
                 );
               })}
@@ -174,30 +192,33 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
             {daySched.length === 0 ? (
               <div className="schedule-day-empty">No classes</div>
             ) : (
-              daySched.map(schedule => (
-                <div key={schedule.id} className="schedule-card-item" style={{ borderLeftColor: DAY_COLORS[day] }}>
-                  <div className="schedule-card-time">
-                    {schedule.timeSlot?.label ?? '—'}
-                  </div>
-                  <div className="schedule-card-body">
-                    <div className="schedule-card-subject">
-                      {schedule.subject?.code ?? '—'}
-                      {schedule.section && (
-                        <span className="schedule-card-section"> · {schedule.section.name}</span>
-                      )}
+              daySched.map(schedule => {
+                const deptColor = getDeptColor(schedule);
+                return (
+                  <div key={schedule.id} className="schedule-card-item" style={{ borderLeftColor: deptColor.bg, backgroundColor: `${deptColor.bg}12` }}>
+                    <div className="schedule-card-time">
+                      {schedule.timeSlot?.label ?? '—'}
                     </div>
-                    <div className="schedule-card-meta">
-                      <span>👤 {schedule.professor?.name ?? '—'}</span>
-                      <span>🏫 {schedule.room?.name ?? '—'}</span>
+                    <div className="schedule-card-body">
+                      <div className="schedule-card-subject">
+                        {schedule.subject?.code ?? '—'}
+                        {schedule.section && (
+                          <span className="schedule-card-section"> · {schedule.section.name}</span>
+                        )}
+                      </div>
+                      <div className="schedule-card-meta">
+                        <span>👤 {schedule.professor?.name ?? '—'}</span>
+                        <span>🏫 {schedule.room?.name ?? '—'}</span>
+                      </div>
                     </div>
+                    {onRemove && (
+                      <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      </button>
+                    )}
                   </div>
-                  {onRemove && (
-                    <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         );
@@ -265,6 +286,16 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
           <div><strong>Revision No.:</strong> 01</div>
           <div><strong>Effectivity:</strong> August 2026</div>
         </div>
+      </div>
+
+      {/* Department Color Legend */}
+      <div className="dept-legend">
+        {Object.entries(DEPT_COLORS).map(([dept, color]) => (
+          <div key={dept} className="dept-legend-item">
+            <span className="dept-legend-swatch" style={{ backgroundColor: color.bg }}></span>
+            <span className="dept-legend-label">{dept}</span>
+          </div>
+        ))}
       </div>
 
       {/* Content */}
