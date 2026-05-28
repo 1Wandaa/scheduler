@@ -9,17 +9,22 @@ const SubjectManagement = ({ subjects, onBack }) => {
   const [currentId, setCurrentId] = useState(null);
 
   const [formData, setFormData] = useState({
-    id: '', code: '', name: '', department: 'BSCS', credits: 3, requiredLab: false, hoursPerMeeting: 1.5
+    id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', code: '', name: '', department: 'BSCS', credits: 3, requiredLab: false, hoursPerMeeting: 1.5 });
+    setFormData({ id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5 });
     setEditMode(false);
     setShowModal(true);
   };
 
   const handleOpenEdit = (subject) => {
-    setFormData(subject);
+    // Normalize: convert old single `department` string into `departments` array
+    const normalized = { ...subject };
+    if (!normalized.departments) {
+      normalized.departments = normalized.department ? [normalized.department] : [];
+    }
+    setFormData(normalized);
     setCurrentId(subject.id);
     setEditMode(true);
     setShowModal(true);
@@ -44,6 +49,24 @@ const SubjectManagement = ({ subjects, onBack }) => {
         alert('Failed to delete subject. Please check your connection.');
       }
     }
+  };
+
+  const handleDeptToggle = (dept) => {
+    setFormData(prev => {
+      const current = prev.departments || [];
+      if (current.includes(dept)) {
+        return { ...prev, departments: current.filter(d => d !== dept) };
+      } else {
+        return { ...prev, departments: [...current, dept] };
+      }
+    });
+  };
+
+  // Helper to display departments (handles both old string and new array format)
+  const getSubjectDepts = (subject) => {
+    if (Array.isArray(subject.departments) && subject.departments.length > 0) return subject.departments;
+    if (subject.department) return [subject.department];
+    return [];
   };
 
   const inputStyle = { width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', marginTop: '5px' };
@@ -74,13 +97,19 @@ const SubjectManagement = ({ subjects, onBack }) => {
       </div>
 
       <table className="data-table">
-        <thead><tr><th>Code</th><th>Name</th><th>Department</th><th>Units</th><th>Meeting Time</th><th>Lab Required</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Code</th><th>Name</th><th>Department(s)</th><th>Units</th><th>Meeting Time</th><th>Lab Required</th><th>Actions</th></tr></thead>
         <tbody>
           {subjects.map(s => (
             <tr key={s.id}>
               <td><strong style={{ color: 'var(--accent-primary)' }}>{s.code}</strong></td>
               <td style={{ fontWeight: '500' }}>{s.name}</td>
-              <td><span style={{ background: 'var(--bg-main)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent-primary)' }}>{s.department || '—'}</span></td>
+              <td>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {getSubjectDepts(s).length > 0 ? getSubjectDepts(s).map(dept => (
+                    <span key={dept} style={{ background: 'var(--bg-main)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent-primary)' }}>{dept}</span>
+                  )) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>None</span>}
+                </div>
+              </td>
               <td style={{ fontWeight: '500', textAlign: 'center' }}>{s.credits || 3}</td>
               <td style={{ fontWeight: '500', color: 'var(--text-muted)' }}>{s.hoursPerMeeting || 1.5} hrs</td>
               <td>
@@ -111,13 +140,25 @@ const SubjectManagement = ({ subjects, onBack }) => {
 
             <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', alignItems: 'stretch' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <label style={labelStyle}>Department</label>
-                <select style={inputStyle} value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
+                <label style={labelStyle}>Departments</label>
+                <div style={{ marginTop: '5px', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {DEPARTMENTS.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
+                    <label key={dept} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: '500' }}>
+                      <input
+                        type="checkbox"
+                        checked={(formData.departments || []).includes(dept)}
+                        onChange={() => handleDeptToggle(dept)}
+                        style={{ accentColor: 'var(--accent-primary)', width: '15px', height: '15px' }}
+                      />
+                      {dept}
+                    </label>
                   ))}
-                </select>
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>Select all departments that offer this subject</p>
               </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', alignItems: 'stretch' }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <label style={labelStyle}>Total Units (Credits)</label>
                 <input type="number" style={inputStyle} value={formData.credits || 3} onChange={e => setFormData({ ...formData, credits: Number(e.target.value) })} />

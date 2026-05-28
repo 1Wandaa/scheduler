@@ -69,7 +69,10 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
         if (!selectedId) return false;
 
         if (viewType === 'department') {
-            const matchesDept = (s.subject?.department === selectedId) || (s.professor?.department === selectedId);
+            // Support both new `departments` array and legacy `department` string
+            const subjDepts = Array.isArray(s.subject?.departments) ? s.subject.departments : (s.subject?.department ? [s.subject.department] : []);
+            const sectionDept = s.section?.name?.split(/\s+/)?.[0]?.toUpperCase() || '';
+            const matchesDept = subjDepts.includes(selectedId) || (s.professor?.department === selectedId) || sectionDept === selectedId;
             if (!matchesDept) return false;
 
             // Filter by year level if selected (match against section's yearLevel)

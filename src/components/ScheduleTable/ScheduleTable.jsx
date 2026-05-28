@@ -99,8 +99,20 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   const DEFAULT_DEPT_COLOR = { bg: '#109EEF', text: '#030813' };
 
   const getDeptColor = (schedule) => {
-    const dept = schedule?.subject?.department;
-    return DEPT_COLORS[dept] || DEFAULT_DEPT_COLOR;
+    // Derive department from section name (e.g. "BSCS 1A" → "BSCS")
+    const sectionName = schedule?.section?.name || '';
+    const sectionDept = sectionName.split(/\s+/)[0]?.toUpperCase();
+    if (sectionDept && DEPT_COLORS[sectionDept]) return DEPT_COLORS[sectionDept];
+
+    // Fallback: check subject.departments array or legacy subject.department string
+    const subj = schedule?.subject;
+    if (subj) {
+      const depts = Array.isArray(subj.departments) ? subj.departments : (subj.department ? [subj.department] : []);
+      for (const d of depts) {
+        if (DEPT_COLORS[d]) return DEPT_COLORS[d];
+      }
+    }
+    return DEFAULT_DEPT_COLOR;
   };
 
   const GridView = () => (
