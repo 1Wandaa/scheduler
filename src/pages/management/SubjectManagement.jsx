@@ -54,11 +54,11 @@ const SubjectManagement = ({ subjects, onBack }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
           {onBack && (
-            <button 
-              onClick={onBack} 
+            <button
+              onClick={onBack}
               style={{ background: 'transparent', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-muted)' }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
               Back
             </button>
           )}
@@ -108,7 +108,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
 
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Subject Code</label><input style={inputStyle} value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. CS101" /></div>
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Subject Name</label><input style={inputStyle} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Intro to Programming" /></div>
-            
+
             <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>Department</label>
@@ -125,7 +125,8 @@ const SubjectManagement = ({ subjects, onBack }) => {
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>Hours per Meeting</label>
                 <select style={inputStyle} value={formData.hoursPerMeeting || 1.5} onChange={e => setFormData({ ...formData, hoursPerMeeting: Number(e.target.value) })}>
-                  <option value={1.5}>1.5 Hours</option>
+                  <option value={1.5}>1.0 Hours</option>
+                  <option value={2}>1.5 Hours</option>
                   <option value={2}>2.0 Hours</option>
                 </select>
               </div>
