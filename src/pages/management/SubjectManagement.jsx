@@ -109,8 +109,8 @@ const SubjectManagement = ({ subjects, onBack }) => {
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Subject Code</label><input style={inputStyle} value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. CS101" /></div>
             <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Subject Name</label><input style={inputStyle} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Intro to Programming" /></div>
 
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-              <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', alignItems: 'stretch' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <label style={labelStyle}>Department</label>
                 <select style={inputStyle} value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
                   {DEPARTMENTS.map(dept => (
@@ -118,15 +118,15 @@ const SubjectManagement = ({ subjects, onBack }) => {
                   ))}
                 </select>
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <label style={labelStyle}>Total Units (Credits)</label>
                 <input type="number" style={inputStyle} value={formData.credits || 3} onChange={e => setFormData({ ...formData, credits: Number(e.target.value) })} />
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <label style={labelStyle}>Hours per Meeting</label>
                 <select style={inputStyle} value={formData.hoursPerMeeting || 1.5} onChange={e => setFormData({ ...formData, hoursPerMeeting: Number(e.target.value) })}>
-                  <option value={1.5}>1.0 Hours</option>
-                  <option value={2}>1.5 Hours</option>
+                  <option value={1}>1.0 Hours</option>
+                  <option value={1.5}>1.5 Hours</option>
                   <option value={2}>2.0 Hours</option>
                 </select>
               </div>
