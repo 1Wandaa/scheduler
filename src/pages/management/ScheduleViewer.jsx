@@ -7,6 +7,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
     const [viewType, setViewType] = useState('department');
     const [selectedId, setSelectedId] = useState('');
     const [deptSectionId, setDeptSectionId] = useState('');
+    const [selectedYearLevel, setSelectedYearLevel] = useState('');
 
     useEffect(() => {
         if (viewType === 'department' && DEPARTMENTS.length > 0) setSelectedId(DEPARTMENTS[0]);
@@ -16,12 +17,16 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
         else setSelectedId('');
 
         setDeptSectionId('');
+        setSelectedYearLevel('');
     }, [viewType, rooms, professors, sections]);
 
-    // When selectedId changes, reset section filter and auto-select first matching section
+    // When selectedId or yearLevel changes, reset section filter and auto-select first matching section
     useEffect(() => {
         if (viewType === 'department' && selectedId) {
-            const matching = sections.filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()));
+            let matching = sections.filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()));
+            if (selectedYearLevel) {
+                matching = matching.filter(sec => String(sec.yearLevel) === String(selectedYearLevel));
+            }
             if (matching.length > 0) {
                 setDeptSectionId(matching[0].id);
             } else {
@@ -30,11 +35,35 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
         } else {
             setDeptSectionId('');
         }
-    }, [viewType, selectedId, sections]);
+    }, [viewType, selectedId, selectedYearLevel, sections]);
+
+    // Compute unique year levels from sections for the selected department
+    const availableYearLevels = viewType === 'department' && selectedId
+        ? [...new Set(
+            sections
+                .filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()))
+                .map(sec => sec.yearLevel)
+                .filter(Boolean)
+          )].sort((a, b) => a - b)
+        : viewType === 'section'
+            ? [...new Set(sections.map(sec => sec.yearLevel).filter(Boolean))].sort((a, b) => a - b)
+            : [];
 
     const deptSections = viewType === 'department' && selectedId
-        ? sections.filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()))
+        ? sections.filter(sec => {
+            const matchesDept = sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase());
+            if (!matchesDept) return false;
+            if (selectedYearLevel) return String(sec.yearLevel) === String(selectedYearLevel);
+            return true;
+          })
         : [];
+
+    // For section view, filter sections list by year level
+    const filteredSectionsList = viewType === 'section'
+        ? (selectedYearLevel
+            ? sections.filter(sec => String(sec.yearLevel) === String(selectedYearLevel))
+            : sections)
+        : sections;
 
     const filteredSchedules = schedules.filter(s => {
         if (!selectedId) return false;
@@ -42,6 +71,12 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
         if (viewType === 'department') {
             const matchesDept = (s.subject?.department === selectedId) || (s.professor?.department === selectedId);
             if (!matchesDept) return false;
+
+            // Filter by year level if selected (match against section's yearLevel)
+            if (selectedYearLevel && !deptSectionId) {
+                const sectionObj = sections.find(sec => s.section && String(sec.id) === String(s.section.id));
+                if (!sectionObj || String(sectionObj.yearLevel) !== String(selectedYearLevel)) return false;
+            }
 
             if (deptSectionId) {
                 return s.section != null && String(s.section.id) === String(deptSectionId);
@@ -122,9 +157,25 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
                         {viewType === 'department' && DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
                         {viewType === 'room' && rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                         {viewType === 'faculty' && professors.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        {viewType === 'section' && sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        {viewType === 'section' && filteredSectionsList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                 </div>
+
+                {(viewType === 'department' || viewType === 'section') && availableYearLevels.length > 0 && (
+                    <div style={{ display: 'flex', gap: '10px', paddingLeft: '15px', borderLeft: '2px solid var(--border-color)' }}>
+                        <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)', alignSelf: 'center' }}>Year:</label>
+                        <select
+                            value={selectedYearLevel}
+                            onChange={(e) => setSelectedYearLevel(e.target.value)}
+                            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--accent-primary)', backgroundColor: selectedYearLevel ? '#DBEAFE' : 'white', color: 'var(--accent-dark)', fontWeight: selectedYearLevel ? 'bold' : 'normal', outline: 'none', cursor: 'pointer', minWidth: '130px' }}
+                        >
+                            <option value="">All Years</option>
+                            {availableYearLevels.map(yr => (
+                                <option key={yr} value={yr}>{yr === 1 ? '1st' : yr === 2 ? '2nd' : yr === 3 ? '3rd' : `${yr}th`} Year</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 {viewType === 'department' && deptSections.length > 0 && (
                     <div style={{ display: 'flex', gap: '10px', paddingLeft: '15px', borderLeft: '2px solid var(--border-color)' }}>
