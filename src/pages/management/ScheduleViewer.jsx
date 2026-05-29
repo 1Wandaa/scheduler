@@ -142,8 +142,8 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
                             <html>
                             <head>
                                 <style>
-                                    @page { size: letter landscape; margin: 0.5in; }
-                                    body { font-family: "Times New Roman", Times, serif; color: #000; margin: 0; padding: 0; }
+                                    @page { size: letter landscape; margin: 0; }
+                                    body { font-family: "Times New Roman", Times, serif; color: #000; margin: 0; padding: 0.5in; }
                                     .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10pt; }
                                     .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 6px; text-align: left; }
                                     .iso-header-table .bold { font-weight: bold; }
