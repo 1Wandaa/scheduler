@@ -11,8 +11,14 @@
 @media print {
     @page {
         size: letter landscape;
-        /* or portrait depending on preference */
-        margin: 0.5in;
+        margin: 0;
+        /* Remove browser header/footer (URL, page title, date) */
+    }
+
+    body {
+        /* Add padding to compensate for the removed @page margin */
+        padding: 0.5in !important;
+        margin: 0 !important;
     }
 
     body * {

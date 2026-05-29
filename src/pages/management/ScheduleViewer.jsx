@@ -203,7 +203,11 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
 
             <PrintableSchedule
                 scheduleItems={filteredSchedules}
-                sectionName={titleName}
+                sectionName={
+                    viewType === 'department' && deptSectionId
+                        ? (sections.find(s => s.id === deptSectionId)?.name || titleName)
+                        : titleName
+                }
                 semesterInfo="2nd Sem 2025-2026"
             />
         </div>
