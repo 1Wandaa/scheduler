@@ -19,6 +19,8 @@ const PENALTY = {
   PROF_CONFLICT: -100,
   SECTION_CONFLICT: -100,
   MIXED_PROF_SECTION: -150,
+  UNPAIRED_DAYS: -120,
+  INCONSISTENT_TIME_OR_ROOM: -110,
   SAME_DAY_CONFLICT: -90,
   LAB_MISMATCH: -80,
   WORKLOAD_EXCEEDED: -60,
@@ -31,7 +33,11 @@ const BONUS = {
   NO_CONSECUTIVE_OVERLOAD: 10,
   SPREAD_ACROSS_WEEK: 5,
   SAME_ROOM_TIME_DIFFERENT_DAYS: 30,
+  PAIRED_DAY_MATCH: 40,
 };
+
+// Day pairing: Mon(0)<->Thu(3), Tue(1)<->Fri(4), Wed(2) has no pair
+const DAY_PAIR_MAP = { 0: 3, 3: 0, 1: 4, 4: 1 };
 
 export class ScheduleGA {
   constructor(subjects, rooms, professors, sections, days, timeSlots, existingSchedules = [], config = {}) {
@@ -215,6 +221,11 @@ export class ScheduleGA {
     }
   }
 
+  /** Get the paired day index (Mon<->Thu, Tue<->Fri). Returns -1 for Wed or invalid. */
+  _getPairedDay(dayIdx) {
+    return DAY_PAIR_MAP[dayIdx] !== undefined ? DAY_PAIR_MAP[dayIdx] : -1;
+  }
+
   _repair(chrom) {
     if (!chrom || chrom.length === 0) return chrom;
 
@@ -321,7 +332,25 @@ export class ScheduleGA {
 
         if (!room) break;
 
-        const dayIdx = this._randInt(this.days.length);
+        // Choose day: when we have a preference, use the PAIRED day deterministically
+        let dayIdx;
+        if (usePref && pref.daysUsed && pref.daysUsed.size > 0) {
+          // Find the paired day of the first meeting
+          const firstDay = [...pref.daysUsed][0];
+          const pairedDay = this._getPairedDay(firstDay);
+          if (pairedDay >= 0 && !pref.daysUsed.has(pairedDay)) {
+            dayIdx = pairedDay; // Mon->Thu, Tue->Fri, etc.
+          } else {
+            // Paired day already used or no pair exists (Wed), pick random unused day
+            const unused = [];
+            for (let d = 0; d < this.days.length; d++) {
+              if (!pref.daysUsed.has(d)) unused.push(d);
+            }
+            dayIdx = unused.length > 0 ? unused[this._randInt(unused.length)] : this._randInt(this.days.length);
+          }
+        } else {
+          dayIdx = this._randInt(this.days.length);
+        }
 
         const ok = this._isSlotFree(
           { roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx, targetDuration: a.targetDuration },
@@ -331,7 +360,7 @@ export class ScheduleGA {
         );
 
         let sameDayConflict = false;
-        if (usePref && pref.daysUsed && pref.daysUsed.has(dayIdx)) {
+        if (pref && pref.daysUsed && pref.daysUsed.has(dayIdx)) {
           sameDayConflict = true;
         }
 
@@ -390,8 +419,10 @@ export class ScheduleGA {
   }
 
   _randomChromosome() {
-    // Pre-assign one professor per section+subject so all meetings share the same prof
+    // Pre-assign one professor, room, time slot, and day pair per section+subject
+    // so all meetings of the same subject for a section are consistent
     const profForSecSub = {};
+    const slotForSecSub = {}; // { roomId, timeIdx, firstDay, meetingCount }
 
     // Seed from existing schedules first
     for (const s of this.existingSchedules) {
@@ -403,24 +434,56 @@ export class ScheduleGA {
 
     const chrom = this.assignments.map(a => {
       const secSubKey = `${a.section.id}-${a.subject.id}`;
-      let profId = profForSecSub[secSubKey];
 
+      // Lock professor
+      let profId = profForSecSub[secSubKey];
       if (!profId) {
-        // Pick one professor randomly for this section+subject and lock it
         const profs = this._eligibleProfsFor(a);
         const prof = profs[this._randInt(profs.length)];
         profId = prof?.id || null;
         if (profId) profForSecSub[secSubKey] = profId;
       }
 
-      const rooms = this._eligibleRoomsFor(a);
-      const room = rooms[this._randInt(rooms.length)];
-      const validTimes = this._eligibleTimeSlotsFor(a);
+      // Lock room, time slot, and day pair for consistency
+      let slot = slotForSecSub[secSubKey];
+      if (!slot) {
+        // First meeting: pick room, time, and a starting day (prefer Mon=0 or Tue=1)
+        const rooms = this._eligibleRoomsFor(a);
+        const room = rooms[this._randInt(rooms.length)];
+        const validTimes = this._eligibleTimeSlotsFor(a);
+        const timeIdx = validTimes[this._randInt(validTimes.length)];
+        const pairStarts = [0, 1]; // Monday or Tuesday
+        const firstDay = pairStarts[this._randInt(pairStarts.length)];
+        slot = { roomId: room?.id || null, timeIdx, firstDay, meetingCount: 0 };
+        slotForSecSub[secSubKey] = slot;
+      }
+
+      // Assign the day: first meeting gets firstDay, second gets paired day, etc.
+      let dayIdx;
+      if (slot.meetingCount === 0) {
+        dayIdx = slot.firstDay;
+      } else if (slot.meetingCount === 1) {
+        const paired = this._getPairedDay(slot.firstDay);
+        dayIdx = paired >= 0 ? paired : this._randInt(this.days.length);
+      } else {
+        // 3+ meetings: use remaining days
+        const usedDays = new Set();
+        usedDays.add(slot.firstDay);
+        const paired = this._getPairedDay(slot.firstDay);
+        if (paired >= 0) usedDays.add(paired);
+        const remaining = [];
+        for (let d = 0; d < this.days.length; d++) {
+          if (!usedDays.has(d)) remaining.push(d);
+        }
+        dayIdx = remaining.length > 0 ? remaining[this._randInt(remaining.length)] : this._randInt(this.days.length);
+      }
+      slot.meetingCount++;
+
       return {
         professorId: profId,
-        roomId: room?.id || null,
-        dayIdx: this._randInt(this.days.length),
-        timeIdx: validTimes[this._randInt(validTimes.length)],
+        roomId: slot.roomId,
+        dayIdx,
+        timeIdx: slot.timeIdx,
       };
     });
     return this.config.repair ? this._repair(chrom) : chrom;
@@ -538,7 +601,7 @@ export class ScheduleGA {
     }
 
     // Penalize mixed professors for the same section+subject (HARD constraint)
-    // and reward consistent room/time across meetings
+    // Enforce day pairing (Mon-Thu, Tue-Fri) and same time/room across meetings
     for (const key in sectionSubjectMeetings) {
       const { entries: meetings, professorIds } = sectionSubjectMeetings[key];
 
@@ -554,25 +617,58 @@ export class ScheduleGA {
 
         let allSameTimeAndRoom = true;
         let allDifferentDays = true;
+        let allProperlyPaired = true;
         const daysUsed = new Set([first.dayIdx]);
 
         for (let i = 1; i < meetings.length; i++) {
           const m = meetings[i];
           if (!m || !m.roomId) {
             allSameTimeAndRoom = false;
+            allProperlyPaired = false;
             break;
           }
+          // Check same time and room
           if (m.roomId !== first.roomId || m.timeIdx !== first.timeIdx) {
             allSameTimeAndRoom = false;
           }
+          // Check different days
           if (daysUsed.has(m.dayIdx)) {
             allDifferentDays = false;
           }
           daysUsed.add(m.dayIdx);
         }
 
+        // Check if days form proper pairs (Mon-Thu or Tue-Fri)
+        if (meetings.length === 2 && allDifferentDays) {
+          const dayA = meetings[0].dayIdx;
+          const dayB = meetings[1].dayIdx;
+          const expectedPair = DAY_PAIR_MAP[dayA];
+          if (expectedPair === undefined || expectedPair !== dayB) {
+            allProperlyPaired = false;
+          }
+        } else if (meetings.length > 2) {
+          // For 3+ meetings, check that at least Mon-Thu or Tue-Fri pairs exist
+          const daySet = new Set(meetings.map(m => m.dayIdx));
+          const hasPair = (daySet.has(0) && daySet.has(3)) || (daySet.has(1) && daySet.has(4));
+          if (!hasPair) allProperlyPaired = false;
+        }
+
+        // HARD PENALTY: Meetings not on paired days (e.g., Mon-Fri instead of Mon-Thu)
+        if (!allProperlyPaired) {
+          hardScore += PENALTY.UNPAIRED_DAYS;
+          hardViolations++;
+        } else {
+          // Bonus for proper day pairing
+          softScore += BONUS.PAIRED_DAY_MATCH * (meetings.length - 1);
+        }
+
+        // HARD PENALTY: Different time slots or rooms across meetings of same subject
+        if (!allSameTimeAndRoom) {
+          hardScore += PENALTY.INCONSISTENT_TIME_OR_ROOM;
+          hardViolations++;
+        }
+
         if (allSameTimeAndRoom && allDifferentDays) {
-          // Bonus per additional meeting that successfully matches the pattern
           softScore += BONUS.SAME_ROOM_TIME_DIFFERENT_DAYS * (meetings.length - 1);
         }
       }
