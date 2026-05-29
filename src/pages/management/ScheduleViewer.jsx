@@ -126,7 +126,45 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
                 </div>
 
                 <div className="no-print">
-                    <button className="btn" onClick={() => window.print()} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <button className="btn" onClick={() => {
+                        const printContent = document.querySelector('.printable-iso-document');
+                        if (!printContent) return;
+                        const iframe = document.createElement('iframe');
+                        iframe.style.position = 'fixed';
+                        iframe.style.top = '-10000px';
+                        iframe.style.left = '-10000px';
+                        iframe.style.width = '0';
+                        iframe.style.height = '0';
+                        document.body.appendChild(iframe);
+                        const doc = iframe.contentDocument || iframe.contentWindow.document;
+                        doc.open();
+                        doc.write(`
+                            <html>
+                            <head>
+                                <style>
+                                    @page { size: letter landscape; margin: 0.5in; }
+                                    body { font-family: "Times New Roman", Times, serif; color: #000; margin: 0; padding: 0; }
+                                    .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10pt; }
+                                    .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 6px; text-align: left; }
+                                    .iso-header-table .bold { font-weight: bold; }
+                                    .iso-header-table .center { text-align: center; }
+                                    .meta-info { font-size: 11pt; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
+                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 11pt; }
+                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 10px; text-align: center; vertical-align: middle; }
+                                    .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                    .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; }
+                                </style>
+                            </head>
+                            <body>${printContent.innerHTML}</body>
+                            </html>
+                        `);
+                        doc.close();
+                        iframe.contentWindow.focus();
+                        setTimeout(() => {
+                            iframe.contentWindow.print();
+                            setTimeout(() => document.body.removeChild(iframe), 1000);
+                        }, 250);
+                    }} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                         Print ISO Schedule
                     </button>
