@@ -86,11 +86,10 @@ const RoomManagement = ({ rooms, onBack }) => {
       </div>
 
       <table className="data-table">
-        <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Name</th><th>Type</th><th>Actions</th></tr></thead>
         <tbody>
           {rooms.map(r => (
             <tr key={r.id}>
-              <td style={{ color: 'var(--text-muted)' }}>{r.id}</td>
               <td><strong style={{ color: 'var(--text-main)' }}>{r.name}</strong></td>
               <td>
                 <span style={{
