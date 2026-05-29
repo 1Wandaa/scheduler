@@ -6,6 +6,7 @@ import { DEPARTMENTS } from '../../config/constants';
 const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [departmentFilter, setDepartmentFilter] = useState('All');
   const [currentId, setCurrentId] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -98,12 +99,44 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
         <button className="btn" onClick={handleOpenAdd}>+ Add Faculty</button>
       </div>
 
+      {/* Department Filter */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by Department:</span>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {['All', ...DEPARTMENTS].map(dept => (
+            <button
+              key={dept}
+              onClick={() => setDepartmentFilter(dept)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '20px',
+                border: departmentFilter === dept ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                background: departmentFilter === dept ? 'var(--accent-primary)' : 'transparent',
+                color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
+                cursor: 'pointer',
+                fontSize: '0.82rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--accent-primary)'; e.target.style.color = 'var(--accent-primary)'; } }}
+              onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
+            >
+              {dept === 'All' ? 'All Departments' : dept}
+            </button>
+          ))}
+        </div>
+        {departmentFilter !== 'All' && (
+          <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: '500' }}>
+            Showing {professors.filter(p => p.department === departmentFilter).length} of {professors.length} faculty
+          </span>
+        )}
+      </div>
+
       <table className="data-table">
-        <thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Max Load</th><th>Subjects</th><th>Rooms</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Name</th><th>Department</th><th>Max Load</th><th>Subjects</th><th>Rooms</th><th>Actions</th></tr></thead>
         <tbody>
-          {professors.map(p => (
+          {professors.filter(p => departmentFilter === 'All' || p.department === departmentFilter).map(p => (
             <tr key={p.id}>
-              <td style={{ color: 'var(--text-muted)' }}>{p.id}</td>
               <td><strong style={{ color: 'var(--text-main)' }}>{p.name}</strong></td>
               <td>{p.department}</td>
               <td><span style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>{p.maxUnits || p.maxHours || 12} units</span></td>
