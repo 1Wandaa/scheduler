@@ -97,7 +97,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
     if (viewType === 'department') {
         if (deptSectionId) {
             const sec = sections.find(s => s.id === deptSectionId);
-            activeEntity = { name: `${selectedId} — ${sec ? sec.name : ''}` };
+            activeEntity = { name: sec ? sec.name : selectedId };
         } else {
             activeEntity = { name: selectedId };
         }
