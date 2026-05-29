@@ -99,17 +99,25 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   const DEFAULT_DEPT_COLOR = { bg: '#109EEF', text: '#030813' };
 
   const getDeptColor = (schedule) => {
-    // Derive department from section name (e.g. "BSCS 1A" → "BSCS")
-    const sectionName = schedule?.section?.name || '';
-    const sectionDept = sectionName.split(/\s+/)[0]?.toUpperCase();
-    if (sectionDept && DEPT_COLORS[sectionDept]) return DEPT_COLORS[sectionDept];
+    // 1. Try to find a known department in the section name (e.g. "BSCS 1A", "BSOA-1B")
+    const sectionName = (schedule?.section?.name || '').toUpperCase();
+    for (const dept of Object.keys(DEPT_COLORS)) {
+      if (sectionName.includes(dept)) {
+        return DEPT_COLORS[dept];
+      }
+    }
 
-    // Fallback: check subject.departments array or legacy subject.department string
+    // 2. Fallback: check subject.departments array or legacy subject.department string
     const subj = schedule?.subject;
     if (subj) {
       const depts = Array.isArray(subj.departments) ? subj.departments : (subj.department ? [subj.department] : []);
       for (const d of depts) {
-        if (DEPT_COLORS[d]) return DEPT_COLORS[d];
+        const upperD = String(d).toUpperCase();
+        for (const dept of Object.keys(DEPT_COLORS)) {
+          if (upperD.includes(dept)) {
+            return DEPT_COLORS[dept];
+          }
+        }
       }
     }
     return DEFAULT_DEPT_COLOR;
