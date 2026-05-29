@@ -18,6 +18,7 @@ const PENALTY = {
   ROOM_CONFLICT: -100,
   PROF_CONFLICT: -100,
   SECTION_CONFLICT: -100,
+  MIXED_PROF_SECTION: -150,
   SAME_DAY_CONFLICT: -90,
   LAB_MISMATCH: -80,
   WORKLOAD_EXCEEDED: -60,
@@ -222,6 +223,19 @@ export class ScheduleGA {
     const secSlots = {};
     const profWork = {};
     const assignedSecSub = {};
+    // Track which professor is locked to each section+subject pair
+    // Once a professor is chosen for a section+subject, all meetings must use the same professor
+    const lockedProfForSecSub = {};
+
+    // Seed locked professors from existing schedules
+    for (const s of this.existingSchedules) {
+      if (s.professor && s.section && s.subject) {
+        const key = `${s.section.id}-${s.subject.id}`;
+        if (!lockedProfForSecSub[key]) {
+          lockedProfForSecSub[key] = s.professor.id;
+        }
+      }
+    }
 
     const idxs = this._shuffle(Array.from({ length: chrom.length }, (_, i) => i));
 
@@ -232,7 +246,21 @@ export class ScheduleGA {
       const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
 
       const rooms = this._shuffle([...this._eligibleRoomsFor(a)]);
-      const profs = this._shuffle([...this._eligibleProfsFor(a, profWork)]);
+      let profs = this._shuffle([...this._eligibleProfsFor(a, profWork)]);
+
+      // If a professor is already locked for this section+subject, force using that professor
+      const lockedProfId = lockedProfForSecSub[secSubKey];
+      if (lockedProfId) {
+        const lockedProf = profs.find(p => p.id === lockedProfId);
+        if (lockedProf) {
+          profs = [lockedProf]; // Only allow the locked professor
+        }
+        // If the locked prof is not in the eligible pool (e.g. overloaded), still try them
+        else {
+          const fallbackProf = this.profMap[lockedProfId];
+          if (fallbackProf) profs = [fallbackProf];
+        }
+      }
 
       let placed = false;
       let bestFallback = null;
@@ -240,7 +268,9 @@ export class ScheduleGA {
       const g = chrom[i];
       let validExisting = false;
       if (g && g.professorId && g.roomId) {
-        const isProfEligible = profs.some(p => p.id === g.professorId);
+        // Check if the existing professor matches the lock
+        const profMatchesLock = !lockedProfId || g.professorId === lockedProfId;
+        const isProfEligible = profMatchesLock && profs.some(p => p.id === g.professorId);
         const isRoomEligible = rooms.some(r => r.id === g.roomId);
         if (isProfEligible && isRoomEligible) {
           const ok = this._isSlotFree(
@@ -255,6 +285,11 @@ export class ScheduleGA {
         this._occupy({ roomId: g.roomId, professorId: g.professorId, sectionId, dayIdx: g.dayIdx, timeIdx: g.timeIdx }, roomSlots, profSlots, secSlots);
         profWork[g.professorId] = (Number(profWork[g.professorId]) || 0) + creditPerSlot;
         
+        // Lock professor for this section+subject
+        if (!lockedProfForSecSub[secSubKey]) {
+          lockedProfForSecSub[secSubKey] = g.professorId;
+        }
+
         if (!assignedSecSub[secSubKey]) {
           assignedSecSub[secSubKey] = { roomId: g.roomId, timeIdx: g.timeIdx, daysUsed: new Set([g.dayIdx]) };
         } else {
@@ -315,6 +350,11 @@ export class ScheduleGA {
         this._occupy({ roomId: room.id, professorId: prof.id, sectionId, dayIdx, timeIdx, targetDuration: a.targetDuration }, roomSlots, profSlots, secSlots);
         profWork[prof.id] = (Number(profWork[prof.id]) || 0) + creditPerSlot;
 
+        // Lock professor for this section+subject
+        if (!lockedProfForSecSub[secSubKey]) {
+          lockedProfForSecSub[secSubKey] = prof.id;
+        }
+
         if (!assignedSecSub[secSubKey]) {
           assignedSecSub[secSubKey] = { roomId: room.id, timeIdx, daysUsed: new Set([dayIdx]) };
         } else {
@@ -331,6 +371,11 @@ export class ScheduleGA {
           this._occupy({ roomId: chrom[i].roomId, professorId: chrom[i].professorId, sectionId, dayIdx: chrom[i].dayIdx, timeIdx: chrom[i].timeIdx, targetDuration: a.targetDuration }, roomSlots, profSlots, secSlots);
           profWork[chrom[i].professorId] = (profWork[chrom[i].professorId] || 0) + creditPerSlot;
           
+          // Lock professor for this section+subject
+          if (!lockedProfForSecSub[secSubKey]) {
+            lockedProfForSecSub[secSubKey] = bestFallback.professorId;
+          }
+
           if (!assignedSecSub[secSubKey]) {
             assignedSecSub[secSubKey] = { roomId: bestFallback.roomId, timeIdx: bestFallback.timeIdx, daysUsed: new Set([bestFallback.dayIdx]) };
           } else {
@@ -345,14 +390,34 @@ export class ScheduleGA {
   }
 
   _randomChromosome() {
+    // Pre-assign one professor per section+subject so all meetings share the same prof
+    const profForSecSub = {};
+
+    // Seed from existing schedules first
+    for (const s of this.existingSchedules) {
+      if (s.professor && s.section && s.subject) {
+        const key = `${s.section.id}-${s.subject.id}`;
+        if (!profForSecSub[key]) profForSecSub[key] = s.professor.id;
+      }
+    }
+
     const chrom = this.assignments.map(a => {
-      const profs = this._eligibleProfsFor(a);
-      const prof = profs[this._randInt(profs.length)];
+      const secSubKey = `${a.section.id}-${a.subject.id}`;
+      let profId = profForSecSub[secSubKey];
+
+      if (!profId) {
+        // Pick one professor randomly for this section+subject and lock it
+        const profs = this._eligibleProfsFor(a);
+        const prof = profs[this._randInt(profs.length)];
+        profId = prof?.id || null;
+        if (profId) profForSecSub[secSubKey] = profId;
+      }
+
       const rooms = this._eligibleRoomsFor(a);
       const room = rooms[this._randInt(rooms.length)];
       const validTimes = this._eligibleTimeSlotsFor(a);
       return {
-        professorId: prof?.id || null,
+        professorId: profId,
         roomId: room?.id || null,
         dayIdx: this._randInt(this.days.length),
         timeIdx: validTimes[this._randInt(validTimes.length)],
@@ -423,8 +488,9 @@ export class ScheduleGA {
       profAssignedSubjects[g.professorId].add(`${a.subject.id}_${a.section.id}`);
 
       const secSubKey = `${a.section.id}-${a.subject.id}`;
-      if (!sectionSubjectMeetings[secSubKey]) sectionSubjectMeetings[secSubKey] = [];
-      sectionSubjectMeetings[secSubKey].push(g);
+      if (!sectionSubjectMeetings[secSubKey]) sectionSubjectMeetings[secSubKey] = { entries: [], professorIds: new Set() };
+      sectionSubjectMeetings[secSubKey].entries.push(g);
+      sectionSubjectMeetings[secSubKey].professorIds.add(g.professorId);
 
       const dailyKey = `${a.section.id}-${a.subject.id}-${g.dayIdx}`;
       if (!dailySubjectCheck[dailyKey]) {
@@ -471,9 +537,17 @@ export class ScheduleGA {
       }
     }
 
-    // Add bonus for multiple meetings of the same subject-section having the same room and time
+    // Penalize mixed professors for the same section+subject (HARD constraint)
+    // and reward consistent room/time across meetings
     for (const key in sectionSubjectMeetings) {
-      const meetings = sectionSubjectMeetings[key];
+      const { entries: meetings, professorIds } = sectionSubjectMeetings[key];
+
+      // HARD PENALTY: Different professors teaching the same subject to the same section
+      if (professorIds.size > 1) {
+        hardScore += PENALTY.MIXED_PROF_SECTION * (professorIds.size - 1);
+        hardViolations += (professorIds.size - 1);
+      }
+
       if (meetings.length > 1) {
         const first = meetings[0];
         if (!first || !first.roomId) continue;

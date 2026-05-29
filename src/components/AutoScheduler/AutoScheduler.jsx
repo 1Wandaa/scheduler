@@ -75,6 +75,15 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       // 3. Initialize saved schedules with existing ones to accurately check overlaps
       const savedSchedules = [...existingSchedules];
 
+      // Track which professor is assigned per section+subject to prevent mixed assignments
+      const profForSecSub = {};
+      for (const s of existingSchedules) {
+        if (s.professor?.id && s.section?.id && s.subject?.id) {
+          const key = `${s.section.id}-${s.subject.id}`;
+          if (!profForSecSub[key]) profForSecSub[key] = String(s.professor.id);
+        }
+      }
+
       // Validate the GA output before claiming success
       for (const entry of gaResult.schedule) {
         if (entry.failed) {
@@ -102,6 +111,16 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           continue;
         }
 
+        // Reject if a different professor was already saved for this section+subject
+        if (entry.section?.id && entry.subject?.id && entry.professor?.id) {
+          const secSubKey = `${entry.section.id}-${entry.subject.id}`;
+          const existingProfId = profForSecSub[secSubKey];
+          if (existingProfId && existingProfId !== String(entry.professor.id)) {
+            unscheduledResults.push({ ...entry, reason: `Section already has a different professor for ${entry.subject.code || entry.subject.name}.` });
+            continue;
+          }
+        }
+
         // Attempt to save to database
         try {
           const writeResult = await onAutoSchedule(entry);
@@ -110,6 +129,11 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           } else {
             savedSchedules.push(entry);
             validResults.push(entry);
+            // Track the professor for this section+subject
+            if (entry.section?.id && entry.subject?.id && entry.professor?.id) {
+              const secSubKey = `${entry.section.id}-${entry.subject.id}`;
+              if (!profForSecSub[secSubKey]) profForSecSub[secSubKey] = String(entry.professor.id);
+            }
           }
         } catch (e) {
           unscheduledResults.push({ ...entry, reason: 'Failed to save to database.' });
