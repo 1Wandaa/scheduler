@@ -263,8 +263,27 @@ const Dashboard = ({ user, onLogout }) => {
     },
     _eligibleRoomsFor: (subject, section, constraints) => {
       let pool = rooms;
-      if (constraints?.respectLabs && subject?.requiredLab) { const labs = rooms.filter(r => r.hasComputers); if (labs.length > 0) pool = labs; }
-      return pool;
+      
+      const isPE = subject && (subject.code || '').toUpperCase().startsWith('PE');
+      const isGym = (r) => (r.name || '').toUpperCase().includes('GYM');
+
+      if (isPE) {
+        const gyms = rooms.filter(isGym);
+        if (gyms.length > 0) return gyms;
+      }
+
+      if (constraints?.respectLabs && subject?.requiredLab) { 
+        const labs = rooms.filter(r => r.hasComputers); 
+        if (labs.length > 0) pool = labs; 
+      }
+
+      return [...pool].sort((a, b) => {
+        const aGym = isGym(a);
+        const bGym = isGym(b);
+        if (aGym && !bGym) return 1;
+        if (!aGym && bGym) return -1;
+        return 0;
+      });
     },
     _eligibleProfsFor: subject => { if (!subject) return []; return professors.filter(p => professorMatchesSubject(p, subject)); },
     _autoScheduleAssignments: async (assignments, constraints) => {

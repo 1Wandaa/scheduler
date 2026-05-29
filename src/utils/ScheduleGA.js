@@ -144,6 +144,15 @@ export class ScheduleGA {
 
   _eligibleRoomsFor(a) {
     let pool = this.rooms;
+    
+    const isPE = a.subject && (a.subject.code || '').toUpperCase().startsWith('PE');
+    const isGym = (r) => (r.name || '').toUpperCase().includes('GYM');
+
+    if (isPE) {
+      const gyms = this.rooms.filter(isGym);
+      if (gyms.length > 0) return gyms;
+    }
+
     if (a.subject.requiredLab) {
       const labs = this.rooms.filter(r => r.hasComputers);
       if (labs.length > 0) pool = labs;
@@ -256,7 +265,18 @@ export class ScheduleGA {
       const secSubKey = `${sectionId}-${a.subject.id}`;
       const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
 
-      const rooms = this._shuffle([...this._eligibleRoomsFor(a)]);
+      const eligibleRooms = this._eligibleRoomsFor(a);
+      const isPE = a.subject && (a.subject.code || '').toUpperCase().startsWith('PE');
+      const isGym = (r) => (r.name || '').toUpperCase().includes('GYM');
+      
+      let rooms;
+      if (isPE) {
+        rooms = this._shuffle([...eligibleRooms]);
+      } else {
+        const normal = this._shuffle(eligibleRooms.filter(r => !isGym(r)));
+        const gyms = this._shuffle(eligibleRooms.filter(isGym));
+        rooms = [...normal, ...gyms];
+      }
       let profs = this._shuffle([...this._eligibleProfsFor(a, profWork)]);
 
       // If a professor is already locked for this section+subject, force using that professor
@@ -582,7 +602,18 @@ export class ScheduleGA {
       const g = chrom[i], a = this.assignments[i];
       if (!g || !g.roomId) continue;
       const room = this.roomMap[g.roomId];
+      
       if (a.subject.requiredLab && room && !room.hasComputers) { hardScore += PENALTY.LAB_MISMATCH; hardViolations++; }
+
+      const isPE = a.subject && (a.subject.code || '').toUpperCase().startsWith('PE');
+      const isGym = room && (room.name || '').toUpperCase().includes('GYM');
+
+      if (isPE && !isGym) {
+        hardScore -= 100; // PE must be in Gym
+        hardViolations++;
+      } else if (!isPE && isGym) {
+        softScore -= 50; // Gym is last option for non-PE
+      }
     }
 
     for (let i = 0; i < chrom.length; i++) {
