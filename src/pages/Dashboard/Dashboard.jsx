@@ -15,6 +15,7 @@ import FacultyManagement from '../management/FacultyManagement';
 import SubjectManagement from '../management/SubjectManagement';
 import ScheduleViewer from '../management/ScheduleViewer';
 import SectionManagement from '../management/SectionManagement';
+import Chatbot from '../../components/Chatbot/Chatbot';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Icon = ({ d, size = 18 }) => (
@@ -736,6 +737,7 @@ const Dashboard = ({ user, onLogout }) => {
         {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} isAdmin={isAdmin} />}
 
       </div>
+      <Chatbot schedules={schedules} />
     </div>
   );
 };

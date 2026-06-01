@@ -1,7 +1,8 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // Add this line
+import { getAuth } from "firebase/auth";
+import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA8-k0LhdhGBkG4KcZiTz9dsCiMRDf_SAE",
@@ -18,4 +19,18 @@ const app = initializeApp(firebaseConfig);
 getAnalytics(app);
 
 export const db = getFirestore(app);
-export const auth = getAuth(app); // Export the auth instance
+export const auth = getAuth(app);
+
+// Initialize AI Logic service
+export const ai = getAI(app, { backend: new GoogleAIBackend() });
+
+const generationConfig = {
+  temperature: 0.7,
+  topP: 0.95,
+  topK: 40,
+};
+
+export const generativeModel = getGenerativeModel(ai, { 
+  model: "gemini-2.5-flash", 
+  generationConfig 
+});
