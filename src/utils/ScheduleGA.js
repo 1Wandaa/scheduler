@@ -40,7 +40,7 @@ const BONUS = {
 const DAY_PAIR_MAP = { 0: 3, 3: 0, 1: 4, 4: 1 };
 
 export class ScheduleGA {
-  constructor(subjects, rooms, professors, sections, days, timeSlots, existingSchedules = [], config = {}) {
+  constructor(subjects, rooms, professors, sections, days, timeSlots, existingSchedules = [], config = {}, aiProfessorMap = null) {
     this.subjects = subjects;
     this.rooms = rooms;
     this.professors = professors;
@@ -49,6 +49,7 @@ export class ScheduleGA {
     this.timeSlots = timeSlots;
     this.existingSchedules = existingSchedules;
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.aiProfessorMap = aiProfessorMap; // Optional AI-ranked professor map: { subjectId: [profId1, profId2, ...] }
     this._validateInputs();
     this._buildLookups();
     this.assignments = this._buildAssignmentList();
@@ -168,7 +169,19 @@ export class ScheduleGA {
   _eligibleProfsFor(a, profWork = null) {
     const subject = a.subject;
     let pool = this.professors;
-    if (subject) {
+
+    // --- AI-enhanced matching: use Gemini-ranked professor list if available ---
+    if (subject && this.aiProfessorMap && this.aiProfessorMap[subject.id]) {
+      const rankedIds = this.aiProfessorMap[subject.id];
+      const aiPool = rankedIds
+        .map(id => this.profMap[id])
+        .filter(Boolean);
+      if (aiPool.length > 0) {
+        pool = aiPool;
+      }
+    }
+    // --- Fallback: original string-matching logic ---
+    else if (subject) {
       pool = this.professors.filter(p => {
         const specs = p.specialization || [];
         const subId = String(subject.id).toLowerCase();

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScheduleGA } from '../../utils/ScheduleGA';
+import { suggestProfessorMatches, analyzeScheduleFailures } from '../../utils/scheduleAI';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import '../../styles/AutoScheduler.css';
 
@@ -16,6 +17,9 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   // Constraints
   const [respectLabs, setRespectLabs] = useState(true);
   const [preventDoubleBooking, setPreventDoubleBooking] = useState(true);
+  const [aiAssisted, setAiAssisted] = useState(true);
+  const [aiStatus, setAiStatus] = useState('');
+  const [aiInsights, setAiInsights] = useState(null);
 
   // Run the Targeted Heuristic Engine (Greedy)
   const runTargeted = async () => {
@@ -48,6 +52,8 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   const runGA = async () => {
     setLoading(true);
     setResult(null);
+    setAiInsights(null);
+    setAiStatus('');
     setProgress({ gen: 0, max: 100, fitness: null });
 
     try {
@@ -60,9 +66,27 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       // 2. Pass existing schedules if we are not clearing them
       const existingSchedules = clearBeforeRun ? [] : (schedules || []);
 
+      // --- AI Pre-Processing: Smart professor-subject matching ---
+      let aiProfessorMap = null;
+      if (aiAssisted) {
+        try {
+          setAiStatus('🧠 AI analyzing professor-subject compatibility...');
+          aiProfessorMap = await suggestProfessorMatches(professors, subjects, sections);
+          if (aiProfessorMap) {
+            setAiStatus('✅ AI matching complete — starting GA with optimized assignments');
+          } else {
+            setAiStatus('⚠️ AI matching returned no results — using default matching');
+          }
+        } catch (aiError) {
+          console.warn('[AI] Pre-processing failed:', aiError);
+          setAiStatus('⚠️ AI unavailable — using default matching');
+        }
+      }
+
       const ga = new ScheduleGA(
         subjects, rooms, professors, sections, DAYS, TIME_SLOTS, existingSchedules,
-        { populationSize: 80, maxGenerations: 100, mutationRate: 0.15 }
+        { populationSize: 80, maxGenerations: 100, mutationRate: 0.15 },
+        aiProfessorMap
       );
 
       const gaResult = await ga.solve((gen, bestFitness, totalGens) => {
@@ -142,6 +166,27 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
       setResult({ schedule: validResults, unscheduled: unscheduledResults, error: null, mode: 'ga' });
 
+      // --- AI Post-Processing: Analyze failures ---
+      if (aiAssisted && unscheduledResults.length > 0) {
+        try {
+          setAiStatus('🔍 AI analyzing scheduling failures...');
+          const insights = await analyzeScheduleFailures(
+            unscheduledResults, professors, rooms, sections, validResults
+          );
+          if (insights) {
+            setAiInsights(insights);
+            setAiStatus('✅ AI analysis complete');
+          } else {
+            setAiStatus('');
+          }
+        } catch (aiError) {
+          console.warn('[AI] Post-processing failed:', aiError);
+          setAiStatus('');
+        }
+      } else if (aiAssisted && unscheduledResults.length === 0) {
+        setAiStatus('✅ All classes scheduled successfully — no analysis needed');
+      }
+
     } catch (error) {
       setResult({ schedule: [], unscheduled: [], error: error.message, mode: 'ga' });
     }
@@ -214,11 +259,25 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           <input type="checkbox" checked={clearBeforeRun} onChange={(e) => setClearBeforeRun(e.target.checked)} />
           <strong>Clear entire existing schedule before running</strong>
         </label>
+        {engineMode === 'ga' && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', cursor: 'pointer', color: 'var(--accent-primary)' }}>
+            <input type="checkbox" checked={aiAssisted} onChange={(e) => setAiAssisted(e.target.checked)} />
+            <strong>🧠 AI-Assisted Mode</strong>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '400' }}>— Gemini optimizes professor matching & analyzes failures</span>
+          </label>
+        )}
       </div>
 
       <button onClick={handleExecute} disabled={loading || (engineMode !== 'ga' && !targetId)} className="btn" style={{ width: '100%', padding: '14px', fontSize: '1rem' }}>
         {loading ? 'Processing Schedule...' : 'Generate Timetable'}
       </button>
+
+      {/* AI Status */}
+      {aiStatus && (
+        <div style={{ marginTop: '12px', padding: '10px 14px', background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.08))', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--accent-primary)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {aiStatus}
+        </div>
+      )}
 
       {/* Progress Bar */}
       {loading && engineMode === 'ga' && (
@@ -288,6 +347,42 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                     <strong>{s?.subject?.code || s?.subject?.name || 'Unknown Subject'}</strong>
                     {s?.section?.name ? ` — ${s.section.name}` : ''}
                     <div style={{ color: 'var(--danger)', marginTop: '4px', fontSize: '0.8rem' }}>Reason: {s?.reason || 'Insufficient slots or conflict'}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* AI Insights Panel */}
+          {aiInsights && aiInsights.length > 0 && (
+            <div style={{ marginTop: '20px' }}>
+              <h3 style={{ color: 'var(--accent-primary)', borderBottom: '2px solid var(--accent-primary)', paddingBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🧠 AI Recommendations ({aiInsights.length})
+              </h3>
+              <div style={{ display: 'grid', gap: '10px', marginTop: '10px' }}>
+                {aiInsights.map((insight, idx) => (
+                  <div key={idx} style={{
+                    padding: '14px',
+                    background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.06))',
+                    border: '1px solid rgba(99,102,241,0.15)',
+                    borderLeft: '4px solid var(--accent-primary)',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                  }}>
+                    <div style={{ fontWeight: '700', color: 'var(--text-main)', marginBottom: '6px' }}>
+                      {insight.subject}{insight.section ? ` — ${insight.section}` : ''}
+                    </div>
+                    <div style={{ color: 'var(--text-muted)', marginBottom: '8px', lineHeight: '1.5' }}>
+                      {insight.problem}
+                    </div>
+                    <div style={{ marginTop: '4px' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: '600', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Suggested Actions:</span>
+                      <ul style={{ margin: '6px 0 0', paddingLeft: '18px', lineHeight: '1.7' }}>
+                        {(insight.solutions || []).map((sol, sIdx) => (
+                          <li key={sIdx} style={{ color: 'var(--text-main)', fontSize: '0.83rem' }}>{sol}</li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 ))}
               </div>

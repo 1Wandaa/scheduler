@@ -111,7 +111,7 @@ Keep your answers concise and polite.`;
         <div className="chatbot-window">
           <div className="chatbot-header">
             <div className="chatbot-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '8px'}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
               </svg>
               SMARTSCHED Assistant
@@ -140,8 +140,8 @@ Keep your answers concise and polite.`;
           </div>
 
           <form className="chatbot-input-area" onSubmit={handleSend}>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about the schedule..."
