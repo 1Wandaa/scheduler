@@ -9,10 +9,20 @@ const Chatbot = ({ schedules }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [chatSession, setChatSession] = useState(null);
   const messagesEndRef = useRef(null);
+  const schedulesRef = useRef(schedules);
+
+  // Reset chat session when schedules change so context stays current
+  useEffect(() => {
+    if (schedulesRef.current !== schedules) {
+      schedulesRef.current = schedules;
+      setChatSession(null);
+    }
+  }, [schedules]);
 
   useEffect(() => {
-    // Initialize the chat session with a system prompt that includes the current schedule context
-    const initChat = async () => {
+    if (!isOpen || chatSession) return;
+
+    const initChat = () => {
       // Build a text representation of the current schedule
       const scheduleContext = schedules.map(s => {
         const subject = s.subject?.code || s.subject?.name || 'Unknown Subject';
@@ -24,7 +34,7 @@ const Chatbot = ({ schedules }) => {
         return `${subject} for section ${section} is taught by ${prof} in ${room} on ${day} at ${time}.`;
       }).join('\n');
 
-      const systemInstruction = `You are a helpful AI assistant for the SMARTSCHED university scheduling system.
+      const systemPrompt = `You are a helpful AI assistant for the SMARTSCHED university scheduling system.
 Your job is to answer questions about the schedule.
 Here is the current schedule data:
 ${scheduleContext || 'There are no classes scheduled yet.'}
@@ -32,28 +42,19 @@ Keep your answers concise and polite.`;
 
       try {
         const chat = generativeModel.startChat({
-          history: [
-            {
-              role: "user",
-              parts: [{ text: systemInstruction }]
-            },
-            {
-              role: "model",
-              parts: [{ text: "Understood. I am ready to answer questions about the schedule." }]
-            }
-          ]
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          history: []
         });
         setChatSession(chat);
+        setMessages([{ role: 'model', text: "Hello! I'm your SMARTSCHED assistant. Ask me anything about the schedule!" }]);
       } catch (error) {
         console.error("Failed to initialize chat:", error);
+        setMessages([{ role: 'model', text: "Sorry, I couldn't connect to the AI service. Please try again later." }]);
       }
     };
 
-    if (isOpen && !chatSession) {
-      initChat();
-      setMessages([{ role: 'model', text: "Hello! I'm your SMARTSCHED assistant. Ask me anything about the schedule!" }]);
-    }
-  }, [isOpen, schedules, chatSession]);
+    initChat();
+  }, [isOpen, chatSession, schedules]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -69,23 +70,28 @@ Keep your answers concise and polite.`;
     setIsTyping(true);
 
     try {
-      const result = await chatSession.sendMessageStream(userMsg);
-      
-      let fullResponse = '';
-      setMessages(prev => [...prev, { role: 'model', text: '' }]);
-
-      for await (const chunk of result.stream) {
-        const chunkText = chunk.text();
-        fullResponse += chunkText;
-        setMessages(prev => {
-          const newMessages = [...prev];
-          newMessages[newMessages.length - 1].text = fullResponse;
-          return newMessages;
-        });
-      }
+      // Use non-streaming sendMessage for reliability
+      const result = await chatSession.sendMessage(userMsg);
+      const responseText = result.response.text();
+      setMessages(prev => [...prev, { role: 'model', text: responseText }]);
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages(prev => [...prev, { role: 'model', text: 'Sorry, I encountered an error while trying to process your request.' }]);
+      console.error("Error code:", error?.code);
+      console.error("Error details:", error?.customErrorData);
+
+      let errorMsg = 'Sorry, I encountered an error while trying to process your request.';
+      if (error?.code === 'api-not-enabled') {
+        errorMsg = 'The AI service is not yet enabled for this project. Please enable the Firebase AI API in the Firebase console.';
+      } else if (error?.code === 'fetch-error') {
+        errorMsg = 'Could not reach the AI service. Please check your internet connection and try again.';
+      } else if (error?.message) {
+        errorMsg = `Error: ${error.message}`;
+      }
+
+      setMessages(prev => [...prev, { role: 'model', text: errorMsg }]);
+
+      // Reset session on error so next attempt re-initializes
+      setChatSession(null);
     } finally {
       setIsTyping(false);
     }
@@ -155,3 +161,4 @@ Keep your answers concise and polite.`;
 };
 
 export default Chatbot;
+
