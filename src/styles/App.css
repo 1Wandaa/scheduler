@@ -4,71 +4,166 @@
    KEYFRAME ANIMATIONS
    ========================================= */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-30px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes slideInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.92); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 5px rgba(86, 69, 238, 0.2); }
-  50% { box-shadow: 0 0 20px rgba(86, 69, 238, 0.4); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(86, 69, 238, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(86, 69, 238, 0.4);
+  }
 }
 
 @keyframes iconBounce {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.22); }
-  70% { transform: scale(0.95); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.22);
+  }
+
+  70% {
+    transform: scale(0.95);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes floatUp {
-  0% { opacity: 0; transform: translateY(30px) scale(0.97); }
-  60% { opacity: 1; transform: translateY(-4px) scale(1.01); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.97);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.01);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @keyframes slideInRight {
-  from { opacity: 0; transform: translateX(20px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes breatheGlow {
-  0%, 100% { box-shadow: 0 0 8px rgba(86, 69, 238, 0.3), 0 0 20px rgba(86, 69, 238, 0.1); }
-  50% { box-shadow: 0 0 16px rgba(86, 69, 238, 0.5), 0 0 40px rgba(86, 69, 238, 0.2); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(86, 69, 238, 0.3), 0 0 20px rgba(86, 69, 238, 0.1);
+  }
+
+  50% {
+    box-shadow: 0 0 16px rgba(86, 69, 238, 0.5), 0 0 40px rgba(86, 69, 238, 0.2);
+  }
 }
 
 @keyframes navIndicatorSlide {
-  from { height: 0; opacity: 0; }
-  to { height: 60%; opacity: 1; }
+  from {
+    height: 0;
+    opacity: 0;
+  }
+
+  to {
+    height: 60%;
+    opacity: 1;
+  }
 }
 
 @keyframes countUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes tableRowSlide {
-  from { opacity: 0; transform: translateX(-12px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes cardEntrance {
@@ -76,6 +171,7 @@
     opacity: 0;
     transform: translateY(24px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -418,10 +514,21 @@ h6 {
 
 
 /* Stagger card entrance animations */
-.card:nth-child(1) { animation-delay: 0.05s; }
-.card:nth-child(2) { animation-delay: 0.12s; }
-.card:nth-child(3) { animation-delay: 0.19s; }
-.card:nth-child(4) { animation-delay: 0.26s; }
+.card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.card:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.card:nth-child(3) {
+  animation-delay: 0.19s;
+}
+
+.card:nth-child(4) {
+  animation-delay: 0.26s;
+}
 
 .btn-sm {
   padding: 5px 12px;
@@ -502,7 +609,7 @@ h6 {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
   transform: translateX(-100%);
   transition: transform 0.5s ease;
 }
@@ -552,11 +659,25 @@ h6 {
   transition: background 0.2s ease;
 }
 
-.data-table tbody tr:nth-child(1) { animation-delay: 0.05s; }
-.data-table tbody tr:nth-child(2) { animation-delay: 0.1s; }
-.data-table tbody tr:nth-child(3) { animation-delay: 0.15s; }
-.data-table tbody tr:nth-child(4) { animation-delay: 0.2s; }
-.data-table tbody tr:nth-child(5) { animation-delay: 0.25s; }
+.data-table tbody tr:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.data-table tbody tr:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.data-table tbody tr:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.data-table tbody tr:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.data-table tbody tr:nth-child(5) {
+  animation-delay: 0.25s;
+}
 
 .data-table tbody tr:hover {
   background: rgba(86, 69, 238, 0.04);
@@ -632,12 +753,20 @@ h6 {
 
 .alert-item:hover {
   transform: translateX(4px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.alert-item:nth-child(1) { animation-delay: 0.1s; }
-.alert-item:nth-child(2) { animation-delay: 0.2s; }
-.alert-item:nth-child(3) { animation-delay: 0.3s; }
+.alert-item:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.alert-item:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.alert-item:nth-child(3) {
+  animation-delay: 0.3s;
+}
 
 .alert-item svg {
   transition: transform 0.3s ease;
@@ -711,7 +840,8 @@ h6 {
   background: var(--card-bg);
   padding: 40px;
   border-radius: 12px;
-  width: 380px;
+  width: 100%;
+  max-width: 380px;
   text-align: center;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   border-top: 5px solid var(--accent-primary);
@@ -810,7 +940,7 @@ h6 {
    ========================================= */
 .kpi-tile:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
   border-color: rgba(86, 69, 238, 0.25);
 }
 
@@ -819,10 +949,21 @@ h6 {
   box-shadow: 0 4px 12px rgba(86, 69, 238, 0.15);
 }
 
-.kpi-tile:nth-child(1) { animation-delay: 0s; }
-.kpi-tile:nth-child(2) { animation-delay: 0.08s; }
-.kpi-tile:nth-child(3) { animation-delay: 0.16s; }
-.kpi-tile:nth-child(4) { animation-delay: 0.24s; }
+.kpi-tile:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.kpi-tile:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.kpi-tile:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+.kpi-tile:nth-child(4) {
+  animation-delay: 0.24s;
+}
 
 /* =========================================
    SIDEBAR LOGO BREATHING GLOW
@@ -943,7 +1084,7 @@ h6 {
     padding: 6px;
     transition: background 0.2s ease, border-color 0.2s ease;
   }
-  
+
   .mobile-menu-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.5);
@@ -1040,5 +1181,6 @@ h6 {
     overflow-x: auto !important;
     white-space: nowrap !important;
   }
+
   /* schedule-table keeps its table display — it has min-width + wrapper overflow-x */
 }
