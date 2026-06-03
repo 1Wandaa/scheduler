@@ -57,8 +57,14 @@ const Login = ({ onLogin }) => {
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-          setError('Account found, but role data is missing. Contact an Administrator.');
-          auth.signOut();
+          // Auto-create a Firestore profile for this authenticated user
+          const newProfile = {
+            username: username,
+            name: cleanUsername,
+            role: 'Student'
+          };
+          await addDoc(collection(db, 'users'), newProfile);
+          onLogin(newProfile);
           setLoading(false);
           return;
         }

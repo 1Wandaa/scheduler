@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import Login from './pages/Login/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import './styles/App.css';
@@ -42,12 +42,14 @@ function App() {
               username: userData.username || username
             });
           } else {
-            // Auth exists but no Firestore profile — set basic info
-            setUser({
+            // Auth exists but no Firestore profile — create one
+            const newProfile = {
+              username: username,
               name: username,
-              role: 'User',
-              username: username
-            });
+              role: 'Student'
+            };
+            await addDoc(collection(db, 'users'), newProfile);
+            setUser(newProfile);
           }
         } catch (error) {
           console.error('Error restoring session:', error);
