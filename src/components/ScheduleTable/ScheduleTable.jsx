@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import '../../styles/ScheduleTable.css';
 
@@ -246,7 +247,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     </div>
   );
 
-  return (
+  const content = (
     <div className={`schedule-table-container ${isFullscreen ? 'schedule-fullscreen' : ''}`}>
 
       {/* Toolbar row */}
@@ -329,6 +330,8 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       )}
     </div>
   );
+
+  return isFullscreen ? createPortal(content, document.body) : content;
 }
 
 export default ScheduleTable;
