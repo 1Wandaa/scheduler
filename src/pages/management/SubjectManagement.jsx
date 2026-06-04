@@ -69,8 +69,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
     return [];
   };
 
-  const inputStyle = { width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', marginTop: '5px' };
-  const labelStyle = { display: 'block', fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' };
+
 
   return (
     <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
@@ -128,41 +127,39 @@ const SubjectManagement = ({ subjects, onBack }) => {
       </table>
 
       {showModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="modal-content" style={{ backgroundColor: 'var(--card-bg)', padding: '30px', borderRadius: '12px', width: '400px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ marginTop: 0, color: 'var(--accent-dark)', marginBottom: '20px' }}>{editMode ? 'Edit Subject' : 'Add New Subject'}</h3>
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ width: '450px' }}>
+            <h3>{editMode ? 'Edit Subject' : 'Add New Subject'}</h3>
 
-            <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Subject Code</label><input style={inputStyle} value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. CS101" /></div>
-            <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Subject Name</label><input style={inputStyle} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Intro to Programming" /></div>
+            <div className="form-group"><label className="form-label">Subject Code</label><input className="form-input" value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. CS101" /></div>
+            <div className="form-group"><label className="form-label">Subject Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Intro to Programming" /></div>
 
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', alignItems: 'stretch' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <label style={labelStyle}>Departments</label>
-                <div style={{ marginTop: '5px', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {DEPARTMENTS.map(dept => (
-                    <label key={dept} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: '500' }}>
-                      <input
-                        type="checkbox"
-                        checked={(formData.departments || []).includes(dept)}
-                        onChange={() => handleDeptToggle(dept)}
-                        style={{ accentColor: 'var(--accent-primary)', width: '15px', height: '15px' }}
-                      />
-                      {dept}
-                    </label>
-                  ))}
-                </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>Select all departments that offer this subject</p>
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label className="form-label">Departments</label>
+              <div style={{ marginTop: '8px', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px 14px', display: 'flex', flexWrap: 'wrap', gap: '12px', background: 'var(--bg-main)' }}>
+                {DEPARTMENTS.map(dept => (
+                  <label key={dept} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                    <input
+                      type="checkbox"
+                      checked={(formData.departments || []).includes(dept)}
+                      onChange={() => handleDeptToggle(dept)}
+                      style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
+                    />
+                    {dept}
+                  </label>
+                ))}
               </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '6px 0 0', fontWeight: '500' }}>Select all departments that offer this subject</p>
             </div>
 
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', alignItems: 'stretch' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <label style={labelStyle}>Total Units (Credits)</label>
-                <input type="number" style={inputStyle} value={formData.credits || 3} onChange={e => setFormData({ ...formData, credits: Number(e.target.value) })} />
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                <label className="form-label">Total Units (Credits)</label>
+                <input type="number" className="form-input" value={formData.credits || 3} onChange={e => setFormData({ ...formData, credits: Number(e.target.value) })} />
               </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <label style={labelStyle}>Hours per Meeting</label>
-                <select style={inputStyle} value={formData.hoursPerMeeting || 1.5} onChange={e => setFormData({ ...formData, hoursPerMeeting: Number(e.target.value) })}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                <label className="form-label">Hours per Meeting</label>
+                <select className="form-select" value={formData.hoursPerMeeting || 1.5} onChange={e => setFormData({ ...formData, hoursPerMeeting: Number(e.target.value) })}>
                   <option value={1}>1.0 Hours</option>
                   <option value={1.5}>1.5 Hours</option>
                   <option value={2}>2.0 Hours</option>
@@ -170,14 +167,14 @@ const SubjectManagement = ({ subjects, onBack }) => {
               </div>
             </div>
 
-            <div style={{ marginBottom: '25px', padding: '10px', background: 'var(--bg-main)', borderRadius: '6px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}>
-                <input type="checkbox" checked={formData.requiredLab} onChange={e => setFormData({ ...formData, requiredLab: e.target.checked })} style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} /> Requires Computer Laboratory
+            <div style={{ marginBottom: '25px', padding: '14px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                <input type="checkbox" checked={formData.requiredLab} onChange={e => setFormData({ ...formData, requiredLab: e.target.checked })} style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} /> Requires Computer Laboratory
               </label>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}>Cancel</button>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowModal(false)} style={{ padding: '10px 18px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-muted)' }}>Cancel</button>
               <button className="btn" onClick={handleSave}>Save Subject</button>
             </div>
           </div>

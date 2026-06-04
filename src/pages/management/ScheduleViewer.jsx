@@ -175,11 +175,12 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
             <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', marginBottom: '20px', padding: '12px 15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)', alignSelf: 'center' }}>Filter By:</label>
+                    <label className="form-label" style={{ marginBottom: 0, alignSelf: 'center' }}>Filter By:</label>
                     <select
+                        className="form-select"
                         value={viewType}
                         onChange={(e) => setViewType(e.target.value)}
-                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', outline: 'none', cursor: 'pointer', minWidth: '140px' }}
+                        style={{ minWidth: '140px' }}
                     >
                         <option value="department">Department</option>
                         <option value="section">Section</option>
@@ -189,11 +190,12 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)', alignSelf: 'center' }}>Target:</label>
+                    <label className="form-label" style={{ marginBottom: 0, alignSelf: 'center' }}>Target:</label>
                     <select
+                        className="form-select"
                         value={selectedId}
                         onChange={(e) => setSelectedId(e.target.value)}
-                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--accent-primary)', backgroundColor: 'var(--success-bg)', color: 'var(--accent-dark)', fontWeight: 'bold', outline: 'none', cursor: 'pointer', minWidth: '200px' }}
+                        style={{ minWidth: '200px', borderColor: 'var(--accent-primary)', backgroundColor: 'var(--success-bg)' }}
                     >
                         {viewType === 'department' && DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
                         {viewType === 'room' && rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
@@ -204,11 +206,12 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
 
                 {(viewType === 'department' || viewType === 'section') && availableYearLevels.length > 0 && (
                     <div style={{ display: 'flex', gap: '10px', paddingLeft: '15px', borderLeft: '2px solid var(--border-color)' }}>
-                        <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)', alignSelf: 'center' }}>Year:</label>
+                        <label className="form-label" style={{ marginBottom: 0, alignSelf: 'center' }}>Year:</label>
                         <select
+                            className="form-select"
                             value={selectedYearLevel}
                             onChange={(e) => setSelectedYearLevel(e.target.value)}
-                            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--accent-primary)', backgroundColor: selectedYearLevel ? '#DBEAFE' : 'white', color: 'var(--accent-dark)', fontWeight: selectedYearLevel ? 'bold' : 'normal', outline: 'none', cursor: 'pointer', minWidth: '130px' }}
+                            style={{ minWidth: '130px', borderColor: selectedYearLevel ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: selectedYearLevel ? '#DBEAFE' : 'white' }}
                         >
                             <option value="">All Years</option>
                             {availableYearLevels.map(yr => (
@@ -220,11 +223,12 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
 
                 {viewType === 'department' && deptSections.length > 0 && (
                     <div style={{ display: 'flex', gap: '10px', paddingLeft: '15px', borderLeft: '2px solid var(--border-color)' }}>
-                        <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)', alignSelf: 'center' }}>Section:</label>
+                        <label className="form-label" style={{ marginBottom: 0, alignSelf: 'center' }}>Section:</label>
                         <select
+                            className="form-select"
                             value={deptSectionId}
                             onChange={(e) => setDeptSectionId(e.target.value)}
-                            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--accent-primary)', backgroundColor: deptSectionId ? 'var(--warning-bg)' : 'white', color: 'var(--accent-dark)', fontWeight: deptSectionId ? 'bold' : 'normal', outline: 'none', cursor: 'pointer', minWidth: '200px' }}
+                            style={{ minWidth: '200px', borderColor: deptSectionId ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: deptSectionId ? 'var(--warning-bg)' : 'white' }}
                         >
                             {deptSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>

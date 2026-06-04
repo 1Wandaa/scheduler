@@ -74,8 +74,9 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
       <h2>Create Schedule</h2>
       <form onSubmit={handleSubmit} className="schedule-form">
         <div className="form-group">
-          <label>Subject *</label>
+          <label className="form-label">Subject *</label>
           <select
+            className="form-select"
             name="subject"
             value={formData.subject}
             onChange={handleChange}
@@ -91,8 +92,9 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
         </div>
 
         <div className="form-group">
-          <label>Professor *</label>
+          <label className="form-label">Professor *</label>
           <select
+            className="form-select"
             name="professor"
             value={formData.professor}
             onChange={handleChange}
@@ -108,8 +110,9 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
         </div>
 
         <div className="form-group">
-          <label>Room *</label>
+          <label className="form-label">Room *</label>
           <select
+            className="form-select"
             name="room"
             value={formData.room}
             onChange={handleChange}
@@ -124,10 +127,11 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
           </select>
         </div>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label>Day *</label>
+        <div className="form-row" style={{ display: 'flex', gap: '15px' }}>
+          <div className="form-group" style={{ flex: 1 }}>
+            <label className="form-label">Day *</label>
             <select
+              className="form-select"
               name="day"
               value={formData.day}
               onChange={handleChange}
@@ -142,9 +146,10 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Time Slot *</label>
+          <div className="form-group" style={{ flex: 1 }}>
+            <label className="form-label">Time Slot *</label>
             <select
+              className="form-select"
               name="timeSlot"
               value={formData.timeSlot}
               onChange={handleChange}
@@ -160,7 +165,7 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
           </div>
         </div>
 
-        <button type="submit" disabled={loading} className="submit-btn">
+        <button type="submit" disabled={loading} className="btn" style={{ width: '100%', padding: '14px', fontSize: '1.05rem', marginTop: '10px' }}>
           {loading ? 'Scheduling...' : 'Add to Schedule'}
         </button>
       </form>

@@ -1,20 +1,26 @@
+/* =========================================
+   SCHEDULE FORM — MODERNIZED
+   ========================================= */
 .schedule-form-container {
-  background: white;
+  background: rgba(255, 255, 255, 0.97);
   padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   margin-bottom: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
 .schedule-form-container h2 {
   margin-top: 0;
   color: var(--text-main);
   margin-bottom: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .schedule-form {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .form-group {
@@ -24,78 +30,114 @@
 
 .form-group label {
   font-weight: 600;
-  margin-bottom: 0.5rem;
+  margin-bottom: 6px;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .form-group select {
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: all 0.3s;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 0.93rem;
+  font-family: inherit;
+  background: rgba(255, 255, 255, 0.8);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  appearance: auto;
 }
 
 .form-group select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(86, 69, 238, 0.15);
+  box-shadow: 0 0 0 3.5px rgba(86, 69, 238, 0.1);
+  background: white;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .submit-btn {
-  padding: 0.75rem 1.5rem;
-  background-color: var(--accent-primary);
+  padding: 13px 24px;
+  background: linear-gradient(135deg, var(--accent-primary), #7c3aed);
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 600;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 15px rgba(86, 69, 238, 0.3);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.02em;
+}
+
+.submit-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.submit-btn:hover:not(:disabled)::before {
+  transform: translateX(100%);
 }
 
 .submit-btn:hover:not(:disabled) {
-  background-color: var(--accent-dark);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 8px 25px rgba(86, 69, 238, 0.4);
+}
+
+.submit-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+  box-shadow: 0 2px 8px rgba(86, 69, 238, 0.25);
+  transition-duration: 0.1s;
 }
 
 .submit-btn:disabled {
-  background-color: #ccc;
+  background: #E2E8F0;
+  color: #94a3b8;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .info-box {
   margin-top: 1rem;
-  padding: 1rem;
-  background-color: var(--warning-bg);
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(254, 246, 233, 0.6), rgba(255, 247, 237, 0.95));
   border-left: 4px solid var(--warning);
-  border-radius: 6px;
-  color: #856404;
+  border-radius: 12px;
+  color: #92400e;
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
 .validation-box {
   margin-top: 1rem;
-  padding: 1rem;
-  border-radius: 6px;
+  padding: 14px 16px;
+  border-radius: 12px;
   border-left: 4px solid;
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
 .validation-box.success {
-  background-color: var(--success-bg);
+  background: linear-gradient(135deg, rgba(230, 248, 240, 0.6), rgba(255, 255, 255, 0.95));
   border-color: var(--success);
-  color: var(--success);
+  color: #065f46;
 }
 
 .validation-box.error {
-  background-color: var(--danger-bg);
+  background: linear-gradient(135deg, rgba(253, 234, 239, 0.6), rgba(255, 255, 255, 0.95));
   border-color: var(--danger);
-  color: var(--danger);
+  color: #9f1239;
 }
 
 .validation-box ul {

@@ -217,12 +217,12 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: engineMode === 'ga' ? '1fr' : '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '5px' }}>Engine Mode</label>
+        <div className="form-group">
+          <label className="form-label">Engine Mode</label>
           <select
+            className="form-select"
             value={engineMode}
             onChange={(e) => { setEngineMode(e.target.value); setTargetId(''); }}
-            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--card-bg)', color: 'var(--text-main)', outline: 'none' }}
           >
             <option value="ga">Full Timetable (GA)</option>
             <option value="faculty">Targeted: Single Faculty</option>
@@ -232,12 +232,12 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         </div>
 
         {engineMode !== 'ga' && (
-          <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '5px' }}>Select Target</label>
+          <div className="form-group">
+            <label className="form-label">Select Target</label>
             <select
+              className="form-select"
               value={targetId}
               onChange={(e) => setTargetId(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--card-bg)', color: 'var(--text-main)', outline: 'none' }}
             >
               <option value="">Choose...</option>
               {targetOptions?.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}

@@ -146,42 +146,34 @@ const UserManagement = ({ onBack }) => {
 
       {/* --- ADD USER MODAL --- */}
       {showModal && (
-        <div className="modal-overlay" style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }}>
-          <div className="modal-content" style={{
-            backgroundColor: 'var(--card-bg)', padding: '30px',
-            borderRadius: '12px', width: '400px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-            maxHeight: '90vh', overflowY: 'auto'
-          }}>
-            <h3 style={{ marginTop: 0, color: 'var(--accent-dark)' }}>Add New User</h3>
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ width: '400px' }}>
+            <h3>Add New User</h3>
 
-            <div className="input-group" style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Username</label>
+            <div className="form-group">
+              <label className="form-label">Username</label>
               <input
-                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)' }}
+                className="form-input"
                 value={newUser.username}
                 onChange={e => setNewUser({ ...newUser, username: e.target.value })}
                 placeholder="e.g. @ryan"
               />
             </div>
 
-            <div className="input-group" style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Full Name</label>
+            <div className="form-group">
+              <label className="form-label">Full Name</label>
               <input
-                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)' }}
+                className="form-input"
                 value={newUser.name}
                 onChange={e => setNewUser({ ...newUser, name: e.target.value })}
                 placeholder="e.g. Ryan James Mora"
               />
             </div>
 
-            <div className="input-group" style={{ marginBottom: '25px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Role</label>
+            <div className="form-group" style={{ marginBottom: '25px' }}>
+              <label className="form-label">Role</label>
               <select
-                style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'white' }}
+                className="form-select"
                 value={newUser.role}
                 onChange={e => setNewUser({ ...newUser, role: e.target.value })}
               >
@@ -191,10 +183,10 @@ const UserManagement = ({ onBack }) => {
               </select>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowModal(false)}
-                style={{ padding: '8px 16px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
+                style={{ padding: '10px 18px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-muted)' }}
               >
                 Cancel
               </button>

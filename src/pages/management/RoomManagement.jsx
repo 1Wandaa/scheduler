@@ -58,8 +58,7 @@ const RoomManagement = ({ rooms, onBack }) => {
     }
   };
 
-  const inputStyle = { width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', marginTop: '5px', backgroundColor: 'white' };
-  const labelStyle = { display: 'block', fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' };
+
 
   return (
     <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
@@ -107,32 +106,32 @@ const RoomManagement = ({ rooms, onBack }) => {
       </table>
 
       {showModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="modal-content" style={{ backgroundColor: 'var(--card-bg)', padding: '30px', borderRadius: '12px', width: '400px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ marginTop: 0, color: 'var(--accent-dark)', marginBottom: '20px' }}>{editMode ? 'Edit Room' : 'Add New Room'}</h3>
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ width: '400px' }}>
+            <h3>{editMode ? 'Edit Room' : 'Add New Room'}</h3>
 
-            <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Room Code</label><input style={inputStyle} value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. R101" /></div>
-            <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Room Name</label><input style={inputStyle} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Room 101" /></div>
+            <div className="form-group"><label className="form-label">Room Code</label><input className="form-input" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. R101" /></div>
+            <div className="form-group"><label className="form-label">Room Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Room 101" /></div>
 
-            <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Room Type</label>
-              <select style={inputStyle} value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
+            <div className="form-group"><label className="form-label">Room Type</label>
+              <select className="form-select" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
                 <option value={ROOM_TYPES.LECTURE}>Lecture</option>
                 <option value={ROOM_TYPES.LAB}>Laboratory</option>
                 <option value={ROOM_TYPES.SEMINAR}>Seminar</option>
               </select>
             </div>
 
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '25px', padding: '10px', background: 'var(--bg-main)', borderRadius: '6px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}>
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '25px', padding: '12px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
                 <input type="checkbox" checked={formData.hasComputers} onChange={e => setFormData({ ...formData, hasComputers: e.target.checked })} style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} /> Has Computers
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
                 <input type="checkbox" checked={formData.hasProjector} onChange={e => setFormData({ ...formData, hasProjector: e.target.checked })} style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} /> Has Projector
               </label>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}>Cancel</button>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowModal(false)} style={{ padding: '10px 18px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-muted)' }}>Cancel</button>
               <button className="btn" onClick={handleSave}>Save Room</button>
             </div>
           </div>

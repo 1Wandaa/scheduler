@@ -20,11 +20,12 @@ function RoomUtilization({ rooms, schedules }) {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <label style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)' }}>Target Room:</label>
+                    <label className="form-label" style={{ marginBottom: 0 }}>Target Room:</label>
                     <select
+                        className="form-select"
                         value={selectedRoomId}
                         onChange={(e) => setSelectedRoomId(e.target.value)}
-                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--accent-primary)', backgroundColor: 'var(--success-bg)', color: 'var(--accent-dark)', fontWeight: 'bold', outline: 'none', cursor: 'pointer' }}
+                        style={{ minWidth: '180px', borderColor: 'var(--accent-primary)', backgroundColor: 'var(--success-bg)' }}
                     >
                         {rooms.map(room => (
                             <option key={room.id} value={room.id}>

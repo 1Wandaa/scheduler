@@ -406,40 +406,13 @@ h6 {
 /* Sidebar Stats Grey Box - Converted for Dark Mode */
 .sidebar-stats-box {
   background: rgba(255, 255, 255, 0.05);
-  /* Translucent white overlay instead of grey */
   margin: 15px;
   padding: 15px;
-  border-radius: 10px;
+  border-radius: 12px;
   color: var(--sidebar-text-active);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Sidebar */
-.sidebar {
-  width: 260px;
-  min-width: 260px;
-  height: 100vh;
-  min-height: 100vh;
-  background: linear-gradient(180deg, #15133C 0%, #1a1750 50%, #15133C 100%);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 20px 0;
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
-  z-index: 10;
-  overflow-y: auto;
-  border-right: 1px solid rgba(86, 69, 238, 0.1);
-  position: sticky;
-  top: 0;
-  transition: margin-left 0.3s ease, opacity 0.3s ease;
-
-  /* Hide the scrollbar */
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.sidebar::-webkit-scrollbar {
-  display: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .sidebar-stats-box .stat-row {
@@ -459,11 +432,29 @@ h6 {
 /* Main Content Area */
 .main-content {
   flex-grow: 1;
-  padding: 20px;
+  padding: 24px 28px;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  display: block;
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(86, 69, 238, 0.2) transparent;
+}
+
+.main-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: rgba(86, 69, 238, 0.15);
+  border-radius: 100px;
+}
+
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(86, 69, 238, 0.3);
 }
 
 .header-title {
@@ -660,7 +651,7 @@ h6 {
 
 .data-table th,
 .data-table td {
-  padding: 12px 10px;
+  padding: 14px 14px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
 }
@@ -668,16 +659,21 @@ h6 {
 .data-table th {
   background: var(--table-header);
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
   border-bottom: 2px solid var(--border-color);
+  white-space: nowrap;
 }
 
 .data-table tbody tr {
   animation: tableRowSlide 0.35s ease-out backwards;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.data-table tbody tr:nth-child(even) {
+  background: rgba(248, 250, 252, 0.5);
 }
 
 .data-table tbody tr:nth-child(1) {
@@ -702,6 +698,11 @@ h6 {
 
 .data-table tbody tr:hover {
   background: rgba(86, 69, 238, 0.04);
+}
+
+.data-table td {
+  color: var(--text-main);
+  font-weight: 450;
 }
 
 
@@ -1639,14 +1640,14 @@ h6 {
    KPI TILE ANIMATIONS
    ========================================= */
 .kpi-tile:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  border-color: rgba(86, 69, 238, 0.25);
+  transform: translateY(-5px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.04);
+  border-color: rgba(86, 69, 238, 0.2);
 }
 
 .kpi-tile:hover .kpi-icon {
-  transform: scale(1.12);
-  box-shadow: 0 4px 12px rgba(86, 69, 238, 0.15);
+  transform: scale(1.12) rotate(-3deg);
+  box-shadow: 0 6px 20px rgba(86, 69, 238, 0.2);
 }
 
 .kpi-tile:nth-child(1) {
@@ -1663,6 +1664,119 @@ h6 {
 
 .kpi-tile:nth-child(4) {
   animation-delay: 0.24s;
+}
+
+/* =========================================
+   MODAL OVERLAY — MODERNIZED
+   ========================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 12, 41, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: modalFadeIn 0.25s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: rgba(255, 255, 255, 0.98);
+  padding: 32px;
+  border-radius: 20px;
+  width: 500px;
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.15);
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalSlideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(86, 69, 238, 0.15) transparent;
+}
+
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: rgba(86, 69, 238, 0.12);
+  border-radius: 100px;
+}
+
+.modal-content h3 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-top: 0;
+  color: var(--text-main);
+  margin-bottom: 24px;
+}
+
+/* =========================================
+   COMMON FORM ELEMENTS (MODALS)
+   ========================================= */
+.form-group {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 0.93rem;
+  font-family: inherit;
+  background: rgba(255, 255, 255, 0.8);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  box-sizing: border-box;
+}
+
+.form-select {
+  appearance: auto;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3.5px rgba(86, 69, 238, 0.1);
+  background: white;
+}
+
+.form-input:disabled,
+.form-select:disabled {
+  background: #f1f3f5;
+  color: #adb5bd;
+  cursor: not-allowed;
 }
 
 /* =========================================

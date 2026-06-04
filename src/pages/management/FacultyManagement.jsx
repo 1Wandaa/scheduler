@@ -72,8 +72,6 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
     }
   };
 
-  const inputStyle = { width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', boxSizing: 'border-box', marginTop: '5px' };
-  const labelStyle = { display: 'block', fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' };
 
   return (
     <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
@@ -153,67 +151,67 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
       </table>
 
       {showModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="modal-content" style={{ backgroundColor: 'var(--card-bg)', padding: '30px', borderRadius: '12px', width: '500px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ marginTop: 0, color: 'var(--accent-dark)', marginBottom: '20px' }}>{editMode ? 'Edit Faculty' : 'Add New Faculty'}</h3>
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ width: '500px' }}>
+            <h3>{editMode ? 'Edit Faculty' : 'Add New Faculty'}</h3>
 
-            <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Faculty ID</label><input style={inputStyle} value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. P001" /></div>
-            <div style={{ marginBottom: '15px' }}><label style={labelStyle}>Full Name</label><input style={inputStyle} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Dr. John Smith" /></div>
+            <div className="form-group"><label className="form-label">Faculty ID</label><input className="form-input" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. P001" /></div>
+            <div className="form-group"><label className="form-label">Full Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Dr. John Smith" /></div>
 
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Department</label>
-                <select style={inputStyle} value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Department</label>
+                <select className="form-select" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
                   {DEPARTMENTS.map(dept => (
                     <option key={dept} value={dept}>{dept}</option>
                   ))}
                 </select>
               </div>
-              <div style={{ width: '120px' }}>
-                <label style={labelStyle}>Max Units</label>
-                <input type="number" style={inputStyle} value={formData.maxUnits} onChange={e => setFormData({ ...formData, maxUnits: parseInt(e.target.value) || 0 })} />
+              <div className="form-group" style={{ width: '120px' }}>
+                <label className="form-label">Max Units</label>
+                <input type="number" className="form-input" value={formData.maxUnits} onChange={e => setFormData({ ...formData, maxUnits: parseInt(e.target.value) || 0 })} />
               </div>
             </div>
 
-            <div style={{ marginBottom: '25px' }}>
-              <label style={labelStyle}>Assigned Subjects</label>
-              <div style={{ marginTop: '8px', maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '10px' }}>
+            <div className="form-group">
+              <label className="form-label">Assigned Subjects</label>
+              <div style={{ marginTop: '8px', maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
                 {subjects.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No subjects available.</p>}
                 {subjects.map(sub => (
-                  <label key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.88rem', borderBottom: '1px solid var(--bg-main)' }}>
+                  <label key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
                     <input
                       type="checkbox"
                       checked={(formData.specialization || []).includes(sub.id)}
                       onChange={() => handleSubjectToggle(sub.id)}
-                      style={{ accentColor: 'var(--accent-primary)', width: '15px', height: '15px' }}
+                      style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
                     />
-                    <span style={{ fontWeight: '600', color: 'var(--accent-primary)' }}>{sub.code}</span>
+                    <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{sub.code}</span>
                     <span>{sub.name}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            <div style={{ marginBottom: '25px' }}>
-              <label style={labelStyle}>Preferred Rooms (Optional)</label>
-              <div style={{ marginTop: '8px', maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '10px' }}>
+            <div className="form-group" style={{ marginBottom: '25px' }}>
+              <label className="form-label">Preferred Rooms (Optional)</label>
+              <div style={{ marginTop: '8px', maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
                 {rooms.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No rooms available.</p>}
                 {rooms.map(room => (
-                  <label key={room.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.88rem', borderBottom: '1px solid var(--bg-main)' }}>
+                  <label key={room.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
                     <input
                       type="checkbox"
                       checked={(formData.preferredRooms || []).includes(room.id)}
                       onChange={() => handleRoomToggle(room.id)}
-                      style={{ accentColor: 'var(--accent-primary)', width: '15px', height: '15px' }}
+                      style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
                     />
-                    <span style={{ fontWeight: '600', color: 'var(--accent-primary)' }}>{room.name}</span>
+                    <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{room.name}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}>Cancel</button>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowModal(false)} style={{ padding: '10px 18px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-muted)' }}>Cancel</button>
               <button className="btn" onClick={handleSave}>Save Faculty</button>
             </div>
           </div>
