@@ -498,27 +498,27 @@ const Login = ({ onLogin }) => {
           <p className="login-hero-footer">© 2026 Capiz State University</p>
         </div>
 
+        {/* Mobile campus banner — only visible on small screens */}
+        <div className="login-mobile-banner">
+          <img src="/background2.jpg?v=1" alt="" className="login-mobile-banner-bg" />
+          <div className="login-mobile-banner-overlay"></div>
+          <div className="login-mobile-banner-content">
+            <img
+              src={LOGO_SRC}
+              alt="CAPSU Logo"
+              className="login-mobile-banner-logo"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = FALLBACK_LOGO;
+              }}
+            />
+            <span className="login-mobile-banner-title">SMARTSCHED</span>
+          </div>
+        </div>
+
         {/* RIGHT — Form Panel */}
         <div className="login-form-panel">
           <div className={`login-box ${isSignUp ? 'login-box-wide' : ''}`}>
-            {/* Mobile campus banner — only visible on small screens */}
-            <div className="login-mobile-banner">
-              <img src="/background2.jpg?v=1" alt="" className="login-mobile-banner-bg" />
-              <div className="login-mobile-banner-overlay"></div>
-              <div className="login-mobile-banner-content">
-                <img
-                  src={LOGO_SRC}
-                  alt="CAPSU Logo"
-                  className="login-mobile-banner-logo"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = FALLBACK_LOGO;
-                  }}
-                />
-                <span className="login-mobile-banner-title">SMARTSCHED</span>
-              </div>
-            </div>
-
             <h2 className="login-form-title">
               {isSignUp ? 'Create Account' : 'Welcome Back'}
             </h2>

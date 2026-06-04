@@ -1160,15 +1160,19 @@ h6 {
   position: relative;
   z-index: 2;
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  height: 100%;
   gap: 12px;
   padding: 24px 20px;
 }
 
 .login-mobile-banner-logo {
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
+  object-fit: cover;
   border: 2px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -1176,9 +1180,10 @@ h6 {
 .login-mobile-banner-title {
   color: white;
   font-family: 'Poppins', sans-serif;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: 700;
   letter-spacing: 0.05em;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .login-form-title {
@@ -1750,12 +1755,12 @@ h6 {
   }
 
   .login-mobile-banner-logo {
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
   }
 
   .login-mobile-banner-title {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
   }
 
   .input-group input,
@@ -1884,8 +1889,9 @@ h6 {
     display: block;
     position: relative;
     width: 100%;
-    min-height: 120px;
+    min-height: 180px;
     background-color: var(--accent-dark);
+    flex-shrink: 0;
   }
 
   /* Form panel fills the screen, centers the card */
