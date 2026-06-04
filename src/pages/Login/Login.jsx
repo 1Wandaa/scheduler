@@ -3,20 +3,20 @@ import { auth, db } from '../../config/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, onSnapshot } from 'firebase/firestore';
 
-// Department → Courses mapping
-const DEPARTMENT_COURSES = {
-  'BSCS': [
-    'Bachelor of Science in Computer Science',
-  ],
-  'BAEL': [
-    'Bachelor of Arts in English Language',
-  ],
-  'BSOA': [
-    'Bachelor of Science in Office Administration',
-  ],
-  'BSFT': [
-    'Bachelor of Science in Food Technology',
-  ],
+// Department → Program mapping (must match the 'program' field stored in Firestore sections)
+const DEPARTMENT_PROGRAM = {
+  'BSCS': 'BS Computer Science',
+  'BAEL': 'Bachelor of Arts in English Language',
+  'BSOA': 'Bachelor of Science in Office Administration',
+  'BSFT': 'Bachelor of Science in Food Technology',
+};
+
+// Human-readable department labels
+const DEPARTMENT_LABELS = {
+  'BSCS': 'Bachelor of Science in Computer Science (BSCS)',
+  'BAEL': 'Bachelor of Arts in English Language (BAEL)',
+  'BSOA': 'Bachelor of Science in Office Administration (BSOA)',
+  'BSFT': 'Bachelor of Science in Food Technology (BSFT)',
 };
 
 const YEAR_LEVELS = [
@@ -42,7 +42,6 @@ const Login = ({ onLogin }) => {
 
   // Academic info
   const [department, setDepartment] = useState('');
-  const [course, setCourse] = useState('');
   const [yearLevel, setYearLevel] = useState('');
   const [section, setSection] = useState('');
 
@@ -66,27 +65,20 @@ const Login = ({ onLogin }) => {
     return () => unsubscribe();
   }, []);
 
-  // Available courses based on selected department
-  const availableCourses = department ? (DEPARTMENT_COURSES[department] || []) : [];
+  // Auto-derive program from selected department
+  const derivedProgram = department ? (DEPARTMENT_PROGRAM[department] || '') : '';
 
-  // Filter sections based on selected course and year level
+  // Filter sections based on derived program and year level
   const availableSections = firestoreSections.filter(sec => {
-    if (!course) return false;
-    const matchesCourse = sec.program === course;
+    if (!derivedProgram) return false;
+    const matchesProgram = sec.program === derivedProgram;
     const matchesYear = yearLevel ? sec.yearLevel === parseInt(yearLevel) : true;
-    return matchesCourse && matchesYear;
+    return matchesProgram && matchesYear;
   });
 
   // Reset dependent fields when department changes
   const handleDepartmentChange = (val) => {
     setDepartment(val);
-    setCourse('');
-    setSection('');
-  };
-
-  // Reset section when course or year changes
-  const handleCourseChange = (val) => {
-    setCourse(val);
     setSection('');
   };
 
@@ -116,11 +108,6 @@ const Login = ({ onLogin }) => {
           setLoading(false);
           return;
         }
-        if (!course) {
-          setError('Please select a course.');
-          setLoading(false);
-          return;
-        }
         if (!yearLevel) {
           setError('Please select a year level.');
           setLoading(false);
@@ -142,7 +129,7 @@ const Login = ({ onLogin }) => {
           role: 'Student',
           studentId: studentId.trim(),
           department: department,
-          course: course,
+          program: derivedProgram,
           yearLevel: parseInt(yearLevel),
           section: section,
         });
@@ -335,6 +322,7 @@ const Login = ({ onLogin }) => {
       </div>
       <p className="step-label">Academic Information</p>
 
+      {/* Student ID */}
       <div className="input-group">
         <label>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="2" y="3" width="20" height="18" rx="2" /><line x1="8" y1="7" x2="16" y2="7" /><line x1="8" y1="11" x2="16" y2="11" /><line x1="8" y1="15" x2="12" y2="15" /></svg>
@@ -349,42 +337,28 @@ const Login = ({ onLogin }) => {
         />
       </div>
 
+      {/* Department */}
       <div className="input-group">
         <label>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
-          Department
+          Department / Program
         </label>
         <select
           required
           value={department}
           onChange={e => handleDepartmentChange(e.target.value)}
         >
-          <option value=""> Select Department </option>
-          {Object.keys(DEPARTMENT_COURSES).map(dept => (
-            <option key={dept} value={dept}>{dept}</option>
+          <option value="">Select your program</option>
+          {Object.keys(DEPARTMENT_PROGRAM).map(dept => (
+            <option key={dept} value={dept}>{DEPARTMENT_LABELS[dept] || dept}</option>
           ))}
         </select>
+        {department && (
+          <span className="field-hint field-hint-success">✓ Program: {derivedProgram}</span>
+        )}
       </div>
 
-      <div className="input-group">
-        <label>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" /></svg>
-          Course / Program
-        </label>
-        <select
-          required
-          value={course}
-          onChange={e => handleCourseChange(e.target.value)}
-          disabled={!department}
-          className={!department ? 'select-disabled' : ''}
-        >
-          <option value="">{department ? '— Select Course —' : '— Select a department first —'}</option>
-          {availableCourses.map(c => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-      </div>
-
+      {/* Year Level + Section side by side */}
       <div className="signup-row">
         <div className="input-group" style={{ flex: 1 }}>
           <label>
@@ -395,8 +369,10 @@ const Login = ({ onLogin }) => {
             required
             value={yearLevel}
             onChange={e => handleYearLevelChange(e.target.value)}
+            disabled={!department}
+            className={!department ? 'select-disabled' : ''}
           >
-            <option value="">— Select —</option>
+            <option value="">Select</option>
             {YEAR_LEVELS.map(yl => (
               <option key={yl.value} value={yl.value}>{yl.label}</option>
             ))}
@@ -412,18 +388,24 @@ const Login = ({ onLogin }) => {
             required
             value={section}
             onChange={e => setSection(e.target.value)}
-            disabled={!course}
-            className={!course ? 'select-disabled' : ''}
+            disabled={!department || !yearLevel}
+            className={(!department || !yearLevel) ? 'select-disabled' : ''}
           >
             <option value="">
-              {!course ? '— Select course first —' : availableSections.length === 0 ? '— No sections available —' : '— Select Section —'}
+              {!department
+                ? 'Select dept first'
+                : !yearLevel
+                  ? 'Select year first'
+                  : availableSections.length === 0
+                    ? 'No sections available'
+                    : 'Select Section'}
             </option>
             {availableSections.map(sec => (
               <option key={sec.id} value={sec.name}>{sec.name}</option>
             ))}
           </select>
-          {course && availableSections.length === 0 && (
-            <span className="field-hint field-hint-warning">No sections found for this course{yearLevel ? ` (Year ${yearLevel})` : ''}. Contact your admin.</span>
+          {department && yearLevel && availableSections.length === 0 && (
+            <span className="field-hint field-hint-warning">No sections found for Year {yearLevel}. Contact your admin.</span>
           )}
         </div>
       </div>
@@ -616,7 +598,6 @@ const Login = ({ onLogin }) => {
                   setFullName('');
                   setStudentId('');
                   setDepartment('');
-                  setCourse('');
                   setYearLevel('');
                   setSection('');
                 }}
