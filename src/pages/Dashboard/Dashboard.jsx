@@ -147,38 +147,49 @@ function professorMatchesSubject(professor, subject) {
   });
 }
 
-// ─── KPI Tile ─────────────────────────────────────────────────────────────────
-const KpiTile = ({ label, value, iconPath, color }) => (
-  <div className="kpi-tile" style={{
-    background: 'var(--card-bg)',
-    border: '1px solid var(--border-color)',
-    borderRadius: '12px',
-    padding: '18px 20px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-    transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease',
-    cursor: 'default',
-    animation: 'floatUp 0.5s ease-out backwards',
-  }}>
-    <div className="kpi-icon" style={{
-      width: 44, height: 44,
-      borderRadius: '10px',
-      background: `${color}18`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color,
-      flexShrink: 0,
-      transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease',
+// ─── KPI Tile ───────────────────────────────────────────────────────────────────────
+const KpiTile = ({ label, value, iconPath, color }) => {
+  const lighten = (hex, amt) => {
+    let r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
+    r = Math.min(255, r + amt); g = Math.min(255, g + amt); b = Math.min(255, b + amt);
+    return `rgb(${r},${g},${b})`;
+  };
+  const gradEnd = lighten(color, 60);
+  return (
+    <div className="kpi-tile" style={{
+      background: 'var(--card-bg)',
+      border: '1px solid var(--border-color)',
+      borderRadius: '16px',
+      padding: '22px 24px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '18px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+      transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease',
+      cursor: 'default',
+      animation: 'floatUp 0.5s ease-out backwards',
+      position: 'relative',
+      overflow: 'hidden',
     }}>
-      <Icon d={iconPath} size={20} />
+      <div className="kpi-icon" style={{
+        width: 48, height: 48,
+        borderRadius: '14px',
+        background: `linear-gradient(135deg, ${color}, ${gradEnd})`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: '#fff',
+        flexShrink: 0,
+        boxShadow: `0 4px 14px ${color}40`,
+        transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease',
+      }}>
+        <Icon d={iconPath} size={22} />
+      </div>
+      <div>
+        <div style={{ fontSize: '1.8rem', fontWeight: 800, lineHeight: 1, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>{value}</div>
+        <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{label}</div>
+      </div>
     </div>
-    <div>
-      <div style={{ fontSize: '1.6rem', fontWeight: 700, lineHeight: 1, color: 'var(--text-main)', animation: 'countUp 0.6s ease-out backwards', animationDelay: '0.2s' }}>{value}</div>
-      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 500 }}>{label}</div>
-    </div>
-  </div>
-);
+  );
+};
 
 // ─── NavItem ──────────────────────────────────────────────────────────────────
 const NavItem = ({ label, iconPath, active, onClick, danger, indent }) => (
@@ -567,21 +578,31 @@ const Dashboard = ({ user, onLogout }) => {
       <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
 
         {/* Logo block */}
-        <div style={{ padding: '24px 16px 20px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', textAlign: 'center' }}>
-          <img
-            src={LOGO_SRC}
-            alt="CAPSU Logo"
-            onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_LOGO; }}
-            style={{ width: 68, height: 68, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--accent-primary)', display: 'block', margin: '0 auto 10px' }}
-          />
+        <div style={{ padding: '28px 20px 24px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', textAlign: 'center' }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: '50%', margin: '0 auto 12px',
+            background: 'linear-gradient(135deg, rgba(86,69,238,0.3), rgba(139,92,246,0.15))',
+            padding: 3, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 24px rgba(86,69,238,0.2)',
+          }}>
+            <img
+              src={LOGO_SRC}
+              alt="CAPSU Logo"
+              onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_LOGO; }}
+              style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+            />
+          </div>
           {!isSidebarCollapsed && (
             <>
               <div style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '0.08em', color: 'var(--sidebar-text-active)' }}>SMARTSCHED</div>
               <span style={{
-                display: 'inline-block', marginTop: 6,
-                fontSize: '0.72rem', padding: '3px 10px', borderRadius: '20px',
-                background: isAdmin ? 'var(--accent-primary)' : 'var(--success)',
-                color: '#fff', fontWeight: 600, letterSpacing: '0.03em',
+                display: 'inline-block', marginTop: 8,
+                fontSize: '0.7rem', padding: '4px 14px', borderRadius: '20px',
+                background: isAdmin
+                  ? 'linear-gradient(135deg, rgba(86,69,238,0.3), rgba(139,92,246,0.2))'
+                  : 'linear-gradient(135deg, rgba(2,185,116,0.3), rgba(52,211,153,0.2))',
+                color: '#fff', fontWeight: 600, letterSpacing: '0.04em',
+                border: `1px solid ${isAdmin ? 'rgba(86,69,238,0.2)' : 'rgba(2,185,116,0.2)'}`,
               }}>
                 {user?.role}
               </span>
@@ -634,9 +655,9 @@ const Dashboard = ({ user, onLogout }) => {
         {/* ── Top Bar ── */}
         <header style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '0 0 18px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-          marginBottom: '24px',
+          padding: '4px 0 20px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          marginBottom: '28px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <button
@@ -648,25 +669,40 @@ const Dashboard = ({ user, onLogout }) => {
               <Icon d={NAV_ICONS.menu} size={20} />
             </button>
             <div>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500, letterSpacing: '0.02em' }}>
+              <p style={{ margin: 0, fontSize: '0.76rem', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                 Capiz State University · Mambusao Satellite College
               </p>
-              <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#ffffff' }}>
-                Welcome, {firstName} 👋
+              <h1 style={{ margin: '4px 0 0', fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>
+                Welcome, {firstName} <span style={{ fontSize: '1.3rem' }}>👋</span>
               </h1>
             </div>
           </div>
-          <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(o => !o)}>
-            <Icon d={NAV_ICONS.menu} size={22} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '10px',
+              padding: '8px 14px',
+              textAlign: 'right',
+              display: 'none',
+            }}>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Today</div>
+              <div style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600, marginTop: 2 }}>
+                {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </div>
+            </div>
+            <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(o => !o)}>
+              <Icon d={NAV_ICONS.menu} size={22} />
+            </button>
+          </div>
         </header>
 
         {/* ── Dashboard Tab ── */}
         {!isStudent && activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.4s' }}>
 
-            {/* KPI row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px' }}>
+          {/* KPI row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
               <KpiTile label="Faculty Members" value={professors.length} iconPath={NAV_ICONS.faculty} color="#0288d1" />
               <KpiTile label="Rooms" value={rooms.length} iconPath={NAV_ICONS.rooms} color="#7c3aed" />
               <KpiTile label="Sections" value={sections.length} iconPath={NAV_ICONS.sections} color="#059669" />
@@ -675,52 +711,72 @@ const Dashboard = ({ user, onLogout }) => {
 
             {/* Admin preview cards */}
             {isAdmin && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
                 {/* Faculty preview */}
-                <div className="card" style={{ padding: '20px' }}>
+                <div className="card" style={{ padding: '22px' }}>
                   <div className="card-header" style={{ marginBottom: '14px' }}>
                     <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Icon d={NAV_ICONS.faculty} size={16} /> Faculty Profiles
+                      <span style={{
+                        width: 28, height: 28, borderRadius: '8px',
+                        background: 'linear-gradient(135deg, #0288d1, #4fc3f7)',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#fff', boxShadow: '0 2px 8px rgba(2,136,209,0.25)'
+                      }}>
+                        <Icon d={NAV_ICONS.faculty} size={14} />
+                      </span>
+                      Faculty Profiles
                     </h3>
-                    <button className="btn btn-sm" onClick={() => setActiveTab('faculty')}>View All</button>
+                    <button className="btn btn-sm" onClick={() => setActiveTab('faculty')} style={{ background: 'transparent', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', boxShadow: 'none', borderRadius: '8px' }}>View All</button>
                   </div>
                   <table className="data-table">
                     <thead><tr><th>Name</th><th>Department</th><th>Max Units</th></tr></thead>
                     <tbody>
                       {professors.slice(0, 3).map(p => (
                         <tr key={p.id}>
-                          <td style={{ fontWeight: 500 }}>{p.name}</td>
-                          <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{p.department}</td>
-                          <td style={{ textAlign: 'center' }}>{p.maxUnits || p.maxHours || 12}</td>
+                          <td style={{ fontWeight: 600 }}>{p.name}</td>
+                          <td><span style={{ fontSize: '0.78rem', padding: '2px 8px', borderRadius: 6, background: '#EEF2FF', color: '#5645EE', fontWeight: 600 }}>{p.department}</span></td>
+                          <td style={{ textAlign: 'center', fontWeight: 600 }}>{p.maxUnits || p.maxHours || 12}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                   {professors.length > 3 && (
-                    <p style={{ margin: '10px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'right' }}>
-                      +{professors.length - 3} more
+                    <p style={{ margin: '12px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'right', fontWeight: 500 }}>
+                      +{professors.length - 3} more faculty
                     </p>
                   )}
                 </div>
 
                 {/* Rooms preview */}
-                <div className="card" style={{ padding: '20px' }}>
+                <div className="card" style={{ padding: '22px' }}>
                   <div className="card-header" style={{ marginBottom: '14px' }}>
                     <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Icon d={NAV_ICONS.rooms} size={16} /> Room List
+                      <span style={{
+                        width: 28, height: 28, borderRadius: '8px',
+                        background: 'linear-gradient(135deg, #7c3aed, #a78bfa)',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#fff', boxShadow: '0 2px 8px rgba(124,58,237,0.25)'
+                      }}>
+                        <Icon d={NAV_ICONS.rooms} size={14} />
+                      </span>
+                      Room List
                     </h3>
-                    <button className="btn btn-sm" onClick={() => setActiveTab('rooms')}>View All</button>
+                    <button className="btn btn-sm" onClick={() => setActiveTab('rooms')} style={{ background: 'transparent', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', boxShadow: 'none', borderRadius: '8px' }}>View All</button>
                   </div>
                   <table className="data-table">
                     <thead><tr><th>Name</th><th>Type</th><th>Lab?</th></tr></thead>
                     <tbody>
                       {rooms.slice(0, 3).map(r => (
                         <tr key={r.id}>
-                          <td style={{ fontWeight: 500 }}>{r.name}</td>
-                          <td style={{ textTransform: 'uppercase', fontSize: '0.82rem', color: 'var(--text-muted)' }}>{r.type}</td>
+                          <td style={{ fontWeight: 600 }}>{r.name}</td>
+                          <td><span style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.03em' }}>{r.type}</span></td>
                           <td style={{ textAlign: 'center' }}>
-                            <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: 20, fontWeight: 600, background: r.hasComputers ? '#05966918' : 'var(--border-color)', color: r.hasComputers ? '#059669' : 'var(--text-muted)' }}>
-                              {r.hasComputers ? 'Yes' : 'No'}
+                            <span style={{
+                              fontSize: '0.73rem', padding: '3px 10px', borderRadius: 20, fontWeight: 700,
+                              background: r.hasComputers ? 'linear-gradient(135deg, #E6F8F0, #D1FAE5)' : '#F1F5F9',
+                              color: r.hasComputers ? '#059669' : '#94a3b8',
+                            }}>
+                              {r.hasComputers ? '✓ Yes' : 'No'}
                             </span>
                           </td>
                         </tr>
@@ -728,8 +784,8 @@ const Dashboard = ({ user, onLogout }) => {
                     </tbody>
                   </table>
                   {rooms.length > 3 && (
-                    <p style={{ margin: '10px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'right' }}>
-                      +{rooms.length - 3} more
+                    <p style={{ margin: '12px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'right', fontWeight: 500 }}>
+                      +{rooms.length - 3} more rooms
                     </p>
                   )}
                 </div>
@@ -739,27 +795,67 @@ const Dashboard = ({ user, onLogout }) => {
             {/* --- NEW: Appropriate Dashboard Widgets (Quick Actions & Recent Activity) --- */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
 
-              {/* System Reminders Panel (Replaced Redundant Quick Actions) */}
+              {/* System Reminders Panel */}
               {isAdmin && (
-                <div className="card" style={{ padding: '20px' }}>
-                  <h3 className="card-title" style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Icon d={NAV_ICONS.manage} size={16} /> System Reminders
+                <div className="card" style={{ padding: '22px' }}>
+                  <h3 className="card-title" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                      width: 28, height: 28, borderRadius: '8px',
+                      background: 'linear-gradient(135deg, #5645EE, #8B5CF6)',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', boxShadow: '0 2px 8px rgba(86,69,238,0.25)'
+                    }}>
+                      <Icon d={NAV_ICONS.manage} size={14} />
+                    </span>
+                    System Reminders
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-                    <div className="alert-item alert-info" style={{ margin: 0 }}>
-                      <Icon d={NAV_ICONS.subjects} size={18} />
+                    <div style={{
+                      padding: '14px 16px', borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #EEF2FF, #F5F3FF)',
+                      border: '1px solid rgba(86,69,238,0.1)',
+                      display: 'flex', gap: '12px', alignItems: 'flex-start',
+                      transition: 'transform 0.2s ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    >
+                      <span style={{
+                        width: 32, height: 32, borderRadius: '8px', flexShrink: 0,
+                        background: 'rgba(86,69,238,0.12)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#5645EE',
+                      }}>
+                        <Icon d={NAV_ICONS.subjects} size={16} />
+                      </span>
                       <div>
-                        <strong style={{ display: 'block', marginBottom: '3px' }}>Pre-Scheduling Checklist</strong>
-                        Ensure all faculty specializations and computer lab requirements are accurate before running the algorithm.
+                        <strong style={{ display: 'block', marginBottom: '4px', fontSize: '0.88rem', color: '#312e81' }}>Pre-Scheduling Checklist</strong>
+                        <span style={{ fontSize: '0.8rem', color: '#6366f1', lineHeight: 1.5 }}>Ensure all faculty specializations and lab requirements are accurate before running the algorithm.</span>
                       </div>
                     </div>
 
-                    <div className="alert-item alert-warning" style={{ margin: 0 }}>
-                      <Icon d={NAV_ICONS.workload} size={18} />
+                    <div style={{
+                      padding: '14px 16px', borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #FEF6E9, #FFF7ED)',
+                      border: '1px solid rgba(245,166,35,0.15)',
+                      display: 'flex', gap: '12px', alignItems: 'flex-start',
+                      transition: 'transform 0.2s ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    >
+                      <span style={{
+                        width: 32, height: 32, borderRadius: '8px', flexShrink: 0,
+                        background: 'rgba(245,166,35,0.15)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#d97706',
+                      }}>
+                        <Icon d={NAV_ICONS.workload} size={16} />
+                      </span>
                       <div>
-                        <strong style={{ display: 'block', marginBottom: '3px' }}>Monitor Workloads</strong>
-                        Regularly check the Workload Report. Assignments exceeding maximum allowed units will be flagged.
+                        <strong style={{ display: 'block', marginBottom: '4px', fontSize: '0.88rem', color: '#92400e' }}>Monitor Workloads</strong>
+                        <span style={{ fontSize: '0.8rem', color: '#b45309', lineHeight: 1.5 }}>Regularly check the Workload Report. Assignments exceeding max units will be flagged.</span>
                       </div>
                     </div>
 
@@ -777,30 +873,55 @@ const Dashboard = ({ user, onLogout }) => {
                     View All
                   </button>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {schedules.slice(-4).reverse().map((s, i) => (
-                    <div key={s.id || i} style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-main)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                          {s.subject?.code} {s.section && <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>({s.section?.name})</span>}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {schedules.slice(-4).reverse().map((s, i) => {
+                    const colors = ['#5645EE', '#059669', '#d97706', '#0288d1'];
+                    const accentColor = colors[i % colors.length];
+                    return (
+                      <div key={s.id || i} style={{
+                        padding: '14px 16px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--bg-main)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        borderLeft: `3px solid ${accentColor}`,
+                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = 'translateX(4px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = 'translateX(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                            {s.subject?.code} {s.section && <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>({s.section?.name})</span>}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '3px', fontWeight: 500 }}>
+                            {s.professor?.name} • {s.room?.name}
+                          </div>
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500 }}>
-                          {s.professor?.name} • {s.room?.name}
+                        <div style={{
+                          textAlign: 'center',
+                          background: `linear-gradient(135deg, ${accentColor}12, ${accentColor}08)`,
+                          padding: '8px 14px',
+                          borderRadius: '10px',
+                          border: `1px solid ${accentColor}20`,
+                          minWidth: '52px',
+                        }}>
+                          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                            {typeof s.day === 'string' ? s.day.slice(0, 3) : s.day}
+                          </div>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 1 }}>
+                            {s.timeSlot?.label?.split(' - ')[0]}
+                          </div>
                         </div>
                       </div>
-                      <div style={{ textAlign: 'right', background: 'white', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
-                          {typeof s.day === 'string' ? s.day.slice(0, 3).toUpperCase() : s.day}
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                          {s.timeSlot?.label?.split(' - ')[0]}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {schedules.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '30px 0', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
-                      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No classes scheduled yet.</p>
+                    <div style={{ textAlign: 'center', padding: '40px 0', border: '1px dashed var(--border-color)', borderRadius: '12px', background: 'var(--bg-main)' }}>
+                      <Icon d={NAV_ICONS.schedule} size={32} />
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0 0' }}>No classes scheduled yet.</p>
                     </div>
                   )}
                 </div>
