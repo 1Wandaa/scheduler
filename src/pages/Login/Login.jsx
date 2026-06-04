@@ -462,8 +462,12 @@ const Login = ({ onLogin }) => {
       </div>
 
       <div className="login-split-layout">
-        {/* LEFT — Branded Hero Panel */}
+        {/* LEFT — Branded Hero Panel with campus background */}
         <div className="login-hero-panel">
+          <div className="login-hero-bg" aria-hidden="true">
+            <img src="/background2.jpg?v=1" alt="" className="login-hero-bg-img" />
+          </div>
+          <div className="login-hero-overlay" aria-hidden="true"></div>
           <div className="login-hero-content">
             <img
               src={LOGO_SRC}
@@ -475,7 +479,7 @@ const Login = ({ onLogin }) => {
               }}
             />
             <h1 className="login-hero-title">SMARTSCHED</h1>
-            <p className="login-hero-subtitle">Capiz State University<br />Intelligent Room Scheduling System</p>
+            <p className="login-hero-subtitle">Capiz State University<br />Mambusao Poblacion Campus</p>
             <div className="login-hero-features">
               <div className="login-hero-feature">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
@@ -497,16 +501,22 @@ const Login = ({ onLogin }) => {
         {/* RIGHT — Form Panel */}
         <div className="login-form-panel">
           <div className={`login-box ${isSignUp ? 'login-box-wide' : ''}`}>
-            {/* Mobile logo — only visible on small screens */}
-            <div className="login-mobile-logo">
-              <img
-                src={LOGO_SRC}
-                alt="CAPSU Logo"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = FALLBACK_LOGO;
-                }}
-              />
+            {/* Mobile campus banner — only visible on small screens */}
+            <div className="login-mobile-banner">
+              <img src="/background2.jpg?v=1" alt="" className="login-mobile-banner-bg" />
+              <div className="login-mobile-banner-overlay"></div>
+              <div className="login-mobile-banner-content">
+                <img
+                  src={LOGO_SRC}
+                  alt="CAPSU Logo"
+                  className="login-mobile-banner-logo"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = FALLBACK_LOGO;
+                  }}
+                />
+                <span className="login-mobile-banner-title">SMARTSCHED</span>
+              </div>
             </div>
 
             <h2 className="login-form-title">
