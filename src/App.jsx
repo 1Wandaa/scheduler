@@ -72,19 +72,7 @@ function App() {
 
   // Show a loading spinner while checking auth state
   if (loading) {
-    return (
-      <div className="login-container">
-        <div style={{ textAlign: 'center', color: 'white' }}>
-          <div style={{
-            width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.3)',
-            borderTop: '4px solid white', borderRadius: '50%', margin: '0 auto 15px',
-            animation: 'spin 0.8s linear infinite'
-          }} />
-          <p style={{ fontSize: '0.95rem', opacity: 0.9 }}>Restoring session...</p>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        </div>
-      </div>
-    );
+    return <div className="login-container"></div>;
   }
 
   // If there is no user logged in, show the Login screen
