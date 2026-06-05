@@ -61,7 +61,8 @@ const RoomManagement = ({ rooms, onBack }) => {
 
 
   return (
-    <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
+    <>
+      <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
           {onBack && (
@@ -104,13 +105,13 @@ const RoomManagement = ({ rooms, onBack }) => {
           ))}
         </tbody>
       </table>
+      </div>
 
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ width: '400px' }}>
             <h3>{editMode ? 'Edit Room' : 'Add New Room'}</h3>
 
-            <div className="form-group"><label className="form-label">Room Code</label><input className="form-input" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. R101" /></div>
             <div className="form-group"><label className="form-label">Room Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Room 101" /></div>
 
             <div className="form-group"><label className="form-label">Room Type</label>
@@ -137,7 +138,7 @@ const RoomManagement = ({ rooms, onBack }) => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

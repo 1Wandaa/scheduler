@@ -308,9 +308,9 @@ const Dashboard = ({ user, onLogout }) => {
   }, []);
 
   const validator = {
-    validateAssignment: (room, professor, subject, day, timeSlot) =>
-      validateScheduleEntry({ room, professor, subject, section: null, day, timeSlot }),
-    addSchedule: (room, professor, subject, day, timeSlot) => ({ schedule: { room, professor, subject, day, timeSlot } }),
+    validateAssignment: (room, professor, subject, section, day, timeSlot) =>
+      validateScheduleEntry({ room, professor, subject, section, day, timeSlot }),
+    addSchedule: (room, professor, subject, section, day, timeSlot) => ({ schedule: { room, professor, subject, section, day, timeSlot } }),
     clearAllSchedules: async () => {
       const snap = await getDocs(collection(db, 'schedules'));
       if (snap.empty) { setSchedules([]); return; }
@@ -937,7 +937,7 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'users' && <UserManagement onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
-            <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} onSchedule={handleAddSchedule} validator={validator} />
+            <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} />
             <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={schedules} onAutoSchedule={handleAddSchedule} />
           </div>
         )}

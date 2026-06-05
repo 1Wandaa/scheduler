@@ -8,6 +8,8 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
     const [selectedId, setSelectedId] = useState('');
     const [deptSectionId, setDeptSectionId] = useState('');
     const [selectedYearLevel, setSelectedYearLevel] = useState('');
+    const [previewImage, setPreviewImage] = useState(null);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
         if (viewType === 'department' && DEPARTMENTS.length > 0) setSelectedId(DEPARTMENTS[0]);
@@ -126,48 +128,97 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
                 </div>
 
                 <div className="no-print">
-                    <button className="btn" onClick={() => {
-                        const printContent = document.querySelector('.printable-iso-document');
-                        if (!printContent) return;
-                        const iframe = document.createElement('iframe');
-                        iframe.style.position = 'fixed';
-                        iframe.style.top = '-10000px';
-                        iframe.style.left = '-10000px';
-                        iframe.style.width = '0';
-                        iframe.style.height = '0';
-                        document.body.appendChild(iframe);
-                        const doc = iframe.contentDocument || iframe.contentWindow.document;
-                        doc.open();
-                        doc.write(`
-                            <html>
-                            <head>
+                    {!isAdmin ? (
+                        <button className="btn" onClick={async () => {
+                            setIsGenerating(true);
+                            const printContent = document.querySelector('.printable-iso-document');
+                            if (!printContent) {
+                                setIsGenerating(false);
+                                return;
+                            }
+                            const tempContainer = document.createElement('div');
+                            tempContainer.style.position = 'absolute';
+                            tempContainer.style.top = '-10000px';
+                            tempContainer.style.left = '-10000px';
+                            tempContainer.style.width = '1100px'; 
+                            tempContainer.style.backgroundColor = 'white';
+                            tempContainer.innerHTML = `
                                 <style>
-                                    @page { size: letter landscape; margin: 0; }
-                                    body { font-family: "Times New Roman", Times, serif; color: #000; margin: 0; padding: 0.5in; }
-                                    .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10pt; }
+                                    .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10pt; font-family: "Times New Roman", Times, serif; color: #000; }
                                     .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 6px; text-align: left; }
                                     .iso-header-table .bold { font-weight: bold; }
                                     .iso-header-table .center { text-align: center; }
-                                    .meta-info { font-size: 11pt; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
-                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 11pt; }
+                                    .meta-info { font-size: 11pt; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 11pt; font-family: "Times New Roman", Times, serif; color: #000; }
                                     .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 10px; text-align: center; vertical-align: middle; }
-                                    .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                                    .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; }
+                                    .iso-schedule-table th { background-color: #f0f0f0 !important; }
+                                    .lunch-break { background-color: #e0e0e0 !important; font-weight: bold; letter-spacing: 5px; }
                                 </style>
-                            </head>
-                            <body>${printContent.innerHTML}</body>
-                            </html>
-                        `);
-                        doc.close();
-                        iframe.contentWindow.focus();
-                        setTimeout(() => {
-                            iframe.contentWindow.print();
-                            setTimeout(() => document.body.removeChild(iframe), 1000);
-                        }, 250);
-                    }} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                        Print ISO Schedule
-                    </button>
+                                <div style="padding: 40px;">
+                                    ${printContent.innerHTML}
+                                </div>
+                            `;
+                            document.body.appendChild(tempContainer);
+                            
+                            try {
+                                const html2canvas = (await import('html2canvas')).default;
+                                const canvas = await html2canvas(tempContainer, { scale: 2, useCORS: true });
+                                setPreviewImage(canvas.toDataURL('image/png'));
+                            } catch (error) {
+                                console.error('Failed to save image:', error);
+                                alert('Failed to generate preview. Please try again.');
+                            } finally {
+                                document.body.removeChild(tempContainer);
+                                setIsGenerating(false);
+                            }
+                        }} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }} disabled={isGenerating}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                            {isGenerating ? 'Generating...' : 'Save Image'}
+                        </button>
+                    ) : (
+                        <button className="btn" onClick={() => {
+                            const printContent = document.querySelector('.printable-iso-document');
+                            if (!printContent) return;
+                            const iframe = document.createElement('iframe');
+                            iframe.style.position = 'fixed';
+                            iframe.style.top = '-10000px';
+                            iframe.style.left = '-10000px';
+                            iframe.style.width = '0';
+                            iframe.style.height = '0';
+                            document.body.appendChild(iframe);
+                            const doc = iframe.contentDocument || iframe.contentWindow.document;
+                            doc.open();
+                            doc.write(`
+                                <html>
+                                <head>
+                                    <style>
+                                        @page { size: letter landscape; margin: 0; }
+                                        body { font-family: "Times New Roman", Times, serif; color: #000; margin: 0; padding: 0.5in; }
+                                        .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10pt; }
+                                        .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 6px; text-align: left; }
+                                        .iso-header-table .bold { font-weight: bold; }
+                                        .iso-header-table .center { text-align: center; }
+                                        .meta-info { font-size: 11pt; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
+                                        .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 11pt; }
+                                        .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 10px; text-align: center; vertical-align: middle; }
+                                        .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                        .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; }
+                                    </style>
+                                </head>
+                                <body>${printContent.innerHTML}</body>
+                                </html>
+                            `);
+                            doc.close();
+                            iframe.contentWindow.focus();
+                            setTimeout(() => {
+                                iframe.contentWindow.print();
+                                setTimeout(() => document.body.removeChild(iframe), 1000);
+                            }, 250);
+                        }} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                            Print ISO Schedule
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -252,6 +303,38 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
                 }
                 semesterInfo="2nd Sem 2025-2026"
             />
+
+            {/* Preview Modal */}
+            {previewImage && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '900px', width: '90%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                            <h3 style={{ margin: 0 }}>Schedule Preview</h3>
+                            <button onClick={() => setPreviewImage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                        <div style={{ maxHeight: '60vh', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#f9fafb', display: 'flex', justifyContent: 'center' }}>
+                            <img src={previewImage} alt="Schedule Preview" style={{ maxWidth: '100%', height: 'auto' }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                            <button className="btn" style={{ background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)' }} onClick={() => setPreviewImage(null)}>
+                                Cancel
+                            </button>
+                            <button className="btn" onClick={() => {
+                                const link = document.createElement('a');
+                                link.download = `${titleName}-Schedule.png`;
+                                link.href = previewImage;
+                                link.click();
+                                setPreviewImage(null);
+                            }} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Download Image
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

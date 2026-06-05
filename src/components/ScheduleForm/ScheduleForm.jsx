@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import '../../styles/SchedulerForm.css';
 
-function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
+function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, validator }) {
   const [formData, setFormData] = useState({
     subject: '',
+    section: '',
     professor: '',
     room: '',
     day: '',
@@ -27,7 +28,7 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
     e.preventDefault();
     setLoading(true);
 
-    if (!formData.subject || !formData.professor || !formData.room || 
+    if (!formData.subject || !formData.section || !formData.professor || !formData.room || 
         !formData.day || !formData.timeSlot) {
       setValidation({
         valid: false,
@@ -38,6 +39,7 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
     }
 
     const subject = subjects.find(s => s.id === formData.subject);
+    const section = sections ? sections.find(s => s.id === formData.section) : null;
     const professor = professors.find(p => p.id === formData.professor);
     const room = rooms.find(r => r.id === formData.room);
     const timeSlot = TIME_SLOTS.find(t => t.id === parseInt(formData.timeSlot));
@@ -46,18 +48,19 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
       room,
       professor,
       subject,
+      section,
       formData.day,
       timeSlot
     );
 
     if (result.valid) {
-      const scheduleResult = validator.addSchedule(room, professor, subject, formData.day, timeSlot);
+      const scheduleResult = validator.addSchedule(room, professor, subject, section, formData.day, timeSlot);
       setValidation({ valid: true, warnings: result.warnings });
       const addResult = await onSchedule(scheduleResult.schedule);
       if (addResult && addResult.ok === false) {
         setValidation({ valid: false, errors: addResult.errors || ['Schedule could not be added.'] });
       } else {
-        setFormData({ subject: '', professor: '', room: '', day: '', timeSlot: '' });
+        setFormData({ subject: '', section: '', professor: '', room: '', day: '', timeSlot: '' });
         setTimeout(() => setValidation(null), 3000);
       }
     } else {
@@ -86,6 +89,24 @@ function ScheduleForm({ rooms, professors, subjects, onSchedule, validator }) {
             {subjects.map(subject => (
               <option key={subject.id} value={subject.id}>
                 {subject.code} - {subject.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Section *</label>
+          <select
+            className="form-select"
+            name="section"
+            value={formData.section}
+            onChange={handleChange}
+            required
+          >
+            <option value="">Select a section</option>
+            {sections && sections.map(sec => (
+              <option key={sec.id} value={sec.id}>
+                {sec.name}
               </option>
             ))}
           </select>

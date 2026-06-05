@@ -80,7 +80,8 @@ const UserManagement = ({ onBack }) => {
   };
 
   return (
-    <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
+    <>
+      <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
       {/* --- HEADER SECTION --- */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
@@ -143,6 +144,7 @@ const UserManagement = ({ onBack }) => {
           ))}
         </tbody>
       </table>
+      </div>
 
       {/* --- ADD USER MODAL --- */}
       {showModal && (
@@ -195,7 +197,7 @@ const UserManagement = ({ onBack }) => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

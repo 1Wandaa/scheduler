@@ -74,81 +74,86 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
 
 
   return (
-    <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          {onBack && (
-            <button className="back-btn" onClick={onBack}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-              Back
-            </button>
-          )}
-          <div>
-            <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-              Faculty Database
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Manage instructor details, teaching load, and room preferences</p>
+    <>
+      <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+            {onBack && (
+              <button className="back-btn" onClick={onBack}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                Back
+              </button>
+            )}
+            <div>
+              <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Faculty Database
+              </h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Manage instructor details, teaching load, and room preferences</p>
+            </div>
           </div>
+          <button className="btn" onClick={handleOpenAdd}>+ Add Faculty</button>
         </div>
-        <button className="btn" onClick={handleOpenAdd}>+ Add Faculty</button>
-      </div>
 
-      {/* Department Filter */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by Department:</span>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {['All', ...DEPARTMENTS].map(dept => (
-            <button
-              key={dept}
-              onClick={() => setDepartmentFilter(dept)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '20px',
-                border: departmentFilter === dept ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                background: departmentFilter === dept ? 'var(--accent-primary)' : 'transparent',
-                color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
-                cursor: 'pointer',
-                fontSize: '0.82rem',
-                fontWeight: '600',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--accent-primary)'; e.target.style.color = 'var(--accent-primary)'; } }}
-              onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
-            >
-              {dept === 'All' ? 'All Departments' : dept}
-            </button>
-          ))}
+        {/* Department Filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by Department:</span>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {['All', ...DEPARTMENTS].map(dept => (
+              <button
+                key={dept}
+                onClick={() => setDepartmentFilter(dept)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  border: departmentFilter === dept ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                  background: departmentFilter === dept ? 'var(--accent-primary)' : 'transparent',
+                  color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--accent-primary)'; e.target.style.color = 'var(--accent-primary)'; } }}
+                onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
+              >
+                {dept === 'All' ? 'All Departments' : dept}
+              </button>
+            ))}
+          </div>
+          {departmentFilter !== 'All' && (
+            <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: '500' }}>
+              Showing {professors.filter(p => p.department === departmentFilter).length} of {professors.length} faculty
+            </span>
+          )}
         </div>
-        {departmentFilter !== 'All' && (
-          <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: '500' }}>
-            Showing {professors.filter(p => p.department === departmentFilter).length} of {professors.length} faculty
-          </span>
-        )}
-      </div>
 
-      <table className="data-table">
-        <thead><tr><th>Name</th><th>Department</th><th>Max Load</th><th>Subjects</th><th>Rooms</th><th>Actions</th></tr></thead>
-        <tbody>
-          {professors.filter(p => departmentFilter === 'All' || p.department === departmentFilter).map(p => (
-            <tr key={p.id}>
-              <td><strong style={{ color: 'var(--text-main)' }}>{p.name}</strong></td>
-              <td>{p.department}</td>
-              <td><span style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>{p.maxUnits || p.maxHours || 12} units</span></td>
-              <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                {(p.specialization || []).length} subject{(p.specialization || []).length !== 1 ? 's' : ''}
-              </td>
-              <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                {(p.preferredRooms || []).length} room{(p.preferredRooms || []).length !== 1 ? 's' : ''}
-              </td>
-              <td>
-                <button style={{ color: 'var(--accent-primary)', border: 'none', background: 'none', cursor: 'pointer', marginRight: '15px', fontWeight: '500' }} onClick={() => handleOpenEdit(p)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Edit</button>
-                <button style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: '500' }} onClick={() => handleDelete(p.id)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        <table className="data-table">
+          <thead><tr><th>Name</th><th>Department</th><th>Max Load</th><th>Subjects</th><th>Rooms</th><th>Actions</th></tr></thead>
+          <tbody>
+            {professors
+              .filter(p => departmentFilter === 'All' || p.department === departmentFilter)
+              .sort((a, b) => a.name.localeCompare(b.name)) // <-- Added sorting here
+              .map(p => (
+                <tr key={p.id}>
+                  <td><strong style={{ color: 'var(--text-main)' }}>{p.name}</strong></td>
+                  <td>{p.department}</td>
+                  <td><span style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>{p.maxUnits || p.maxHours || 12} units</span></td>
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {(p.specialization || []).length} subject{(p.specialization || []).length !== 1 ? 's' : ''}
+                  </td>
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {(p.preferredRooms || []).length} room{(p.preferredRooms || []).length !== 1 ? 's' : ''}
+                  </td>
+                  <td>
+                    <button style={{ color: 'var(--accent-primary)', border: 'none', background: 'none', cursor: 'pointer', marginRight: '15px', fontWeight: '500' }} onClick={() => handleOpenEdit(p)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Edit</button>
+                    <button style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: '500' }} onClick={() => handleDelete(p.id)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
 
       {showModal && (
         <div className="modal-overlay">
@@ -217,7 +222,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
