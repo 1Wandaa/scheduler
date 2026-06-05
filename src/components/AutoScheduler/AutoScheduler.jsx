@@ -216,7 +216,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Generate conflict-free timetables automatically.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: engineMode === 'ga' ? '1fr' : '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px' }}>
         <div className="form-group">
           <label className="form-label">Engine Mode</label>
           <select
@@ -225,9 +225,9 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
             onChange={(e) => { setEngineMode(e.target.value); setTargetId(''); }}
           >
             <option value="ga">Full Timetable (GA)</option>
-            <option value="faculty">Targeted: Single Faculty</option>
-            <option value="room">Targeted: Single Room</option>
-            <option value="section">Targeted: Single Section</option>
+            <option value="faculty">By Faculty</option>
+            <option value="room">By Room</option>
+            <option value="section">By Section</option>
           </select>
         </div>
 
