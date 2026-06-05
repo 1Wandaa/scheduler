@@ -3,7 +3,7 @@ import ScheduleTable from '../../components/ScheduleTable/ScheduleTable';
 import PrintableSchedule from '../../components/PrintableSchedule/PrintableSchedule';
 import { DEPARTMENTS } from '../../config/constants';
 
-function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
+function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpdateSchedule }) {
     const [viewType, setViewType] = useState('department');
     const [selectedId, setSelectedId] = useState('');
     const [deptSectionId, setDeptSectionId] = useState('');
@@ -291,6 +291,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin }) {
                 <ScheduleTable
                     schedules={filteredSchedules}
                     title={`${titlePrefix} SCHEDULE: ${titleName}`}
+                    onUpdateSchedule={isAdmin ? onUpdateSchedule : undefined}
                 />
             </div>
 

@@ -550,7 +550,7 @@ const Dashboard = ({ user, onLogout }) => {
     const existing = schedules.find(s => s.id === scheduleId);
     if (!existing) return { ok: false, errors: ['Schedule not found.'] };
     const check = validateScheduleEntry({ room: existing.room, professor: existing.professor, subject: existing.subject, section: existing.section || null, day: newDay, timeSlot: newTimeSlot, excludeScheduleId: scheduleId });
-    if (!check.valid) { alert(`Cannot move schedule:\n${check.errors.join('\n')}`); return { ok: false, errors: check.errors }; }
+    if (!check.valid) { return { ok: false, errors: check.errors }; }
     await updateDoc(doc(db, 'schedules', scheduleId.toString()), { day: newDay, timeSlot: newTimeSlot });
     return { ok: true };
   };
@@ -948,7 +948,7 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
 
         {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
-        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} isAdmin={isAdmin} />}
+        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} />}
 
       </div>
       <Chatbot schedules={schedules} />

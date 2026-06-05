@@ -12,6 +12,18 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'cards'
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [errorToast, setErrorToast] = useState(null);
+  const [successToast, setSuccessToast] = useState(null);
+
+  const showToast = (msg, isError = true) => {
+    if (isError) {
+      setErrorToast(msg);
+      setTimeout(() => setErrorToast(null), 5000);
+    } else {
+      setSuccessToast(msg);
+      setTimeout(() => setSuccessToast(null), 3000);
+    }
+  };
 
   useEffect(() => {
     const onResize = () => {
@@ -53,7 +65,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
   const handleDragLeave = () => setDragOverCell(null);
 
-  const handleDrop = (e, day, timeSlotId) => {
+  const handleDrop = async (e, day, timeSlotId) => {
     e.preventDefault();
     setDragOverCell(null);
     setDraggingId(null);
@@ -70,10 +82,15 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       if (roomConflict) msgs.push(`Room "${movingSchedule.room?.name ?? 'Unknown'}" is already occupied`);
       if (profConflict) msgs.push(`Prof. "${movingSchedule.professor?.name ?? 'Unknown'}" is already teaching`);
       if (sectionConflict) msgs.push(`Section "${movingSchedule.section?.name || 'Unknown'}" already has a class`);
-      alert(`Cannot move schedule:\n${msgs.join('\n')}`);
+      showToast(`Cannot move schedule:\n${msgs.join('\n')}`);
       return;
     }
-    onUpdateSchedule(scheduleId, day, timeSlotId);
+    const result = await onUpdateSchedule(scheduleId, day, timeSlotId);
+    if (result && result.ok === false) {
+      showToast(`Cannot move schedule:\n${result.errors?.join('\n') || result.error || 'Unknown error'}`);
+    } else if (result && result.ok) {
+      showToast('Schedule successfully updated.', false);
+    }
   };
 
   // Group schedules by day for card view
@@ -327,6 +344,47 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         <div className="fullscreen-hint" onClick={() => setIsFullscreen(false)}>
           Press ESC or click here to exit fullscreen
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {(errorToast || successToast) && createPortal(
+        <div style={{
+          position: 'fixed',
+          bottom: '30px',
+          right: '30px',
+          background: errorToast ? 'var(--danger)' : 'var(--success)',
+          color: 'white',
+          padding: '16px 24px',
+          borderRadius: '12px',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+          zIndex: 999999,
+          animation: 'fadeIn 0.3s ease-out',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '12px',
+          maxWidth: '400px'
+        }}>
+          {errorToast ? (
+             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          ) : (
+             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '1rem', marginBottom: '4px' }}>
+                {errorToast ? 'Error' : 'Success'}
+            </span>
+            <span style={{ fontSize: '0.85rem', opacity: 0.9, whiteSpace: 'pre-line', lineHeight: '1.4' }}>
+                {errorToast || successToast}
+            </span>
+          </div>
+          <button 
+            onClick={() => { setErrorToast(null); setSuccessToast(null); }}
+            style={{ background: 'transparent', border: 'none', color: 'white', opacity: 0.7, cursor: 'pointer', marginLeft: 'auto', padding: '4px' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>,
+        document.body
       )}
     </div>
   );
