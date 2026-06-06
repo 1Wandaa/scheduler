@@ -35,7 +35,16 @@ function App() {
           const snapshot = await getDocs(q);
 
           if (!snapshot.empty) {
-            const userData = snapshot.docs[0].data();
+            let userData = snapshot.docs[0].data();
+            const storedUsername = localStorage.getItem('smartsched_username');
+            
+            if (storedUsername) {
+              const exactMatch = snapshot.docs.find(doc => doc.data().username === storedUsername);
+              if (exactMatch) {
+                userData = exactMatch.data();
+              }
+            }
+
             setUser({
               name: userData.name || username,
               role: userData.role || 'User',
@@ -66,8 +75,16 @@ function App() {
   }, []);
 
   const handleLogout = () => {
+    localStorage.removeItem('smartsched_username');
     auth.signOut();
     setUser(null);
+  };
+
+  const handleLogin = (userProfile) => {
+    if (userProfile && userProfile.username) {
+      localStorage.setItem('smartsched_username', userProfile.username);
+    }
+    setUser(userProfile);
   };
 
   // Show a loading spinner while checking auth state
@@ -77,7 +94,7 @@ function App() {
 
   // If there is no user logged in, show the Login screen
   if (!user) {
-    return <Login onLogin={setUser} />;
+    return <Login onLogin={handleLogin} />;
   }
 
   // If logged in, show the SMARTSCHED Dashboard
