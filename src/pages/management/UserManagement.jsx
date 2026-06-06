@@ -123,22 +123,8 @@ const UserManagement = ({ onBack }) => {
               <td style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>{u.username}</td>
               <td style={{ fontWeight: '500' }}>{u.name}</td>
               <td>{renderRoleBadge(u.role)}</td>
-              <td>
-                <button
-                  style={{
-                    color: 'var(--danger)',
-                    border: 'none',
-                    background: 'none',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    fontSize: '0.85rem'
-                  }}
-                  onClick={() => handleDeleteUser(u.id)}
-                  onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-                  onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-                >
-                  Delete
-                </button>
+              <td style={{ whiteSpace: 'nowrap' }}>
+                <button className="btn-delete" onClick={() => handleDeleteUser(u.id)}>Delete</button>
               </td>
             </tr>
           ))}

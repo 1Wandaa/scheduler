@@ -1,8 +1,5 @@
-/* src/PrintableSchedule.css */
-
+/* src/styles/PrintableSchedule.css */
 @media screen {
-
-    /* Hide the print layout entirely on normal screens */
     .printable-iso-document {
         display: none;
     }
@@ -12,18 +9,15 @@
     @page {
         size: letter landscape;
         margin: 0;
-        /* Remove browser header/footer (URL, page title, date) */
     }
 
     body {
-        /* Add padding to compensate for the removed @page margin */
         padding: 0.5in !important;
         margin: 0 !important;
     }
 
     body * {
         visibility: hidden;
-        /* Hide the rest of the app */
     }
 
     .printable-iso-document,
@@ -37,11 +31,9 @@
         left: 0;
         width: 100%;
         font-family: "Times New Roman", Times, serif;
-        /* Formal ISO font */
         color: #000;
     }
 
-    /* ISO Header Table */
     .iso-header-table {
         width: 100%;
         border-collapse: collapse;
@@ -64,15 +56,20 @@
         text-align: center;
     }
 
-    /* Meta Info Header */
     .meta-info {
-        font-size: 11pt;
+        display: flex;
+        justify-content: space-between;
+        font-size: 10pt;
         font-weight: bold;
         margin-bottom: 15px;
         text-transform: uppercase;
     }
 
-    /* Main Schedule Table */
+    .meta-value {
+        font-weight: normal;
+        text-decoration: underline;
+    }
+
     .iso-schedule-table {
         width: 100%;
         border-collapse: collapse;
@@ -97,5 +94,6 @@
         -webkit-print-color-adjust: exact;
         font-weight: bold;
         letter-spacing: 5px;
+        padding: 5px;
     }
 }

@@ -142,17 +142,19 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                             tempContainer.style.left = '-10000px';
                             tempContainer.style.width = '1100px'; 
                             tempContainer.style.backgroundColor = 'white';
+                            // INJECTED CSS FOR EXACT ISO LAYOUT ON EXPORT
                             tempContainer.innerHTML = `
                                 <style>
-                                    .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10pt; font-family: "Times New Roman", Times, serif; color: #000; }
-                                    .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 6px; text-align: left; }
+                                    .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
                                     .iso-header-table .bold { font-weight: bold; }
                                     .iso-header-table .center { text-align: center; }
-                                    .meta-info { font-size: 11pt; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
-                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 11pt; font-family: "Times New Roman", Times, serif; color: #000; }
-                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 10px; text-align: center; vertical-align: middle; }
+                                    .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    .meta-value { font-weight: normal; text-decoration: underline; }
+                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 4px; text-align: center; vertical-align: middle; }
                                     .iso-schedule-table th { background-color: #f0f0f0 !important; }
-                                    .lunch-break { background-color: #e0e0e0 !important; font-weight: bold; letter-spacing: 5px; }
+                                    .lunch-break { background-color: #e0e0e0 !important; font-weight: bold; letter-spacing: 5px; padding: 4px; }
                                 </style>
                                 <div style="padding: 40px;">
                                     ${printContent.innerHTML}
@@ -188,21 +190,23 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                             document.body.appendChild(iframe);
                             const doc = iframe.contentDocument || iframe.contentWindow.document;
                             doc.open();
+                            // INJECTED CSS FOR EXACT ISO LAYOUT ON PRINT PDF
                             doc.write(`
                                 <html>
                                 <head>
                                     <style>
                                         @page { size: letter landscape; margin: 0; }
                                         body { font-family: "Times New Roman", Times, serif; color: #000; margin: 0; padding: 0.5in; }
-                                        .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10pt; }
-                                        .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 6px; text-align: left; }
+                                        .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
+                                        .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
                                         .iso-header-table .bold { font-weight: bold; }
                                         .iso-header-table .center { text-align: center; }
-                                        .meta-info { font-size: 11pt; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
-                                        .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 11pt; }
-                                        .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 10px; text-align: center; vertical-align: middle; }
+                                        .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
+                                        .meta-value { font-weight: normal; text-decoration: underline; }
+                                        .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+                                        .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 4px; text-align: center; vertical-align: middle; }
                                         .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                                        .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; }
+                                        .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; padding: 4px; }
                                     </style>
                                 </head>
                                 <body>${printContent.innerHTML}</body>

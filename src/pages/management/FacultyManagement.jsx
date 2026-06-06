@@ -145,9 +145,9 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
                   <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     {(p.preferredRooms || []).length} room{(p.preferredRooms || []).length !== 1 ? 's' : ''}
                   </td>
-                  <td>
-                    <button style={{ color: 'var(--accent-primary)', border: 'none', background: 'none', cursor: 'pointer', marginRight: '15px', fontWeight: '500' }} onClick={() => handleOpenEdit(p)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Edit</button>
-                    <button style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: '500' }} onClick={() => handleDelete(p.id)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Delete</button>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <button className="btn-edit" onClick={() => handleOpenEdit(p)}>Edit</button>
+                    <button className="btn-delete" onClick={() => handleDelete(p.id)}>Delete</button>
                   </td>
                 </tr>
               ))}

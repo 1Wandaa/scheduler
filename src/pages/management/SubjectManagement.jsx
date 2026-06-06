@@ -119,9 +119,9 @@ const SubjectManagement = ({ subjects, onBack }) => {
                     {s.requiredLab ? 'Yes' : 'No'}
                   </span>
                 </td>
-                <td>
-                  <button style={{ color: 'var(--accent-primary)', border: 'none', background: 'none', cursor: 'pointer', marginRight: '15px', fontWeight: '500' }} onClick={() => handleOpenEdit(s)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Edit</button>
-                  <button style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: '500' }} onClick={() => handleDelete(s.id)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Delete</button>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <button className="btn-edit" onClick={() => handleOpenEdit(s)}>Edit</button>
+                  <button className="btn-delete" onClick={() => handleDelete(s.id)}>Delete</button>
                 </td>
               </tr>
             ))}

@@ -10,6 +10,22 @@ function ProfessorWorkload({ professors, schedules }) {
   const matchesProfessor = (s, professor) =>
     professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);
 
+  const DEPT_COLORS = {
+    BSCS: { bg: 'rgba(16, 158, 239, 0.1)', border: 'rgba(16, 158, 239, 0.3)', solid: '#109EEF' },  // Blue
+    BSFT: { bg: 'rgba(22, 163, 74, 0.1)', border: 'rgba(22, 163, 74, 0.3)', solid: '#16A34A' },   // Green
+    BSOA: { bg: 'rgba(139, 92, 246, 0.1)', border: 'rgba(139, 92, 246, 0.3)', solid: '#8B5CF6' }, // Purple
+    BAEL: { bg: 'rgba(234, 179, 8, 0.1)', border: 'rgba(234, 179, 8, 0.3)', solid: '#EAB308' },   // Yellow
+  };
+
+  const getDeptTheme = (dept) => {
+    if (!dept) return null;
+    const upper = dept.toUpperCase();
+    for (const [key, theme] of Object.entries(DEPT_COLORS)) {
+      if (upper.includes(key)) return theme;
+    }
+    return null;
+  };
+
   return (
     <div className="professor-workload-container card" style={{ animation: 'fadeIn 0.5s' }}>
 
@@ -60,8 +76,16 @@ function ProfessorWorkload({ professors, schedules }) {
           if (utilization > 100) { statusClass = 'overload'; statusColor = 'var(--danger)'; }
           else if (utilization > 80) { statusClass = 'warning'; statusColor = 'var(--warning)'; }
 
+          const deptTheme = getDeptTheme(professor.department);
+          const cardStyle = { position: 'relative', overflow: 'hidden' };
+          
+          if (deptTheme) {
+            cardStyle.background = `linear-gradient(135deg, ${deptTheme.bg}, rgba(255, 255, 255, 0.95))`;
+            cardStyle.borderColor = deptTheme.border;
+          }
+
           return (
-            <div key={professor.id} className={`workload-card ${statusClass}`} style={{ position: 'relative', overflow: 'hidden' }}>
+            <div key={professor.id} className={`workload-card ${statusClass}`} style={cardStyle}>
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', backgroundColor: statusColor }}></div>
 
               <h3 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -46,9 +46,11 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   }, [isFullscreen]);
 
   const handleDragStart = (e, schedule) => {
-    setDraggingId(schedule.id);
     e.dataTransfer.setData('scheduleId', schedule.id);
     e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => {
+      setDraggingId(schedule.id);
+    }, 0);
   };
 
   const handleDragEnd = () => {
@@ -63,7 +65,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     if (dragOverCell !== cellKey) setDragOverCell(cellKey);
   };
 
-  const handleDragLeave = () => setDragOverCell(null);
+
 
   const handleDrop = async (e, day, timeSlotId) => {
     e.preventDefault();
@@ -176,7 +178,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                     rowSpan={rowSpan}
                     className={`schedule-cell ${isDropTarget ? 'drag-over' : ''} ${cellSchedules.length > 0 ? 'has-schedule' : ''}`}
                     onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
-                    onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, day, timeSlot.id)}
                     style={cellSchedules.length > 0 ? { backgroundColor: getDeptColor(cellSchedules[0]).bg, padding: 0 } : {}}
                   >

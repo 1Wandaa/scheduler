@@ -320,6 +320,7 @@
 
 .schedule-content {
   flex: 1;
+  pointer-events: none;
 }
 
 .schedule-content p {

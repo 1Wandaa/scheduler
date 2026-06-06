@@ -60,6 +60,55 @@ const RoomManagement = ({ rooms, onBack }) => {
 
 
 
+  const getRoomTypeBadge = (room) => {
+    let bg = 'var(--success-bg)';
+    let color = 'var(--success)';
+
+    if (room.type === 'lab') {
+      bg = 'var(--warning-bg)';
+      color = 'var(--warning)';
+    } else if (room.type === 'seminar') {
+      bg = '#EEF2FF';
+      color = 'var(--accent-primary)';
+    }
+
+    const facilities = [];
+    if (room.hasComputers) facilities.push('Computers');
+    if (room.hasProjector) facilities.push('Projector');
+
+    return (
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <span style={{
+          background: bg,
+          color: color,
+          padding: '3px 8px', 
+          borderRadius: '4px', 
+          fontSize: '0.75rem', 
+          fontWeight: '600', 
+          textTransform: 'capitalize'
+        }}>
+          {room.type}
+        </span>
+        
+        {facilities.length > 0 && (
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {facilities.map(f => (
+              <span key={f} style={{ 
+                fontSize: '0.7rem', 
+                color: 'var(--text-muted)', 
+                border: '1px solid var(--border-color)', 
+                padding: '2px 6px', 
+                borderRadius: '4px' 
+              }}>
+                {f}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
@@ -83,23 +132,15 @@ const RoomManagement = ({ rooms, onBack }) => {
       </div>
 
       <table className="data-table">
-        <thead><tr><th>Name</th><th>Type</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Name</th><th>Type & Facilities</th><th>Actions</th></tr></thead>
         <tbody>
           {rooms.map(r => (
             <tr key={r.id}>
               <td><strong style={{ color: 'var(--text-main)' }}>{r.name}</strong></td>
-              <td>
-                <span style={{
-                  background: r.type === 'lab' ? 'var(--warning-bg)' : 'var(--success-bg)',
-                  color: r.type === 'lab' ? 'var(--warning)' : 'var(--success)',
-                  padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase'
-                }}>
-                  {r.type} {r.hasComputers && '🖥️'}
-                </span>
-              </td>
-              <td>
-                <button style={{ color: 'var(--accent-primary)', border: 'none', background: 'none', cursor: 'pointer', marginRight: '15px', fontWeight: '500' }} onClick={() => handleOpenEdit(r)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Edit</button>
-                <button style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: '500' }} onClick={() => handleDelete(r.id)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Delete</button>
+              <td>{getRoomTypeBadge(r)}</td>
+              <td style={{ whiteSpace: 'nowrap' }}>
+                <button className="btn-edit" onClick={() => handleOpenEdit(r)}>Edit</button>
+                <button className="btn-delete" onClick={() => handleDelete(r.id)}>Delete</button>
               </td>
             </tr>
           ))}

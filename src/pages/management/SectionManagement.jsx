@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { DEPARTMENTS } from '../../config/constants';
 
 // Map full program names to their short department codes for grouping
 const PROGRAM_DEPARTMENTS = {
@@ -91,21 +92,21 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Section Name</th>
-              <th>Program</th>
-              <th>Year</th>
-              <th>Students</th>
-              <th>Subjects</th>
-              <th>Actions</th>
+              <th style={{ textAlign: 'center' }}>Section Name</th>
+              <th style={{ textAlign: 'center' }}>Program</th>
+              <th style={{ textAlign: 'center' }}>Year</th>
+              <th style={{ textAlign: 'center' }}>Students</th>
+              <th style={{ textAlign: 'center' }}>Subjects</th>
+              <th style={{ textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {sectionList.map(sec => (
               <tr key={sec.id}>
-                <td><strong style={{ color: 'var(--accent-primary)' }}>{sec.name}</strong></td>
-                <td style={{ fontWeight: '500' }}>{sec.program}</td>
+                <td style={{ textAlign: 'center', verticalAlign: 'middle' }}><strong style={{ color: 'var(--accent-primary)' }}>{sec.name}</strong></td>
+                <td style={{ fontWeight: '500', textAlign: 'center', verticalAlign: 'middle' }}>{PROGRAM_DEPARTMENTS[sec.program] || sec.program}</td>
                 {/* Added whiteSpace: 'nowrap' to fix the text wrapping issue */}
-                <td style={{ whiteSpace: 'nowrap' }}>
+                <td style={{ whiteSpace: 'nowrap', textAlign: 'center', verticalAlign: 'middle' }}>
                   <span style={{
                     background: '#EEF2FF', color: '#5645EE',
                     padding: '3px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600',
@@ -114,8 +115,8 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
                     Year {sec.yearLevel}
                   </span>
                 </td>
-                <td style={{ color: 'var(--text-muted)' }}>{sec.studentCount} pax</td>
-                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '280px' }}>
+                <td style={{ color: 'var(--text-muted)', textAlign: 'center', verticalAlign: 'middle' }}>{sec.studentCount}</td>
+                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '280px', textAlign: 'center', verticalAlign: 'middle' }}>
                   {(sec.subjects || []).length === 0 ? (
                     <span style={{ fontStyle: 'italic' }}>None</span>
                   ) : (
@@ -125,9 +126,9 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
                     </span>
                   )}
                 </td>
-                <td>
-                  <button style={{ color: 'var(--accent-primary)', border: 'none', background: 'none', cursor: 'pointer', marginRight: '15px', fontWeight: '500' }} onClick={() => handleOpenEdit(sec)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Edit</button>
-                  <button style={{ color: 'var(--danger)', border: 'none', background: 'none', cursor: 'pointer', fontWeight: '500' }} onClick={() => handleDelete(sec.id)} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>Delete</button>
+                <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                  <button className="btn-edit" onClick={() => handleOpenEdit(sec)}>Edit</button>
+                  <button className="btn-delete" onClick={() => handleDelete(sec.id)}>Delete</button>
                 </td>
               </tr>
             ))}
@@ -160,20 +161,20 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
         </div>
 
         {/* Render sections grouped by their Department */}
-        {Object.entries(PROGRAM_DEPARTMENTS).map(([fullProgramName, deptCode]) => {
+        {DEPARTMENTS.map(dept => {
           const deptSections = sections
-            .filter(sec => sec.program === fullProgramName)
+            .filter(sec => sec.program === dept || PROGRAM_DEPARTMENTS[sec.program] === dept)
             .sort((a, b) => {
               if (a.yearLevel !== b.yearLevel) return a.yearLevel - b.yearLevel;
               return a.name.localeCompare(b.name);
             });
-          return renderSectionTable(deptSections, `${deptCode} Sections`, "var(--accent-primary)");
+          return renderSectionTable(deptSections, `${dept} Sections`, "var(--accent-primary)");
         })}
 
         {/* Render any sections that do not match the standard program list */}
         {renderSectionTable(
           sections
-            .filter(sec => !PROGRAM_DEPARTMENTS[sec.program])
+            .filter(sec => !DEPARTMENTS.includes(sec.program) && !DEPARTMENTS.includes(PROGRAM_DEPARTMENTS[sec.program]))
             .sort((a, b) => {
               if (a.yearLevel !== b.yearLevel) return a.yearLevel - b.yearLevel;
               return a.name.localeCompare(b.name);
@@ -202,10 +203,9 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
               <label className="form-label">Program</label>
               <select className="form-select" value={formData.program} onChange={e => setFormData({ ...formData, program: e.target.value })}>
                 <option value="">Select Program</option>
-                <option value="Bachelor of Science in Computer Science">Bachelor of Science in Computer Science</option>
-                <option value="Bachelor of Science in Food Technology">Bachelor of Science in Food Technology</option>
-                <option value="Bachelor of Science in Office Administration">Bachelor of Science in Office Administration</option>
-                <option value="Bachelor of Arts in English Language">Bachelor of Arts in English Language</option>
+                {DEPARTMENTS.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
               </select>
             </div>
             <div style={{ display: 'flex', gap: '16px' }}>
