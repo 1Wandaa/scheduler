@@ -6,37 +6,32 @@ export const initialRooms = [
     id: 'R101',
     name: 'Room 101',
     type: ROOM_TYPES.LECTURE,
-    hasComputers: false,
-    hasProjector: true
+    hasComputers: false
   },
   {
     id: 'R102',
     name: 'Room 102',
     type: ROOM_TYPES.LECTURE,
-    hasComputers: false,
-    hasProjector: true
+    hasComputers: false
   },
   {
     id: 'LAB1',
     name: 'Computer Lab 1',
     capacity: 30,
     type: ROOM_TYPES.LAB,
-    hasComputers: true,
-    hasProjector: true
+    hasComputers: true
   },
   {
     id: 'LAB2',
     name: 'Computer Lab 2',
     type: ROOM_TYPES.LAB,
-    hasComputers: true,
-    hasProjector: true
+    hasComputers: true
   },
   {
     id: 'SEM1',
-    name: 'Seminar Room 1',
-    type: ROOM_TYPES.SEMINAR,
-    hasComputers: false,
-    hasProjector: false
+    name: 'Lecture Room 1',
+    type: ROOM_TYPES.LECTURE,
+    hasComputers: false
   }
 ];
 

@@ -9,11 +9,11 @@ const RoomManagement = ({ rooms, onBack }) => {
   const [currentId, setCurrentId] = useState(null);
 
   const [formData, setFormData] = useState({
-    id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, hasProjector: true
+    id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, hasProjector: true });
+    setFormData({ id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false });
     setEditMode(false);
     setShowModal(true);
   };
@@ -24,7 +24,6 @@ const RoomManagement = ({ rooms, onBack }) => {
       name: room.name || '',
       type: room.type || ROOM_TYPES.LECTURE,
       hasComputers: !!room.hasComputers,
-      hasProjector: room.hasProjector !== false,
     });
     setCurrentId(room.id);
     setEditMode(true);
@@ -32,11 +31,11 @@ const RoomManagement = ({ rooms, onBack }) => {
   };
 
   const handleSave = async () => {
+    const isCSBuilding = formData.name.toLowerCase().includes('computer science') || formData.name.toLowerCase().includes('bscs');
     const payload = {
       name: formData.name,
       type: formData.type,
-      hasComputers: formData.hasComputers,
-      hasProjector: formData.hasProjector,
+      hasComputers: isCSBuilding ? true : formData.hasComputers,
     };
     if (editMode) {
       // Replaced the deleteField workaround with a pure payload update
@@ -67,14 +66,10 @@ const RoomManagement = ({ rooms, onBack }) => {
     if (room.type === 'lab') {
       bg = 'var(--warning-bg)';
       color = 'var(--warning)';
-    } else if (room.type === 'seminar') {
-      bg = '#EEF2FF';
-      color = 'var(--accent-primary)';
     }
 
     const facilities = [];
     if (room.hasComputers) facilities.push('Computers');
-    if (room.hasProjector) facilities.push('Projector');
 
     return (
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -159,16 +154,12 @@ const RoomManagement = ({ rooms, onBack }) => {
               <select className="form-select" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
                 <option value={ROOM_TYPES.LECTURE}>Lecture</option>
                 <option value={ROOM_TYPES.LAB}>Laboratory</option>
-                <option value={ROOM_TYPES.SEMINAR}>Seminar</option>
               </select>
             </div>
 
             <div style={{ display: 'flex', gap: '20px', marginBottom: '25px', padding: '12px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input type="checkbox" checked={formData.hasComputers} onChange={e => setFormData({ ...formData, hasComputers: e.target.checked })} style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} /> Has Computers
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input type="checkbox" checked={formData.hasProjector} onChange={e => setFormData({ ...formData, hasProjector: e.target.checked })} style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} /> Has Projector
+                <input type="checkbox" checked={(formData.name.toLowerCase().includes('computer science') || formData.name.toLowerCase().includes('bscs')) ? true : formData.hasComputers} disabled={formData.name.toLowerCase().includes('computer science') || formData.name.toLowerCase().includes('bscs')} onChange={e => setFormData({ ...formData, hasComputers: e.target.checked })} style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} /> Has Computers
               </label>
             </div>
 

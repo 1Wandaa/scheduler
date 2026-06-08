@@ -1,8 +1,7 @@
 // src/config/constants.js
 export const ROOM_TYPES = {
   LECTURE: 'lecture',
-  LAB: 'lab',
-  SEMINAR: 'seminar'
+  LAB: 'lab'
 };
 
 export const TIME_SLOTS = [
