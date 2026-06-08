@@ -26,19 +26,28 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     }
   };
 
+  // Init once
+  useEffect(() => {
+    if (window.innerWidth <= 768) {
+      setViewMode('cards');
+    }
+  }, []);
+
   useEffect(() => {
     const onResize = () => {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
       // Auto-switch to cards on mobile if still in grid
-      if (mobile && viewMode === 'grid') setViewMode('cards');
-      if (!mobile && viewMode === 'cards') setViewMode('grid');
+      setViewMode(prev => {
+        if (isFullscreen || document.fullscreenElement) return 'grid';
+        if (mobile && prev === 'grid') return 'cards';
+        if (!mobile && prev === 'cards') return 'grid';
+        return prev;
+      });
     };
     window.addEventListener('resize', onResize);
-    // Init
-    if (window.innerWidth <= 768) setViewMode('cards');
     return () => window.removeEventListener('resize', onResize);
-  }, []);
+  }, [isFullscreen]);
 
   // Fullscreen: lock body scroll when fullscreen
   useEffect(() => {
@@ -49,7 +58,15 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   // Listen to native fullscreen changes
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const isFS = !!document.fullscreenElement;
+      setIsFullscreen(isFS);
+      if (isFS) {
+        setViewMode('grid');
+      } else {
+        if (window.innerWidth <= 768) {
+          setViewMode('cards');
+        }
+      }
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -63,6 +80,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         });
       } else {
         setIsFullscreen(true); // fallback
+        setViewMode('grid');
       }
     } else {
       if (document.exitFullscreen) {
@@ -364,13 +382,20 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       </div>
 
       {/* Content */}
-      {viewMode === 'grid' ? <GridView /> : <CardView />}
+      {viewMode === 'grid' || isFullscreen ? <GridView /> : <CardView />}
 
       {/* Floating exit fullscreen button for presentation mode */}
       {isFullscreen && (
         <button
           className="floating-exit-btn"
-          onClick={() => document.exitFullscreen?.()}
+          onClick={() => {
+            if (document.fullscreenElement && document.exitFullscreen) {
+              document.exitFullscreen();
+            } else {
+              setIsFullscreen(false);
+              if (window.innerWidth <= 768) setViewMode('cards');
+            }
+          }}
           title="Exit Fullscreen"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
