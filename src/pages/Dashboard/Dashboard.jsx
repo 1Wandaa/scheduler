@@ -580,10 +580,10 @@ const Dashboard = ({ user, onLogout }) => {
         {/* Logo block */}
         <div style={{ padding: '28px 20px 24px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', textAlign: 'center' }}>
           <div style={{
-            width: 72, height: 72, borderRadius: '50%', margin: '0 auto 12px',
-            background: 'linear-gradient(135deg, rgba(86,69,238,0.3), rgba(139,92,246,0.15))',
-            padding: 3, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 24px rgba(86,69,238,0.2)',
+            width: 80, height: 80, borderRadius: '50%', margin: '0 auto 12px',
+            background: 'linear-gradient(135deg, rgba(0,191,255,0.4), rgba(65,105,225,0.2))',
+            padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 28px rgba(0,191,255,0.3)',
           }}>
             <img
               src={LOGO_SRC}
@@ -594,15 +594,21 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
           {!isSidebarCollapsed && (
             <>
-              <div style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '0.08em', color: 'var(--sidebar-text-active)' }}>SMARTSCHED</div>
+              <div style={{ 
+                fontWeight: 900, 
+                fontSize: '1.25rem', 
+                letterSpacing: '0.12em', 
+                color: '#ffffff',
+                textShadow: '0 2px 12px rgba(255,255,255,0.3)'
+              }}>
+                SMARTSCHED
+              </div>
               <span style={{
-                display: 'inline-block', marginTop: 8,
-                fontSize: '0.7rem', padding: '4px 14px', borderRadius: '20px',
-                background: isAdmin
-                  ? 'linear-gradient(135deg, rgba(86,69,238,0.3), rgba(139,92,246,0.2))'
-                  : 'linear-gradient(135deg, rgba(2,185,116,0.3), rgba(52,211,153,0.2))',
+                display: 'inline-block', marginTop: 10,
+                fontSize: '0.75rem', padding: '6px 18px', borderRadius: '20px',
+                background: isAdmin ? '#2f2c68' : 'rgba(2,185,116,0.2)',
                 color: '#fff', fontWeight: 600, letterSpacing: '0.04em',
-                border: `1px solid ${isAdmin ? 'rgba(86,69,238,0.2)' : 'rgba(2,185,116,0.2)'}`,
+                border: isAdmin ? 'none' : '1px solid rgba(2,185,116,0.2)',
               }}>
                 {user?.role}
               </span>

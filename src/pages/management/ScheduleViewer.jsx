@@ -100,7 +100,10 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
         activeEntity = professors.find(p => p.id === selectedId);
     }
 
-    const titlePrefix = viewType === 'department' ? 'DEPARTMENT' : viewType === 'room' ? 'ROOM' : viewType === 'faculty' ? 'FACULTY' : '';
+    const titlePrefix = viewType === 'department' 
+        ? (deptSectionId ? 'CLASS' : 'DEPARTMENT') 
+        : viewType === 'room' ? 'ROOM' 
+        : viewType === 'faculty' ? 'FACULTY' : '';
     const titleName = activeEntity ? activeEntity.name.toUpperCase() : 'SELECT ITEM';
 
     return (
@@ -116,102 +119,101 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Filter schedules by department{isAdmin ? ', faculty, or room' : ' or room'}</p>
                 </div>
 
-                <div className="no-print">
-                    {!isAdmin ? (
-                        <button className="btn" onClick={async () => {
-                            setIsGenerating(true);
-                            const printContent = document.querySelector('.printable-iso-document');
-                            if (!printContent) {
-                                setIsGenerating(false);
-                                return;
-                            }
-                            const tempContainer = document.createElement('div');
-                            tempContainer.style.position = 'absolute';
-                            tempContainer.style.top = '-10000px';
-                            tempContainer.style.left = '-10000px';
-                            tempContainer.style.width = '1100px'; 
-                            tempContainer.style.backgroundColor = 'white';
-                            // INJECTED CSS FOR EXACT ISO LAYOUT ON EXPORT
-                            tempContainer.innerHTML = `
+                <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', textTransform: 'uppercase', marginRight: '4px' }}>ISO Format:</span>
+                    <button className="btn btn-sm" onClick={async () => {
+                        setIsGenerating(true);
+                        const printContent = document.querySelector('.printable-iso-document');
+                        if (!printContent) {
+                            setIsGenerating(false);
+                            return;
+                        }
+                        const tempContainer = document.createElement('div');
+                        tempContainer.style.position = 'absolute';
+                        tempContainer.style.top = '-10000px';
+                        tempContainer.style.left = '-10000px';
+                        tempContainer.style.width = '1100px'; 
+                        tempContainer.style.backgroundColor = 'white';
+                        // INJECTED CSS FOR EXACT ISO LAYOUT ON EXPORT
+                        tempContainer.innerHTML = `
+                            <style>
+                                .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
+                                .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
+                                .iso-header-table .bold { font-weight: bold; }
+                                .iso-header-table .center { text-align: center; }
+                                .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
+                                .meta-value { font-weight: normal; text-decoration: underline; }
+                                .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
+                                .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 4px; text-align: center; vertical-align: middle; }
+                                .iso-schedule-table th { background-color: #f0f0f0 !important; }
+                                .lunch-break { background-color: #e0e0e0 !important; font-weight: bold; letter-spacing: 5px; padding: 4px; }
+                            </style>
+                            <div style="padding: 40px;">
+                                ${printContent.innerHTML}
+                            </div>
+                        `;
+                        document.body.appendChild(tempContainer);
+                        
+                        try {
+                            const html2canvas = (await import('html2canvas')).default;
+                            const canvas = await html2canvas(tempContainer, { scale: 2, useCORS: true });
+                            setPreviewImage(canvas.toDataURL('image/png'));
+                        } catch (error) {
+                            console.error('Failed to save image:', error);
+                            alert('Failed to generate preview. Please try again.');
+                        } finally {
+                            document.body.removeChild(tempContainer);
+                            setIsGenerating(false);
+                        }
+                    }} style={{ background: 'transparent', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '5px' }} disabled={isGenerating}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        {isGenerating ? 'Generating...' : 'Save Image'}
+                    </button>
+
+                    <button className="btn btn-sm" onClick={() => {
+                        const printContent = document.querySelector('.printable-iso-document');
+                        if (!printContent) return;
+                        const iframe = document.createElement('iframe');
+                        iframe.style.position = 'fixed';
+                        iframe.style.top = '-10000px';
+                        iframe.style.left = '-10000px';
+                        iframe.style.width = '0';
+                        iframe.style.height = '0';
+                        document.body.appendChild(iframe);
+                        const doc = iframe.contentDocument || iframe.contentWindow.document;
+                        doc.open();
+                        // INJECTED CSS FOR EXACT ISO LAYOUT ON PRINT PDF
+                        doc.write(`
+                            <html>
+                            <head>
                                 <style>
-                                    .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    @page { size: letter landscape; margin: 0; }
+                                    body { font-family: "Times New Roman", Times, serif; color: #000; margin: 0; padding: 0.5in; }
+                                    .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
                                     .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
                                     .iso-header-table .bold { font-weight: bold; }
                                     .iso-header-table .center { text-align: center; }
-                                    .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
                                     .meta-value { font-weight: normal; text-decoration: underline; }
-                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
                                     .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 4px; text-align: center; vertical-align: middle; }
-                                    .iso-schedule-table th { background-color: #f0f0f0 !important; }
-                                    .lunch-break { background-color: #e0e0e0 !important; font-weight: bold; letter-spacing: 5px; padding: 4px; }
+                                    .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                    .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; padding: 4px; }
                                 </style>
-                                <div style="padding: 40px;">
-                                    ${printContent.innerHTML}
-                                </div>
-                            `;
-                            document.body.appendChild(tempContainer);
-                            
-                            try {
-                                const html2canvas = (await import('html2canvas')).default;
-                                const canvas = await html2canvas(tempContainer, { scale: 2, useCORS: true });
-                                setPreviewImage(canvas.toDataURL('image/png'));
-                            } catch (error) {
-                                console.error('Failed to save image:', error);
-                                alert('Failed to generate preview. Please try again.');
-                            } finally {
-                                document.body.removeChild(tempContainer);
-                                setIsGenerating(false);
-                            }
-                        }} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }} disabled={isGenerating}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                            {isGenerating ? 'Generating...' : 'Save Image'}
-                        </button>
-                    ) : (
-                        <button className="btn" onClick={() => {
-                            const printContent = document.querySelector('.printable-iso-document');
-                            if (!printContent) return;
-                            const iframe = document.createElement('iframe');
-                            iframe.style.position = 'fixed';
-                            iframe.style.top = '-10000px';
-                            iframe.style.left = '-10000px';
-                            iframe.style.width = '0';
-                            iframe.style.height = '0';
-                            document.body.appendChild(iframe);
-                            const doc = iframe.contentDocument || iframe.contentWindow.document;
-                            doc.open();
-                            // INJECTED CSS FOR EXACT ISO LAYOUT ON PRINT PDF
-                            doc.write(`
-                                <html>
-                                <head>
-                                    <style>
-                                        @page { size: letter landscape; margin: 0; }
-                                        body { font-family: "Times New Roman", Times, serif; color: #000; margin: 0; padding: 0.5in; }
-                                        .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
-                                        .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
-                                        .iso-header-table .bold { font-weight: bold; }
-                                        .iso-header-table .center { text-align: center; }
-                                        .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
-                                        .meta-value { font-weight: normal; text-decoration: underline; }
-                                        .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-                                        .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 4px; text-align: center; vertical-align: middle; }
-                                        .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                                        .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; padding: 4px; }
-                                    </style>
-                                </head>
-                                <body>${printContent.innerHTML}</body>
-                                </html>
-                            `);
-                            doc.close();
-                            iframe.contentWindow.focus();
-                            setTimeout(() => {
-                                iframe.contentWindow.print();
-                                setTimeout(() => document.body.removeChild(iframe), 1000);
-                            }, 250);
-                        }} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                            Print ISO Schedule
-                        </button>
-                    )}
+                            </head>
+                            <body>${printContent.innerHTML}</body>
+                            </html>
+                        `);
+                        doc.close();
+                        iframe.contentWindow.focus();
+                        setTimeout(() => {
+                            iframe.contentWindow.print();
+                            setTimeout(() => document.body.removeChild(iframe), 1000);
+                        }, 250);
+                    }} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        Print
+                    </button>
                 </div>
             </div>
 
@@ -278,7 +280,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                 )}
             </div>
 
-            <div className="no-print">
+            <div className="colored-schedule-wrapper">
                 <ScheduleTable
                     schedules={filteredSchedules}
                     title={`${titlePrefix} SCHEDULE: ${titleName}`}

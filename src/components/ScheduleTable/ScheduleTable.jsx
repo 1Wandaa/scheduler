@@ -16,6 +16,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   const [errorToast, setErrorToast] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
   const [fitScale, setFitScale] = useState(1);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const showToast = (msg, isError = true) => {
     if (isError) {
@@ -24,6 +25,48 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     } else {
       setSuccessToast(msg);
       setTimeout(() => setSuccessToast(null), 3000);
+    }
+  };
+
+  const handleDownloadImage = () => {
+    if (!previewImage) return;
+    const link = document.createElement('a');
+    link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_schedule.png`;
+    link.href = previewImage;
+    link.click();
+    setPreviewImage(null);
+    showToast('Image saved successfully!', false);
+  };
+
+  const handleExportImage = async () => {
+    if (!containerRef.current) return;
+    try {
+      showToast('Generating image, please wait...', false);
+      const html2canvas = (await import('html2canvas')).default;
+      
+      const oldViewMode = viewMode;
+      setViewMode('grid');
+      
+      await new Promise(r => setTimeout(r, 200));
+
+      const toolbar = containerRef.current.querySelector('.schedule-toolbar');
+      if (toolbar) toolbar.style.display = 'none';
+
+      const canvas = await html2canvas(containerRef.current, { 
+          scale: 2, 
+          useCORS: true,
+          backgroundColor: '#ffffff'
+      });
+
+      if (toolbar) toolbar.style.display = 'flex';
+
+      const imgData = canvas.toDataURL('image/png');
+      
+      setViewMode(oldViewMode);
+      setPreviewImage(imgData);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to export image.');
     }
   };
 
@@ -316,6 +359,9 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                         {schedule.section && (
                           <span className="schedule-card-section"> · {schedule.section.name}</span>
                         )}
+                        {schedule.subject?.credits && (
+                          <span className="schedule-card-section"> ({schedule.subject.credits} Units)</span>
+                        )}
                       </div>
                       <div className="schedule-card-meta">
                         <span>👤 {schedule.professor?.name ?? '—'}</span>
@@ -360,6 +406,94 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
             <span>Cards</span>
           </button>
+        </div>
+
+        {/* Export Actions */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', textTransform: 'uppercase', marginRight: '4px' }}>ORDINARY FORMAT:</span>
+            <button
+            className="fullscreen-btn"
+            onClick={handleExportImage}
+            title="Export Schedule as Image"
+            style={{ background: '#e6f4ea', color: '#137333', border: '1px solid #ceead6' }}
+            >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            <span style={{ fontWeight: 600 }}>Save Image</span>
+            </button>
+
+            <button
+            className="fullscreen-btn"
+            onClick={async () => {
+                if (!containerRef.current) return;
+                try {
+                  showToast('Preparing print, please wait...', false);
+                  const html2canvas = (await import('html2canvas')).default;
+                  
+                  const oldViewMode = viewMode;
+                  setViewMode('grid');
+                  
+                  await new Promise(r => setTimeout(r, 200));
+
+                  const toolbar = containerRef.current.querySelector('.schedule-toolbar');
+                  if (toolbar) toolbar.style.display = 'none';
+
+                  const canvas = await html2canvas(containerRef.current, { 
+                      scale: 2, 
+                      useCORS: true,
+                      backgroundColor: '#ffffff'
+                  });
+
+                  if (toolbar) toolbar.style.display = 'flex';
+                  setViewMode(oldViewMode);
+
+                  const imgData = canvas.toDataURL('image/png');
+                  
+                  const iframe = document.createElement('iframe');
+                  iframe.style.position = 'fixed';
+                  iframe.style.top = '-10000px';
+                  iframe.style.left = '-10000px';
+                  document.body.appendChild(iframe);
+                  
+                  const doc = iframe.contentDocument || iframe.contentWindow.document;
+                  doc.open();
+                  doc.write(`
+                      <html>
+                      <head>
+                          <title>Print Schedule</title>
+                          <style>
+                              @page { size: landscape; margin: 0.5in; }
+                              body { margin: 0; padding: 0; display: flex; justify-content: center; background: #fff; }
+                              img { max-width: 100%; height: auto; }
+                          </style>
+                      </head>
+                      <body>
+                          <img src="${imgData}" />
+                      </body>
+                      </html>
+                  `);
+                  doc.close();
+                  
+                  iframe.contentWindow.focus();
+                  setTimeout(() => {
+                      iframe.contentWindow.print();
+                      setTimeout(() => {
+                          if (document.body.contains(iframe)) {
+                              document.body.removeChild(iframe);
+                          }
+                      }, 1000);
+                  }, 300);
+
+                } catch (err) {
+                  console.error(err);
+                  showToast('Failed to print schedule.');
+                }
+            }}
+            title="Print Schedule"
+            style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' }}
+            >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            <span style={{ fontWeight: 600 }}>Print</span>
+            </button>
         </div>
 
         {/* Fullscreen toggle (grid view only) */}
@@ -438,6 +572,33 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         </>
       )}
 
+
+      {/* Preview Modal */}
+      {previewImage && createPortal(
+        <div className="modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="modal-content" style={{ maxWidth: '900px', width: '90%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0 }}>Schedule Preview</h3>
+              <button onClick={() => setPreviewImage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <div style={{ maxHeight: '60vh', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#f9fafb', display: 'flex', justifyContent: 'center' }}>
+              <img src={previewImage} alt="Schedule Preview" style={{ maxWidth: '100%', height: 'auto' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button className="btn" style={{ background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)' }} onClick={() => setPreviewImage(null)}>
+                Cancel
+              </button>
+              <button className="btn" onClick={handleDownloadImage} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Download Image
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Toast Notification */}
       {(errorToast || successToast) && createPortal(

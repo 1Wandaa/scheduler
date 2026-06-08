@@ -1,4 +1,63 @@
 /* ── Schedule Table Container ─────────────────────────────────────────────── */
+/* =========================
+   Print Styles for Colored Mode 
+   ========================= */
+@media print {
+    /* Override PrintableSchedule.css global hide */
+    body.print-colored-mode * {
+        visibility: visible !important;
+    }
+
+    /* Page layout */
+    @page {
+        size: landscape;
+        margin: 10mm;
+    }
+
+    /* Hide layout elements that are not the schedule table */
+    body.print-colored-mode .sidebar,
+    body.print-colored-mode .main-content > header,
+    body.print-colored-mode .mobile-menu-btn,
+    body.print-colored-mode .schedule-toolbar,
+    body.print-colored-mode .floating-exit-btn,
+    body.print-colored-mode .rotate-device-hint,
+    body.print-colored-mode .btn,
+    body.print-colored-mode .no-print,
+    body.print-colored-mode .printable-iso-document,
+    body.print-colored-mode .schedule-filters {
+        display: none !important;
+    }
+
+    body.print-colored-mode .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    body.print-colored-mode .colored-schedule-wrapper {
+        width: 100% !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        /* Scale down to ensure it fits completely within one page vertically */
+        zoom: 0.85; 
+        transform-origin: top center;
+    }
+
+    body.print-colored-mode .schedule-table-container {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    /* Force background colors to print */
+    body.print-colored-mode {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
+
 .schedule-table-container {
   background: transparent;
   padding: 1rem;
