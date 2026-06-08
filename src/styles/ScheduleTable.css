@@ -30,7 +30,7 @@
 
 .schedule-fullscreen .table-wrapper {
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
   box-shadow: none !important;
   border-radius: 0 !important;
   background: #fff;

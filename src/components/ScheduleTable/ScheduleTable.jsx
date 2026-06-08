@@ -15,6 +15,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [errorToast, setErrorToast] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
+  const [fitScale, setFitScale] = useState(1);
 
   const showToast = (msg, isError = true) => {
     if (isError) {
@@ -53,6 +54,30 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   useEffect(() => {
     document.body.style.overflow = isFullscreen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
+  }, [isFullscreen]);
+
+  // Handle Fit Scale for Mobile Fullscreen
+  useEffect(() => {
+    if (!isFullscreen) {
+      setFitScale(1);
+      return;
+    }
+    const updateFitScale = () => {
+      // The fullscreen container has 1rem padding = 32px total horizontal padding
+      const padding = 32; 
+      const availableWidth = window.innerWidth - padding;
+      const minTableWidth = 680; // from CSS
+      
+      if (availableWidth < minTableWidth) {
+        setFitScale(availableWidth / minTableWidth);
+      } else {
+        setFitScale(1);
+      }
+    };
+    
+    updateFitScale();
+    window.addEventListener('resize', updateFitScale);
+    return () => window.removeEventListener('resize', updateFitScale);
   }, [isFullscreen]);
 
   // Listen to native fullscreen changes
@@ -189,7 +214,10 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
   const GridView = () => (
     <div className="table-wrapper">
-      <table className="schedule-table">
+      <table 
+        className="schedule-table"
+        style={isFullscreen && fitScale < 1 ? { zoom: fitScale } : {}}
+      >
         <thead>
           <tr>
             <th>Time Slot</th>
