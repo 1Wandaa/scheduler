@@ -226,16 +226,16 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                 </div>
             </div>
 
-            {/* Filters Row: Dedicated block with minWidth to stop element shifting */}
-            <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', marginBottom: '20px', padding: '12px 15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            {/* Filters Row: Dedicated block with responsive grid */}
+            <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <label className="form-label" style={{ marginBottom: 0, alignSelf: 'center' }}>Filter By:</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter By</label>
                     <select
                         className="form-select"
                         value={viewType}
                         onChange={(e) => setViewType(e.target.value)}
-                        style={{ minWidth: '140px' }}
+                        style={{ width: '100%' }}
                     >
                         <option value="department">Department</option>
                         <option value="section">Section</option>
@@ -244,13 +244,13 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                     </select>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <label className="form-label" style={{ marginBottom: 0, alignSelf: 'center' }}>Target:</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target</label>
                     <select
                         className="form-select"
                         value={selectedId}
                         onChange={(e) => setSelectedId(e.target.value)}
-                        style={{ minWidth: '200px', borderColor: 'var(--accent-primary)', backgroundColor: 'var(--success-bg)' }}
+                        style={{ width: '100%', borderColor: 'var(--accent-primary)', backgroundColor: 'var(--success-bg)' }}
                     >
                         {viewType === 'department' && DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
                         {viewType === 'room' && rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
@@ -260,13 +260,13 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                 </div>
 
                 {(viewType === 'department' || viewType === 'section') && availableYearLevels.length > 0 && (
-                    <div style={{ display: 'flex', gap: '10px', paddingLeft: '15px', borderLeft: '2px solid var(--border-color)' }}>
-                        <label className="form-label" style={{ marginBottom: 0, alignSelf: 'center' }}>Year:</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Year</label>
                         <select
                             className="form-select"
                             value={selectedYearLevel}
                             onChange={(e) => setSelectedYearLevel(e.target.value)}
-                            style={{ minWidth: '130px', borderColor: selectedYearLevel ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: selectedYearLevel ? '#DBEAFE' : 'white' }}
+                            style={{ width: '100%', borderColor: selectedYearLevel ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: selectedYearLevel ? '#DBEAFE' : 'white' }}
                         >
                             <option value="">All Years</option>
                             {availableYearLevels.map(yr => (
@@ -277,13 +277,13 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                 )}
 
                 {viewType === 'department' && deptSections.length > 0 && (
-                    <div style={{ display: 'flex', gap: '10px', paddingLeft: '15px', borderLeft: '2px solid var(--border-color)' }}>
-                        <label className="form-label" style={{ marginBottom: 0, alignSelf: 'center' }}>Section:</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Section</label>
                         <select
                             className="form-select"
                             value={deptSectionId}
                             onChange={(e) => setDeptSectionId(e.target.value)}
-                            style={{ minWidth: '200px', borderColor: deptSectionId ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: deptSectionId ? 'var(--warning-bg)' : 'white' }}
+                            style={{ width: '100%', borderColor: deptSectionId ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: deptSectionId ? 'var(--warning-bg)' : 'white' }}
                         >
                             {deptSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
