@@ -15,7 +15,6 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
         if (viewType === 'department' && DEPARTMENTS.length > 0) setSelectedId(DEPARTMENTS[0]);
         else if (viewType === 'room' && rooms.length > 0) setSelectedId(rooms[0].id);
         else if (viewType === 'faculty' && professors.length > 0) setSelectedId(professors[0].id);
-        else if (viewType === 'section' && sections.length > 0) setSelectedId(sections[0].id);
         else setSelectedId('');
 
         setDeptSectionId('');
@@ -47,9 +46,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                 .map(sec => sec.yearLevel)
                 .filter(Boolean)
           )].sort((a, b) => a - b)
-        : viewType === 'section'
-            ? [...new Set(sections.map(sec => sec.yearLevel).filter(Boolean))].sort((a, b) => a - b)
-            : [];
+        : [];
 
     const deptSections = viewType === 'department' && selectedId
         ? sections.filter(sec => {
@@ -60,12 +57,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
           })
         : [];
 
-    // For section view, filter sections list by year level
-    const filteredSectionsList = viewType === 'section'
-        ? (selectedYearLevel
-            ? sections.filter(sec => String(sec.yearLevel) === String(selectedYearLevel))
-            : sections)
-        : sections;
+
 
     const filteredSchedules = schedules.filter(s => {
         if (!selectedId) return false;
@@ -90,7 +82,6 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
         }
         if (viewType === 'room') return s.room != null && String(s.room.id) === String(selectedId);
         if (viewType === 'faculty') return s.professor != null && String(s.professor.id) === String(selectedId);
-        if (viewType === 'section') return s.section != null && String(s.section.id) === String(selectedId);
 
         return false;
     });
@@ -107,11 +98,9 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
         activeEntity = rooms.find(r => r.id === selectedId);
     } else if (viewType === 'faculty') {
         activeEntity = professors.find(p => p.id === selectedId);
-    } else if (viewType === 'section') {
-        activeEntity = sections.find(s => s.id === selectedId);
     }
 
-    const titlePrefix = viewType === 'department' ? 'DEPARTMENT' : viewType === 'room' ? 'ROOM' : viewType === 'faculty' ? 'FACULTY' : 'SECTION';
+    const titlePrefix = viewType === 'department' ? 'DEPARTMENT' : viewType === 'room' ? 'ROOM' : viewType === 'faculty' ? 'FACULTY' : '';
     const titleName = activeEntity ? activeEntity.name.toUpperCase() : 'SELECT ITEM';
 
     return (
@@ -124,7 +113,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
                         Schedule Viewer
                     </h3>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Filter schedules by department, section{isAdmin ? ', faculty, or room' : ', or room'}</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Filter schedules by department{isAdmin ? ', faculty, or room' : ' or room'}</p>
                 </div>
 
                 <div className="no-print">
@@ -238,7 +227,6 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                         style={{ width: '100%' }}
                     >
                         <option value="department">Department</option>
-                        <option value="section">Section</option>
                         {isAdmin && <option value="faculty">Faculty</option>}
                         <option value="room">Room</option>
                     </select>
@@ -255,11 +243,10 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                         {viewType === 'department' && DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
                         {viewType === 'room' && rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                         {viewType === 'faculty' && professors.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        {viewType === 'section' && filteredSectionsList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                 </div>
 
-                {(viewType === 'department' || viewType === 'section') && availableYearLevels.length > 0 && (
+                {viewType === 'department' && availableYearLevels.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Year</label>
                         <select

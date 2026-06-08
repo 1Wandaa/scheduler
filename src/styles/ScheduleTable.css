@@ -8,39 +8,93 @@
   transition: all 0.3s ease;
 }
 
-/* ── Fullscreen Mode ──────────────────────────────────────────────────────── */
 .schedule-fullscreen {
   position: fixed !important;
   inset: 0;
-  z-index: 9999;
-  background: #fff;
-  padding: 1rem;
-  overflow-y: auto;
-  border-radius: 0;
-  margin: 0;
+  z-index: 99999;
+  background: #ffffff !important;
+  padding: 1rem !important;
+  overflow: hidden; /* prevent scrolling to act like a slide */
+  border-radius: 0 !important;
+  margin: 0 !important;
   display: flex;
   flex-direction: column;
 }
 
+/* Hide extra elements in fullscreen like a powerpoint slide */
+.schedule-fullscreen .schedule-toolbar,
+.schedule-fullscreen .schedule-doc-header,
+.schedule-fullscreen .dept-legend {
+  display: none !important;
+}
+
 .schedule-fullscreen .table-wrapper {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  background: #fff;
+  border: none !important;
+  display: flex;
+  flex-direction: column;
 }
 
-.fullscreen-hint {
-  text-align: center;
-  padding: 10px;
-  font-size: 0.75rem;
-  color: var(--text-muted);
+.schedule-fullscreen .schedule-table {
+  height: 100%;
+}
+
+.schedule-fullscreen .schedule-table th {
+  padding: 18px 12px;
+  font-size: 0.9rem;
+}
+
+.schedule-fullscreen .schedule-table td {
+  height: auto;
+}
+
+.schedule-fullscreen .time-label {
+  font-size: 0.9rem;
+}
+
+.schedule-fullscreen .schedule-content .subject {
+  font-size: 1.1rem;
+  margin-bottom: 0.4rem;
+}
+
+.schedule-fullscreen .schedule-content p {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.floating-exit-btn {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 100000;
+  background: rgba(0, 0, 0, 0.4);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  margin-top: 8px;
-  border-top: 1px solid var(--border-color);
-  transition: color 0.2s ease;
+  opacity: 0;
+  transition: opacity 0.3s ease, background 0.2s ease;
+  backdrop-filter: blur(4px);
 }
 
-.fullscreen-hint:hover {
-  color: var(--accent-primary);
+.schedule-fullscreen:hover .floating-exit-btn {
+  opacity: 1;
 }
+
+.floating-exit-btn:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+
 
 /* ── Toolbar ─────────────────────────────────────────────────────────────── */
 .schedule-toolbar {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import '../../styles/ScheduleTable.css';
@@ -10,6 +10,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   const [dragOverCell, setDragOverCell] = useState(null);
   const [draggingId, setDraggingId] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef(null);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'cards'
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [errorToast, setErrorToast] = useState(null);
@@ -44,6 +45,31 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     document.body.style.overflow = isFullscreen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isFullscreen]);
+
+  // Listen to native fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      if (containerRef.current?.requestFullscreen) {
+        containerRef.current.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      } else {
+        setIsFullscreen(true); // fallback
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
 
   const handleDragStart = (e, schedule) => {
     e.dataTransfer.setData('scheduleId', schedule.id);
@@ -266,7 +292,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   );
 
   const content = (
-    <div className={`schedule-table-container ${isFullscreen ? 'schedule-fullscreen' : ''}`}>
+    <div ref={containerRef} className={`schedule-table-container ${isFullscreen ? 'schedule-fullscreen' : ''}`}>
 
       {/* Toolbar row */}
       <div className="schedule-toolbar">
@@ -294,7 +320,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         {viewMode === 'grid' && (
           <button
             className="fullscreen-btn"
-            onClick={() => setIsFullscreen(f => !f)}
+            onClick={toggleFullscreen}
             title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
           >
             {isFullscreen ? (
@@ -340,12 +366,17 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       {/* Content */}
       {viewMode === 'grid' ? <GridView /> : <CardView />}
 
-      {/* Fullscreen close hint */}
+      {/* Floating exit fullscreen button for presentation mode */}
       {isFullscreen && (
-        <div className="fullscreen-hint" onClick={() => setIsFullscreen(false)}>
-          Press ESC or click here to exit fullscreen
-        </div>
+        <button
+          className="floating-exit-btn"
+          onClick={() => document.exitFullscreen?.()}
+          title="Exit Fullscreen"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+        </button>
       )}
+
 
       {/* Toast Notification */}
       {(errorToast || successToast) && createPortal(
@@ -390,7 +421,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     </div>
   );
 
-  return isFullscreen ? createPortal(content, document.body) : content;
+  return content;
 }
 
 export default ScheduleTable;
