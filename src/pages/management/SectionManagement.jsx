@@ -235,7 +235,7 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
               </div>
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Student Count</label>
-                <input type="number" className="form-input" value={formData.studentCount} onChange={e => setFormData({ ...formData, studentCount: parseInt(e.target.value) || 0 })} />
+                <input type="number" className="form-input" value={formData.studentCount} onChange={e => setFormData({ ...formData, studentCount: e.target.value === '' ? '' : parseInt(e.target.value) })} />
               </div>
             </div>
             <div className="form-group" style={{ marginBottom: '25px' }}>

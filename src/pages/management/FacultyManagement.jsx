@@ -202,7 +202,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
               </div>
               <div className="form-group" style={{ width: '120px' }}>
                 <label className="form-label">Max Units</label>
-                <input type="number" className="form-input" value={formData.maxUnits} onChange={e => setFormData({ ...formData, maxUnits: parseInt(e.target.value) || 0 })} />
+                <input type="number" className="form-input" value={formData.maxUnits} onChange={e => setFormData({ ...formData, maxUnits: e.target.value === '' ? '' : parseInt(e.target.value) })} />
               </div>
             </div>
 

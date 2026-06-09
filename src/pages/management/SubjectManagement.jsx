@@ -230,7 +230,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
             <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
               <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                 <label className="form-label">Total Units (Credits)</label>
-                <input type="number" className="form-input" value={formData.credits || 3} onChange={e => setFormData({ ...formData, credits: Number(e.target.value) })} />
+                <input type="number" className="form-input" value={formData.credits === undefined ? 3 : formData.credits} onChange={e => setFormData({ ...formData, credits: e.target.value === '' ? '' : Number(e.target.value) })} />
               </div>
               <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                 <label className="form-label">Hours per Meeting</label>
