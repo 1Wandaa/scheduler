@@ -21,15 +21,17 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
-    id: '', name: '', program: '', yearLevel: 1, studentCount: 35, subjects: []
+    id: '', name: '', program: '', yearLevel: 1, subjects: []
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', name: '', program: '', yearLevel: 1, studentCount: 35, subjects: [] });
+    setFormData({ id: '', name: '', program: '', yearLevel: 1, subjects: [] });
     setEditMode(false);
     setError(null);
+    setSubjectSearchQuery('');
     setShowModal(true);
   };
 
@@ -38,6 +40,7 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
     setCurrentId(section.id);
     setEditMode(true);
     setError(null);
+    setSubjectSearchQuery('');
     setShowModal(true);
   };
 
@@ -113,7 +116,6 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
               <th style={{ textAlign: 'center' }}>Section Name</th>
               <th style={{ textAlign: 'center' }}>Program</th>
               <th style={{ textAlign: 'center' }}>Year</th>
-              <th style={{ textAlign: 'center' }}>Students</th>
               <th style={{ textAlign: 'center' }}>Subjects</th>
               <th style={{ textAlign: 'center' }}>Actions</th>
             </tr>
@@ -133,7 +135,6 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
                     Year {sec.yearLevel}
                   </span>
                 </td>
-                <td style={{ color: 'var(--text-muted)', textAlign: 'center', verticalAlign: 'middle' }}>{sec.studentCount}</td>
                 <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '280px', textAlign: 'center', verticalAlign: 'middle' }}>
                   {(sec.subjects || []).length === 0 ? (
                     <span style={{ fontStyle: 'italic' }}>None</span>
@@ -246,26 +247,33 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
                 ))}
               </select>
             </div>
-            <div style={{ display: 'flex', gap: '16px' }}>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Year Level</label>
-                <select className="form-select" value={formData.yearLevel} onChange={e => setFormData({ ...formData, yearLevel: parseInt(e.target.value) })}>
-                  <option value={1}>1st Year</option>
-                  <option value={2}>2nd Year</option>
-                  <option value={3}>3rd Year</option>
-                  <option value={4}>4th Year</option>
-                </select>
-              </div>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Student Count</label>
-                <input type="number" className="form-input" value={formData.studentCount} onChange={e => setFormData({ ...formData, studentCount: e.target.value === '' ? '' : parseInt(e.target.value) })} />
-              </div>
+            <div className="form-group">
+              <label className="form-label">Year Level</label>
+              <select className="form-select" value={formData.yearLevel} onChange={e => setFormData({ ...formData, yearLevel: parseInt(e.target.value) })}>
+                <option value={1}>1st Year</option>
+                <option value={2}>2nd Year</option>
+                <option value={3}>3rd Year</option>
+                <option value={4}>4th Year</option>
+              </select>
             </div>
             <div className="form-group" style={{ marginBottom: '25px' }}>
               <label className="form-label">Enrolled Subjects</label>
-              <div style={{ marginTop: '8px', maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="Search subject code or name..." 
+                value={subjectSearchQuery} 
+                onChange={(e) => setSubjectSearchQuery(e.target.value)}
+                style={{ marginBottom: '10px', marginTop: '5px' }}
+              />
+              <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
                 {subjects.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No subjects available. Add subjects first.</p>}
-                {[...subjects].sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' })).map(sub => (
+                {[...subjects]
+                  .filter(sub => 
+                    (sub.code || '').toLowerCase().includes(subjectSearchQuery.toLowerCase()) || 
+                    (sub.name || '').toLowerCase().includes(subjectSearchQuery.toLowerCase())
+                  )
+                  .sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' })).map(sub => (
                   <label key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
                     <input
                       type="checkbox"
