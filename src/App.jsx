@@ -20,7 +20,32 @@ function App() {
       link.rel = 'icon';
       document.head.appendChild(link);
     }
-    link.href = '/logo.jpg?v=1';
+    
+    const img = new Image();
+    img.src = '/logo.jpg?v=1';
+    img.onload = () => {
+      // Create a square canvas based on the smaller dimension to prevent stretching
+      const size = Math.min(img.width, img.height);
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      
+      // Draw a circular clipping mask in the center of the square canvas
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      
+      // Calculate offset to center the image if it's not perfectly square
+      const offsetX = (img.width - size) / 2;
+      const offsetY = (img.height - size) / 2;
+      
+      // Draw the image onto the canvas, cropping out the excess
+      ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, size, size);
+      
+      link.href = canvas.toDataURL('image/png');
+    };
     // --------------------------------------------
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
