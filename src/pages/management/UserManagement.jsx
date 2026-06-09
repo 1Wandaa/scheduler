@@ -16,6 +16,7 @@ const UserManagement = ({ onBack }) => {
   const [showModal, setShowModal] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', name: '', role: 'Student' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const initializeUsers = async () => {
@@ -36,6 +37,18 @@ const UserManagement = ({ onBack }) => {
   }, []);
 
   const handleAddUser = async () => {
+    setError(null);
+    if (!newUser.username.trim() || !newUser.name.trim()) {
+      setError("Username and Full Name are required.");
+      return;
+    }
+
+    const isDuplicate = users.some(u => u.username.toLowerCase() === newUser.username.trim().toLowerCase());
+    if (isDuplicate) {
+      setError(`The username "${newUser.username.trim()}" already exists.`);
+      return;
+    }
+
     await addDoc(collection(db, 'users'), newUser);
     setShowModal(false);
     setNewUser({ username: '', name: '', role: 'Student' });
@@ -105,7 +118,11 @@ const UserManagement = ({ onBack }) => {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Manage system users and permissions</p>
           </div>
         </div>
-        <button className="btn" onClick={() => setShowModal(true)}>+ Add User</button>
+        <button className="btn" onClick={() => {
+          setError(null);
+          setNewUser({ username: '', name: '', role: 'Student' });
+          setShowModal(true);
+        }}>+ Add User</button>
       </div>
 
       {/* Search Bar */}
@@ -154,6 +171,12 @@ const UserManagement = ({ onBack }) => {
         <div className="modal-overlay">
           <div className="modal-content" style={{ width: '400px' }}>
             <h3>Add New User</h3>
+            {error && (
+              <div style={{ position: 'sticky', top: '0', zIndex: 10, padding: '10px 15px', backgroundColor: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '8px', marginBottom: '15px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.3s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                {error}
+              </div>
+            )}
 
             <div className="form-group">
               <label className="form-label">Username</label>

@@ -9,6 +9,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [currentId, setCurrentId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
     id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: []
@@ -17,6 +18,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
   const handleOpenAdd = () => {
     setFormData({ id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: [] });
     setEditMode(false);
+    setError(null);
     setShowModal(true);
   };
 
@@ -74,10 +76,17 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
     });
     setCurrentId(prof.id);
     setEditMode(true);
+    setError(null);
     setShowModal(true);
   };
 
   const handleSave = async () => {
+    setError(null);
+    if (!formData.firstName || !formData.lastName) {
+      setError("First and last names are required.");
+      return;
+    }
+
     const combinedName = `${(formData.lastName || '').trim()}, ${(formData.firstName || '').trim()}`;
     
     // Robust duplicate check: normalize by removing titles, spaces, and punctuation
@@ -95,7 +104,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
     );
 
     if (isDuplicate) {
-      alert(`A faculty member named "${combinedName}" already exists!`);
+      setError(`A faculty member named "${combinedName}" already exists!`);
       return;
     }
 
@@ -235,7 +244,12 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
         <div className="modal-overlay">
           <div className="modal-content" style={{ width: '500px' }}>
             <h3>{editMode ? 'Edit Faculty' : 'Add New Faculty'}</h3>
-
+            {error && (
+              <div style={{ position: 'sticky', top: '0', zIndex: 10, padding: '10px 15px', backgroundColor: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '8px', marginBottom: '15px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.3s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                {error}
+              </div>
+            )}
             <div className="form-group"><label className="form-label">Faculty ID</label><input className="form-input" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. P001" /></div>
             
             <div style={{ display: 'flex', gap: '15px' }}>

@@ -9,6 +9,7 @@ const RoomManagement = ({ rooms, onBack }) => {
   const [currentId, setCurrentId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterBuilding, setFilterBuilding] = useState('');
+  const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
     id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, building: ''
@@ -17,6 +18,7 @@ const RoomManagement = ({ rooms, onBack }) => {
   const handleOpenAdd = () => {
     setFormData({ id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, building: '' });
     setEditMode(false);
+    setError(null);
     setShowModal(true);
   };
 
@@ -30,12 +32,14 @@ const RoomManagement = ({ rooms, onBack }) => {
     });
     setCurrentId(room.id);
     setEditMode(true);
+    setError(null);
     setShowModal(true);
   };
 
   const handleSave = async () => {
+    setError(null);
     if (!formData.name.trim()) {
-      alert('Room name is required.');
+      setError('Room name is required.');
       return;
     }
     const duplicate = rooms.find(r => 
@@ -43,7 +47,7 @@ const RoomManagement = ({ rooms, onBack }) => {
       (editMode ? r.id !== currentId : true)
     );
     if (duplicate) {
-      alert('A room with this name already exists.');
+      setError(`A room named "${formData.name.trim()}" already exists.`);
       return;
     }
     const isCSBuilding = formData.name.trim().toLowerCase().includes('computer science') || formData.name.trim().toLowerCase().includes('bscs');
@@ -186,8 +190,15 @@ const RoomManagement = ({ rooms, onBack }) => {
 
       {showModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ width: '400px' }}>
+          <div className="modal-content" style={{ width: '450px' }}>
             <h3>{editMode ? 'Edit Room' : 'Add New Room'}</h3>
+            {error && (
+              <div style={{ position: 'sticky', top: '0', zIndex: 10, padding: '10px 15px', backgroundColor: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '8px', marginBottom: '15px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.3s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                {error}
+              </div>
+            )}
+            <div className="form-group"><label className="form-label">Room ID</label><input className="form-input" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. R001" /></div>
 
             <div className="form-group"><label className="form-label">Room Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Room 101" /></div>
 

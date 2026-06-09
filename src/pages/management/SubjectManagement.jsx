@@ -8,6 +8,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major'
   });
@@ -15,6 +16,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
   const handleOpenAdd = () => {
     setFormData({ id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major' });
     setEditMode(false);
+    setError(null);
     setShowModal(true);
   };
 
@@ -30,10 +32,25 @@ const SubjectManagement = ({ subjects, onBack }) => {
     setFormData(normalized);
     setCurrentId(subject.id);
     setEditMode(true);
+    setError(null);
     setShowModal(true);
   };
 
   const handleSave = async () => {
+    setError(null);
+    if (!formData.code || !formData.name) {
+      setError("Subject code and name are required.");
+      return;
+    }
+    
+    const normalize = str => (str || '').replace(/\s+/g, '').toUpperCase();
+    const isDuplicate = subjects.some(s => s.id !== currentId && normalize(s.code) === normalize(formData.code));
+    
+    if (isDuplicate) {
+      setError(`A subject with the code "${formData.code}" already exists.`);
+      return;
+    }
+
     if (editMode) {
       await updateDoc(doc(db, 'subjects', currentId.toString()), formData);
     } else {
@@ -198,6 +215,12 @@ const SubjectManagement = ({ subjects, onBack }) => {
         <div className="modal-overlay">
           <div className="modal-content" style={{ width: '450px' }}>
             <h3>{editMode ? 'Edit Subject' : 'Add New Subject'}</h3>
+            {error && (
+              <div style={{ position: 'sticky', top: '0', zIndex: 10, padding: '10px 15px', backgroundColor: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '8px', marginBottom: '15px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.3s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                {error}
+              </div>
+            )}
             <div className="form-group"><label className="form-label">Subject Code</label><input className="form-input" value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. CS101" /></div>
             <div className="form-group"><label className="form-label">Subject Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Intro to Programming" /></div>
 
