@@ -11,11 +11,11 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
   const [searchQuery, setSearchQuery] = useState('');
 
   const [formData, setFormData] = useState({
-    id: '', name: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: []
+    id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: []
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', name: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: [] });
+    setFormData({ id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: [] });
     setEditMode(false);
     setShowModal(true);
   };
@@ -43,8 +43,33 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
   };
 
   const handleOpenEdit = (prof) => {
+    let fName = prof.firstName || '';
+    let lName = prof.lastName || '';
+    
+    if (!fName && !lName && prof.name) {
+      if (prof.name.includes(',')) {
+        const parts = prof.name.split(',');
+        lName = parts[0].trim();
+        fName = parts.slice(1).join(',').trim();
+      } else {
+        const titles = ['Dr.', 'Prof.', 'Mr.', 'Mrs.', 'Ms.', 'Engr.', 'Atty.'];
+        let parts = prof.name.trim().split(/\s+/);
+        let title = '';
+        if (parts.length > 0 && titles.includes(parts[0])) title = parts.shift();
+        
+        if (parts.length >= 2) {
+          lName = parts.pop();
+          fName = (title ? title + ' ' : '') + parts.join(' ');
+        } else {
+          lName = prof.name;
+        }
+      }
+    }
+
     setFormData({
       ...prof,
+      firstName: fName,
+      lastName: lName,
       preferredRooms: prof.preferredRooms || [] // Ensure array exists
     });
     setCurrentId(prof.id);
@@ -53,11 +78,34 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
   };
 
   const handleSave = async () => {
+    const combinedName = `${(formData.lastName || '').trim()}, ${(formData.firstName || '').trim()}`;
+    
+    // Robust duplicate check: normalize by removing titles, spaces, and punctuation
+    const normalizeName = (name) => {
+      if (!name) return '';
+      let clean = name.replace(/Dr\.|Prof\.|Mr\.|Mrs\.|Ms\.|Engr\.|Atty\./gi, '');
+      return clean.replace(/[^a-z]/gi, '').toLowerCase();
+    };
+
+    const newNameNormalized = normalizeName(formData.firstName + formData.lastName);
+
+    const isDuplicate = professors.some(p => 
+      p.id !== currentId && 
+      normalizeName(p.name) === newNameNormalized
+    );
+
+    if (isDuplicate) {
+      alert(`A faculty member named "${combinedName}" already exists!`);
+      return;
+    }
+
+    const dataToSave = { ...formData, name: combinedName };
+
     if (editMode) {
-      await updateDoc(doc(db, 'professors', currentId.toString()), formData);
+      await updateDoc(doc(db, 'professors', currentId.toString()), dataToSave);
     } else {
       const newId = formData.id || `P${Date.now().toString().slice(-4)}`;
-      await addDoc(collection(db, 'professors'), { ...formData, id: newId });
+      await addDoc(collection(db, 'professors'), { ...dataToSave, id: newId });
     }
     setShowModal(false);
   };
@@ -189,7 +237,17 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
             <h3>{editMode ? 'Edit Faculty' : 'Add New Faculty'}</h3>
 
             <div className="form-group"><label className="form-label">Faculty ID</label><input className="form-input" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. P001" /></div>
-            <div className="form-group"><label className="form-label">Full Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Smith, Dr. John" /></div>
+            
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">First Name</label>
+                <input className="form-input" value={formData.firstName || ''} onChange={e => setFormData({ ...formData, firstName: e.target.value })} placeholder="e.g. Dr. John" />
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Last Name (Surname)</label>
+                <input className="form-input" value={formData.lastName || ''} onChange={e => setFormData({ ...formData, lastName: e.target.value })} placeholder="e.g. Smith" />
+              </div>
+            </div>
 
             <div style={{ display: 'flex', gap: '15px' }}>
               <div className="form-group" style={{ flex: 1 }}>
