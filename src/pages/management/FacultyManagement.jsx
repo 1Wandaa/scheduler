@@ -9,6 +9,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [currentId, setCurrentId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
   const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
     setFormData({ id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: [] });
     setEditMode(false);
     setError(null);
+    setSubjectSearchQuery('');
     setShowModal(true);
   };
 
@@ -77,6 +79,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
     setCurrentId(prof.id);
     setEditMode(true);
     setError(null);
+    setSubjectSearchQuery('');
     setShowModal(true);
   };
 
@@ -289,9 +292,22 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
 
             <div className="form-group">
               <label className="form-label">Assigned Subjects</label>
-              <div style={{ marginTop: '8px', maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="Search subject code or name..." 
+                value={subjectSearchQuery} 
+                onChange={(e) => setSubjectSearchQuery(e.target.value)}
+                style={{ marginBottom: '10px', marginTop: '5px' }}
+              />
+              <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
                 {subjects.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No subjects available.</p>}
-                {[...subjects].sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' })).map(sub => (
+                {[...subjects]
+                  .filter(sub => 
+                    (sub.code || '').toLowerCase().includes(subjectSearchQuery.toLowerCase()) || 
+                    (sub.name || '').toLowerCase().includes(subjectSearchQuery.toLowerCase())
+                  )
+                  .sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' })).map(sub => (
                   <label key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
                     <input
                       type="checkbox"
