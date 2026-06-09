@@ -27,10 +27,21 @@ function RoomUtilization({ rooms, schedules }) {
                         onChange={(e) => setSelectedRoomId(e.target.value)}
                         style={{ minWidth: '180px', borderColor: 'var(--accent-primary)', backgroundColor: 'var(--success-bg)' }}
                     >
-                        {rooms.map(room => (
-                            <option key={room.id} value={room.id}>
-                                {room.id} - {room.name}
-                            </option>
+                        {Object.entries(rooms.reduce((acc, r) => {
+                            const b = r.building || 'Other';
+                            if (!acc[b]) acc[b] = [];
+                            acc[b].push(r);
+                            return acc;
+                        }, {}))
+                        .sort(([bA], [bB]) => bA.localeCompare(bB))
+                        .map(([building, bRooms]) => (
+                            <optgroup key={building} label={building}>
+                                {bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => (
+                                    <option key={room.id} value={room.id}>
+                                        {room.name}
+                                    </option>
+                                ))}
+                            </optgroup>
                         ))}
                     </select>
                 </div>

@@ -140,10 +140,21 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             required
           >
             <option value="">Select a room</option>
-            {rooms.map(room => (
-              <option key={room.id} value={room.id}>
-                {room.name}{room.hasComputers ? ' (Lab)' : ''}
-              </option>
+            {Object.entries(rooms.reduce((acc, r) => {
+              const b = r.building || 'Other';
+              if (!acc[b]) acc[b] = [];
+              acc[b].push(r);
+              return acc;
+            }, {}))
+            .sort(([bA], [bB]) => bA.localeCompare(bB))
+            .map(([building, bRooms]) => (
+              <optgroup key={building} label={building}>
+                {bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => (
+                  <option key={room.id} value={room.id}>
+                    {room.name}{room.hasComputers ? ' (Lab)' : ''}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>

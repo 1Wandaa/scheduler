@@ -19,3 +19,4 @@ export const TIME_SLOTS = [
 
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 export const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
+export const BUILDINGS = ['BSOA Building', 'BAEL Building', 'BSFT Building', 'BSCS Building'];

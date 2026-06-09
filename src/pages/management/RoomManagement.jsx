@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc, deleteField } from 'firebase/firestore';
-import { ROOM_TYPES } from '../../config/constants';
+import { ROOM_TYPES, BUILDINGS } from '../../config/constants';
 
 const RoomManagement = ({ rooms, onBack }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterBuilding, setFilterBuilding] = useState('');
 
   const [formData, setFormData] = useState({
-    id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false
+    id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, building: ''
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false });
+    setFormData({ id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, building: '' });
     setEditMode(false);
     setShowModal(true);
   };
@@ -24,6 +26,7 @@ const RoomManagement = ({ rooms, onBack }) => {
       name: room.name || '',
       type: room.type || ROOM_TYPES.LECTURE,
       hasComputers: !!room.hasComputers,
+      building: room.building || '',
     });
     setCurrentId(room.id);
     setEditMode(true);
@@ -31,11 +34,24 @@ const RoomManagement = ({ rooms, onBack }) => {
   };
 
   const handleSave = async () => {
-    const isCSBuilding = formData.name.toLowerCase().includes('computer science') || formData.name.toLowerCase().includes('bscs');
+    if (!formData.name.trim()) {
+      alert('Room name is required.');
+      return;
+    }
+    const duplicate = rooms.find(r => 
+      r.name.toLowerCase() === formData.name.trim().toLowerCase() && 
+      (editMode ? r.id !== currentId : true)
+    );
+    if (duplicate) {
+      alert('A room with this name already exists.');
+      return;
+    }
+    const isCSBuilding = formData.name.trim().toLowerCase().includes('computer science') || formData.name.trim().toLowerCase().includes('bscs');
     const payload = {
       name: formData.name,
       type: formData.type,
       hasComputers: isCSBuilding ? true : formData.hasComputers,
+      building: formData.building || 'Unassigned',
     };
     if (editMode) {
       // Replaced the deleteField workaround with a pure payload update
@@ -126,12 +142,37 @@ const RoomManagement = ({ rooms, onBack }) => {
         <button className="btn" onClick={handleOpenAdd}>+ Add Room</button>
       </div>
 
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+        <input 
+          type="text" 
+          className="form-input" 
+          placeholder="Search room name..." 
+          value={searchQuery} 
+          onChange={(e) => setSearchQuery(e.target.value)} 
+          style={{ flex: 1, maxWidth: '300px' }}
+        />
+        <select 
+          className="form-select" 
+          value={filterBuilding} 
+          onChange={(e) => setFilterBuilding(e.target.value)}
+          style={{ flex: 1, maxWidth: '250px' }}
+        >
+          <option value="">All Buildings</option>
+          {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
+        </select>
+      </div>
+
       <table className="data-table">
-        <thead><tr><th>Name</th><th>Type & Facilities</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Name</th><th>Building</th><th>Type & Facilities</th><th>Actions</th></tr></thead>
         <tbody>
-          {rooms.map(r => (
+          {rooms.filter(r => {
+            const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesBuilding = filterBuilding ? r.building === filterBuilding : true;
+            return matchesSearch && matchesBuilding;
+          }).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => (
             <tr key={r.id}>
               <td><strong style={{ color: 'var(--text-main)' }}>{r.name}</strong></td>
+              <td>{r.building || 'Unassigned'}</td>
               <td>{getRoomTypeBadge(r)}</td>
               <td style={{ whiteSpace: 'nowrap' }}>
                 <button className="btn-edit" onClick={() => handleOpenEdit(r)}>Edit</button>
@@ -149,6 +190,13 @@ const RoomManagement = ({ rooms, onBack }) => {
             <h3>{editMode ? 'Edit Room' : 'Add New Room'}</h3>
 
             <div className="form-group"><label className="form-label">Room Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Room 101" /></div>
+
+            <div className="form-group"><label className="form-label">Building</label>
+              <select className="form-select" value={formData.building} onChange={e => setFormData({ ...formData, building: e.target.value })}>
+                <option value="">Select a Building</option>
+                {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
 
             <div className="form-group"><label className="form-label">Room Type</label>
               <select className="form-select" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>

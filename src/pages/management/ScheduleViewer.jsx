@@ -243,7 +243,18 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                         style={{ width: '100%', borderColor: 'var(--accent-primary)', backgroundColor: 'var(--success-bg)' }}
                     >
                         {viewType === 'department' && DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                        {viewType === 'room' && rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                        {viewType === 'room' && Object.entries(rooms.reduce((acc, r) => {
+                            const b = r.building || 'Other';
+                            if (!acc[b]) acc[b] = [];
+                            acc[b].push(r);
+                            return acc;
+                        }, {}))
+                        .sort(([bA], [bB]) => bA.localeCompare(bB))
+                        .map(([building, bRooms]) => (
+                            <optgroup key={building} label={building}>
+                                {bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                            </optgroup>
+                        ))}
                         {viewType === 'faculty' && professors.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                 </div>
