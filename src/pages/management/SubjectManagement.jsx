@@ -7,6 +7,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
     id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major'
   });
@@ -72,8 +73,12 @@ const SubjectManagement = ({ subjects, onBack }) => {
   };
 
   // Split subjects into categories
-  const minorSubjects = subjects.filter(s => s.category === 'Minor');
-  const majorSubjects = subjects.filter(s => s.category !== 'Minor'); // Default to major
+  const filteredSubjects = subjects.filter(s => 
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    s.code.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const minorSubjects = filteredSubjects.filter(s => s.category === 'Minor');
+  const majorSubjects = filteredSubjects.filter(s => s.category !== 'Minor'); // Default to major
 
   // Helper to render a formatted table
   const renderSubjectTable = (subjectList, title, titleColor = 'var(--accent-primary)') => {
@@ -151,6 +156,18 @@ const SubjectManagement = ({ subjects, onBack }) => {
             </div>
           </div>
           <button className="btn" onClick={handleOpenAdd}>+ Add Subject</button>
+        </div>
+
+        {/* Search Bar */}
+        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <input 
+            type="text" 
+            className="form-input" 
+            placeholder="Search subject code or name..." 
+            value={searchQuery} 
+            onChange={(e) => setSearchQuery(e.target.value)} 
+            style={{ flex: 1, maxWidth: '300px' }}
+          />
         </div>
 
         {/* --- DYNAMIC TABLES INSTEAD OF ONE BIG TABLE --- */}

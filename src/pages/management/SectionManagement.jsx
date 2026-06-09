@@ -20,6 +20,7 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
     id: '', name: '', program: '', yearLevel: 1, studentCount: 35, subjects: []
   });
@@ -160,9 +161,22 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
           <button className="btn" onClick={handleOpenAdd}>+ Add Section</button>
         </div>
 
+        {/* Search Bar */}
+        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <input 
+            type="text" 
+            className="form-input" 
+            placeholder="Search section name or program..." 
+            value={searchQuery} 
+            onChange={(e) => setSearchQuery(e.target.value)} 
+            style={{ flex: 1, maxWidth: '300px' }}
+          />
+        </div>
+
         {/* Render sections grouped by their Department */}
         {DEPARTMENTS.map(dept => {
           const deptSections = sections
+            .filter(sec => sec.name.toLowerCase().includes(searchQuery.toLowerCase()) || sec.program.toLowerCase().includes(searchQuery.toLowerCase()))
             .filter(sec => sec.program === dept || PROGRAM_DEPARTMENTS[sec.program] === dept)
             .sort((a, b) => {
               if (a.yearLevel !== b.yearLevel) return a.yearLevel - b.yearLevel;
@@ -174,6 +188,7 @@ const SectionManagement = ({ sections, subjects, onBack }) => {
         {/* Render any sections that do not match the standard program list */}
         {renderSectionTable(
           sections
+            .filter(sec => sec.name.toLowerCase().includes(searchQuery.toLowerCase()) || sec.program.toLowerCase().includes(searchQuery.toLowerCase()))
             .filter(sec => !DEPARTMENTS.includes(sec.program) && !DEPARTMENTS.includes(PROGRAM_DEPARTMENTS[sec.program]))
             .sort((a, b) => {
               if (a.yearLevel !== b.yearLevel) return a.yearLevel - b.yearLevel;

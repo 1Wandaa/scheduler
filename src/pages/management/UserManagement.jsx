@@ -15,6 +15,7 @@ const UserManagement = ({ onBack }) => {
   const [users, setUsers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', name: '', role: 'Student' });
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const initializeUsers = async () => {
@@ -107,6 +108,18 @@ const UserManagement = ({ onBack }) => {
         <button className="btn" onClick={() => setShowModal(true)}>+ Add User</button>
       </div>
 
+      {/* Search Bar */}
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+        <input 
+          type="text" 
+          className="form-input" 
+          placeholder="Search user by name, username or role..." 
+          value={searchQuery} 
+          onChange={(e) => setSearchQuery(e.target.value)} 
+          style={{ flex: 1, maxWidth: '300px' }}
+        />
+      </div>
+
       {/* --- DATA TABLE --- */}
       <table className="data-table">
         <thead>
@@ -118,7 +131,11 @@ const UserManagement = ({ onBack }) => {
           </tr>
         </thead>
         <tbody>
-          {users.map(u => (
+          {users.filter(u => 
+            u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.role.toLowerCase().includes(searchQuery.toLowerCase())
+          ).map(u => (
             <tr key={u.id}>
               <td style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>{u.username}</td>
               <td style={{ fontWeight: '500' }}>{u.name}</td>

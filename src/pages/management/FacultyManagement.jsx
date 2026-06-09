@@ -8,6 +8,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
   const [editMode, setEditMode] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [currentId, setCurrentId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [formData, setFormData] = useState({
     id: '', name: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: []
@@ -95,37 +96,49 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
           <button className="btn" onClick={handleOpenAdd}>+ Add Faculty</button>
         </div>
 
-        {/* Department Filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by Department:</span>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {['All', ...DEPARTMENTS].map(dept => (
-              <button
-                key={dept}
-                onClick={() => setDepartmentFilter(dept)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  border: departmentFilter === dept ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                  background: departmentFilter === dept ? 'var(--accent-primary)' : 'transparent',
-                  color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontSize: '0.82rem',
-                  fontWeight: '600',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--accent-primary)'; e.target.style.color = 'var(--accent-primary)'; } }}
-                onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
-              >
-                {dept === 'All' ? 'All Departments' : dept}
-              </button>
-            ))}
+        {/* Department Filter and Search */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by Department:</span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {['All', ...DEPARTMENTS].map(dept => (
+                <button
+                  key={dept}
+                  onClick={() => setDepartmentFilter(dept)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: departmentFilter === dept ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                    background: departmentFilter === dept ? 'var(--accent-primary)' : 'transparent',
+                    color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '0.82rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--accent-primary)'; e.target.style.color = 'var(--accent-primary)'; } }}
+                  onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
+                >
+                  {dept === 'All' ? 'All Departments' : dept}
+                </button>
+              ))}
+            </div>
+            {departmentFilter !== 'All' && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: '500' }}>
+                Showing {professors.filter(p => p.department === departmentFilter).length} of {professors.length} faculty
+              </span>
+            )}
           </div>
-          {departmentFilter !== 'All' && (
-            <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: '500' }}>
-              Showing {professors.filter(p => p.department === departmentFilter).length} of {professors.length} faculty
-            </span>
-          )}
+          <div style={{ display: 'flex' }}>
+            <input 
+              type="text" 
+              className="form-input" 
+              placeholder="Search faculty name..." 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              style={{ flex: 1, maxWidth: '300px' }}
+            />
+          </div>
         </div>
 
         <table className="data-table">
@@ -133,6 +146,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
           <tbody>
             {professors
               .filter(p => departmentFilter === 'All' || p.department === departmentFilter)
+              .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
               .sort((a, b) => a.name.localeCompare(b.name)) // <-- Added sorting here
               .map(p => (
                 <tr key={p.id}>
