@@ -86,7 +86,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             required
           >
             <option value="">Select a subject</option>
-            {subjects.map(subject => (
+            {[...subjects].sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' })).map(subject => (
               <option key={subject.id} value={subject.id}>
                 {subject.code} - {subject.name}
               </option>

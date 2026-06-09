@@ -145,12 +145,26 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
           <thead><tr><th>Name</th><th>Department</th><th>Max Load</th><th>Subjects</th><th>Rooms</th><th>Actions</th></tr></thead>
           <tbody>
             {professors
+              .map(p => ({
+                ...p,
+                formattedName: (() => {
+                  if (!p.name) return '';
+                  if (p.name.includes(',')) return p.name;
+                  const titles = ['Dr.', 'Prof.', 'Mr.', 'Mrs.', 'Ms.', 'Engr.', 'Atty.'];
+                  let parts = p.name.trim().split(/\s+/);
+                  let title = '';
+                  if (parts.length > 0 && titles.includes(parts[0])) title = parts.shift();
+                  if (parts.length < 2) return p.name;
+                  const surname = parts.pop();
+                  return `${surname}, ${title ? title + ' ' : ''}${parts.join(' ')}`.trim();
+                })()
+              }))
               .filter(p => departmentFilter === 'All' || p.department === departmentFilter)
-              .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
-              .sort((a, b) => a.name.localeCompare(b.name)) // <-- Added sorting here
+              .filter(p => p.formattedName.toLowerCase().includes(searchQuery.toLowerCase()) || p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+              .sort((a, b) => a.formattedName.localeCompare(b.formattedName))
               .map(p => (
                 <tr key={p.id}>
-                  <td><strong style={{ color: 'var(--text-main)' }}>{p.name}</strong></td>
+                  <td><strong style={{ color: 'var(--text-main)' }}>{p.formattedName}</strong></td>
                   <td>{p.department}</td>
                   <td><span style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>{p.maxUnits || p.maxHours || 12} units</span></td>
                   <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -175,7 +189,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
             <h3>{editMode ? 'Edit Faculty' : 'Add New Faculty'}</h3>
 
             <div className="form-group"><label className="form-label">Faculty ID</label><input className="form-input" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. P001" /></div>
-            <div className="form-group"><label className="form-label">Full Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Dr. John Smith" /></div>
+            <div className="form-group"><label className="form-label">Full Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Smith, Dr. John" /></div>
 
             <div style={{ display: 'flex', gap: '15px' }}>
               <div className="form-group" style={{ flex: 1 }}>
@@ -196,7 +210,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
               <label className="form-label">Assigned Subjects</label>
               <div style={{ marginTop: '8px', maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
                 {subjects.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No subjects available.</p>}
-                {subjects.map(sub => (
+                {[...subjects].sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' })).map(sub => (
                   <label key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
                     <input
                       type="checkbox"

@@ -74,9 +74,13 @@ const SubjectManagement = ({ subjects, onBack }) => {
 
   // Split subjects into categories
   const filteredSubjects = subjects.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    s.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (s.code || '').toLowerCase().includes(searchQuery.toLowerCase())
+  ).sort((a, b) => {
+    const codeA = (a.code || '').replace(/\s+/g, '').toUpperCase();
+    const codeB = (b.code || '').replace(/\s+/g, '').toUpperCase();
+    return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+  });
   const minorSubjects = filteredSubjects.filter(s => s.category === 'Minor');
   const majorSubjects = filteredSubjects.filter(s => s.category !== 'Minor'); // Default to major
 
