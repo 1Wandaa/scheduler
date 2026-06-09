@@ -130,6 +130,15 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
     }
   };
 
+  const getDeptColor = (dept) => {
+    switch(dept) {
+      case 'BSCS': return '#109EEF'; // Blue
+      case 'BAEL': return '#EAB308'; // Yellow
+      case 'BSOA': return '#8B5CF6'; // Purple
+      case 'BSFT': return '#16A34A'; // Green
+      default: return 'var(--accent-primary)';
+    }
+  };
 
   return (
     <>
@@ -144,10 +153,10 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
             )}
             <div>
               <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                Faculty Database
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                Faculty Management
               </h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Manage instructor details, teaching load, and room preferences</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Manage instructors, their departments, and constraints</p>
             </div>
           </div>
           <button className="btn" onClick={handleOpenAdd}>+ Add Faculty</button>
@@ -165,15 +174,15 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
                   style={{
                     padding: '6px 14px',
                     borderRadius: '20px',
-                    border: departmentFilter === dept ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                    background: departmentFilter === dept ? 'var(--accent-primary)' : 'transparent',
+                    border: departmentFilter === dept ? `1.5px solid ${getDeptColor(dept)}` : '1px solid var(--border-color)',
+                    background: departmentFilter === dept ? getDeptColor(dept) : 'transparent',
                     color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
                     cursor: 'pointer',
                     fontSize: '0.82rem',
                     fontWeight: '600',
                     transition: 'all 0.2s ease',
                   }}
-                  onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--accent-primary)'; e.target.style.color = 'var(--accent-primary)'; } }}
+                  onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = getDeptColor(dept); e.target.style.color = getDeptColor(dept); } }}
                   onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
                 >
                   {dept === 'All' ? 'All Departments' : dept}
