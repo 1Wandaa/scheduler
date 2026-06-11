@@ -174,6 +174,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
       case 'BSOA': return '#8B5CF6'; // Purple
       case 'BSFT': return '#16A34A'; // Green
       case 'SHARED': return '#64748B'; // Slate
+      case 'Minor': return '#F5A623'; // Orange
       default: return 'var(--accent-primary)';
     }
   };
@@ -203,9 +204,9 @@ const SubjectManagement = ({ subjects, onBack }) => {
         {/* Department Filter and Search Bar */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by Department:</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by:</span>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {['All', ...DEPARTMENTS].map(dept => (
+              {['All', 'Minor', ...DEPARTMENTS].map(dept => (
                 <button
                   key={dept}
                   onClick={() => setDepartmentFilter(dept)}
@@ -223,7 +224,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
                   onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = getDeptColor(dept); e.target.style.color = getDeptColor(dept); } }}
                   onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
                 >
-                  {dept === 'All' ? 'All Departments' : dept}
+                  {dept === 'All' ? 'All Subjects' : dept === 'Minor' ? 'Minor Subjects' : dept}
                 </button>
               ))}
             </div>
@@ -243,7 +244,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
         {/* --- DYNAMIC TABLES INSTEAD OF ONE BIG TABLE --- */}
 
         {/* Render Minor Subjects First */}
-        {(departmentFilter === 'All') && renderSubjectTable(minorSubjects, "Minor / General Education Subjects", "var(--warning)")}
+        {(departmentFilter === 'All' || departmentFilter === 'Minor') && renderSubjectTable(minorSubjects, "Minor / General Education Subjects", "var(--warning)")}
 
         {/* Render Major Subjects grouped by Department */}
         {DEPARTMENTS.map(dept => {
