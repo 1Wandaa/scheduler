@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc, deleteField } from 'firebase/firestore';
-import { ROOM_TYPES, BUILDINGS } from '../../config/constants';
+import { ROOM_TYPES, BUILDINGS, DEPARTMENTS } from '../../config/constants';
 
 const RoomManagement = ({ rooms, onBack }) => {
   const [showModal, setShowModal] = useState(false);
@@ -12,11 +12,11 @@ const RoomManagement = ({ rooms, onBack }) => {
   const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
-    id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, building: ''
+    id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, building: '', department: 'SHARED'
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, building: '' });
+    setFormData({ id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, building: '', department: 'SHARED' });
     setEditMode(false);
     setError(null);
     setShowModal(true);
@@ -29,6 +29,7 @@ const RoomManagement = ({ rooms, onBack }) => {
       type: room.type || ROOM_TYPES.LECTURE,
       hasComputers: !!room.hasComputers,
       building: room.building || '',
+      department: room.department || 'SHARED',
     });
     setCurrentId(room.id);
     setEditMode(true);
@@ -56,6 +57,7 @@ const RoomManagement = ({ rooms, onBack }) => {
       type: formData.type,
       hasComputers: isCSBuilding ? true : formData.hasComputers,
       building: formData.building || 'Unassigned',
+      department: formData.department || 'SHARED',
     };
     if (editMode) {
       // Replaced the deleteField workaround with a pure payload update
@@ -176,7 +178,7 @@ const RoomManagement = ({ rooms, onBack }) => {
       </div>
 
       <table className="data-table">
-        <thead><tr><th>Name</th><th>Building</th><th>Type & Facilities</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Name</th><th>Dept Owner</th><th>Building</th><th>Type & Facilities</th><th>Actions</th></tr></thead>
         <tbody>
           {rooms.filter(r => {
             const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -185,6 +187,16 @@ const RoomManagement = ({ rooms, onBack }) => {
           }).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => (
             <tr key={r.id}>
               <td><strong style={{ color: 'var(--text-main)' }}>{r.name}</strong></td>
+              <td>
+                <span style={{
+                  fontSize: '0.75rem', padding: '3px 10px', borderRadius: 6, fontWeight: 700,
+                  background: (r.department && r.department !== 'SHARED')
+                    ? 'linear-gradient(135deg, #EEF2FF, #E0E7FF)' : '#F1F5F9',
+                  color: (r.department && r.department !== 'SHARED') ? '#4338ca' : '#64748b',
+                }}>
+                  {r.department || 'SHARED'}
+                </span>
+              </td>
               <td>{r.building || 'Unassigned'}</td>
               <td>{getRoomTypeBadge(r)}</td>
               <td style={{ whiteSpace: 'nowrap' }}>
@@ -216,6 +228,14 @@ const RoomManagement = ({ rooms, onBack }) => {
                 <option value="">Select a Building</option>
                 {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
+            </div>
+
+            <div className="form-group"><label className="form-label">Department Owner</label>
+              <select className="form-select" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
+                <option value="SHARED">SHARED (Any department)</option>
+                {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>Priority scheduling for this department's sections. SHARED = available to all.</span>
             </div>
 
             <div className="form-group"><label className="form-label">Room Type</label>

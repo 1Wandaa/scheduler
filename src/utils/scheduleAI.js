@@ -4,7 +4,7 @@
  * Uses Firebase AI Logic (Gemini 2.5 Flash) already configured in the project
  * to improve scheduling accuracy through:
  *   1. Smart professor-subject matching (pre-processing)
- *   2. Intelligent failure analysis (post-processing)
+ *   2. Intelligent failure analysis with concrete prescriptions (post-processing)
  */
 
 import { generativeModel } from '../config/firebase';
@@ -109,14 +109,15 @@ ${subSummary}`;
 
 /**
  * Ask Gemini to analyze why certain subjects could not be scheduled,
- * and produce actionable recommendations for the user.
+ * and produce actionable prescriptions with CONCRETE suggestions
+ * (specific rooms, times, professors from the actual available data).
  *
  * @param {Array} unscheduled - [{ subject, section, reason, professor?, room? }]
  * @param {Array} professors  - Full professor list
  * @param {Array} rooms       - Full room list
  * @param {Array} sections    - Full section list
  * @param {Array} scheduled   - Successfully scheduled items for context
- * @returns {Array|null} Array of { subject, section, problem, solutions: string[] }, or null
+ * @returns {Array|null} Array of prescription objects, or null
  */
 export async function analyzeScheduleFailures(unscheduled, professors, rooms, sections, scheduled = []) {
   if (!unscheduled?.length) return null;
@@ -132,7 +133,7 @@ export async function analyzeScheduleFailures(unscheduled, professors, rooms, se
       return `${i + 1}. ${sub} for ${sec} — reason: "${reason}" (prof: ${prof}, room: ${room})`;
     }).join('\n');
 
-    // Resource summary
+    // Resource summary — professor workload
     const profLoad = {};
     for (const s of (scheduled || [])) {
       if (s.professor?.id) {
@@ -144,13 +145,33 @@ export async function analyzeScheduleFailures(unscheduled, professors, rooms, se
     const profContext = professors.map(p => {
       const max = Number(p.maxUnits) || Number(p.maxHours) || 12;
       const used = Math.round((profLoad[p.id] || 0) * 10) / 10;
+      const remaining = Math.round((max - used) * 10) / 10;
       const specs = (p.specialization || []).length;
-      return `- ${p.name} [${p.id}]: ${used}/${max} units used, ${specs} subjects assigned`;
+      return `- ${p.name} [${p.id}]: ${used}/${max} units (${remaining} remaining), dept:${p.department || '?'}, ${specs} subjects assigned`;
     }).join('\n');
 
-    const roomContext = `${rooms.length} rooms total (${rooms.filter(r => r.hasComputers).length} computer labs)`;
+    // Room availability — compute idle slots per room
+    const roomSlotUsage = {};
+    const totalSlots = 5 * 9; // 5 days × 9 time slots
+    for (const r of rooms) roomSlotUsage[r.id] = 0;
+    for (const s of (scheduled || [])) {
+      if (s.room?.id) roomSlotUsage[s.room.id] = (roomSlotUsage[s.room.id] || 0) + 1;
+    }
 
-    const prompt = `You are a university scheduling assistant. The auto-scheduler failed to place certain classes. Analyze each failure and provide specific, actionable solutions.
+    const roomContext = rooms.map(r => {
+      const used = roomSlotUsage[r.id] || 0;
+      const free = totalSlots - used;
+      return `- ${r.name} [${r.id}]: dept:${r.department || 'SHARED'}, lab:${r.hasComputers ? 'yes' : 'no'}, ${used}/${totalSlots} slots used (${free} free)`;
+    }).join('\n');
+
+    const prompt = `You are a university scheduling assistant. The auto-scheduler failed to place certain classes. Analyze each failure and provide CONCRETE prescriptions — specific rooms, times, and professors that could work.
+
+CRITICAL RULES:
+1. Every failed class MUST get at least one actionable prescription. No class should be left without a solution.
+2. Prescriptions should reference REAL room names, professor names, and time slots from the data below.
+3. If the original room/professor is unavailable, suggest overflow alternatives from OTHER departments.
+4. If professor workload is the issue, suggest increasing their max units or reassigning to a less-loaded professor.
+5. Prefer rooms with more free slots. Prefer professors with more remaining capacity.
 
 FAILED CLASSES:
 ${failureText}
@@ -158,17 +179,18 @@ ${failureText}
 PROFESSOR WORKLOADS:
 ${profContext}
 
-ROOMS: ${roomContext}
+ROOM AVAILABILITY:
+${roomContext}
 
-For each failed class, provide:
-1. A clear explanation of the root cause
-2. 1-3 specific actions the administrator can take to resolve it`;
+TIME SLOTS: 7:30-8:30, 8:30-9:30, 9:30-10:30, 10:30-11:30, 11:30-12:00, 1:00-2:00, 2:00-3:00, 3:00-4:00, 4:00-5:00
+
+For each failed class, provide a specific prescription with suggested room, day, time, and professor.`;
 
     const result = await generativeModel.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 3072,
         responseMimeType: 'application/json',
         responseSchema: {
           type: SchemaType.ARRAY,
@@ -178,7 +200,11 @@ For each failed class, provide:
               subject: { type: SchemaType.STRING },
               section: { type: SchemaType.STRING },
               problem: { type: SchemaType.STRING },
-              solutions: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
+              solutions: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+              suggestedRoom: { type: SchemaType.STRING },
+              suggestedDay: { type: SchemaType.STRING },
+              suggestedTime: { type: SchemaType.STRING },
+              suggestedProfessor: { type: SchemaType.STRING },
             },
             required: ["subject", "section", "problem", "solutions"]
           }
@@ -190,12 +216,12 @@ For each failed class, provide:
     const parsed = JSON.parse(responseText);
 
     if (Array.isArray(parsed) && parsed.length > 0) {
-      console.log('[AI] Failure analysis complete:', parsed.length, 'insights generated');
+      console.log('[AI] Prescription analysis complete:', parsed.length, 'prescriptions generated');
       return parsed;
     }
     return null;
   } catch (error) {
-    console.warn('[AI] Failure analysis failed:', error.message);
+    console.warn('[AI] Prescription analysis failed:', error.message);
     return null; // Non-critical — UI just won't show AI insights
   }
 }

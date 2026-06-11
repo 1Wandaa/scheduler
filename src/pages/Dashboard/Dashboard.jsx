@@ -382,13 +382,27 @@ const Dashboard = ({ user, onLogout }) => {
         if (labs.length > 0) pool = labs; 
       }
 
-      return [...pool].sort((a, b) => {
-        const aGym = isGym(a);
-        const bGym = isGym(b);
-        if (aGym && !bGym) return 1;
-        if (!aGym && bGym) return -1;
-        return 0;
-      });
+      // Tier rooms by department ownership
+      const sectionDept = (() => {
+        if (!section) return null;
+        const program = (section.program || '').toUpperCase();
+        for (const d of ['BSCS', 'BAEL', 'BSOA', 'BSFT']) { if (program.includes(d)) return d; }
+        const name = (section.name || '').toUpperCase();
+        for (const d of ['BSCS', 'BAEL', 'BSOA', 'BSFT']) { if (name.startsWith(d)) return d; }
+        return null;
+      })();
+
+      const tier1 = []; // Dept-owned rooms
+      const tier2 = []; // SHARED rooms
+      const tier3 = []; // Other dept rooms (overflow)
+      for (const r of pool) {
+        if (isGym(r) && !isPE) { tier3.push(r); continue; }
+        const roomDept = (r.department || 'SHARED').toUpperCase();
+        if (roomDept === 'SHARED') tier2.push(r);
+        else if (sectionDept && roomDept === sectionDept) tier1.push(r);
+        else tier3.push(r);
+      }
+      return [...tier1, ...tier2, ...tier3];
     },
     _eligibleProfsFor: (subject, constraints) => { 
       if (!subject) return []; 
