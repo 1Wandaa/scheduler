@@ -329,14 +329,15 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       </div>
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '8px' }}>
-        <button onClick={handleExecute} disabled={loading || clearing || (engineMode !== 'ga' && !targetId)} className="btn" style={{ flex: 1, padding: '14px', fontSize: '1rem' }}>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+        <button onClick={handleExecute} disabled={loading || clearing || (engineMode !== 'ga' && !targetId)} className="btn" style={{ flex: 1, padding: '14px', fontSize: '1rem', whiteSpace: 'nowrap', minWidth: '200px' }}>
           {loading ? 'Processing Schedule...' : 'Generate Timetable'}
         </button>
         <button
           onClick={handleClearAll}
           disabled={loading || clearing}
           style={{
+            flex: 1,
             padding: '14px 20px',
             fontSize: '0.9rem',
             fontWeight: 700,
