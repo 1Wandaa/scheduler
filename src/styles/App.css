@@ -214,7 +214,7 @@ html {
   margin: 0;
   padding: 0;
   font-family: 'Inter', Tahoma, Geneva, Verdana, sans-serif;
-  height: 100vh;
+  height: 100dvh;
   color: var(--text-main);
   /* Cache-bust so updated image shows immediately */
   background-image: url('/background2.jpg?v=1');
@@ -237,7 +237,7 @@ h6 {
 /* Dashboard Layout */
 .smartsched-container {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: linear-gradient(135deg, rgba(15,12,41,0.92) 0%, rgba(42,38,95,0.88) 50%, rgba(30,27,75,0.92) 100%);
 }
@@ -246,8 +246,8 @@ h6 {
 .sidebar {
   width: 260px;
   min-width: 260px;
-  height: 100vh;
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
   background: linear-gradient(180deg, #15133C 0%, #1a1750 50%, #15133C 100%);
   display: flex;
   flex-direction: column;
@@ -434,6 +434,7 @@ h6 {
   flex-grow: 1;
   padding: 24px 28px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: block;
   /* Custom scrollbar */
   scrollbar-width: thin;
@@ -944,7 +945,7 @@ h6 {
 .login-container {
   position: relative;
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
   background: linear-gradient(135deg, #0f0c29 0%, #1a1640 40%, #24243e 100%);
 }
@@ -1008,7 +1009,7 @@ h6 {
   z-index: 1;
   display: flex;
   width: 100%;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* =========================================
@@ -2033,7 +2034,7 @@ h6 {
     position: fixed;
     left: -250px;
     top: 0;
-    height: 100vh;
+    height: 100dvh;
     transition: left 0.3s ease;
     z-index: 1000;
   }
@@ -2044,7 +2045,8 @@ h6 {
   }
 
   .main-content {
-    overflow-y: visible;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .dashboard-master-grid,
