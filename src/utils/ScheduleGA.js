@@ -191,12 +191,9 @@ export class ScheduleGA {
     const tier3 = []; // Other department rooms (overflow)
 
     for (const r of pool) {
-      if (isGym(r) && !isPE) {
-        tier3.push(r); // Gym is last resort for non-PE
-        continue;
-      }
       const roomDept = (r.department || 'SHARED').toUpperCase();
-      if (roomDept === 'SHARED') {
+      const roomBldg = (r.building || 'Unassigned').toUpperCase();
+      if (roomDept === 'SHARED' || roomBldg === 'UNASSIGNED' || roomBldg === 'GENERAL BUILDING' || roomBldg === 'GYMNASIUM') {
         tier2.push(r);
       } else if (sectionDept && roomDept === sectionDept) {
         tier1.push(r);
@@ -366,9 +363,8 @@ export class ScheduleGA {
       } else if (isPE) {
         rooms = this._shuffle([...eligibleRooms]);
       } else {
-        const normal = this._shuffle(eligibleRooms.filter(r => !isGym(r)));
-        const gyms = this._shuffle(eligibleRooms.filter(isGym));
-        rooms = [...normal, ...gyms];
+        // Just shuffle eligible rooms (tier ordering handles priorities)
+        rooms = this._shuffle(eligibleRooms);
       }
 
       let profs = this._shuffle([...this._eligibleProfsFor(a, profWork)]);
@@ -837,8 +833,6 @@ export class ScheduleGA {
       if (isPE && !isGym) {
         hardScore -= 100; // PE must be in Gym
         hardViolations++;
-      } else if (!isPE && isGym) {
-        softScore -= 50; // Gym is last option for non-PE
       }
     }
 

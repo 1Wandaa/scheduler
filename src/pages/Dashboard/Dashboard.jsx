@@ -425,11 +425,15 @@ const Dashboard = ({ user, onLogout }) => {
       const tier2 = []; // SHARED rooms
       const tier3 = []; // Other dept rooms (overflow)
       for (const r of pool) {
-        if (isGym(r) && !isPE) { tier3.push(r); continue; }
         const roomDept = (r.department || 'SHARED').toUpperCase();
-        if (roomDept === 'SHARED') tier2.push(r);
-        else if (sectionDept && roomDept === sectionDept) tier1.push(r);
-        else tier3.push(r);
+        const roomBldg = (r.building || 'Unassigned').toUpperCase();
+        if (roomDept === 'SHARED' || roomBldg === 'UNASSIGNED' || roomBldg === 'GENERAL BUILDING' || roomBldg === 'GYMNASIUM') {
+          tier2.push(r);
+        } else if (sectionDept && roomDept === sectionDept) {
+          tier1.push(r);
+        } else {
+          tier3.push(r);
+        }
       }
       return [...tier1, ...tier2, ...tier3];
     },

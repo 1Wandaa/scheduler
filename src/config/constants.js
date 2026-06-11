@@ -38,4 +38,4 @@ export function getSlotDurationHours(timeSlotOrIndex) {
 
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 export const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
-export const BUILDINGS = ['BSOA Building', 'BAEL Building', 'BSFT Building', 'BSCS Building'];
+export const BUILDINGS = ['BSOA Building', 'BAEL Building', 'BSFT Building', 'BSCS Building', 'General Building', 'Gymnasium'];
