@@ -240,7 +240,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
               onChange={(e) => setTargetId(e.target.value)}
             >
               <option value="">Choose...</option>
-              {targetOptions?.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+              {targetOptions && [...targetOptions].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
             </select>
           </div>
         )}

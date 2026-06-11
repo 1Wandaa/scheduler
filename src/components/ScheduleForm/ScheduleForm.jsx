@@ -104,7 +104,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             required
           >
             <option value="">Select a section</option>
-            {sections && sections.map(sec => (
+            {sections && [...sections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(sec => (
               <option key={sec.id} value={sec.id}>
                 {sec.name}
               </option>
@@ -122,7 +122,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             required
           >
             <option value="">Select a professor</option>
-            {professors.map(professor => (
+            {[...professors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(professor => (
               <option key={professor.id} value={professor.id}>
                 {professor.name}
               </option>

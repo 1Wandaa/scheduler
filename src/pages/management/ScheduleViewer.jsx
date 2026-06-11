@@ -242,7 +242,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                         onChange={(e) => setSelectedId(e.target.value)}
                         style={{ width: '100%', borderColor: 'var(--accent-primary)', backgroundColor: 'var(--success-bg)' }}
                     >
-                        {viewType === 'department' && DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                        {viewType === 'department' && [...DEPARTMENTS].sort((a, b) => a.localeCompare(b)).map(d => <option key={d} value={d}>{d}</option>)}
                         {viewType === 'room' && Object.entries(rooms.reduce((acc, r) => {
                             const b = r.building || 'Other';
                             if (!acc[b]) acc[b] = [];
@@ -255,7 +255,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                                 {bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                             </optgroup>
                         ))}
-                        {viewType === 'faculty' && professors.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        {viewType === 'faculty' && [...professors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                 </div>
 
@@ -285,7 +285,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                             onChange={(e) => setDeptSectionId(e.target.value)}
                             style={{ width: '100%', borderColor: deptSectionId ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: deptSectionId ? 'var(--warning-bg)' : 'white' }}
                         >
-                            {deptSections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            {[...deptSections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
                 )}
