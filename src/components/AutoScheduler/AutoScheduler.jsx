@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScheduleGA } from '../../utils/ScheduleGA';
-import { suggestProfessorMatches, analyzeScheduleFailures } from '../../utils/scheduleAI';
+import { suggestProfessorMatches, analyzeScheduleFailures, validateScheduleSetup, generateScheduleQualityReport, suggestScheduleSwaps } from '../../utils/scheduleAI';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import '../../styles/AutoScheduler.css';
 
@@ -20,6 +20,11 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   const [aiAssisted, setAiAssisted] = useState(true);
   const [aiStatus, setAiStatus] = useState('');
   const [aiInsights, setAiInsights] = useState(null);
+  
+  // Phase 3 & 4 AI States
+  const [preFlightIssues, setPreFlightIssues] = useState(null);
+  const [qualityReport, setQualityReport] = useState(null);
+  const [swapSuggestions, setSwapSuggestions] = useState(null);
 
   // Run the Targeted Heuristic Engine (Greedy)
   const runTargeted = async () => {
@@ -53,6 +58,9 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     setLoading(true);
     setResult(null);
     setAiInsights(null);
+    setPreFlightIssues(null);
+    setQualityReport(null);
+    setSwapSuggestions(null);
     setAiStatus('');
     setProgress({ gen: 0, max: 100, fitness: null });
 
@@ -66,12 +74,25 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       // 2. Pass existing schedules if we are not clearing them
       const existingSchedules = clearBeforeRun ? [] : (schedules || []);
 
-      // --- AI Pre-Processing: Smart professor-subject matching ---
+      // --- AI Pre-Processing ---
       let aiProfessorMap = null;
       if (aiAssisted) {
         try {
-          setAiStatus('🧠 AI analyzing professor-subject compatibility...');
-          aiProfessorMap = await suggestProfessorMatches(professors, subjects, sections);
+          // Phase 3.1: Pre-flight check
+          setAiStatus('🔍 AI performing pre-flight checks...');
+          const setupCheck = await validateScheduleSetup(professors, subjects, sections, rooms);
+          if (setupCheck && (setupCheck.warnings.length > 0 || setupCheck.blockers.length > 0)) {
+            setPreFlightIssues(setupCheck);
+            if (setupCheck.blockers.length > 0) {
+              setLoading(false);
+              setAiStatus('❌ Critical issues found. Please fix blockers before scheduling.');
+              return; // Stop execution if there are blockers
+            }
+          }
+
+          // Phase 3.2: Smart Matching
+          setAiStatus('🧠 AI analyzing professor-subject compatibility & workload...');
+          aiProfessorMap = await suggestProfessorMatches(professors, subjects, sections, existingSchedules);
           if (aiProfessorMap) {
             setAiStatus('✅ AI matching complete — starting GA with optimized assignments');
           } else {
@@ -180,11 +201,27 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
             setAiStatus('');
           }
         } catch (aiError) {
-          console.warn('[AI] Post-processing failed:', aiError);
+          console.warn('[AI] Post-processing (failure analysis) failed:', aiError);
           setAiStatus('');
         }
       } else if (aiAssisted && unscheduledResults.length === 0) {
-        setAiStatus('✅ All classes scheduled successfully — no analysis needed');
+        // Phase 4: Generate Quality Report and Swap Suggestions
+        try {
+          setAiStatus('📝 AI generating schedule quality report...');
+          const report = await generateScheduleQualityReport(validResults, professors, rooms, sections);
+          if (report) {
+            setQualityReport(report);
+            setAiStatus('🔄 AI looking for optimization swaps...');
+            const swaps = await suggestScheduleSwaps(validResults, professors, rooms);
+            if (swaps) setSwapSuggestions(swaps);
+            setAiStatus('✅ Auto-scheduling and AI analysis complete');
+          } else {
+            setAiStatus('✅ All classes scheduled successfully');
+          }
+        } catch (aiError) {
+          console.warn('[AI] Post-processing (quality report) failed:', aiError);
+          setAiStatus('✅ All classes scheduled successfully');
+        }
       }
 
     } catch (error) {
@@ -297,6 +334,67 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           {result.error && (
             <div className="alert-danger" style={{ padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
               <strong>Engine Error:</strong> {result.error}
+            </div>
+          )}
+
+          {/* AI Pre-Flight Issues */}
+          {preFlightIssues && (preFlightIssues.warnings.length > 0 || preFlightIssues.blockers.length > 0) && (
+            <div style={{ marginTop: '20px', animation: 'fadeIn 0.5s' }}>
+              <h3 style={{ borderBottom: '2px solid var(--border-color)', paddingBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🛫 AI Pre-Flight Checks
+              </h3>
+              
+              {preFlightIssues.blockers.length > 0 && (
+                <div style={{ padding: '15px', background: 'var(--danger-bg)', borderLeft: '4px solid var(--danger)', borderRadius: '8px', marginBottom: '10px' }}>
+                  <h4 style={{ color: 'var(--danger)', margin: '0 0 10px 0' }}>Blockers (Must Fix)</h4>
+                  <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--danger)' }}>
+                    {preFlightIssues.blockers.map((b, i) => <li key={i}>{b}</li>)}
+                  </ul>
+                </div>
+              )}
+
+              {preFlightIssues.warnings.length > 0 && (
+                <div style={{ padding: '15px', background: 'var(--warning-bg)', borderLeft: '4px solid var(--warning)', borderRadius: '8px', marginBottom: '10px' }}>
+                  <h4 style={{ color: 'var(--warning)', margin: '0 0 10px 0' }}>Warnings</h4>
+                  <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--warning)' }}>
+                    {preFlightIssues.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* AI Quality Report */}
+          {qualityReport && (
+            <div style={{ marginTop: '20px', animation: 'fadeIn 0.5s' }}>
+              <h3 style={{ color: 'var(--accent-primary)', borderBottom: '2px solid var(--accent-primary)', paddingBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📊 AI Quality Report: Grade {qualityReport.grade}
+              </h3>
+              <div style={{ padding: '15px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                <p style={{ margin: '0 0 15px 0', fontWeight: 'bold' }}>{qualityReport.summary}</p>
+                <div style={{ display: 'grid', gap: '10px', fontSize: '0.9rem' }}>
+                  <div><strong>Workload:</strong> {qualityReport.details?.workload}</div>
+                  <div><strong>Room Consistency:</strong> {qualityReport.details?.roomConsistency}</div>
+                  <div><strong>Day Balance:</strong> {qualityReport.details?.dayBalance}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* AI Swap Suggestions */}
+          {swapSuggestions && swapSuggestions.length > 0 && (
+            <div style={{ marginTop: '20px', animation: 'fadeIn 0.5s' }}>
+              <h3 style={{ color: 'var(--success)', borderBottom: '2px solid var(--success)', paddingBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                💡 Optimization Suggestions
+              </h3>
+              <div style={{ display: 'grid', gap: '10px' }}>
+                {swapSuggestions.map((swap, idx) => (
+                  <div key={idx} style={{ padding: '12px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderLeft: '4px solid var(--success)', borderRadius: '8px' }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{swap.description} <span style={{ fontSize: '0.75rem', padding: '2px 6px', background: 'var(--success-bg)', color: 'var(--success)', borderRadius: '12px', marginLeft: '8px' }}>Impact: {swap.impact}</span></div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{swap.reason}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

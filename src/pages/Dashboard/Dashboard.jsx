@@ -1,9 +1,9 @@
 // src/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
-import { initialRooms, initialProfessors, initialSubjects, initialSections, SEED_VERSION } from '../../config/initialData';
+import { initialRooms, initialProfessors, initialSubjects, initialSections, initialSemesters, SEED_VERSION } from '../../config/initialData';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import { db } from '../../config/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, writeBatch, query, where } from 'firebase/firestore';
 
 import UserManagement from '../management/UserManagement';
 import ProfessorWorkload from '../../components/ProfessorWorkload/ProfessorWorkload';
@@ -241,6 +241,10 @@ const Dashboard = ({ user, onLogout }) => {
   const [subjects, setSubjects] = useState([]);
   const [sections, setSections] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  
+  // Phase 6: Semester Management
+  const [semesters, setSemesters] = useState([]);
+  const [currentSemesterId, setCurrentSemesterId] = useState('');
 
   const findScheduleConflicts = ({ roomId, professorId, sectionId, day, timeSlotId, excludeScheduleId = null }) => {
     const conflicts = { room: null, professor: null, section: null };
@@ -284,7 +288,7 @@ const Dashboard = ({ user, onLogout }) => {
       const versionDoc = await getDoc(doc(db, 'meta', 'seedVersion'));
       const storedVersion = versionDoc.exists() ? versionDoc.data().version : null;
       if (storedVersion !== SEED_VERSION) {
-        const collectionsToWipe = ['rooms', 'professors', 'subjects', 'sections', 'schedules'];
+        const collectionsToWipe = ['rooms', 'professors', 'subjects', 'sections', 'schedules', 'semesters'];
         for (const colName of collectionsToWipe) {
           const snap = await getDocs(collection(db, colName));
           if (!snap.empty) { const batch = writeBatch(db); snap.docs.forEach(d => batch.delete(d.ref)); await batch.commit(); }
@@ -294,6 +298,9 @@ const Dashboard = ({ user, onLogout }) => {
         initialProfessors.forEach(p => seedBatch.set(doc(db, 'professors', p.id.toString()), p));
         initialSubjects.forEach(s => seedBatch.set(doc(db, 'subjects', s.id.toString()), s));
         initialSections.forEach(sec => seedBatch.set(doc(db, 'sections', sec.id.toString()), sec));
+        if (typeof initialSemesters !== 'undefined') {
+          initialSemesters.forEach(sem => seedBatch.set(doc(db, 'semesters', sem.id.toString()), sem));
+        }
         await seedBatch.commit();
         await setDoc(doc(db, 'meta', 'seedVersion'), { version: SEED_VERSION });
       }
@@ -303,16 +310,42 @@ const Dashboard = ({ user, onLogout }) => {
     const unsubProfs = onSnapshot(collection(db, 'professors'), snap => setProfessors(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
     const unsubSubj = onSnapshot(collection(db, 'subjects'), snap => setSubjects(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
     const unsubSec = onSnapshot(collection(db, 'sections'), snap => setSections(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
-    const unsubSched = onSnapshot(collection(db, 'schedules'), snap => setSchedules(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
-    return () => { unsubRooms(); unsubProfs(); unsubSubj(); unsubSec(); unsubSched(); };
+    
+    // Listen to semesters
+    const unsubSemesters = onSnapshot(collection(db, 'semesters'), snap => {
+      const sems = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+      setSemesters(sems);
+      
+      // Auto-select active semester if none selected
+      setCurrentSemesterId(prev => {
+        if (prev) return prev;
+        const active = sems.find(s => s.isActive);
+        return active ? active.id : (sems.length > 0 ? sems[0].id : '');
+      });
+    });
+
+    return () => { unsubRooms(); unsubProfs(); unsubSubj(); unsubSec(); unsubSemesters(); };
   }, []);
+
+  // Fetch schedules based on selected semester
+  useEffect(() => {
+    if (!currentSemesterId) return;
+    
+    const q = query(collection(db, 'schedules'), where('semesterId', '==', currentSemesterId));
+    const unsubSched = onSnapshot(q, snap => setSchedules(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
+    
+    return () => unsubSched();
+  }, [currentSemesterId]);
 
   const validator = {
     validateAssignment: (room, professor, subject, section, day, timeSlot) =>
       validateScheduleEntry({ room, professor, subject, section, day, timeSlot }),
-    addSchedule: (room, professor, subject, section, day, timeSlot) => ({ schedule: { room, professor, subject, section, day, timeSlot } }),
+    addSchedule: (room, professor, subject, section, day, timeSlot) => ({ schedule: { room, professor, subject, section, day, timeSlot, semesterId: currentSemesterId } }),
     clearAllSchedules: async () => {
-      const snap = await getDocs(collection(db, 'schedules'));
+      // Phase 6: Only delete schedules for the current semester
+      if (!currentSemesterId) return;
+      const q = query(collection(db, 'schedules'), where('semesterId', '==', currentSemesterId));
+      const snap = await getDocs(q);
       if (snap.empty) { setSchedules([]); return; }
       const batch = writeBatch(db); snap.docs.forEach(d => batch.delete(d.ref)); await batch.commit(); setSchedules([]);
     },
@@ -556,10 +589,20 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const handleAddSchedule = async (newSchedule) => {
-    if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
-    const check = validateScheduleEntry({ room: newSchedule?.room, professor: newSchedule?.professor, subject: newSchedule?.subject, section: newSchedule?.section || null, day: newSchedule?.day, timeSlot: newSchedule?.timeSlot, excludeScheduleId: null });
+    if (!isAdmin) return { ok: false, errors: ['Unauthorized.'] };
+    // Inject current semester ID
+    const entryToValidate = { ...newSchedule, semesterId: currentSemesterId };
+    const check = validateScheduleEntry({ 
+      room: entryToValidate.room, 
+      professor: entryToValidate.professor, 
+      subject: entryToValidate.subject, 
+      section: entryToValidate.section || null, 
+      day: entryToValidate.day, 
+      timeSlot: entryToValidate.timeSlot, 
+      excludeScheduleId: null 
+    });
     if (!check.valid) return { ok: false, errors: check.errors };
-    await addDoc(collection(db, 'schedules'), newSchedule);
+    await addDoc(collection(db, 'schedules'), entryToValidate);
     return { ok: true };
   };
 
@@ -684,19 +727,39 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '10px',
-              padding: '8px 14px',
-              textAlign: 'right',
-              display: 'none',
-            }}>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Today</div>
-              <div style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600, marginTop: 2 }}>
-                {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            {/* Phase 6.2: Semester Selector UI */}
+            {semesters.length > 0 && (
+              <div style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '10px',
+                padding: '4px 10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase' }}>Term:</span>
+                <select 
+                  value={currentSemesterId} 
+                  onChange={(e) => setCurrentSemesterId(e.target.value)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#fff',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {semesters.map(sem => (
+                    <option key={sem.id} value={sem.id} style={{ color: '#000' }}>
+                      {sem.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
+            )}
             <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(o => !o)}>
               <Icon d={NAV_ICONS.menu} size={22} />
             </button>

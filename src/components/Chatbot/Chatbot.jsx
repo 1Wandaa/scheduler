@@ -23,7 +23,9 @@ const Chatbot = ({ schedules }) => {
     if (!isOpen || chatSession) return;
 
     const initChat = () => {
-      // Build a text representation of the current schedule
+      // Phase 5.1: Build a richer text representation of the current schedule
+      const profLoad = {};
+      const profRooms = {};
       const scheduleContext = schedules.map(s => {
         const subject = s.subject?.code || s.subject?.name || 'Unknown Subject';
         const section = s.section?.name || 'Unknown Section';
@@ -31,14 +33,37 @@ const Chatbot = ({ schedules }) => {
         const room = s.room?.name || 'Unknown Room';
         const day = s.day;
         const time = s.timeSlot?.label || 'Unknown Time';
+        
+        // Track stats for the prompt
+        if (s.professor?.id) {
+          const credits = Number(s.subject?.credits || 3);
+          profLoad[s.professor.name] = (profLoad[s.professor.name] || 0) + credits;
+          if (!profRooms[s.professor.name]) profRooms[s.professor.name] = new Set();
+          if (s.room?.name) profRooms[s.professor.name].add(s.room.name);
+        }
+
         return `${subject} for section ${section} is taught by ${prof} in ${room} on ${day} at ${time}.`;
       }).join('\n');
 
+      const profStats = Object.entries(profLoad).map(([name, units]) => {
+        const rooms = Array.from(profRooms[name] || []).join(', ');
+        return `- ${name}: ~${units} units, Rooms used: [${rooms}]`;
+      }).join('\n');
+
       const systemPrompt = `You are a helpful AI assistant for the SMARTSCHED university scheduling system.
-Your job is to answer questions about the schedule.
+Your job is to answer questions about the schedule, analyze workload, and spot issues.
+
 Here is the current schedule data:
 ${scheduleContext || 'There are no classes scheduled yet.'}
-Keep your answers concise and polite.`;
+
+PROFESSOR STATS (Estimated Workload & Rooms):
+${profStats || 'No professor data available.'}
+
+RULES:
+1. Keep your answers concise and polite.
+2. If asked about "workload", refer to the PROFESSOR STATS.
+3. If asked about "conflicts" or "issues", look for professors or sections scheduled in multiple places at the same time, or professors teaching in many different rooms (they prefer just 1 room).
+4. Do not make up data not present in the prompt.`;
 
       try {
         const chat = generativeModel.startChat({
@@ -137,6 +162,25 @@ Keep your answers concise and polite.`;
               </div>
             )}
             <div ref={messagesEndRef} />
+          </div>
+
+          {/* Phase 5.2: Actionable query buttons */}
+          <div style={{ padding: '10px 15px', display: 'flex', gap: '8px', overflowX: 'auto', borderTop: '1px solid var(--border-color)', background: 'var(--bg-main)' }}>
+            <button 
+              onClick={() => setInput("Give me a workload summary for all professors.")}
+              style={{ padding: '6px 12px', fontSize: '0.75rem', borderRadius: '14px', background: 'var(--accent-primary)', color: 'white', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              📊 Workload Summary
+            </button>
+            <button 
+              onClick={() => setInput("Are there any scheduling conflicts or issues with room assignments?")}
+              style={{ padding: '6px 12px', fontSize: '0.75rem', borderRadius: '14px', background: 'var(--warning)', color: 'white', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              ⚠️ Find Conflicts
+            </button>
+            <button 
+              onClick={() => setInput("What optimization tips do you have for this schedule?")}
+              style={{ padding: '6px 12px', fontSize: '0.75rem', borderRadius: '14px', background: 'var(--success)', color: 'white', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              💡 Optimization Tips
+            </button>
           </div>
 
           <form className="chatbot-input-area" onSubmit={handleSend}>

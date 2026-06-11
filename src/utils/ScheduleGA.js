@@ -1,10 +1,11 @@
 /**
  * ScheduleGA - Genetic Algorithm for University Timetabling
+ * Enhanced with professor-room affinity, adaptive sizing, and improved constraints.
  */
 
 const DEFAULT_CONFIG = {
-  populationSize: 80,
-  maxGenerations: 300,
+  populationSize: 80,    // Will be adaptively scaled in constructor
+  maxGenerations: 300,   // Will be adaptively scaled in constructor
   mutationRate: 0.15,
   crossoverRate: 0.8,
   elitismCount: 4,
@@ -12,6 +13,7 @@ const DEFAULT_CONFIG = {
   stagnationLimit: 50,
   repair: true,
   repairTriesPerGene: 40,
+  adaptiveSizing: true,  // Enable adaptive population/generation scaling
 };
 
 const PENALTY = {
@@ -24,6 +26,9 @@ const PENALTY = {
   SAME_DAY_CONFLICT: -90,
   LAB_MISMATCH: -80,
   WORKLOAD_EXCEEDED: -60,
+  PROF_ROOM_INCONSISTENT: -80,     // Professor assigned to multiple rooms
+  CONSECUTIVE_OVERLOAD: -25,       // Per extra slot beyond 3 consecutive
+  SECTION_DAILY_OVERLOAD: -30,     // Section has >4 classes in a day
 };
 
 const BONUS = {
@@ -34,6 +39,8 @@ const BONUS = {
   SPREAD_ACROSS_WEEK: 5,
   SAME_ROOM_TIME_DIFFERENT_DAYS: 30,
   PAIRED_DAY_MATCH: 40,
+  PROF_ROOM_CONSISTENCY: 35,       // All of a professor's classes in one room
+  SECTION_SPREAD: 8,               // Section has 2-3 classes per day (ideal)
 };
 
 // Day pairing: Mon(0)<->Thu(3), Tue(1)<->Fri(4), Wed(2) has no pair
@@ -53,6 +60,21 @@ export class ScheduleGA {
     this._validateInputs();
     this._buildLookups();
     this.assignments = this._buildAssignmentList();
+
+    // Phase 1.1: Adaptive population & generation sizing
+    if (this.config.adaptiveSizing && this.assignments.length > 0) {
+      const n = this.assignments.length;
+      // Only override if the user hasn't explicitly set these in the config
+      if (!config.populationSize) {
+        this.config.populationSize = Math.max(60, Math.min(200, n * 4));
+      }
+      if (!config.maxGenerations) {
+        this.config.maxGenerations = Math.max(100, Math.min(500, n * 10));
+      }
+      if (!config.stagnationLimit) {
+        this.config.stagnationLimit = Math.max(30, Math.min(80, Math.floor(this.config.maxGenerations * 0.2)));
+      }
+    }
   }
 
   _validateInputs() {
@@ -95,6 +117,35 @@ export class ScheduleGA {
           if (s.professor) this.existingProfSlots[`${s.professor.id}-${dIdx}-${t}`] = true;
           if (s.section) this.existingSecSlots[`${s.section.id}-${dIdx}-${t}`] = true;
         }
+      }
+    }
+
+    // Phase 2.1: Professor-room affinity — determine each professor's preferred/locked room
+    // Priority: existing schedule patterns > professor.preferredRoom field > null (let GA decide)
+    this.profRoomAffinity = {};
+    const profRoomCounts = {}; // { profId: { roomId: count } }
+
+    for (const s of this.existingSchedules) {
+      if (s.professor?.id && s.room?.id) {
+        if (!profRoomCounts[s.professor.id]) profRoomCounts[s.professor.id] = {};
+        profRoomCounts[s.professor.id][s.room.id] = (profRoomCounts[s.professor.id][s.room.id] || 0) + 1;
+      }
+    }
+
+    // Pick the most-used room for each professor from existing schedules
+    for (const profId in profRoomCounts) {
+      const rooms = profRoomCounts[profId];
+      let bestRoom = null, bestCount = 0;
+      for (const roomId in rooms) {
+        if (rooms[roomId] > bestCount) { bestRoom = roomId; bestCount = rooms[roomId]; }
+      }
+      if (bestRoom) this.profRoomAffinity[profId] = bestRoom;
+    }
+
+    // Fill in from professor.preferredRoom for professors without existing schedule patterns
+    for (const p of this.professors) {
+      if (!this.profRoomAffinity[p.id] && p.preferredRoom && this.roomMap[p.preferredRoom]) {
+        this.profRoomAffinity[p.id] = p.preferredRoom;
       }
     }
   }
@@ -260,13 +311,29 @@ export class ScheduleGA {
     // Once a professor is chosen for a section+subject, all meetings must use the same professor
     const lockedProfForSecSub = {};
 
-    // Seed locked professors from existing schedules
+    // Phase 2.1: Track which room is locked to each professor (professor-room affinity)
+    // Once a professor's first assignment picks a room, lock that room for all subsequent assignments
+    const lockedRoomForProf = {};
+
+    // Seed locked professors and rooms from existing schedules
     for (const s of this.existingSchedules) {
       if (s.professor && s.section && s.subject) {
         const key = `${s.section.id}-${s.subject.id}`;
         if (!lockedProfForSecSub[key]) {
           lockedProfForSecSub[key] = s.professor.id;
         }
+      }
+      if (s.professor?.id && s.room?.id) {
+        if (!lockedRoomForProf[s.professor.id]) {
+          lockedRoomForProf[s.professor.id] = s.room.id;
+        }
+      }
+    }
+
+    // Seed from profRoomAffinity for professors without existing schedule patterns
+    for (const profId in this.profRoomAffinity) {
+      if (!lockedRoomForProf[profId]) {
+        lockedRoomForProf[profId] = this.profRoomAffinity[profId];
       }
     }
 
@@ -358,7 +425,14 @@ export class ScheduleGA {
           }
           timeIdx = pref.timeIdx;
         } else {
-          room = rooms[this._randInt(rooms.length)];
+          // Phase 2.1: Prefer the professor's affinity room if eligible
+          const affinityRoomId = lockedRoomForProf[prof.id];
+          const affinityRoom = affinityRoomId ? rooms.find(r => r.id === affinityRoomId) : null;
+          if (affinityRoom && t < this.config.repairTriesPerGene * 0.7) {
+            room = affinityRoom; // Use affinity room for ~70% of attempts
+          } else {
+            room = rooms[this._randInt(rooms.length)];
+          }
           const validTimes = this._eligibleTimeSlotsFor(a);
           timeIdx = validTimes[this._randInt(validTimes.length)];
         }
@@ -415,6 +489,11 @@ export class ScheduleGA {
         // Lock professor for this section+subject
         if (!lockedProfForSecSub[secSubKey]) {
           lockedProfForSecSub[secSubKey] = prof.id;
+        }
+
+        // Phase 2.1: Lock room for this professor
+        if (!lockedRoomForProf[prof.id]) {
+          lockedRoomForProf[prof.id] = room.id;
         }
 
         if (!assignedSecSub[secSubKey]) {
@@ -482,7 +561,17 @@ export class ScheduleGA {
       if (!slot) {
         // First meeting: pick room, time, and a starting day (prefer Mon=0 or Tue=1)
         const rooms = this._eligibleRoomsFor(a);
-        const room = rooms[this._randInt(rooms.length)];
+
+        // Phase 2.1: Prefer the professor's affinity room
+        let room = null;
+        const affinityRoomId = profId ? this.profRoomAffinity[profId] : null;
+        if (affinityRoomId) {
+          room = rooms.find(r => r.id === affinityRoomId);
+        }
+        if (!room) {
+          room = rooms[this._randInt(rooms.length)];
+        }
+
         const validTimes = this._eligibleTimeSlotsFor(a);
         const timeIdx = validTimes[this._randInt(validTimes.length)];
         const pairStarts = [0, 1]; // Monday or Tuesday
@@ -532,12 +621,18 @@ export class ScheduleGA {
     const secTimeline = {};
     const roomTimeline = {};
     const profWork = {};
+    const profRooms = {}; // Phase 2.1: Track rooms per professor { profId: Set<roomId> }
 
     // Base Workload Seed
     for (const s of this.existingSchedules) {
       if (s.professor && s.subject) {
         if (!profAssignedSubjects[s.professor.id]) profAssignedSubjects[s.professor.id] = new Set();
         profAssignedSubjects[s.professor.id].add(`${s.subject.id}_${s.section?.id || 'x'}`);
+      }
+      // Seed professor rooms from existing schedules
+      if (s.professor?.id && s.room?.id) {
+        if (!profRooms[s.professor.id]) profRooms[s.professor.id] = new Set();
+        profRooms[s.professor.id].add(s.room.id);
       }
     }
 
@@ -549,10 +644,6 @@ export class ScheduleGA {
         continue;
       }
 
-      const rk = `${g.roomId}-${g.dayIdx}-${g.timeIdx}`;
-      const pk = `${g.professorId}-${g.dayIdx}-${g.timeIdx}`;
-      const sk = `${a.section.id}-${g.dayIdx}-${g.timeIdx}`;
-
       if (!profTimeline[g.professorId]) profTimeline[g.professorId] = {};
       if (!secTimeline[a.section.id]) secTimeline[a.section.id] = {};
       if (!roomTimeline[g.roomId]) roomTimeline[g.roomId] = {};
@@ -560,6 +651,7 @@ export class ScheduleGA {
       if (!secTimeline[a.section.id][g.dayIdx]) secTimeline[a.section.id][g.dayIdx] = [];
       if (!roomTimeline[g.roomId][g.dayIdx]) roomTimeline[g.roomId][g.dayIdx] = [];
       
+      // Phase 1.2: Multi-slot duration awareness — track ALL occupied time indices
       const slotsNeeded = Math.ceil((a.targetDuration || 1.5) / 1.5);
       for (let s = 0; s < slotsNeeded; s++) {
         const t = g.timeIdx + s;
@@ -567,18 +659,27 @@ export class ScheduleGA {
         profTimeline[g.professorId][g.dayIdx].push({ timeIdx: t, roomId: g.roomId });
         secTimeline[a.section.id][g.dayIdx].push({ timeIdx: t, roomId: g.roomId });
         roomTimeline[g.roomId][g.dayIdx].push({ timeIdx: t });
+
+        // Phase 1.2: Check conflicts for ALL occupied slots, not just the starting slot
+        const rk = `${g.roomId}-${g.dayIdx}-${t}`;
+        const pk = `${g.professorId}-${g.dayIdx}-${t}`;
+        const sk = `${a.section.id}-${g.dayIdx}-${t}`;
+
+        if (this.existingRoomSlots[rk]) { hardScore += PENALTY.ROOM_CONFLICT; hardViolations++; }
+        if (this.existingProfSlots[pk]) { hardScore += PENALTY.PROF_CONFLICT; hardViolations++; }
+        if (this.existingSecSlots[sk]) { hardScore += PENALTY.SECTION_CONFLICT; hardViolations++; }
+
+        roomSlots[rk] = (roomSlots[rk] || 0) + 1;
+        profSlots[pk] = (profSlots[pk] || 0) + 1;
+        secSlots[sk] = (secSlots[sk] || 0) + 1;
       }
 
       const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
       profWork[g.professorId] = (profWork[g.professorId] || 0) + creditPerSlot;
 
-      if (this.existingRoomSlots[rk]) { hardScore += PENALTY.ROOM_CONFLICT; hardViolations++; }
-      if (this.existingProfSlots[pk]) { hardScore += PENALTY.PROF_CONFLICT; hardViolations++; }
-      if (this.existingSecSlots[sk]) { hardScore += PENALTY.SECTION_CONFLICT; hardViolations++; }
-
-      roomSlots[rk] = (roomSlots[rk] || 0) + 1;
-      profSlots[pk] = (profSlots[pk] || 0) + 1;
-      secSlots[sk] = (secSlots[sk] || 0) + 1;
+      // Phase 2.1: Track rooms per professor
+      if (!profRooms[g.professorId]) profRooms[g.professorId] = new Set();
+      profRooms[g.professorId].add(g.roomId);
 
       if (!profAssignedSubjects[g.professorId]) profAssignedSubjects[g.professorId] = new Set();
       profAssignedSubjects[g.professorId].add(`${a.subject.id}_${a.section.id}`);
@@ -754,8 +855,10 @@ export class ScheduleGA {
               const prev = classes[i-1];
               if (curr.timeIdx === prev.timeIdx + 1) {
                  consecutive++;
-                 if (consecutive > 4) {
-                    if (isProf) hardScore += PENALTY.WORKLOAD_EXCEEDED / 2;
+                 // Phase 2.2: Scaled consecutive overload penalty (per extra slot beyond 3)
+                 if (consecutive > 3) {
+                    const overSlots = consecutive - 3;
+                    if (isProf) softScore += PENALTY.CONSECUTIVE_OVERLOAD * overSlots;
                  }
                  if (curr.roomId !== prev.roomId && curr.timeIdx !== prev.timeIdx) {
                     softScore -= 10; // penalty for back-to-back different rooms
@@ -792,6 +895,33 @@ export class ScheduleGA {
     checkTimeline(secTimeline, false);
     checkRoomTimeline(roomTimeline);
 
+    // Phase 2.1: Professor-room consistency
+    // Reward professors who teach all classes in a single room; penalize inconsistency
+    for (const profId in profRooms) {
+      const roomSet = profRooms[profId];
+      if (roomSet.size === 1) {
+        softScore += BONUS.PROF_ROOM_CONSISTENCY;
+      } else {
+        // Penalize each extra room beyond the first
+        hardScore += PENALTY.PROF_ROOM_INCONSISTENT * (roomSet.size - 1);
+        hardViolations += (roomSet.size - 1);
+      }
+    }
+
+    // Phase 2.3: Section daily load balancing
+    for (const secId in secTimeline) {
+      for (const day in secTimeline[secId]) {
+        // Count unique time slots (not duplicates from multi-slot classes)
+        const uniqueSlots = new Set(secTimeline[secId][day].map(c => c.timeIdx));
+        const classCount = uniqueSlots.size;
+        if (classCount > 4) {
+          softScore += PENALTY.SECTION_DAILY_OVERLOAD * (classCount - 4);
+        } else if (classCount >= 2 && classCount <= 3) {
+          softScore += BONUS.SECTION_SPREAD; // Ideal daily distribution
+        }
+      }
+    }
+
     return { score: hardScore + softScore, hardViolations, hardScore, softScore };
   }
 
@@ -810,14 +940,30 @@ export class ScheduleGA {
   }
 
   _mutate(chrom) {
+    // Phase 1.3: Build index of section+subject groups for group mutation
+    const secSubGroups = {};
+    for (let i = 0; i < this.assignments.length; i++) {
+      const a = this.assignments[i];
+      const key = `${a.section.id}-${a.subject.id}`;
+      if (!secSubGroups[key]) secSubGroups[key] = [];
+      secSubGroups[key].push(i);
+    }
+
     for (let i = 0; i < chrom.length; i++) {
       if (!chrom[i] || !chrom[i].professorId) continue;
       if (Math.random() < this.config.mutationRate) {
         const g = chrom[i], a = this.assignments[i];
-        switch (Math.floor(Math.random() * 4)) {
+        const mutationType = Math.floor(Math.random() * 5);
+
+        switch (mutationType) {
           case 0: {
+            // Mutate room — prefer professor's affinity room
             const pool = this._eligibleRoomsFor(a);
-            if (pool && pool.length > 0) g.roomId = pool[this._randInt(pool.length)].id;
+            if (pool && pool.length > 0) {
+              const affinityRoomId = this.profRoomAffinity[g.professorId];
+              const affinityRoom = affinityRoomId ? pool.find(r => r.id === affinityRoomId) : null;
+              g.roomId = (affinityRoom && Math.random() < 0.6) ? affinityRoom.id : pool[this._randInt(pool.length)].id;
+            }
             break;
           }
           case 1: g.dayIdx = this._randInt(this.days.length); break;
@@ -829,6 +975,28 @@ export class ScheduleGA {
           case 3: {
             const dp = this._eligibleProfsFor(a);
             if (dp && dp.length > 0) g.professorId = dp[this._randInt(dp.length)].id;
+            break;
+          }
+          case 4: {
+            // Phase 1.3: Group mutation — move all meetings of a section+subject together
+            const key = `${a.section.id}-${a.subject.id}`;
+            const group = secSubGroups[key];
+            if (group && group.length > 1) {
+              // Pick a new day or time for the whole group
+              const validTimes = this._eligibleTimeSlotsFor(a);
+              const newTimeIdx = validTimes.length > 0 ? validTimes[this._randInt(validTimes.length)] : g.timeIdx;
+              const pool = this._eligibleRoomsFor(a);
+              const affinityRoomId = this.profRoomAffinity[g.professorId];
+              const affinityRoom = affinityRoomId ? pool.find(r => r.id === affinityRoomId) : null;
+              const newRoomId = (affinityRoom && Math.random() < 0.7) ? affinityRoom.id : (pool.length > 0 ? pool[this._randInt(pool.length)].id : g.roomId);
+
+              for (const idx of group) {
+                if (chrom[idx]) {
+                  chrom[idx].timeIdx = newTimeIdx;
+                  chrom[idx].roomId = newRoomId;
+                }
+              }
+            }
             break;
           }
         }
@@ -872,11 +1040,24 @@ export class ScheduleGA {
       const sorted = fits.map((f, i) => ({ f, i })).sort((a, b) => b.f.score - a.f.score);
       const next = [];
       for (let i = 0; i < elitismCount && i < sorted.length; i++) next.push(pop[sorted[i].i].map(g => ({ ...g })));
-      while (next.length < populationSize) {
+
+      // Phase 1.4: Diversity injection on stagnation
+      // When stagnation exceeds 60% of limit, inject fresh random chromosomes
+      const diversityThreshold = Math.floor(stagnationLimit * 0.6);
+      const injectCount = (stag >= diversityThreshold) ? Math.floor(populationSize * 0.2) : 0;
+
+      // Fill with crossover + mutation children
+      while (next.length < populationSize - injectCount) {
         let child = this._crossover(this._selectParent(pop, fits), this._selectParent(pop, fits));
         child = this._mutate(child);
         next.push(child);
       }
+
+      // Inject fresh random chromosomes to escape local optima
+      while (next.length < populationSize) {
+        next.push(this._randomChromosome());
+      }
+
       pop = next;
 
       if (gen % 10 === 0) await new Promise(r => setTimeout(r, 0));
