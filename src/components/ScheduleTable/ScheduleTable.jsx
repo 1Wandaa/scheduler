@@ -341,7 +341,9 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                                 {schedule.professor?.name ? (() => {
                                   const parts = schedule.professor.name.trim().split(/\s+/);
                                   if (parts.length === 1) return parts[0];
-                                  return `${parts[0][0].toUpperCase()}.${parts[parts.length - 1]}`;
+                                  const initial = parts[0][0].toUpperCase();
+                                  const surname = parts.slice(1).join(' ');
+                                  return `${initial}. ${surname}`;
                                 })() : '—'}
                               </p>
                               <p className="room" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>{schedule.room?.name ?? '—'}</p>
