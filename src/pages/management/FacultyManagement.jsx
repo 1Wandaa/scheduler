@@ -26,35 +26,38 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
     setShowModal(true);
   };
 
-  const handleSubjectToggle = (subjectId) => {
+  const handleSubjectToggle = (subject) => {
     setFormData(prev => {
       const current = prev.specialization || [];
-      if (current.includes(subjectId)) {
-        return { ...prev, specialization: current.filter(s => s !== subjectId) };
+      const isChecked = current.includes(subject.id) || current.includes(subject.code) || current.includes(subject.name);
+      if (isChecked) {
+        return { ...prev, specialization: current.filter(s => s !== subject.id && s !== subject.code && s !== subject.name) };
       } else {
-        return { ...prev, specialization: [...current, subjectId] };
+        return { ...prev, specialization: [...current, subject.id] };
       }
     });
   };
 
-  const handleRoomToggle = (roomId) => {
+  const handleRoomToggle = (room) => {
     setFormData(prev => {
       const current = prev.preferredRooms || [];
-      if (current.includes(roomId)) {
-        return { ...prev, preferredRooms: current.filter(r => r !== roomId) };
+      const isChecked = current.includes(room.id) || current.includes(room.name);
+      if (isChecked) {
+        return { ...prev, preferredRooms: current.filter(r => r !== room.id && r !== room.name) };
       } else {
-        return { ...prev, preferredRooms: [...current, roomId] };
+        return { ...prev, preferredRooms: [...current, room.id] };
       }
     });
   };
 
-  const handleSectionToggle = (sectionId) => {
+  const handleSectionToggle = (sec) => {
     setFormData(prev => {
       const current = prev.assignedSections || [];
-      if (current.includes(sectionId)) {
-        return { ...prev, assignedSections: current.filter(s => s !== sectionId) };
+      const isChecked = current.includes(sec.id) || current.includes(sec.name);
+      if (isChecked) {
+        return { ...prev, assignedSections: current.filter(s => s !== sec.id && s !== sec.name) };
       } else {
-        return { ...prev, assignedSections: [...current, sectionId] };
+        return { ...prev, assignedSections: [...current, sec.id] };
       }
     });
   };
@@ -338,8 +341,8 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                   <label key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
                     <input
                       type="checkbox"
-                      checked={(formData.specialization || []).includes(sub.id)}
-                      onChange={() => handleSubjectToggle(sub.id)}
+                      checked={(formData.specialization || []).includes(sub.id) || (formData.specialization || []).includes(sub.code) || (formData.specialization || []).includes(sub.name)}
+                      onChange={() => handleSubjectToggle(sub)}
                       style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
                     />
                     <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{sub.code}</span>
@@ -357,8 +360,8 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                   <label key={room.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
                     <input
                       type="checkbox"
-                      checked={(formData.preferredRooms || []).includes(room.id)}
-                      onChange={() => handleRoomToggle(room.id)}
+                      checked={(formData.preferredRooms || []).includes(room.id) || (formData.preferredRooms || []).includes(room.name)}
+                      onChange={() => handleRoomToggle(room)}
                       style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
                     />
                     <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{room.name}</span>
@@ -385,8 +388,8 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                   <label key={sec.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
                     <input
                       type="checkbox"
-                      checked={(formData.assignedSections || []).includes(sec.id)}
-                      onChange={() => handleSectionToggle(sec.id)}
+                      checked={(formData.assignedSections || []).includes(sec.id) || (formData.assignedSections || []).includes(sec.name)}
+                      onChange={() => handleSectionToggle(sec)}
                       style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
                     />
                     <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{sec.name}</span>
