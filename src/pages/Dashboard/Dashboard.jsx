@@ -404,14 +404,27 @@ const Dashboard = ({ user, onLogout }) => {
       }
       return [...tier1, ...tier2, ...tier3];
     },
-    _eligibleProfsFor: (subject, constraints) => { 
+    _eligibleProfsFor: (subject, section, constraints) => { 
       if (!subject) return []; 
+      let pool = professors;
+
       if (constraints?.aiProfessorMap && constraints.aiProfessorMap[subject.id]) {
         const rankedIds = constraints.aiProfessorMap[subject.id];
         const aiPool = rankedIds.map(id => professors.find(p => p.id === id)).filter(Boolean);
-        if (aiPool.length > 0) return aiPool;
+        if (aiPool.length > 0) pool = aiPool;
+      } else {
+        pool = pool.filter(p => professorMatchesSubject(p, subject));
       }
-      return professors.filter(p => professorMatchesSubject(p, subject)); 
+
+      const sectionId = section?.id;
+      if (sectionId && pool.length > 0) {
+        const explicitProfs = pool.filter(p => (p.assignedSections || []).includes(sectionId));
+        if (explicitProfs.length > 0) {
+          pool = explicitProfs;
+        }
+      }
+
+      return pool;
     },
     _autoScheduleAssignments: async (assignments, constraints) => {
       const results = [];
@@ -448,7 +461,7 @@ const Dashboard = ({ user, onLogout }) => {
       for (const group of groups) {
         const { subject, section, count } = group;
         const roomPool = fixedRoom ? [fixedRoom] : validator._eligibleRoomsFor(subject, section, constraints);
-        const profPool = fixedProfessor ? [fixedProfessor] : validator._eligibleProfsFor(subject, constraints);
+        const profPool = fixedProfessor ? [fixedProfessor] : validator._eligibleProfsFor(subject, section, constraints);
 
         let placedCount = 0;
 
@@ -970,7 +983,7 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
         )}
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}

@@ -3,24 +3,26 @@ import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { DEPARTMENTS } from '../../config/constants';
 
-const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) => {
+const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], onBack }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [currentId, setCurrentId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
+  const [sectionSearchQuery, setSectionSearchQuery] = useState('');
   const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
-    id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: []
+    id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: [], assignedSections: []
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: [] });
+    setFormData({ id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: [], assignedSections: [] });
     setEditMode(false);
     setError(null);
     setSubjectSearchQuery('');
+    setSectionSearchQuery('');
     setShowModal(true);
   };
 
@@ -42,6 +44,17 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
         return { ...prev, preferredRooms: current.filter(r => r !== roomId) };
       } else {
         return { ...prev, preferredRooms: [...current, roomId] };
+      }
+    });
+  };
+
+  const handleSectionToggle = (sectionId) => {
+    setFormData(prev => {
+      const current = prev.assignedSections || [];
+      if (current.includes(sectionId)) {
+        return { ...prev, assignedSections: current.filter(s => s !== sectionId) };
+      } else {
+        return { ...prev, assignedSections: [...current, sectionId] };
       }
     });
   };
@@ -74,12 +87,14 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
       ...prof,
       firstName: fName,
       lastName: lName,
-      preferredRooms: prof.preferredRooms || [] // Ensure array exists
+      preferredRooms: prof.preferredRooms || [],
+      assignedSections: prof.assignedSections || []
     });
     setCurrentId(prof.id);
     setEditMode(true);
     setError(null);
     setSubjectSearchQuery('');
+    setSectionSearchQuery('');
     setShowModal(true);
   };
 
@@ -220,7 +235,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
         </div>
 
         <table className="data-table">
-          <thead><tr><th>Name</th><th>Department</th><th>Max Load</th><th>Subjects</th><th>Rooms</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Name</th><th>Department</th><th>Max Load</th><th>Subjects</th><th>Sections</th><th>Rooms</th><th>Actions</th></tr></thead>
           <tbody>
             {professors
               .map(p => ({
@@ -247,6 +262,9 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
                   <td><span style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>{p.maxUnits || p.maxHours || 12} units</span></td>
                   <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     {(p.specialization || []).length} subject{(p.specialization || []).length !== 1 ? 's' : ''}
+                  </td>
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {(p.assignedSections || []).length} section{(p.assignedSections || []).length !== 1 ? 's' : ''}
                   </td>
                   <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     {(p.preferredRooms || []).length} room{(p.preferredRooms || []).length !== 1 ? 's' : ''}
@@ -344,6 +362,34 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], onBack }) =>
                       style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
                     />
                     <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{room.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '25px' }}>
+              <label className="form-label">Assigned Sections (Optional)</label>
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="Search section name..." 
+                value={sectionSearchQuery} 
+                onChange={(e) => setSectionSearchQuery(e.target.value)}
+                style={{ marginBottom: '10px', marginTop: '5px' }}
+              />
+              <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
+                {sections.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No sections available.</p>}
+                {[...sections]
+                  .filter(sec => (sec.name || '').toLowerCase().includes(sectionSearchQuery.toLowerCase()))
+                  .sort((a, b) => a.name.localeCompare(b.name)).map(sec => (
+                  <label key={sec.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
+                    <input
+                      type="checkbox"
+                      checked={(formData.assignedSections || []).includes(sec.id)}
+                      onChange={() => handleSectionToggle(sec.id)}
+                      style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
+                    />
+                    <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{sec.name}</span>
                   </label>
                 ))}
               </div>

@@ -256,6 +256,17 @@ export class ScheduleGA {
       });
     }
 
+    // --- ASSIGNED SECTIONS FILTER ---
+    // If any eligible professors are explicitly assigned to this section,
+    // restrict the pool to ONLY those professors.
+    const sectionId = a.section?.id;
+    if (sectionId && pool.length > 0) {
+      const explicitProfs = pool.filter(p => (p.assignedSections || []).includes(sectionId));
+      if (explicitProfs.length > 0) {
+        pool = explicitProfs;
+      }
+    }
+
     if (!profWork) return pool;
 
     const credits = Number(a.subject?.credits) || 3;
@@ -280,6 +291,15 @@ export class ScheduleGA {
     let pool = sectionDept
       ? this.professors.filter(p => (p.department || '').toUpperCase() === sectionDept)
       : [...this.professors];
+
+    // --- ASSIGNED SECTIONS FILTER ---
+    const sectionId = a.section?.id;
+    if (sectionId && pool.length > 0) {
+      const explicitProfs = pool.filter(p => (p.assignedSections || []).includes(sectionId));
+      if (explicitProfs.length > 0) {
+        pool = explicitProfs;
+      }
+    }
 
     if (!profWork) return pool;
 
