@@ -634,6 +634,14 @@ const Dashboard = ({ user, onLogout }) => {
 
   const firstName = user?.name?.split?.(/\s+/)?.[0] ?? 'there';
 
+  const enrichedSchedules = schedules.map(s => ({
+    ...s,
+    professor: professors.find(p => String(p.id) === String(s.professor?.id)) || s.professor,
+    room: rooms.find(r => String(r.id) === String(s.room?.id)) || s.room,
+    section: sections.find(sec => String(sec.id) === String(s.section?.id)) || s.section,
+    subject: subjects.find(sub => String(sub.id) === String(s.subject?.id)) || s.subject
+  }));
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className={`smartsched-container ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -776,7 +784,7 @@ const Dashboard = ({ user, onLogout }) => {
               <KpiTile label="Faculty Members" value={professors.length} iconPath={NAV_ICONS.faculty} color="#0288d1" />
               <KpiTile label="Rooms" value={rooms.length} iconPath={NAV_ICONS.rooms} color="#7c3aed" />
               <KpiTile label="Sections" value={sections.length} iconPath={NAV_ICONS.sections} color="#059669" />
-              <KpiTile label="Scheduled Classes" value={schedules.length} iconPath={NAV_ICONS.schedule} color="#d97706" />
+              <KpiTile label="Scheduled Classes" value={enrichedSchedules.length} iconPath={NAV_ICONS.schedule} color="#d97706" />
             </div>
 
             {/* Admin preview cards */}
@@ -944,7 +952,7 @@ const Dashboard = ({ user, onLogout }) => {
                   </button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {schedules.slice(-4).reverse().map((s, i) => {
+                  {enrichedSchedules.slice(-4).reverse().map((s, i) => {
                     const colors = ['#5645EE', '#059669', '#d97706', '#0288d1'];
                     const accentColor = colors[i % colors.length];
                     return (
@@ -988,7 +996,7 @@ const Dashboard = ({ user, onLogout }) => {
                       </div>
                     );
                   })}
-                  {schedules.length === 0 && (
+                  {enrichedSchedules.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '40px 0', border: '1px dashed var(--border-color)', borderRadius: '12px', background: 'var(--bg-main)' }}>
                       <Icon d={NAV_ICONS.schedule} size={32} />
                       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0 0' }}>No classes scheduled yet.</p>
@@ -1008,20 +1016,20 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
             <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} />
-            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={schedules} onAutoSchedule={handleAddSchedule} />
+            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={enrichedSchedules} onAutoSchedule={handleAddSchedule} />
           </div>
         )}
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={schedules} />}
+        {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={enrichedSchedules} />}
 
         {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
-        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} />}
+        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={enrichedSchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} />}
 
       </div>
-      <Chatbot schedules={schedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
+      <Chatbot schedules={enrichedSchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
     </div>
   );
 };
