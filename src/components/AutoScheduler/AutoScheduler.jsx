@@ -25,10 +25,29 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   const runTargeted = async () => {
     setLoading(true);
     setResult(null);
+    setAiInsights(null);
+    setAiStatus('');
     try {
       if (clearBeforeRun) await validator.clearAllSchedules();
 
-      const constraints = { respectLabs, preventDoubleBooking };
+      // --- AI Pre-Processing: Smart professor-subject matching ---
+      let aiProfessorMap = null;
+      if (aiAssisted) {
+        try {
+          setAiStatus('🧠 AI analyzing professor-subject compatibility...');
+          aiProfessorMap = await suggestProfessorMatches(professors, subjects, sections);
+          if (aiProfessorMap) {
+            setAiStatus('✅ AI matching complete — starting targeted engine with optimized assignments');
+          } else {
+            setAiStatus('⚠️ AI matching returned no results — using default matching');
+          }
+        } catch (aiError) {
+          console.warn('[AI] Pre-processing failed:', aiError);
+          setAiStatus('⚠️ AI unavailable — using default matching');
+        }
+      }
+
+      const constraints = { respectLabs, preventDoubleBooking, aiProfessorMap };
       let r = null;
 
       if (engineMode === 'faculty') r = await validator.autoScheduleForFaculty(targetId, constraints);
@@ -36,12 +55,36 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       else if (engineMode === 'section') r = await validator.autoScheduleForSection(targetId, constraints);
       else throw new Error('Invalid mode selected.');
 
+      const unscheduledResults = r.unscheduled || [];
+
       setResult({
         schedule: r.results || [],
-        unscheduled: r.unscheduled || [],
+        unscheduled: unscheduledResults,
         error: r.error || null,
         mode: engineMode
       });
+
+      // --- AI Post-Processing: Analyze failures ---
+      if (aiAssisted && unscheduledResults.length > 0) {
+        try {
+          setAiStatus('🔍 AI analyzing scheduling failures...');
+          const insights = await analyzeScheduleFailures(
+            unscheduledResults, professors, rooms, sections, r.results || []
+          );
+          if (insights) {
+            setAiInsights(insights);
+            setAiStatus('✅ AI analysis complete');
+          } else {
+            setAiStatus('');
+          }
+        } catch (aiError) {
+          console.warn('[AI] Post-processing failed:', aiError);
+          setAiStatus('');
+        }
+      } else if (aiAssisted && unscheduledResults.length === 0) {
+        setAiStatus('✅ All classes scheduled successfully — no analysis needed');
+      }
+
     } catch (e) {
       setResult({ schedule: [], unscheduled: [], error: e.message, mode: engineMode });
     }
@@ -259,13 +302,11 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           <input type="checkbox" checked={clearBeforeRun} onChange={(e) => setClearBeforeRun(e.target.checked)} />
           <strong>Clear entire existing schedule before running</strong>
         </label>
-        {engineMode === 'ga' && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', cursor: 'pointer', color: 'var(--accent-primary)' }}>
-            <input type="checkbox" checked={aiAssisted} onChange={(e) => setAiAssisted(e.target.checked)} />
-            <strong>🧠 AI-Assisted Mode</strong>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '400' }}>— Gemini optimizes professor matching & analyzes failures</span>
-          </label>
-        )}
+        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', cursor: 'pointer', color: 'var(--accent-primary)' }}>
+          <input type="checkbox" checked={aiAssisted} onChange={(e) => setAiAssisted(e.target.checked)} />
+          <strong>🧠 AI-Assisted Mode</strong>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '400' }}>— Gemini optimizes professor matching & analyzes failures</span>
+        </label>
       </div>
 
       <button onClick={handleExecute} disabled={loading || (engineMode !== 'ga' && !targetId)} className="btn" style={{ width: '100%', padding: '14px', fontSize: '1rem' }}>

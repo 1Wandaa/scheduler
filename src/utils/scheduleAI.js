@@ -8,6 +8,7 @@
  */
 
 import { generativeModel } from '../config/firebase';
+import { SchemaType } from 'firebase/ai';
 
 /**
  * Ask Gemini to semantically rank which professors are the best fit for each
@@ -44,7 +45,7 @@ export async function suggestProfessorMatches(professors, subjects, sections) {
       }
     }
 
-    const prompt = `You are a university scheduling assistant. Given the professors and subjects below, produce a JSON object that maps each subject ID to a RANKED array of professor IDs, from best fit to worst fit.
+    const prompt = `You are a university scheduling assistant. Given the professors and subjects below, evaluate which professors are the best fit for each subject.
 
 RULES:
 1. A professor is a STRONG match if they are explicitly assigned to the subject (it appears in their "assigned subjects" list).
@@ -52,15 +53,13 @@ RULES:
 3. A professor is a WEAK match if they are in the same department but have no related specialization.
 4. Do NOT include professors who have zero relevance to the subject.
 5. Only include subjects that are actually needed: [${[...neededSubjectIds].join(', ')}]
-6. Return ONLY valid JSON — no markdown, no explanation.
+6. Rank the professor IDs from best fit to worst fit.
 
 PROFESSORS:
 ${profSummary}
 
 SUBJECTS:
-${subSummary}
-
-Return format: { "subjectId1": ["profId_best", "profId_good", ...], "subjectId2": [...] }`;
+${subSummary}`;
 
     const result = await generativeModel.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -68,21 +67,36 @@ Return format: { "subjectId1": ["profId_best", "profId_good", ...], "subjectId2"
         temperature: 0.1, // Low temperature for consistent, logical output
         maxOutputTokens: 2048,
         responseMimeType: 'application/json',
+        responseSchema: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              subjectId: { type: SchemaType.STRING },
+              professorIds: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
+            },
+            required: ["subjectId", "professorIds"]
+          }
+        }
       },
     });
 
     const responseText = result.response.text();
-    const parsed = JSON.parse(responseText);
+    const parsedArray = JSON.parse(responseText);
 
     // Validate: ensure all IDs actually exist
     const validProfIds = new Set(professors.map(p => p.id));
     const validSubIds = new Set(subjects.map(s => s.id));
     const cleaned = {};
 
-    for (const [subId, profIds] of Object.entries(parsed)) {
-      if (!validSubIds.has(subId)) continue;
-      if (!Array.isArray(profIds)) continue;
-      cleaned[subId] = profIds.filter(pid => validProfIds.has(pid));
+    for (const item of parsedArray) {
+      if (!item || !item.subjectId || !Array.isArray(item.professorIds)) continue;
+      if (!validSubIds.has(item.subjectId)) continue;
+      
+      const profs = item.professorIds.filter(pid => validProfIds.has(pid));
+      if (profs.length > 0) {
+        cleaned[item.subjectId] = profs;
+      }
     }
 
     console.log('[AI] Professor matching complete:', Object.keys(cleaned).length, 'subjects mapped');
@@ -148,10 +162,7 @@ ROOMS: ${roomContext}
 
 For each failed class, provide:
 1. A clear explanation of the root cause
-2. 1-3 specific actions the administrator can take to resolve it
-
-Return ONLY valid JSON array — no markdown, no extra text.
-Format: [{ "subject": "CODE", "section": "SECTION_NAME", "problem": "clear explanation", "solutions": ["action 1", "action 2"] }]`;
+2. 1-3 specific actions the administrator can take to resolve it`;
 
     const result = await generativeModel.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -159,6 +170,19 @@ Format: [{ "subject": "CODE", "section": "SECTION_NAME", "problem": "clear expla
         temperature: 0.3,
         maxOutputTokens: 2048,
         responseMimeType: 'application/json',
+        responseSchema: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              subject: { type: SchemaType.STRING },
+              section: { type: SchemaType.STRING },
+              problem: { type: SchemaType.STRING },
+              solutions: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
+            },
+            required: ["subject", "section", "problem", "solutions"]
+          }
+        }
       },
     });
 

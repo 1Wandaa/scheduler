@@ -390,7 +390,15 @@ const Dashboard = ({ user, onLogout }) => {
         return 0;
       });
     },
-    _eligibleProfsFor: subject => { if (!subject) return []; return professors.filter(p => professorMatchesSubject(p, subject)); },
+    _eligibleProfsFor: (subject, constraints) => { 
+      if (!subject) return []; 
+      if (constraints?.aiProfessorMap && constraints.aiProfessorMap[subject.id]) {
+        const rankedIds = constraints.aiProfessorMap[subject.id];
+        const aiPool = rankedIds.map(id => professors.find(p => p.id === id)).filter(Boolean);
+        if (aiPool.length > 0) return aiPool;
+      }
+      return professors.filter(p => professorMatchesSubject(p, subject)); 
+    },
     _autoScheduleAssignments: async (assignments, constraints) => {
       const results = [];
       const unscheduled = [];
@@ -426,7 +434,7 @@ const Dashboard = ({ user, onLogout }) => {
       for (const group of groups) {
         const { subject, section, count } = group;
         const roomPool = fixedRoom ? [fixedRoom] : validator._eligibleRoomsFor(subject, section, constraints);
-        const profPool = fixedProfessor ? [fixedProfessor] : validator._eligibleProfsFor(subject);
+        const profPool = fixedProfessor ? [fixedProfessor] : validator._eligibleProfsFor(subject, constraints);
 
         let placedCount = 0;
 

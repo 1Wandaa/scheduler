@@ -34,6 +34,9 @@ const BONUS = {
   SPREAD_ACROSS_WEEK: 5,
   SAME_ROOM_TIME_DIFFERENT_DAYS: 30,
   PAIRED_DAY_MATCH: 40,
+  AI_MATCH_1ST: 40,
+  AI_MATCH_2ND: 20,
+  AI_MATCH_3RD: 5,
 };
 
 // Day pairing: Mon(0)<->Thu(3), Tue(1)<->Fri(4), Wed(2) has no pair
@@ -641,6 +644,15 @@ export class ScheduleGA {
 
       if (prof && prof.preferredRooms && prof.preferredRooms.includes(chrom[i].roomId)) {
         softScore += BONUS.ROOM_PREFERENCE;
+      }
+
+      // AI match bonus
+      if (this.aiProfessorMap && this.aiProfessorMap[this.assignments[i].subject.id]) {
+         const rankedIds = this.aiProfessorMap[this.assignments[i].subject.id];
+         const rank = rankedIds.indexOf(chrom[i].professorId);
+         if (rank === 0) softScore += BONUS.AI_MATCH_1ST;
+         else if (rank === 1) softScore += BONUS.AI_MATCH_2ND;
+         else if (rank > 1) softScore += BONUS.AI_MATCH_3RD;
       }
     }
 
