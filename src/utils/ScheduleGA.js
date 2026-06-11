@@ -146,6 +146,18 @@ export class ScheduleGA {
         }
       }
     }
+    list.sort((a, b) => {
+      const aPE = (a.subject?.code || '').toUpperCase().startsWith('PE') ? 1 : 0;
+      const bPE = (b.subject?.code || '').toUpperCase().startsWith('PE') ? 1 : 0;
+      if (aPE !== bPE) return bPE - aPE; // PE first
+
+      const aLab = a.subject?.requiredLab ? 1 : 0;
+      const bLab = b.subject?.requiredLab ? 1 : 0;
+      if (aLab !== bLab) return bLab - aLab; // Lab second
+
+      return 0;
+    });
+
     return list;
   }
 

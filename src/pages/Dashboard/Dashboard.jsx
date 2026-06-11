@@ -470,10 +470,18 @@ const Dashboard = ({ user, onLogout }) => {
         }
       }
 
-      // Sort remaining groups: Lab subjects first
+      // Sort remaining groups: PE subjects first, then Lab subjects
       const groups = Array.from(groupsMap.values())
         .filter(g => g.count > 0)
-        .sort((a, b) => (b.subject?.requiredLab ? 1 : 0) - (a.subject?.requiredLab ? 1 : 0));
+        .sort((a, b) => {
+          const aPE = (a.subject?.code || '').toUpperCase().startsWith('PE') ? 1 : 0;
+          const bPE = (b.subject?.code || '').toUpperCase().startsWith('PE') ? 1 : 0;
+          if (aPE !== bPE) return bPE - aPE; // PE first
+
+          const aLab = a.subject?.requiredLab ? 1 : 0;
+          const bLab = b.subject?.requiredLab ? 1 : 0;
+          return bLab - aLab; // Lab second
+        });
 
       const PREFERRED_PAIRS = [['Monday', 'Thursday'], ['Tuesday', 'Friday']];
 
