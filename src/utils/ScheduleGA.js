@@ -257,9 +257,18 @@ export class ScheduleGA {
     }
 
     // --- ASSIGNED SECTIONS FILTER ---
-    // If any eligible professors are explicitly assigned to this section,
-    // restrict the pool to ONLY those professors.
     const sectionId = a.section?.id;
+    
+    // Rule 1: A professor with assigned sections CANNOT teach sections they are not assigned to.
+    pool = pool.filter(p => {
+      if (p.assignedSections && p.assignedSections.length > 0) {
+        return p.assignedSections.includes(sectionId);
+      }
+      return true; // No explicit assignments = can teach any section
+    });
+
+    // Rule 2: If there are ANY professors explicitly assigned to THIS section (and subject),
+    // restrict the pool ONLY to them, preventing unassigned professors from taking it.
     if (sectionId && pool.length > 0) {
       const explicitProfs = pool.filter(p => (p.assignedSections || []).includes(sectionId));
       if (explicitProfs.length > 0) {
@@ -294,6 +303,14 @@ export class ScheduleGA {
 
     // --- ASSIGNED SECTIONS FILTER ---
     const sectionId = a.section?.id;
+    
+    pool = pool.filter(p => {
+      if (p.assignedSections && p.assignedSections.length > 0) {
+        return p.assignedSections.includes(sectionId);
+      }
+      return true;
+    });
+
     if (sectionId && pool.length > 0) {
       const explicitProfs = pool.filter(p => (p.assignedSections || []).includes(sectionId));
       if (explicitProfs.length > 0) {

@@ -416,7 +416,18 @@ const Dashboard = ({ user, onLogout }) => {
         pool = pool.filter(p => professorMatchesSubject(p, subject));
       }
 
+      // --- ASSIGNED SECTIONS FILTER ---
       const sectionId = section?.id;
+      
+      // Rule 1: A professor with assigned sections CANNOT teach sections they are not assigned to.
+      pool = pool.filter(p => {
+        if (p.assignedSections && p.assignedSections.length > 0) {
+          return p.assignedSections.includes(sectionId);
+        }
+        return true;
+      });
+
+      // Rule 2: If there are ANY professors explicitly assigned to THIS section, restrict pool to them.
       if (sectionId && pool.length > 0) {
         const explicitProfs = pool.filter(p => (p.assignedSections || []).includes(sectionId));
         if (explicitProfs.length > 0) {
