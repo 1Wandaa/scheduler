@@ -7,6 +7,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
+  const [departmentFilter, setDepartmentFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
@@ -166,6 +167,17 @@ const SubjectManagement = ({ subjects, onBack }) => {
     }
   };
 
+  const getDeptColor = (dept) => {
+    switch(dept) {
+      case 'BSCS': return '#109EEF'; // Blue
+      case 'BAEL': return '#EAB308'; // Yellow
+      case 'BSOA': return '#8B5CF6'; // Purple
+      case 'BSFT': return '#16A34A'; // Green
+      case 'SHARED': return '#64748B'; // Slate
+      default: return 'var(--accent-primary)';
+    }
+  };
+
   return (
     <>
       <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
@@ -188,31 +200,60 @@ const SubjectManagement = ({ subjects, onBack }) => {
           <button className="btn" onClick={handleOpenAdd}>+ Add Subject</button>
         </div>
 
-        {/* Search Bar */}
-        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-          <input 
-            type="text" 
-            className="form-input" 
-            placeholder="Search subject code or name..." 
-            value={searchQuery} 
-            onChange={(e) => setSearchQuery(e.target.value)} 
-            style={{ flex: 1, maxWidth: '300px' }}
-          />
+        {/* Department Filter and Search Bar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by Department:</span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {['All', ...DEPARTMENTS].map(dept => (
+                <button
+                  key={dept}
+                  onClick={() => setDepartmentFilter(dept)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: departmentFilter === dept ? `1.5px solid ${getDeptColor(dept)}` : '1px solid var(--border-color)',
+                    background: departmentFilter === dept ? getDeptColor(dept) : 'transparent',
+                    color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '0.82rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = getDeptColor(dept); e.target.style.color = getDeptColor(dept); } }}
+                  onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
+                >
+                  {dept === 'All' ? 'All Departments' : dept}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <input 
+              type="text" 
+              className="form-input" 
+              placeholder="Search subject code or name..." 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              style={{ flex: 1, maxWidth: '300px' }}
+            />
+          </div>
         </div>
 
         {/* --- DYNAMIC TABLES INSTEAD OF ONE BIG TABLE --- */}
 
         {/* Render Minor Subjects First */}
-        {renderSubjectTable(minorSubjects, "Minor / General Education Subjects", "var(--warning)")}
+        {(departmentFilter === 'All') && renderSubjectTable(minorSubjects, "Minor / General Education Subjects", "var(--warning)")}
 
         {/* Render Major Subjects grouped by Department */}
         {DEPARTMENTS.map(dept => {
+          if (departmentFilter !== 'All' && departmentFilter !== dept) return null;
           const deptMajors = majorSubjects.filter(s => getSubjectDepts(s).includes(dept));
           return renderSubjectTable(deptMajors, `${dept} Major Subjects`, "var(--accent-primary)");
         })}
 
         {/* Fallback for major subjects that don't have a department assigned yet */}
-        {renderSubjectTable(
+        {(departmentFilter === 'All') && renderSubjectTable(
           majorSubjects.filter(s => getSubjectDepts(s).length === 0),
           "Unassigned Major Subjects",
           "var(--text-muted)"

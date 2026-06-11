@@ -8,6 +8,7 @@ const RoomManagement = ({ rooms, onBack }) => {
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('All');
   const [filterBuilding, setFilterBuilding] = useState('');
   const [error, setError] = useState(null);
 
@@ -135,6 +136,17 @@ const RoomManagement = ({ rooms, onBack }) => {
     }
   };
 
+  const getDeptColor = (dept) => {
+    switch(dept) {
+      case 'BSCS': return '#109EEF'; // Blue
+      case 'BAEL': return '#EAB308'; // Yellow
+      case 'BSOA': return '#8B5CF6'; // Purple
+      case 'BSFT': return '#16A34A'; // Green
+      case 'SHARED': return '#64748B'; // Slate
+      default: return 'var(--accent-primary)';
+    }
+  };
+
   return (
     <>
       <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
@@ -157,24 +169,52 @@ const RoomManagement = ({ rooms, onBack }) => {
         <button className="btn" onClick={handleOpenAdd}>+ Add Room</button>
       </div>
 
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-        <input 
-          type="text" 
-          className="form-input" 
-          placeholder="Search room name..." 
-          value={searchQuery} 
-          onChange={(e) => setSearchQuery(e.target.value)} 
-          style={{ flex: 1, maxWidth: '300px' }}
-        />
-        <select 
-          className="form-select" 
-          value={filterBuilding} 
-          onChange={(e) => setFilterBuilding(e.target.value)}
-          style={{ flex: 1, maxWidth: '250px' }}
-        >
-          <option value="">All Buildings</option>
-          {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
-        </select>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by Department:</span>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {['All', 'SHARED', ...DEPARTMENTS].map(dept => (
+              <button
+                key={dept}
+                onClick={() => setDepartmentFilter(dept)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  border: departmentFilter === dept ? `1.5px solid ${getDeptColor(dept)}` : '1px solid var(--border-color)',
+                  background: departmentFilter === dept ? getDeptColor(dept) : 'transparent',
+                  color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = getDeptColor(dept); e.target.style.color = getDeptColor(dept); } }}
+                onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
+              >
+                {dept === 'All' ? 'All Departments' : dept}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '15px' }}>
+          <input 
+            type="text" 
+            className="form-input" 
+            placeholder="Search room name..." 
+            value={searchQuery} 
+            onChange={(e) => setSearchQuery(e.target.value)} 
+            style={{ flex: 1, maxWidth: '300px' }}
+          />
+          <select 
+            className="form-select" 
+            value={filterBuilding} 
+            onChange={(e) => setFilterBuilding(e.target.value)}
+            style={{ flex: 1, maxWidth: '250px' }}
+          >
+            <option value="">All Buildings</option>
+            {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </div>
       </div>
 
       <table className="data-table">
@@ -183,7 +223,8 @@ const RoomManagement = ({ rooms, onBack }) => {
           {rooms.filter(r => {
             const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesBuilding = filterBuilding ? r.building === filterBuilding : true;
-            return matchesSearch && matchesBuilding;
+            const matchesDept = departmentFilter === 'All' ? true : (r.department || 'SHARED') === departmentFilter;
+            return matchesSearch && matchesBuilding && matchesDept;
           }).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => (
             <tr key={r.id}>
               <td><strong style={{ color: 'var(--text-main)' }}>{r.name}</strong></td>
