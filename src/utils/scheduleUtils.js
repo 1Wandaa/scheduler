@@ -15,11 +15,25 @@ export function slotsNeededFromIndex(startIdx, hoursPerMeeting) {
   const target = Number(hoursPerMeeting) || 1.5;
   let accumulated = 0;
   let count = 0;
+  let crossesLunch = false;
+  
   while (startIdx + count < TIME_SLOTS.length && accumulated < target - 0.001) {
+    if (count > 0) {
+      const prevSlot = TIME_SLOTS[startIdx + count - 1];
+      const currSlot = TIME_SLOTS[startIdx + count];
+      if (prevSlot.label === '11:30 - 12:00' && currSlot.label === '1:00 - 1:30') {
+        crossesLunch = true;
+        break;
+      }
+    }
     accumulated += getSlotDurationHours(startIdx + count);
     count++;
   }
-  return accumulated >= target - 0.001 ? Math.max(1, count) : 0;
+  
+  if (crossesLunch || accumulated < target - 0.001) {
+    return 0;
+  }
+  return Math.max(1, count);
 }
 
 /** Number of consecutive timetable rows a meeting occupies (default start: enough for 1.5hr). */

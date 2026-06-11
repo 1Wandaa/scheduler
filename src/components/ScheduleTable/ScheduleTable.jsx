@@ -265,11 +265,34 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
           </tr>
         </thead>
         <tbody>
-          {TIME_SLOTS.map((timeSlot, tIdx) => (
-            <tr key={timeSlot.id}>
-              <td className="time-label">
-                <strong>{timeSlot.label}</strong>
-              </td>
+          {TIME_SLOTS.map((timeSlot, tIdx) => {
+            const isEven = tIdx % 2 === 0;
+            let hourLabel = '';
+            if (isEven) {
+              const startLabel = timeSlot.label.split(' - ')[0];
+              const nextSlot = TIME_SLOTS[tIdx + 1];
+              const endLabel = nextSlot ? nextSlot.label.split(' - ')[1] : '';
+              hourLabel = `${startLabel} - ${endLabel}`;
+            }
+
+            return (
+              <React.Fragment key={timeSlot.id}>
+                {tIdx === 10 && (
+                  <tr className="lunch-break-row" style={{ height: '40px', backgroundColor: '#f1f5f9' }}>
+                    <td className="time-label" style={{ borderTop: '2px solid var(--border-color)', borderBottom: '2px solid var(--border-color)' }}>
+                      <strong>12:00 - 1:00</strong>
+                    </td>
+                    <td colSpan={DAYS.length} style={{ textAlign: 'center', letterSpacing: '8px', color: '#64748b', fontSize: '0.9rem', borderTop: '2px solid var(--border-color)', borderBottom: '2px solid var(--border-color)' }}>
+                      <strong>LUNCH BREAK</strong>
+                    </td>
+                  </tr>
+                )}
+                <tr className={isEven ? 'hour-row' : 'half-hour-row'}>
+                  {isEven && (
+                    <td className="time-label" rowSpan={2}>
+                      <strong>{hourLabel}</strong>
+                    </td>
+                  )}
               {DAYS.map(day => {
                 const cellKey = `${day}-${timeSlot.id}`;
                 if (window[`skip_cell_${cellKey}`]) {
@@ -309,16 +332,23 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                           onDragEnd={handleDragEnd}
                           style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
                         >
-                          <div className="schedule-content">
-                            <p className="subject" style={{ color: deptColor.text }}>
+                          <div className="schedule-content" style={{ display: 'flex', flexDirection: 'column' }}>
+                            <p className="subject" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0 }}>
                               {schedule.subject?.code ?? '—'}
-                              {schedule.section && <span style={{ fontWeight: '500', fontSize: '0.75rem', color: deptColor.text }}> — {schedule.section.name}</span>}
                             </p>
-                            <p className="time-range" style={{ color: deptColor.text, fontSize: '0.72rem', opacity: 0.9 }}>
-                              {getMeetingTimeLabel(schedule.timeSlot, schedule.subject?.hoursPerMeeting)}
-                            </p>
-                            <p className="professor" style={{ color: deptColor.text }}>{schedule.professor?.name ?? '—'}</p>
-                            <p className="room" style={{ color: deptColor.text }}>{schedule.room?.name ?? '—'}</p>
+                            <div className="details" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <p className="professor" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
+                                {schedule.professor?.name ? (() => {
+                                  const parts = schedule.professor.name.trim().split(/\s+/);
+                                  if (parts.length === 1) return parts[0];
+                                  return `${parts[0][0].toUpperCase()}.${parts[parts.length - 1]}`;
+                                })() : '—'}
+                              </p>
+                              <p className="room" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>{schedule.room?.name ?? '—'}</p>
+                              {schedule.section && (
+                                <p className="section" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>{schedule.section.name}</p>
+                              )}
+                            </div>
                           </div>
                           {onRemove && (
                             <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
@@ -331,8 +361,10 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                   </td>
                 );
               })}
-            </tr>
-          ))}
+                </tr>
+              </React.Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -369,7 +401,11 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                         )}
                       </div>
                       <div className="schedule-card-meta">
-                        <span>👤 {schedule.professor?.name ?? '—'}</span>
+                        <span>👤 {schedule.professor?.name ? (() => {
+                          const parts = schedule.professor.name.trim().split(/\s+/);
+                          if (parts.length === 1) return parts[0];
+                          return `${parts[0][0].toUpperCase()}.${parts[parts.length - 1]}`;
+                        })() : '—'}</span>
                         <span>🏫 {schedule.room?.name ?? '—'}</span>
                       </div>
                     </div>

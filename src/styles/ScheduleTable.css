@@ -407,9 +407,16 @@
 .schedule-table td {
   border: 1px solid var(--border-color);
   padding: 0;
-  height: 80px;
+  height: 40px;
   vertical-align: top;
   overflow: hidden;
+}
+
+.schedule-table tr.half-hour-row td:not(.time-label) {
+  border-top: none;
+}
+.schedule-table tr.hour-row td:not(.time-label) {
+  border-bottom: none;
 }
 
 .time-label {
@@ -428,7 +435,7 @@
 .schedule-cell {
   position: relative;
   padding: 0.5rem;
-  height: 80px;
+  height: 40px;
   transition: background-color 0.25s ease, box-shadow 0.25s ease;
   overflow: hidden;
 }
