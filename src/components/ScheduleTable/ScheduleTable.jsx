@@ -533,15 +533,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         </div>
       </div>
 
-      {/* Department Color Legend */}
-      <div className="dept-legend">
-        {Object.entries(DEPT_COLORS).map(([dept, color]) => (
-          <div key={dept} className="dept-legend-item">
-            <span className="dept-legend-swatch" style={{ backgroundColor: color.bg }}></span>
-            <span className="dept-legend-label">{dept}</span>
-          </div>
-        ))}
-      </div>
+
 
       {/* Content */}
       {viewMode === 'grid' || isFullscreen ? <GridView /> : <CardView />}
