@@ -339,11 +339,18 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                             <div className="details" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                               <p className="professor" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
                                 {schedule.professor?.name ? (() => {
-                                  const parts = schedule.professor.name.trim().split(/\s+/);
-                                  if (parts.length === 1) return parts[0];
-                                  const initial = parts[0][0].toUpperCase();
-                                  const surname = parts.slice(1).join(' ');
-                                  return `${initial}. ${surname}`;
+                                  const name = schedule.professor.name.trim();
+                                  if (name.includes(',')) {
+                                    const [surname, firstNames] = name.split(',').map(s => s.trim());
+                                    const initial = firstNames ? firstNames[0].toUpperCase() : '';
+                                    return initial ? `${initial}. ${surname}` : surname;
+                                  } else {
+                                    const parts = name.split(/\s+/);
+                                    if (parts.length === 1) return parts[0];
+                                    const initial = parts[0][0].toUpperCase();
+                                    const surname = parts.slice(1).join(' ');
+                                    return `${initial}. ${surname}`;
+                                  }
                                 })() : '—'}
                               </p>
                               <p className="room" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>{schedule.room?.name ?? '—'}</p>
