@@ -157,6 +157,15 @@ const SubjectManagement = ({ subjects, onBack }) => {
     );
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'TEXTAREA') return;
+      if (e.target.placeholder && e.target.placeholder.toLowerCase().includes('search')) return;
+      e.preventDefault();
+      handleSave();
+    }
+  };
+
   return (
     <>
       <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
@@ -213,7 +222,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
 
       {showModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ width: '450px' }}>
+          <div className="modal-content" style={{ width: '450px' }} onKeyDown={handleKeyDown}>
             <h3>{editMode ? 'Edit Subject' : 'Add New Subject'}</h3>
             {error && (
               <div style={{ position: 'sticky', top: '0', zIndex: 10, padding: '10px 15px', backgroundColor: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '8px', marginBottom: '15px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.3s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}>
