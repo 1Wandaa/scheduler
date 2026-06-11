@@ -353,7 +353,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
               <label className="form-label">Preferred Rooms (Optional)</label>
               <div style={{ marginTop: '8px', maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
                 {rooms.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No rooms available.</p>}
-                {rooms.map(room => (
+                {[...rooms].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(room => (
                   <label key={room.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
                     <input
                       type="checkbox"
