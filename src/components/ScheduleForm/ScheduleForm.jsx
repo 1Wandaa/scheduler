@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
-import { getEligibleProfessors } from '../../utils/scheduleUtils';
+import { getEligibleProfessors, slotsNeededFromIndex, getMeetingTimeLabel } from '../../utils/scheduleUtils';
 import '../../styles/SchedulerForm.css';
 
 function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, validator }) {
@@ -76,6 +76,10 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
   const eligibleProfessors = selectedSubject
     ? getEligibleProfessors(professors, selectedSubject, selectedSection)
     : professors;
+
+  const eligibleTimeSlots = selectedSubject
+    ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, selectedSubject.hoursPerMeeting) > 0)
+    : TIME_SLOTS;
 
   return (
     <div className="schedule-form-container">
@@ -193,11 +197,17 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               required
             >
               <option value="">Select a time</option>
-              {TIME_SLOTS.map(slot => (
-                <option key={slot.id} value={slot.id}>
-                  {slot.label}
-                </option>
-              ))}
+              {eligibleTimeSlots.map(slot => {
+                const idx = TIME_SLOTS.findIndex(ts => ts.id === slot.id);
+                const rangeLabel = selectedSubject
+                  ? getMeetingTimeLabel(slot, selectedSubject.hoursPerMeeting)
+                  : slot.label;
+                return (
+                  <option key={slot.id} value={slot.id}>
+                    {rangeLabel}{idx >= 0 && slotsNeededFromIndex(idx, selectedSubject?.hoursPerMeeting) > 1 ? ` (${selectedSubject?.hoursPerMeeting || 1.5} hrs)` : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
         </div>

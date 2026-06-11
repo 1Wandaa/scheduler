@@ -9,7 +9,7 @@ import {
   getSectionDepartment,
   getEligibleProfessors,
   applyAIRanking,
-  slotsNeeded,
+  slotsNeededFromIndex,
 } from './scheduleUtils.js';
 
 const DEFAULT_CONFIG = {
@@ -105,7 +105,7 @@ export class ScheduleGA {
       const dIdx = this.days.indexOf(s.day);
       const tIdx = this.timeSlots.findIndex(ts => String(ts.id) === String(s.timeSlot?.id));
       if (dIdx >= 0 && tIdx >= 0) {
-        const needed = slotsNeeded(s.subject?.hoursPerMeeting);
+        const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting);
         for (let i = 0; i < needed; i++) {
           const t = tIdx + i;
           if (t >= this.timeSlots.length) continue;
@@ -210,8 +210,7 @@ export class ScheduleGA {
   }
 
   _eligibleTimeSlotsFor(a) {
-    const needed = slotsNeeded(a.targetDuration);
-    return this.timeSlots.map((ts, idx) => idx).filter(idx => idx + needed <= this.timeSlots.length);
+    return this.timeSlots.map((ts, idx) => idx).filter(idx => slotsNeededFromIndex(idx, a.targetDuration) > 0);
   }
 
   _eligibleProfsFor(a, profWork = null) {
@@ -277,8 +276,8 @@ export class ScheduleGA {
   }
 
   _isSlotFree({ roomId, professorId, sectionId, dayIdx, timeIdx, targetDuration }, roomSlots, profSlots, secSlots) {
-    const needed = slotsNeeded(targetDuration);
-    if (timeIdx + needed > this.timeSlots.length) return false;
+    const needed = slotsNeededFromIndex(timeIdx, targetDuration);
+    if (needed === 0) return false;
 
     for (let i = 0; i < needed; i++) {
       const t = timeIdx + i;
@@ -293,7 +292,8 @@ export class ScheduleGA {
   }
 
   _occupy({ roomId, professorId, sectionId, dayIdx, timeIdx, targetDuration }, roomSlots, profSlots, secSlots) {
-    const needed = slotsNeeded(targetDuration);
+    const needed = slotsNeededFromIndex(timeIdx, targetDuration);
+    if (needed === 0) return;
     for (let i = 0; i < needed; i++) {
       const t = timeIdx + i;
       if (t >= this.timeSlots.length) continue;
@@ -746,7 +746,7 @@ export class ScheduleGA {
       if (!secTimeline[a.section.id][g.dayIdx]) secTimeline[a.section.id][g.dayIdx] = [];
       if (!roomTimeline[g.roomId][g.dayIdx]) roomTimeline[g.roomId][g.dayIdx] = [];
 
-      const needed = slotsNeeded(a.targetDuration);
+      const needed = slotsNeededFromIndex(g.timeIdx, a.targetDuration);
       const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
       profWork[g.professorId] = (profWork[g.professorId] || 0) + creditPerSlot;
 

@@ -22,7 +22,7 @@ import {
   getEligibleProfessors,
   applyAIRanking,
   creditPerMeeting,
-  slotsNeeded,
+  slotsNeededFromIndex,
   getTimeSlotIndex,
   schedulesOverlap,
 } from '../../utils/scheduleUtils';
@@ -290,8 +290,8 @@ const Dashboard = ({ user, onLogout }) => {
     if (errors.length > 0) return { valid: false, errors, warnings };
 
     const startIdx = getTimeSlotIndex(timeSlot);
-    const needed = slotsNeeded(subject?.hoursPerMeeting);
-    if (startIdx < 0 || startIdx + needed > TIME_SLOTS.length) {
+    const needed = slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting);
+    if (startIdx < 0 || needed === 0) {
       errors.push(`Time slot does not fit the ${subject?.hoursPerMeeting || 1.5}hr meeting duration.`);
       return { valid: false, errors, warnings };
     }
@@ -497,8 +497,7 @@ const Dashboard = ({ user, onLogout }) => {
           for (const room of roomPool) {
             for (const timeSlot of TIME_SLOTS) {
               const startIdx = getTimeSlotIndex(timeSlot);
-              const needed = slotsNeeded(subject?.hoursPerMeeting);
-              if (startIdx < 0 || startIdx + needed > TIME_SLOTS.length) continue;
+              if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting) === 0) continue;
 
               const isFree = (d) => {
                 const candidate = { room, professor, subject, section, day: d, timeSlot };

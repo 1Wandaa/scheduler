@@ -1,5 +1,30 @@
 import React from 'react';
+import { slotsNeededFromIndex } from '../../utils/scheduleUtils';
 import '../../styles/PrintableSchedule.css';
+
+/** Map printable row index to TIME_SLOTS array index (skips LUNCH row). */
+function printIndexToSlotIndex(printIdx) {
+  if (printIdx <= 4) return printIdx;
+  return printIdx - 1;
+}
+
+/** How many printable rows a class spans (includes LUNCH row when crossed). */
+function printRowsSpanned(printStartIdx, hoursPerMeeting, fixedTimeSlots) {
+  const target = Number(hoursPerMeeting) || 1.5;
+  const slotIdx = printIndexToSlotIndex(printStartIdx);
+  const slotRows = slotsNeededFromIndex(slotIdx, target);
+  if (slotRows <= 0) return 1;
+
+  let printRows = 0;
+  let slotsCounted = 0;
+  let idx = printStartIdx;
+  while (idx < fixedTimeSlots.length && slotsCounted < slotRows) {
+    if (fixedTimeSlots[idx] !== 'LUNCH') slotsCounted++;
+    printRows++;
+    idx++;
+  }
+  return Math.max(1, printRows);
+}
 
 const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -114,12 +139,11 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
 
                                     const cls = getClass(day, timeLabel);
                                     let rowSpan = 1;
-                                    if (cls && cls.subject?.hoursPerMeeting === 2) {
-                                        let nextIndex = index + 1;
-                                        if (fixedTimeSlots[nextIndex] === "LUNCH") nextIndex++; // Skip the lunch row for spanning
-                                        if (nextIndex < fixedTimeSlots.length) {
-                                            rowSpan = 2;
-                                            window[`print_skip_${day}-${fixedTimeSlots[nextIndex]}`] = true;
+                                    if (cls) {
+                                        rowSpan = printRowsSpanned(index, cls.subject?.hoursPerMeeting, fixedTimeSlots);
+                                        for (let skip = 1; skip < rowSpan; skip++) {
+                                            const skipLabel = fixedTimeSlots[index + skip];
+                                            if (skipLabel) window[`print_skip_${day}-${skipLabel}`] = true;
                                         }
                                     }
 

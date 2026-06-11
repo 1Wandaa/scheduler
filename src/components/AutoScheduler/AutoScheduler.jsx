@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { suggestProfessorMatches, analyzeScheduleFailures } from '../../utils/scheduleAI';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
-import { schedulesOverlap } from '../../utils/scheduleUtils';
+import { schedulesOverlap, getMeetingTimeLabel } from '../../utils/scheduleUtils';
 import '../../styles/AutoScheduler.css';
 
 // 1. ADDED 'schedules' to the props list
@@ -426,7 +426,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                           <div key={idx} style={{ padding: '10px', background: 'var(--success-bg)', borderLeft: item.prescriptionNote ? '4px solid var(--warning)' : '4px solid var(--success)', borderRadius: '4px', fontSize: '0.85rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
                               <span>{item.subject.code} {item.section ? `(${item.section.name})` : ''}</span>
-                              <span>{item.timeSlot.label}</span>
+                              <span>{getMeetingTimeLabel(item.timeSlot, item.subject?.hoursPerMeeting) || item.timeSlot.label}</span>
                             </div>
                             <div style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
                               {item.room.name} • Prof. {item.professor.name}

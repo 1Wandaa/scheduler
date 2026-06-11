@@ -2,13 +2,51 @@
  * Shared scheduling utilities used by GA, Dashboard validation, AI, and AutoScheduler.
  */
 
-import { TIME_SLOTS } from '../config/constants';
+import { TIME_SLOTS, getSlotDurationHours } from '../config/constants';
 
 const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
 
-/** Number of consecutive 1.5hr time slots a meeting occupies. */
+/**
+ * How many consecutive TIME_SLOTS rows a meeting occupies from a start index.
+ * Accounts for the 30-minute slot before lunch (id 5).
+ * Returns 0 if the meeting does not fit from that start index.
+ */
+export function slotsNeededFromIndex(startIdx, hoursPerMeeting) {
+  const target = Number(hoursPerMeeting) || 1.5;
+  let accumulated = 0;
+  let count = 0;
+  while (startIdx + count < TIME_SLOTS.length && accumulated < target - 0.001) {
+    accumulated += getSlotDurationHours(startIdx + count);
+    count++;
+  }
+  return accumulated >= target - 0.001 ? Math.max(1, count) : 0;
+}
+
+/** Number of consecutive timetable rows a meeting occupies (default start: enough for 1.5hr). */
 export function slotsNeeded(hoursPerMeeting) {
-  return Math.ceil((Number(hoursPerMeeting) || 1.5) / 1.5);
+  const target = Number(hoursPerMeeting) || 1.5;
+  // Typical case: ceil hours when all slots are 1hr (1.5→2, 2→2, 2.5→3, 3→3)
+  return Math.max(1, Math.ceil(target));
+}
+
+/** True if a meeting fits starting at the given TIME_SLOTS index. */
+export function fitsFromTimeSlotIndex(startIdx, hoursPerMeeting) {
+  return slotsNeededFromIndex(startIdx, hoursPerMeeting) > 0;
+}
+
+/** Human-readable time range for a scheduled class (e.g. "7:30 - 9:00"). */
+export function getMeetingTimeLabel(startTimeSlot, hoursPerMeeting) {
+  if (!startTimeSlot) return '';
+  const startIdx = getTimeSlotIndex(startTimeSlot);
+  if (startIdx < 0) return startTimeSlot.label || '';
+
+  const rowCount = slotsNeededFromIndex(startIdx, hoursPerMeeting);
+  const endIdx = startIdx + rowCount - 1;
+  const startLabel = (startTimeSlot.label || '').split(' - ')[0]?.trim();
+  const endSlot = TIME_SLOTS[endIdx];
+  const endLabel = endSlot ? (endSlot.label || '').split(' - ').pop()?.trim() : '';
+  if (startLabel && endLabel) return `${startLabel} - ${endLabel}`;
+  return startTimeSlot.label || '';
 }
 
 /** Extract department code from a section's program or name. */
@@ -54,7 +92,8 @@ export function getOccupiedSlots(schedule) {
   const startIdx = getTimeSlotIndex(schedule.timeSlot);
   if (startIdx < 0) return [{ day: schedule.day, timeSlotId: schedule.timeSlot.id }];
 
-  const needed = slotsNeeded(schedule.subject?.hoursPerMeeting);
+  const needed = slotsNeededFromIndex(startIdx, schedule.subject?.hoursPerMeeting);
+  if (needed === 0) return [{ day: schedule.day, timeSlotId: schedule.timeSlot.id }];
   const slots = [];
   for (let i = 0; i < needed; i++) {
     const idx = startIdx + i;

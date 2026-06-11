@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
+import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap } from '../../utils/scheduleUtils';
 import '../../styles/ScheduleTable.css';
 
 function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID" }) {
@@ -188,15 +189,11 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     const movingSchedule = schedules.find(s => s.id === scheduleId);
     if (!movingSchedule) return;
     if (movingSchedule.day === day && String(movingSchedule.timeSlot?.id) === String(timeSlotId)) return;
-    const roomConflict = schedules.find(s => s.id !== scheduleId && movingSchedule.room?.id != null && String(s.room?.id) === String(movingSchedule.room.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlotId));
-    const profConflict = schedules.find(s => s.id !== scheduleId && movingSchedule.professor?.id != null && String(s.professor?.id) === String(movingSchedule.professor.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlotId));
-    const sectionConflict = movingSchedule.section?.id ? schedules.find(s => s.id !== scheduleId && String(s.section?.id) === String(movingSchedule.section.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlotId)) : null;
-    if (roomConflict || profConflict || sectionConflict) {
-      const msgs = [];
-      if (roomConflict) msgs.push(`Room "${movingSchedule.room?.name ?? 'Unknown'}" is already occupied`);
-      if (profConflict) msgs.push(`Prof. "${movingSchedule.professor?.name ?? 'Unknown'}" is already teaching`);
-      if (sectionConflict) msgs.push(`Section "${movingSchedule.section?.name || 'Unknown'}" already has a class`);
-      showToast(`Cannot move schedule:\n${msgs.join('\n')}`);
+    const newTimeSlot = TIME_SLOTS.find(ts => String(ts.id) === String(timeSlotId));
+    const candidate = { ...movingSchedule, day, timeSlot: newTimeSlot };
+    const overlap = schedules.find(s => s.id !== scheduleId && schedulesOverlap(candidate, s));
+    if (overlap) {
+      showToast('Cannot move schedule: the new time overlaps an existing class (room, faculty, or section).');
       return;
     }
     const result = await onUpdateSchedule(scheduleId, day, timeSlotId);
@@ -282,10 +279,15 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                 const isDropTarget = dragOverCell === cellKey;
                 const cellSchedules = schedules.filter(s => s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
                 let rowSpan = 1;
-                const has2HrClass = cellSchedules.some(s => s.subject?.hoursPerMeeting === 2);
-                if (has2HrClass && tIdx < TIME_SLOTS.length - 1) {
-                  rowSpan = 2;
-                  window[`skip_cell_${day}-${TIME_SLOTS[tIdx + 1].id}`] = true;
+                for (const s of cellSchedules) {
+                  const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting);
+                  if (needed > rowSpan) rowSpan = needed;
+                }
+                if (rowSpan > 1) {
+                  for (let skip = 1; skip < rowSpan; skip++) {
+                    const skipSlot = TIME_SLOTS[tIdx + skip];
+                    if (skipSlot) window[`skip_cell_${day}-${skipSlot.id}`] = true;
+                  }
                 }
                 return (
                   <td
@@ -311,6 +313,9 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                             <p className="subject" style={{ color: deptColor.text }}>
                               {schedule.subject?.code ?? '—'}
                               {schedule.section && <span style={{ fontWeight: '500', fontSize: '0.75rem', color: deptColor.text }}> — {schedule.section.name}</span>}
+                            </p>
+                            <p className="time-range" style={{ color: deptColor.text, fontSize: '0.72rem', opacity: 0.9 }}>
+                              {getMeetingTimeLabel(schedule.timeSlot, schedule.subject?.hoursPerMeeting)}
                             </p>
                             <p className="professor" style={{ color: deptColor.text }}>{schedule.professor?.name ?? '—'}</p>
                             <p className="room" style={{ color: deptColor.text }}>{schedule.room?.name ?? '—'}</p>
@@ -351,7 +356,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                 return (
                   <div key={schedule.id} className="schedule-card-item" style={{ borderLeftColor: deptColor.bg, backgroundColor: `${deptColor.bg}12` }}>
                     <div className="schedule-card-time">
-                      {schedule.timeSlot?.label ?? '—'}
+                      {getMeetingTimeLabel(schedule.timeSlot, schedule.subject?.hoursPerMeeting) || schedule.timeSlot?.label || '—'}
                     </div>
                     <div className="schedule-card-body">
                       <div className="schedule-card-subject">
