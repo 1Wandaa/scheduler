@@ -31,7 +31,7 @@ const PENALTY = {
   MIXED_PROF_SECTION: -150,
   UNPAIRED_DAYS: -120,
   INCONSISTENT_TIME_OR_ROOM: -200,   // Increased from -110 — hard-lock room+time
-  IGNORED_ROOM_PREFERENCE: -150,      // Make preferred rooms a strict requirement
+  IGNORED_ROOM_PREFERENCE: -500,      // Massive penalty: never ignore preferred rooms
   SAME_DAY_CONFLICT: -90,
   LAB_MISMATCH: -80,
   WORKLOAD_EXCEEDED: -60,
@@ -590,7 +590,13 @@ export class ScheduleGA {
       let placed = false;
       for (const prof of rescueProfs) {
         if (placed) break;
-        for (const room of allRooms) {
+        
+        const prefRoomIds = prof.preferredRooms || [];
+        const validPrefRooms = allRooms.filter(r => prefRoomIds.includes(r.id));
+        const nonPrefRooms = allRooms.filter(r => !prefRoomIds.includes(r.id));
+        const sortedRoomsToTry = [...validPrefRooms, ...nonPrefRooms];
+
+        for (const room of sortedRoomsToTry) {
           if (placed) break;
           // Skip lab mismatch
           if (a.subject.requiredLab && !room.hasComputers) continue;
@@ -1047,7 +1053,12 @@ export class ScheduleGA {
         const g = chrom[i], a = this.assignments[i];
         switch (Math.floor(Math.random() * 4)) {
           case 0: {
-            const pool = this._eligibleRoomsFor(a);
+            let pool = this._eligibleRoomsFor(a);
+            const prof = this.profMap[g.professorId];
+            if (prof && prof.preferredRooms && prof.preferredRooms.length > 0) {
+              const prefPool = pool.filter(r => prof.preferredRooms.includes(r.id));
+              if (prefPool.length > 0) pool = prefPool;
+            }
             if (pool && pool.length > 0) g.roomId = pool[this._randInt(pool.length)].id;
             break;
           }
