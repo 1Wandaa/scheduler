@@ -1003,7 +1003,7 @@ const Dashboard = ({ user, onLogout }) => {
         {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={schedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} />}
 
       </div>
-      <Chatbot schedules={schedules} />
+      <Chatbot schedules={schedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
     </div>
   );
 };

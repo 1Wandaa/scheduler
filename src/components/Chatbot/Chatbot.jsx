@@ -2,28 +2,35 @@ import React, { useState, useEffect, useRef } from 'react';
 import { generativeModel } from '../../config/firebase';
 import '../../styles/Chatbot.css';
 
-const Chatbot = ({ schedules }) => {
+const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], rooms = [] }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [chatSession, setChatSession] = useState(null);
   const messagesEndRef = useRef(null);
-  const schedulesRef = useRef(schedules);
+  const dataRef = useRef({ schedules, professors, subjects, sections, rooms });
 
-  // Reset chat session when schedules change so context stays current
+  // Reset chat session when data changes so context stays current
   useEffect(() => {
-    if (schedulesRef.current !== schedules) {
-      schedulesRef.current = schedules;
+    const isDataDifferent = 
+      dataRef.current.schedules !== schedules ||
+      dataRef.current.professors !== professors ||
+      dataRef.current.subjects !== subjects ||
+      dataRef.current.sections !== sections ||
+      dataRef.current.rooms !== rooms;
+
+    if (isDataDifferent) {
+      dataRef.current = { schedules, professors, subjects, sections, rooms };
       setChatSession(null);
     }
-  }, [schedules]);
+  }, [schedules, professors, subjects, sections, rooms]);
 
   useEffect(() => {
     if (!isOpen || chatSession) return;
 
     const initChat = () => {
-      // Build a text representation of the current schedule
+      // Build a rich text representation of the current state
       const scheduleContext = schedules.map(s => {
         const subject = s.subject?.code || s.subject?.name || 'Unknown Subject';
         const section = s.section?.name || 'Unknown Section';
@@ -31,14 +38,72 @@ const Chatbot = ({ schedules }) => {
         const room = s.room?.name || 'Unknown Room';
         const day = s.day;
         const time = s.timeSlot?.label || 'Unknown Time';
-        return `${subject} for section ${section} is taught by ${prof} in ${room} on ${day} at ${time}.`;
+        return `- ${subject} for section ${section} is taught by ${prof} in ${room} on ${day} at ${time}.`;
       }).join('\n');
 
-      const systemPrompt = `You are a helpful AI assistant for the SMARTSCHED university scheduling system.
-Your job is to answer questions about the schedule.
-Here is the current schedule data:
+      const profContext = professors.map(p => `- ${p.name} (${p.department || 'No Dept'}). Specs: ${(p.specialization || []).length} subjects.`).join('\n');
+      const roomContext = rooms.map(r => `- ${r.name} (${r.department || 'SHARED'}). Cap: ${r.capacity || '?'}.`).join('\n');
+
+      // --- Conflict Detection ---
+      const conflicts = [];
+      const timeMap = {};
+      
+      schedules.forEach(s => {
+        if (!s.day || !s.timeSlot?.id) return;
+        const key = `${s.day}_${s.timeSlot.id}`;
+        if (!timeMap[key]) timeMap[key] = [];
+        timeMap[key].push(s);
+      });
+
+      Object.values(timeMap).forEach(slotSchedules => {
+        if (slotSchedules.length < 2) return;
+        
+        for (let i = 0; i < slotSchedules.length; i++) {
+          for (let j = i + 1; j < slotSchedules.length; j++) {
+            const s1 = slotSchedules[i];
+            const s2 = slotSchedules[j];
+            
+            const subj1 = s1.subject?.code || s1.subject?.name;
+            const subj2 = s2.subject?.code || s2.subject?.name;
+            const timeDesc = `on ${s1.day} at ${s1.timeSlot?.label}`;
+
+            if (s1.room?.id && s1.room.id === s2.room?.id) {
+              conflicts.push(`ROOM CONFLICT: ${s1.room.name} is double-booked for ${subj1} and ${subj2} ${timeDesc}.`);
+            }
+            if (s1.professor?.id && s1.professor.id === s2.professor?.id) {
+              conflicts.push(`PROFESSOR CONFLICT: ${s1.professor.name} is double-booked for ${subj1} and ${subj2} ${timeDesc}.`);
+            }
+            if (s1.section?.id && s1.section.id === s2.section?.id) {
+              conflicts.push(`SECTION CONFLICT: Section ${s1.section.name} is double-booked for ${subj1} and ${subj2} ${timeDesc}.`);
+            }
+          }
+        }
+      });
+      
+      // Deduplicate conflicts
+      const uniqueConflicts = [...new Set(conflicts)];
+      const conflictContext = uniqueConflicts.length > 0 
+        ? uniqueConflicts.join('\n') 
+        : 'No conflicts detected in the current schedule.';
+
+      const systemPrompt = `You are an expert AI assistant for the SMARTSCHED university scheduling system.
+Your job is to answer questions about the schedule, faculty, rooms, and subjects.
+Be extremely helpful, concise, and format your answers beautifully using markdown (like **bold** or bullet points).
+
+--- CURRENT SCHEDULE (${schedules.length} classes) ---
 ${scheduleContext || 'There are no classes scheduled yet.'}
-Keep your answers concise and polite.`;
+
+--- DETECTED CONFLICTS ---
+If the user asks about conflicts or how to fix them, you MUST suggest alternative schedules based on the OVERVIEWS below. Suggest an alternative room, professor, or time that fixes the conflict.
+${conflictContext}
+
+--- FACULTY OVERVIEW (${professors.length} professors) ---
+${profContext || 'No faculty data.'}
+
+--- ROOMS OVERVIEW (${rooms.length} rooms) ---
+${roomContext || 'No room data.'}
+
+Do not list all data unless explicitly asked. Summarize when appropriate.`;
 
       try {
         const chat = generativeModel.startChat({
@@ -59,6 +124,32 @@ Keep your answers concise and polite.`;
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
+
+  // A simple markdown parser for the chat bubbles
+  const renderText = (text) => {
+    if (!text) return null;
+    return text.split('\n').map((line, i) => {
+      // Bold syntax
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      return (
+        <span key={i} style={{ display: 'block', minHeight: '1.2em' }}>
+          {parts.map((part, j) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={j}>{part.slice(2, -2)}</strong>;
+            }
+            return <span key={j}>{part}</span>;
+          })}
+        </span>
+      );
+    });
+  };
+
+  const SUGGESTIONS = [
+    "Are there any conflicts? How can I fix them?",
+    "Who teaches what?",
+    "Show me the schedule for BSCS 1A",
+    "Which rooms are available on Monday?"
+  ];
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -123,10 +214,24 @@ Keep your answers concise and polite.`;
             {messages.map((msg, idx) => (
               <div key={idx} className={`chat-message ${msg.role}`}>
                 <div className="chat-bubble">
-                  {msg.text}
+                  {renderText(msg.text)}
                 </div>
               </div>
             ))}
+            
+            {messages.length === 1 && !isTyping && (
+              <div className="chat-suggestions" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '10px 15px', justifyContent: 'center' }}>
+                {SUGGESTIONS.map((sug, idx) => (
+                  <button 
+                    key={idx} 
+                    onClick={() => { setInput(sug); }} 
+                    style={{ background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '6px 12px', fontSize: '0.8rem', cursor: 'pointer', color: 'var(--accent-primary)', transition: 'all 0.2s' }}
+                  >
+                    {sug}
+                  </button>
+                ))}
+              </div>
+            )}
             {isTyping && (
               <div className="chat-message model">
                 <div className="chat-bubble typing">
