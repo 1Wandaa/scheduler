@@ -247,16 +247,20 @@ export class ScheduleGA {
 
     // --- ASSIGNED SECTIONS FILTER ---
     const sectionId = a.section?.id;
+    const sectionName = a.section?.name;
     
     pool = pool.filter(p => {
       if (p.assignedSections && p.assignedSections.length > 0) {
-        return p.assignedSections.includes(sectionId);
+        return p.assignedSections.includes(sectionId) || (sectionName && p.assignedSections.includes(sectionName));
       }
       return true;
     });
 
-    if (sectionId && pool.length > 0) {
-      const explicitProfs = pool.filter(p => (p.assignedSections || []).includes(sectionId));
+    if ((sectionId || sectionName) && pool.length > 0) {
+      const explicitProfs = pool.filter(p => {
+        const assigned = p.assignedSections || [];
+        return assigned.includes(sectionId) || (sectionName && assigned.includes(sectionName));
+      });
       if (explicitProfs.length > 0) {
         pool = explicitProfs;
       }
