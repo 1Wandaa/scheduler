@@ -16,6 +16,16 @@ import SubjectManagement from '../management/SubjectManagement';
 import ScheduleViewer from '../management/ScheduleViewer';
 import SectionManagement from '../management/SectionManagement';
 import Chatbot from '../../components/Chatbot/Chatbot';
+import {
+  professorMatchesSubject,
+  findScheduleConflicts,
+  getEligibleProfessors,
+  applyAIRanking,
+  creditPerMeeting,
+  slotsNeeded,
+  getTimeSlotIndex,
+  schedulesOverlap,
+} from '../../utils/scheduleUtils';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Icon = ({ d, size = 18 }) => {
@@ -132,20 +142,6 @@ const NAV_ICONS = {
     { d: "M6 14h12v8H6z" },
   ]},
 };
-
-function professorMatchesSubject(professor, subject) {
-  if (!professor || !subject) return false;
-  const specs = professor.specialization || [];
-  const subId = String(subject.id).toLowerCase();
-  const subCode = String(subject.code).toLowerCase();
-
-  return specs.some(s => {
-    const spec = String(s).toLowerCase().trim();
-    if (!spec) return false;
-    // Strict match on Subject ID or Code only
-    return spec === subId || spec === subCode;
-  });
-}
 
 // ─── KPI Tile ───────────────────────────────────────────────────────────────────────
 const KpiTile = ({ label, value, iconPath, color }) => {
@@ -277,20 +273,6 @@ const Dashboard = ({ user, onLogout }) => {
   const [sections, setSections] = useState([]);
   const [schedules, setSchedules] = useState([]);
 
-  const findScheduleConflicts = ({ roomId, professorId, sectionId, day, timeSlotId, excludeScheduleId = null }) => {
-    const conflicts = { room: null, professor: null, section: null };
-    for (const s of schedules) {
-      if (excludeScheduleId && s.id === excludeScheduleId) continue;
-      if (s.day !== day) continue;
-      if (String(s.timeSlot?.id) !== String(timeSlotId)) continue;
-      if (!conflicts.room && String(s.room?.id) === String(roomId)) conflicts.room = s;
-      if (!conflicts.professor && String(s.professor?.id) === String(professorId)) conflicts.professor = s;
-      if (!conflicts.section && sectionId && String(s.section?.id) === String(sectionId)) conflicts.section = s;
-      if (conflicts.room && conflicts.professor && (!sectionId || conflicts.section)) break;
-    }
-    return conflicts;
-  };
-
   const validateScheduleEntry = ({ room, professor, subject, section, day, timeSlot, excludeScheduleId = null }) => {
     const errors = []; const warnings = [];
     if (!room?.id) errors.push('Room is required.');
@@ -306,7 +288,19 @@ const Dashboard = ({ user, onLogout }) => {
         errors.push(`Section "${section.name}" is not enrolled in subject "${subject.code}".`);
     }
     if (errors.length > 0) return { valid: false, errors, warnings };
-    const conflicts = findScheduleConflicts({ roomId: room.id, professorId: professor.id, sectionId: section?.id || null, day, timeSlotId: timeSlot.id, excludeScheduleId });
+
+    const startIdx = getTimeSlotIndex(timeSlot);
+    const needed = slotsNeeded(subject?.hoursPerMeeting);
+    if (startIdx < 0 || startIdx + needed > TIME_SLOTS.length) {
+      errors.push(`Time slot does not fit the ${subject?.hoursPerMeeting || 1.5}hr meeting duration.`);
+      return { valid: false, errors, warnings };
+    }
+
+    const conflicts = findScheduleConflicts(
+      { room, professor, subject, section, day, timeSlot },
+      schedules,
+      { excludeScheduleId }
+    );
     if (conflicts.room) errors.push(`Room "${room?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
     if (conflicts.professor) errors.push(`Faculty "${professor?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
     if (section?.id && conflicts.section) errors.push(`Section "${section?.name}" already has a class for ${day} (${timeSlot?.label}).`);
@@ -439,38 +433,13 @@ const Dashboard = ({ user, onLogout }) => {
       }
       return [...tier1, ...tier2, ...tier3];
     },
-    _eligibleProfsFor: (subject, section, constraints) => { 
-      if (!subject) return []; 
-      let pool = professors;
-
-      if (constraints?.aiProfessorMap && constraints.aiProfessorMap[subject.id]) {
-        const rankedIds = constraints.aiProfessorMap[subject.id];
-        const aiPool = rankedIds.map(id => professors.find(p => p.id === id)).filter(Boolean);
-        if (aiPool.length > 0) pool = aiPool;
-      } else {
-        pool = pool.filter(p => professorMatchesSubject(p, subject));
+    _eligibleProfsFor: (subject, section, constraints) => {
+      if (!subject) return [];
+      const basePool = getEligibleProfessors(professors, subject, section);
+      if (constraints?.aiProfessorMap?.[subject.id]) {
+        return applyAIRanking(basePool, constraints.aiProfessorMap[subject.id]);
       }
-
-      // --- ASSIGNED SECTIONS FILTER ---
-      const sectionId = section?.id;
-      
-      // Rule 1: A professor with assigned sections CANNOT teach sections they are not assigned to.
-      pool = pool.filter(p => {
-        if (p.assignedSections && p.assignedSections.length > 0) {
-          return p.assignedSections.includes(sectionId);
-        }
-        return true;
-      });
-
-      // Rule 2: If there are ANY professors explicitly assigned to THIS section, restrict pool to them.
-      if (sectionId && pool.length > 0) {
-        const explicitProfs = pool.filter(p => (p.assignedSections || []).includes(sectionId));
-        if (explicitProfs.length > 0) {
-          pool = explicitProfs;
-        }
-      }
-
-      return pool;
+      return basePool;
     },
     _autoScheduleAssignments: async (assignments, constraints) => {
       const results = [];
@@ -516,22 +485,25 @@ const Dashboard = ({ user, onLogout }) => {
           const uniqueLoad = new Map();
           for (const s of profSchedules) {
             const k = `${s.subject?.id || 'x'}__${s.section?.id || 'x'}`;
-            if (!uniqueLoad.has(k)) uniqueLoad.set(k, Number(s.subject?.credits) || 3);
+            if (!uniqueLoad.has(k)) uniqueLoad.set(k, creditPerMeeting(s.subject));
           }
           const profCurrentLoad = Array.from(uniqueLoad.values()).reduce((s, c) => s + c, 0);
+          const perMeeting = creditPerMeeting(subject);
 
-          if (profCurrentLoad + (Number(subject.credits) || 3) > (Number(professor.maxUnits) || Number(professor.maxHours) || 12) + 0.01) {
+          if (profCurrentLoad + perMeeting > (Number(professor.maxUnits) || Number(professor.maxHours) || 12) + 0.01) {
             continue;
           }
 
           for (const room of roomPool) {
             for (const timeSlot of TIME_SLOTS) {
+              const startIdx = getTimeSlotIndex(timeSlot);
+              const needed = slotsNeeded(subject?.hoursPerMeeting);
+              if (startIdx < 0 || startIdx + needed > TIME_SLOTS.length) continue;
+
               const isFree = (d) => {
+                const candidate = { room, professor, subject, section, day: d, timeSlot };
                 if (constraints?.preventDoubleBooking) {
-                  const rBusy = temp.some(s => String(s.room?.id) === String(room.id) && s.day === d && String(s.timeSlot?.id) === String(timeSlot.id));
-                  const pBusy = temp.some(s => String(s.professor?.id) === String(professor.id) && s.day === d && String(s.timeSlot?.id) === String(timeSlot.id));
-                  const sBusy = section?.id ? temp.some(s => String(s.section?.id) === String(section.id) && s.day === d && String(s.timeSlot?.id) === String(timeSlot.id)) : false;
-                  if (rBusy || pBusy || sBusy) return false;
+                  if (temp.some(s => schedulesOverlap(candidate, s))) return false;
                 }
                 const chk = validateScheduleEntry({ room, professor, subject, section, day: d, timeSlot });
                 return chk.valid;

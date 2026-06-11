@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
+import { getEligibleProfessors } from '../../utils/scheduleUtils';
 import '../../styles/SchedulerForm.css';
 
 function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, validator }) {
@@ -71,6 +72,10 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
   };
 
   const selectedSubject = subjects.find(s => s.id === formData.subject);
+  const selectedSection = sections ? sections.find(s => s.id === formData.section) : null;
+  const eligibleProfessors = selectedSubject
+    ? getEligibleProfessors(professors, selectedSubject, selectedSection)
+    : professors;
 
   return (
     <div className="schedule-form-container">
@@ -122,7 +127,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             required
           >
             <option value="">Select a professor</option>
-            {[...professors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(professor => (
+            {[...eligibleProfessors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(professor => (
               <option key={professor.id} value={professor.id}>
                 {professor.name}
               </option>
@@ -205,6 +210,12 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       {selectedSubject && selectedSubject.requiredLab && (
         <div className="info-box">
           ⚠️ This subject requires a computer laboratory.
+        </div>
+      )}
+
+      {selectedSubject && eligibleProfessors.length === 0 && (
+        <div className="info-box" style={{ borderColor: 'var(--danger)' }}>
+          No faculty is authorized for this subject{selectedSection ? ` in section ${selectedSection.name}` : ''}. Assign a specialization in Faculty Management.
         </div>
       )}
 

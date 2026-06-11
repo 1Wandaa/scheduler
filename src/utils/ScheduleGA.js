@@ -5,6 +5,13 @@
  *     prescription output, room utilization spread.
  */
 
+import {
+  getSectionDepartment,
+  getEligibleProfessors,
+  applyAIRanking,
+  slotsNeeded,
+} from './scheduleUtils.js';
+
 const DEFAULT_CONFIG = {
   populationSize: 80,
   maxGenerations: 300,
@@ -49,25 +56,6 @@ const BONUS = {
 
 // Day pairing: Mon(0)<->Thu(3), Tue(1)<->Fri(4), Wed(2) has no pair
 const DAY_PAIR_MAP = { 0: 3, 3: 0, 1: 4, 4: 1 };
-
-/**
- * Extract the department from a section's program or name.
- * e.g. "BSCS 1A" → "BSCS", "BAEL 2" → "BAEL"
- */
-function getSectionDepartment(section) {
-  if (!section) return null;
-  // Check program field first
-  const program = (section.program || '').toUpperCase();
-  for (const dept of ['BSCS', 'BAEL', 'BSOA', 'BSFT']) {
-    if (program.includes(dept)) return dept;
-  }
-  // Fallback: check section name
-  const name = (section.name || '').toUpperCase();
-  for (const dept of ['BSCS', 'BAEL', 'BSOA', 'BSFT']) {
-    if (name.startsWith(dept)) return dept;
-  }
-  return null;
-}
 
 export class ScheduleGA {
   constructor(subjects, rooms, professors, sections, days, timeSlots, existingSchedules = [], config = {}, aiProfessorMap = null) {
@@ -117,8 +105,8 @@ export class ScheduleGA {
       const dIdx = this.days.indexOf(s.day);
       const tIdx = this.timeSlots.findIndex(ts => String(ts.id) === String(s.timeSlot?.id));
       if (dIdx >= 0 && tIdx >= 0) {
-        const slotsNeeded = Math.ceil((Number(s.subject?.hoursPerMeeting) || 1.5) / 1.5);
-        for (let i = 0; i < slotsNeeded; i++) {
+        const needed = slotsNeeded(s.subject?.hoursPerMeeting);
+        for (let i = 0; i < needed; i++) {
           const t = tIdx + i;
           if (t >= this.timeSlots.length) continue;
           if (s.room) this.existingRoomSlots[`${s.room.id}-${dIdx}-${t}`] = true;
@@ -222,60 +210,16 @@ export class ScheduleGA {
   }
 
   _eligibleTimeSlotsFor(a) {
-    const slotsNeeded = Math.ceil((a.targetDuration || 1.5) / 1.5);
-    return this.timeSlots.map((ts, idx) => idx).filter(idx => idx + slotsNeeded <= this.timeSlots.length);
+    const needed = slotsNeeded(a.targetDuration);
+    return this.timeSlots.map((ts, idx) => idx).filter(idx => idx + needed <= this.timeSlots.length);
   }
 
   _eligibleProfsFor(a, profWork = null) {
     const subject = a.subject;
-    let pool = this.professors;
-
-    // --- AI-enhanced matching: use Gemini-ranked professor list if available ---
-    if (subject && this.aiProfessorMap && this.aiProfessorMap[subject.id]) {
-      const rankedIds = this.aiProfessorMap[subject.id];
-      const aiPool = rankedIds
-        .map(id => this.profMap[id])
-        .filter(Boolean);
-      if (aiPool.length > 0) {
-        pool = aiPool;
-      }
-    }
-    // --- Fallback: original string-matching logic ---
-    else if (subject) {
-      pool = this.professors.filter(p => {
-        const specs = p.specialization || [];
-        const subId = String(subject.id).toLowerCase();
-        const subCode = (subject.code ? String(subject.code).toLowerCase() : '');
-        const subName = (subject.name ? String(subject.name).toLowerCase() : '');
-
-        return specs.some(s => {
-          const spec = String(s).toLowerCase().trim();
-          if (!spec) return false;
-          // Fuzzy match on Subject ID, Code, or Name
-          return subId.includes(spec) || subCode.includes(spec) || subName.includes(spec) || spec === subId || spec === subCode;
-        });
-      });
-    }
-
-    // --- ASSIGNED SECTIONS FILTER ---
-    const sectionId = a.section?.id;
-    
-    // Rule 1: A professor with assigned sections CANNOT teach sections they are not assigned to.
-    pool = pool.filter(p => {
-      if (p.assignedSections && p.assignedSections.length > 0) {
-        return p.assignedSections.includes(sectionId);
-      }
-      return true; // No explicit assignments = can teach any section
-    });
-
-    // Rule 2: If there are ANY professors explicitly assigned to THIS section (and subject),
-    // restrict the pool ONLY to them, preventing unassigned professors from taking it.
-    if (sectionId && pool.length > 0) {
-      const explicitProfs = pool.filter(p => (p.assignedSections || []).includes(sectionId));
-      if (explicitProfs.length > 0) {
-        pool = explicitProfs;
-      }
-    }
+    const basePool = getEligibleProfessors(this.professors, subject, a.section);
+    let pool = this.aiProfessorMap?.[subject?.id]
+      ? applyAIRanking(basePool, this.aiProfessorMap[subject.id])
+      : basePool;
 
     if (!profWork) return pool;
 
@@ -333,10 +277,10 @@ export class ScheduleGA {
   }
 
   _isSlotFree({ roomId, professorId, sectionId, dayIdx, timeIdx, targetDuration }, roomSlots, profSlots, secSlots) {
-    const slotsNeeded = Math.ceil((targetDuration || 1.5) / 1.5);
-    if (timeIdx + slotsNeeded > this.timeSlots.length) return false;
+    const needed = slotsNeeded(targetDuration);
+    if (timeIdx + needed > this.timeSlots.length) return false;
 
-    for (let i = 0; i < slotsNeeded; i++) {
+    for (let i = 0; i < needed; i++) {
       const t = timeIdx + i;
       const rk = `${roomId}-${dayIdx}-${t}`;
       const pk = `${professorId}-${dayIdx}-${t}`;
@@ -349,8 +293,8 @@ export class ScheduleGA {
   }
 
   _occupy({ roomId, professorId, sectionId, dayIdx, timeIdx, targetDuration }, roomSlots, profSlots, secSlots) {
-    const slotsNeeded = Math.ceil((targetDuration || 1.5) / 1.5);
-    for (let i = 0; i < slotsNeeded; i++) {
+    const needed = slotsNeeded(targetDuration);
+    for (let i = 0; i < needed; i++) {
       const t = timeIdx + i;
       if (t >= this.timeSlots.length) continue;
       const rk = `${roomId}-${dayIdx}-${t}`;
@@ -453,7 +397,7 @@ export class ScheduleGA {
         const isRoomEligible = roomMatchesLock && rooms.some(r => r.id === g.roomId);
         if (isProfEligible && isRoomEligible) {
           const ok = this._isSlotFree(
-            { roomId: g.roomId, professorId: g.professorId, sectionId, dayIdx: g.dayIdx, timeIdx: g.timeIdx },
+            { roomId: g.roomId, professorId: g.professorId, sectionId, dayIdx: g.dayIdx, timeIdx: g.timeIdx, targetDuration: a.targetDuration },
             roomSlots, profSlots, secSlots
           );
           if (ok) validExisting = true;
@@ -461,7 +405,7 @@ export class ScheduleGA {
       }
 
       if (validExisting) {
-        this._occupy({ roomId: g.roomId, professorId: g.professorId, sectionId, dayIdx: g.dayIdx, timeIdx: g.timeIdx }, roomSlots, profSlots, secSlots);
+        this._occupy({ roomId: g.roomId, professorId: g.professorId, sectionId, dayIdx: g.dayIdx, timeIdx: g.timeIdx, targetDuration: a.targetDuration }, roomSlots, profSlots, secSlots);
         profWork[g.professorId] = (Number(profWork[g.professorId]) || 0) + creditPerSlot;
         
         // Lock professor and room for this section+subject
@@ -795,36 +739,37 @@ export class ScheduleGA {
 
       roomsUsed.add(g.roomId);
 
-      const rk = `${g.roomId}-${g.dayIdx}-${g.timeIdx}`;
-      const pk = `${g.professorId}-${g.dayIdx}-${g.timeIdx}`;
-      const sk = `${a.section.id}-${g.dayIdx}-${g.timeIdx}`;
-
       if (!profTimeline[g.professorId]) profTimeline[g.professorId] = {};
       if (!secTimeline[a.section.id]) secTimeline[a.section.id] = {};
       if (!roomTimeline[g.roomId]) roomTimeline[g.roomId] = {};
       if (!profTimeline[g.professorId][g.dayIdx]) profTimeline[g.professorId][g.dayIdx] = [];
       if (!secTimeline[a.section.id][g.dayIdx]) secTimeline[a.section.id][g.dayIdx] = [];
       if (!roomTimeline[g.roomId][g.dayIdx]) roomTimeline[g.roomId][g.dayIdx] = [];
-      
-      const slotsNeeded = Math.ceil((a.targetDuration || 1.5) / 1.5);
-      for (let s = 0; s < slotsNeeded; s++) {
-        const t = g.timeIdx + s;
-        if (t >= this.timeSlots.length) continue;
-        profTimeline[g.professorId][g.dayIdx].push({ timeIdx: t, roomId: g.roomId });
-        secTimeline[a.section.id][g.dayIdx].push({ timeIdx: t, roomId: g.roomId });
-        roomTimeline[g.roomId][g.dayIdx].push({ timeIdx: t });
-      }
 
+      const needed = slotsNeeded(a.targetDuration);
       const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
       profWork[g.professorId] = (profWork[g.professorId] || 0) + creditPerSlot;
 
-      if (this.existingRoomSlots[rk]) { hardScore += PENALTY.ROOM_CONFLICT; hardViolations++; }
-      if (this.existingProfSlots[pk]) { hardScore += PENALTY.PROF_CONFLICT; hardViolations++; }
-      if (this.existingSecSlots[sk]) { hardScore += PENALTY.SECTION_CONFLICT; hardViolations++; }
+      for (let s = 0; s < needed; s++) {
+        const t = g.timeIdx + s;
+        if (t >= this.timeSlots.length) continue;
 
-      roomSlots[rk] = (roomSlots[rk] || 0) + 1;
-      profSlots[pk] = (profSlots[pk] || 0) + 1;
-      secSlots[sk] = (secSlots[sk] || 0) + 1;
+        const rk = `${g.roomId}-${g.dayIdx}-${t}`;
+        const pk = `${g.professorId}-${g.dayIdx}-${t}`;
+        const sk = `${a.section.id}-${g.dayIdx}-${t}`;
+
+        profTimeline[g.professorId][g.dayIdx].push({ timeIdx: t, roomId: g.roomId });
+        secTimeline[a.section.id][g.dayIdx].push({ timeIdx: t, roomId: g.roomId });
+        roomTimeline[g.roomId][g.dayIdx].push({ timeIdx: t });
+
+        if (this.existingRoomSlots[rk]) { hardScore += PENALTY.ROOM_CONFLICT; hardViolations++; }
+        if (this.existingProfSlots[pk]) { hardScore += PENALTY.PROF_CONFLICT; hardViolations++; }
+        if (this.existingSecSlots[sk]) { hardScore += PENALTY.SECTION_CONFLICT; hardViolations++; }
+
+        roomSlots[rk] = (roomSlots[rk] || 0) + 1;
+        profSlots[pk] = (profSlots[pk] || 0) + 1;
+        secSlots[sk] = (secSlots[sk] || 0) + 1;
+      }
 
       if (!profAssignedSubjects[g.professorId]) profAssignedSubjects[g.professorId] = new Set();
       profAssignedSubjects[g.professorId].add(`${a.subject.id}_${a.section.id}`);
@@ -906,13 +851,16 @@ export class ScheduleGA {
         }
       }
 
-      // AI match bonus
-      if (this.aiProfessorMap && this.aiProfessorMap[this.assignments[i].subject.id]) {
-         const rankedIds = this.aiProfessorMap[this.assignments[i].subject.id];
-         const rank = rankedIds.indexOf(chrom[i].professorId);
-         if (rank === 0) softScore += BONUS.AI_MATCH_1ST;
-         else if (rank === 1) softScore += BONUS.AI_MATCH_2ND;
-         else if (rank > 1) softScore += BONUS.AI_MATCH_3RD;
+      // AI match bonus — only when professor is in the eligible pool for this assignment
+      const assignment = this.assignments[i];
+      const eligibleForBonus = getEligibleProfessors(this.professors, assignment.subject, assignment.section);
+      const eligibleIds = new Set(eligibleForBonus.map(p => p.id));
+      if (eligibleIds.has(chrom[i].professorId) && this.aiProfessorMap?.[assignment.subject.id]) {
+        const rankedIds = this.aiProfessorMap[assignment.subject.id].filter(id => eligibleIds.has(id));
+        const rank = rankedIds.indexOf(chrom[i].professorId);
+        if (rank === 0) softScore += BONUS.AI_MATCH_1ST;
+        else if (rank === 1) softScore += BONUS.AI_MATCH_2ND;
+        else if (rank > 1) softScore += BONUS.AI_MATCH_3RD;
       }
     }
 

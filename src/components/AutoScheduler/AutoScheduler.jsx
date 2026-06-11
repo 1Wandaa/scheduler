@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { suggestProfessorMatches, analyzeScheduleFailures } from '../../utils/scheduleAI';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
+import { schedulesOverlap } from '../../utils/scheduleUtils';
 import '../../styles/AutoScheduler.css';
 
 // 1. ADDED 'schedules' to the props list
@@ -51,7 +52,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       if (aiAssisted) {
         try {
           setAiStatus('🧠 AI analyzing professor-subject compatibility...');
-          aiProfessorMap = await suggestProfessorMatches(professors, subjects, sections);
+          aiProfessorMap = await suggestProfessorMatches(professors, subjects, sections, schedules);
           if (aiProfessorMap) {
             setAiStatus('✅ AI matching complete — starting targeted engine with optimized assignments');
           } else {
@@ -129,7 +130,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       if (aiAssisted) {
         try {
           setAiStatus('🧠 AI analyzing professor-subject compatibility...');
-          aiProfessorMap = await suggestProfessorMatches(professors, subjects, sections);
+          aiProfessorMap = await suggestProfessorMatches(professors, subjects, sections, existingSchedules);
           if (aiProfessorMap) {
             setAiStatus('✅ AI matching complete — starting GA with optimized assignments');
           } else {
@@ -208,15 +209,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           continue;
         }
 
-        const sameTimeSlot = (a, b) => a.day === b.day && String(a.timeSlot?.id) === String(b.timeSlot?.id);
-
-        const isConflict = savedSchedules.some(s =>
-          sameTimeSlot(s, entry) && (
-            (s.room?.id && entry.room?.id && String(s.room.id) === String(entry.room.id)) ||
-            (s.professor?.id && entry.professor?.id && String(s.professor.id) === String(entry.professor.id)) ||
-            (s.section?.id && entry.section?.id && String(s.section.id) === String(entry.section.id))
-          )
-        );
+        const isConflict = savedSchedules.some(s => schedulesOverlap(s, entry));
 
         if (preventDoubleBooking && isConflict) {
           unscheduledResults.push({ ...entry, reason: 'Overlap conflict detected by engine.' });
@@ -539,10 +532,15 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                     
                     {/* Concrete suggestion from AI */}
                     {(insight.suggestedRoom || insight.suggestedDay || insight.suggestedTime || insight.suggestedProfessor) && (
-                      <div style={{ padding: '10px 12px', background: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.15)', borderRadius: '6px', marginBottom: '8px' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
-                          Suggested Placement:
+                      <div style={{ padding: '10px 12px', background: insight.validated ? 'rgba(5,150,105,0.06)' : 'rgba(245,166,35,0.06)', border: `1px solid ${insight.validated ? 'rgba(5,150,105,0.15)' : 'rgba(245,166,35,0.2)'}`, borderRadius: '6px', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: '700', color: insight.validated ? 'var(--success)' : 'var(--warning)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                          {insight.validated ? 'Validated Placement:' : 'Suggested Placement (unverified):'}
                         </div>
+                        {insight.validationWarnings?.length > 0 && (
+                          <div style={{ fontSize: '0.78rem', color: 'var(--warning)', marginBottom: '6px' }}>
+                            {insight.validationWarnings.map((w, wi) => <div key={wi}>⚠️ {w}</div>)}
+                          </div>
+                        )}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '6px', fontSize: '0.82rem' }}>
                           {insight.suggestedRoom && (
                             <div><strong style={{ color: 'var(--text-muted)' }}>Room:</strong> <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{insight.suggestedRoom}</span></div>
