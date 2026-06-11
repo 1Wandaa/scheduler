@@ -24,6 +24,7 @@ const PENALTY = {
   MIXED_PROF_SECTION: -150,
   UNPAIRED_DAYS: -120,
   INCONSISTENT_TIME_OR_ROOM: -200,   // Increased from -110 — hard-lock room+time
+  IGNORED_ROOM_PREFERENCE: -150,      // Make preferred rooms a strict requirement
   SAME_DAY_CONFLICT: -90,
   LAB_MISMATCH: -80,
   WORKLOAD_EXCEEDED: -60,
@@ -495,7 +496,18 @@ export class ScheduleGA {
           }
           timeIdx = pref.timeIdx;
         } else {
-          room = rooms[this._randInt(rooms.length)];
+          const prefRoomIds = prof.preferredRooms || [];
+          if (prefRoomIds.length > 0) {
+            const validPrefRooms = rooms.filter(r => prefRoomIds.includes(r.id));
+            if (validPrefRooms.length > 0) {
+              room = validPrefRooms[this._randInt(validPrefRooms.length)];
+            } else {
+              room = rooms[this._randInt(rooms.length)];
+            }
+          } else {
+            room = rooms[this._randInt(rooms.length)];
+          }
+          
           const validTimes = this._eligibleTimeSlotsFor(a);
           timeIdx = validTimes[this._randInt(validTimes.length)];
         }
@@ -699,7 +711,21 @@ export class ScheduleGA {
       if (!slot) {
         // First meeting: pick room, time, and a starting day (prefer Mon=0 or Tue=1)
         const rooms = this._eligibleRoomsFor(a);
-        const room = rooms[this._randInt(rooms.length)];
+        let room;
+        
+        const assignedProf = this.profMap[profId];
+        const prefRoomIds = assignedProf?.preferredRooms || [];
+        if (prefRoomIds.length > 0) {
+          const validPrefRooms = rooms.filter(r => prefRoomIds.includes(r.id));
+          if (validPrefRooms.length > 0) {
+            room = validPrefRooms[this._randInt(validPrefRooms.length)];
+          } else {
+            room = rooms[this._randInt(rooms.length)];
+          }
+        } else {
+          room = rooms[this._randInt(rooms.length)];
+        }
+
         const validTimes = this._eligibleTimeSlotsFor(a);
         const timeIdx = validTimes[this._randInt(validTimes.length)];
         const pairStarts = [0, 1]; // Monday or Tuesday
@@ -871,8 +897,13 @@ export class ScheduleGA {
         for (const sp of specs) { if (name.includes(sp)) { softScore += BONUS.SPECIALIZATION_MATCH; break; } }
       }
 
-      if (prof && prof.preferredRooms && prof.preferredRooms.includes(chrom[i].roomId)) {
-        softScore += BONUS.ROOM_PREFERENCE;
+      if (prof && prof.preferredRooms && prof.preferredRooms.length > 0) {
+        if (prof.preferredRooms.includes(chrom[i].roomId)) {
+          softScore += BONUS.ROOM_PREFERENCE;
+        } else {
+          hardScore += PENALTY.IGNORED_ROOM_PREFERENCE;
+          hardViolations++;
+        }
       }
 
       // AI match bonus
