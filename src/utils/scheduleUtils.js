@@ -12,6 +12,10 @@ const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
  * Returns 0 if the meeting does not fit from that start index.
  */
 export function slotsNeededFromIndex(startIdx, hoursPerMeeting) {
+  if (startIdx === 0) {
+    return 0; // Prevent classes from starting at 7:00 AM
+  }
+
   const target = Number(hoursPerMeeting) || 1.5;
   let accumulated = 0;
   let count = 0;
