@@ -236,6 +236,41 @@ const Dashboard = ({ user, onLogout }) => {
 
   const handleTabClick = (tab) => { setActiveTab(tab); setIsMobileMenuOpen(false); };
 
+  // --- Mobile Swipe Gesture for Sidebar ---
+  useEffect(() => {
+    let touchStartX = 0;
+    
+    const handleTouchStart = (e) => {
+      touchStartX = e.touches[0].clientX;
+    };
+    
+    const handleTouchEnd = (e) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const diff = touchEndX - touchStartX;
+      
+      // If sidebar is closed: swipe right from the left edge to open
+      if (!isMobileMenuOpen && touchStartX < 40 && diff > 50) {
+        setIsMobileMenuOpen(true);
+      }
+      // If sidebar is open: swipe left anywhere to close
+      else if (isMobileMenuOpen && diff < -50) {
+        setIsMobileMenuOpen(false);
+      }
+      // Failsafe: if they specifically swiped left from the right edge (as requested)
+      else if (!isMobileMenuOpen && touchStartX > window.innerWidth - 40 && diff < -50) {
+        setIsMobileMenuOpen(true);
+      }
+    };
+    
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isMobileMenuOpen]);
+
   const [rooms, setRooms] = useState([]);
   const [professors, setProfessors] = useState([]);
   const [subjects, setSubjects] = useState([]);
