@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { ScheduleGA } from '../../utils/ScheduleGA';
 import { suggestProfessorMatches, analyzeScheduleFailures } from '../../utils/scheduleAI';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import '../../styles/AutoScheduler.css';
@@ -142,14 +141,43 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         }
       }
 
-      const ga = new ScheduleGA(
-        subjects, rooms, professors, sections, DAYS, TIME_SLOTS, existingSchedules,
-        { populationSize: 80, maxGenerations: 100, mutationRate: 0.15 },
-        aiProfessorMap
-      );
+      // --- Run GA in a Web Worker to keep UI responsive ---
+      setAiStatus(prev => prev || '⚙️ Starting GA engine in background...');
 
-      const gaResult = await ga.solve((gen, bestFitness, totalGens) => {
-        setProgress({ gen, max: totalGens, fitness: bestFitness });
+      const gaResult = await new Promise((resolve, reject) => {
+        const worker = new Worker(
+          new URL('../../utils/scheduleGA.worker.js', import.meta.url),
+          { type: 'module' }
+        );
+
+        worker.onmessage = (e) => {
+          const msg = e.data;
+          if (msg.type === 'progress') {
+            setProgress({ gen: msg.gen, max: msg.max, fitness: msg.fitness });
+          } else if (msg.type === 'done') {
+            worker.terminate();
+            resolve(msg.result);
+          } else if (msg.type === 'error') {
+            worker.terminate();
+            reject(new Error(msg.message));
+          }
+        };
+
+        worker.onerror = (err) => {
+          worker.terminate();
+          reject(new Error(err.message || 'Worker crashed'));
+        };
+
+        worker.postMessage({
+          type: 'start',
+          payload: {
+            subjects, rooms, professors, sections,
+            days: DAYS, timeSlots: TIME_SLOTS,
+            existingSchedules,
+            config: { populationSize: 80, maxGenerations: 100, mutationRate: 0.15 },
+            aiProfessorMap,
+          }
+        });
       });
 
       const validResults = [];

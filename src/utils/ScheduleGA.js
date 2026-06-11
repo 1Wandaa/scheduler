@@ -1094,7 +1094,7 @@ export class ScheduleGA {
       }
       pop = next;
 
-      if (gen % 10 === 0) await new Promise(r => setTimeout(r, 0));
+      if (gen % 3 === 0) await new Promise(r => setTimeout(r, 0));
     }
 
     this.config.mutationRate = baseMutation;
