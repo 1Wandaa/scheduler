@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../config/firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
+import Swal from 'sweetalert2';
 
 // Mock data to initialize database
 const initialUsers = [
@@ -38,15 +39,32 @@ const UserManagement = ({ onBack }) => {
 
   // --- UPDATED FORCED DELETE FUNCTION ---
   const handleDeleteUser = async (id) => {
-    console.log("Delete button clicked for ID:", id);
+    const result = await Swal.fire({
+      title: 'Delete User?',
+      text: "This action cannot be undone. Proceed?",
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        popup: 'minimal-swal',
+        title: 'minimal-title',
+        htmlContainer: 'minimal-text',
+        actions: 'minimal-actions',
+        confirmButton: 'btn-delete',
+        cancelButton: 'back-btn'
+      },
+      buttonsStyling: false,
+      focusCancel: true
+    });
 
-    try {
-      await deleteDoc(doc(db, 'users', id.toString()));
-      console.log("Firebase deletion successful!");
-      alert("User deleted successfully!");
-    } catch (error) {
-      console.error("Error deleting user: ", error);
-      alert("Error: " + error.message);
+    if (result.isConfirmed) {
+      try {
+        await deleteDoc(doc(db, 'users', id.toString()));
+        Swal.fire({ title: 'Deleted', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+      } catch (error) {
+        console.error("Error deleting user: ", error);
+        Swal.fire({ title: 'Error', text: error.message, icon: 'error', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+      }
     }
   };
 

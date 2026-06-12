@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc, deleteField } from 'firebase/firestore';
+import Swal from 'sweetalert2';
 import { ROOM_TYPES, BUILDINGS, DEPARTMENTS } from '../../config/constants';
 
 const RoomManagement = ({ rooms, onBack }) => {
@@ -70,12 +71,31 @@ const RoomManagement = ({ rooms, onBack }) => {
     setShowModal(false);
   };
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this room?')) {
+    const result = await Swal.fire({
+      title: 'Delete Room?',
+      text: "This action cannot be undone. Proceed?",
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        popup: 'minimal-swal',
+        title: 'minimal-title',
+        htmlContainer: 'minimal-text',
+        actions: 'minimal-actions',
+        confirmButton: 'btn-delete',
+        cancelButton: 'back-btn'
+      },
+      buttonsStyling: false,
+      focusCancel: true
+    });
+
+    if (result.isConfirmed) {
       try {
         await deleteDoc(doc(db, 'rooms', id.toString()));
+        Swal.fire({ title: 'Deleted', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
       } catch (error) {
         console.error("Error deleting room: ", error);
-        alert('Failed to delete room. Please check your connection.');
+        Swal.fire({ title: 'Error', text: 'Failed to delete.', icon: 'error', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
       }
     }
   };

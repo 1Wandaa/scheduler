@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import Swal from 'sweetalert2';
 import { DEPARTMENTS } from '../../config/constants';
 
 const SubjectManagement = ({ subjects, onBack }) => {
@@ -62,12 +63,31 @@ const SubjectManagement = ({ subjects, onBack }) => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this subject?')) {
+    const result = await Swal.fire({
+      title: 'Delete Subject?',
+      text: "This action cannot be undone. Proceed?",
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        popup: 'minimal-swal',
+        title: 'minimal-title',
+        htmlContainer: 'minimal-text',
+        actions: 'minimal-actions',
+        confirmButton: 'btn-delete',
+        cancelButton: 'back-btn'
+      },
+      buttonsStyling: false,
+      focusCancel: true
+    });
+
+    if (result.isConfirmed) {
       try {
         await deleteDoc(doc(db, 'subjects', id.toString()));
+        Swal.fire({ title: 'Deleted', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
       } catch (error) {
         console.error("Error deleting subject: ", error);
-        alert('Failed to delete subject. Please check your connection.');
+        Swal.fire({ title: 'Error', text: 'Failed to delete.', icon: 'error', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
       }
     }
   };
