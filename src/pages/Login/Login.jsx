@@ -143,16 +143,55 @@ const Login = ({ onLogin }) => {
 
       } else {
         // LOGIN FLOW (Existing)
-        await signInWithEmailAndPassword(auth, dummyEmail, password);
+        try {
+          await signInWithEmailAndPassword(auth, dummyEmail, password);
+        } catch (signInErr) {
+          // Fallback: If auth fails, check if there's a user manually created in Firestore with a plain-text password
+          if (signInErr.code === 'auth/invalid-credential' || signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/wrong-password') {
+            const cleanU = username.replace('@', '').trim();
+            const searchArray = Array.from(new Set([username, username.trim(), cleanU, `@${cleanU}`]));
+            const qCheck = query(collection(db, 'users'), where('username', 'in', searchArray));
+            const snapCheck = await getDocs(qCheck);
+            
+            if (!snapCheck.empty) {
+              const firestoreUserData = snapCheck.docs[0].data();
+              
+              // Verify if the password matches the one set in Firestore manually
+              if (firestoreUserData.password && firestoreUserData.password.trim() === password.trim()) {
+                if (password.length < 6) {
+                   throw new Error('Firebase requires passwords to be at least 6 characters long. Please change it in Firestore.');
+                }
+                try {
+                  // Create the Auth account behind the scenes so future logins are fully secure
+                  await createUserWithEmailAndPassword(auth, dummyEmail, password);
+                } catch (createErr) {
+                  if (createErr.code === 'auth/email-already-in-use') {
+                    // Account already existed, meaning they just typed the wrong password for their actual Auth account
+                    throw new Error('Invalid password. Please try again.');
+                  }
+                  throw createErr;
+                }
+              } else {
+                throw new Error('The password does not match what is in Firestore.');
+              }
+            } else {
+              throw new Error(`Username "${username}" not found in Firestore Database. Check your spelling.`);
+            }
+          } else {
+            throw signInErr;
+          }
+        }
 
-        const q = query(collection(db, 'users'), where('username', '==', username));
+        const cleanU = username.replace('@', '').trim();
+        const searchArray2 = Array.from(new Set([username, username.trim(), cleanU, `@${cleanU}`]));
+        const q = query(collection(db, 'users'), where('username', 'in', searchArray2));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
           const newProfile = {
             username: username,
             name: cleanUsername,
-            role: 'Student'
+            role: username.toLowerCase().includes('admin') ? 'Admin' : 'Student'
           };
           await addDoc(collection(db, 'users'), newProfile);
           onLogin(newProfile);
