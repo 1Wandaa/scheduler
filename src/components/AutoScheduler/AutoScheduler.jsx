@@ -3,6 +3,7 @@ import { suggestProfessorMatches, analyzeScheduleFailures } from '../../utils/sc
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import { schedulesOverlap, getMeetingTimeLabel } from '../../utils/scheduleUtils';
 import '../../styles/AutoScheduler.css';
+import Swal from 'sweetalert2';
 
 // 1. ADDED 'schedules' to the props list
 function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, onAutoSchedule }) {
@@ -23,10 +24,25 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
   // ─── CLEAR ALL SCHEDULES (Independent action) ───
   const handleClearAll = async () => {
-    const confirmed = window.confirm(
-      '⚠️ This will permanently delete ALL scheduled classes.\n\nAre you sure you want to clear the entire schedule?'
-    );
-    if (!confirmed) return;
+    const result = await Swal.fire({
+      title: 'Clear All Schedules?',
+      text: "⚠️ This will permanently delete ALL scheduled classes. Are you sure you want to proceed?",
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Clear All',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        popup: 'minimal-swal',
+        title: 'minimal-title',
+        htmlContainer: 'minimal-text',
+        actions: 'minimal-actions',
+        confirmButton: 'btn-delete',
+        cancelButton: 'back-btn'
+      },
+      buttonsStyling: false,
+      focusCancel: true
+    });
+
+    if (!result.isConfirmed) return;
 
     setClearing(true);
     try {
@@ -34,8 +50,10 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       setResult(null);
       setAiInsights(null);
       setAiStatus('');
+      Swal.fire({ title: 'Cleared', text: 'All schedules have been removed.', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
     } catch (e) {
       console.error('Failed to clear schedules:', e);
+      Swal.fire({ title: 'Error', text: 'Failed to clear schedules.', icon: 'error', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
     }
     setClearing(false);
   };
