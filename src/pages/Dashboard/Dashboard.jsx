@@ -462,7 +462,17 @@ const Dashboard = ({ user, onLogout }) => {
     const unsubRooms = onSnapshot(collection(db, 'rooms'), snap => setRooms(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
     const unsubProfs = onSnapshot(collection(db, 'professors'), snap => setProfessors(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
     const unsubSubj = onSnapshot(collection(db, 'subjects'), snap => setSubjects(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
-    const unsubSec = onSnapshot(collection(db, 'sections'), snap => setSections(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
+    const unsubSec = onSnapshot(collection(db, 'sections'), snap => setSections(snap.docs.map(d => {
+      const data = d.data();
+      // Normalize program name for getSectionDepartment
+      let prog = data.program || '';
+      const pUp = prog.toUpperCase();
+      if (pUp.includes('COMPUTER SCIENCE')) prog = 'BSCS';
+      else if (pUp.includes('ENGLISH LANGUAGE')) prog = 'BAEL';
+      else if (pUp.includes('OFFICE ADMINISTRATION')) prog = 'BSOA';
+      else if (pUp.includes('FOOD TECHNOLOGY')) prog = 'BSFT';
+      return { ...data, program: prog, id: d.id };
+    })));
     const unsubSched = onSnapshot(collection(db, 'schedules'), snap => setSchedules(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
     const unsubMeta = onSnapshot(doc(db, 'meta', 'settings'), snap => {
       if (snap.exists()) {

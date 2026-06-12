@@ -140,6 +140,54 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         throw new Error("No sections defined. Please add sections in Section Management first.");
       }
 
+      // Pre-flight feasibility check
+      const missingProfsItems = [];
+      const missingRoomsItems = [];
+      for (const sec of sections) {
+        for (const subId of (sec.subjects || [])) {
+          const sub = subjects.find(s => s.id === subId || s.code === subId);
+          if (!sub) continue;
+          
+          const profs = validator._eligibleProfsFor(sub, sec);
+          if (!profs || profs.length === 0) {
+            missingProfsItems.push(`${sub.code || sub.name} (${sec.name})`);
+          }
+          
+          const roomsObj = validator._eligibleRoomsFor(sub, sec, { respectLabs });
+          if (!roomsObj || !roomsObj.flat || roomsObj.flat.length === 0) {
+            missingRoomsItems.push(`${sub.code || sub.name} (${sec.name})`);
+          }
+        }
+      }
+
+      if (missingProfsItems.length > 0 || missingRoomsItems.length > 0) {
+        setLoading(false);
+        
+        let htmlContent = '<div style="text-align: left; max-height: 250px; overflow-y: auto; font-size: 0.9rem; padding: 10px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; background: #fafafa;">';
+        if (missingProfsItems.length > 0) {
+          htmlContent += `<p style="margin-bottom: 5px; color: #b91c1c;"><strong>Missing Eligible Faculty (${missingProfsItems.length}):</strong></p>`;
+          htmlContent += `<ul style="margin-top: 0; padding-left: 20px;">${missingProfsItems.map(item => `<li>${item}</li>`).join('')}</ul>`;
+        }
+        if (missingRoomsItems.length > 0) {
+          htmlContent += `<p style="margin-bottom: 5px; color: #b91c1c;"><strong>Missing Eligible Rooms (${missingRoomsItems.length}):</strong></p>`;
+          htmlContent += `<ul style="margin-top: 0; padding-left: 20px;">${missingRoomsItems.map(item => `<li>${item}</li>`).join('')}</ul>`;
+        }
+        htmlContent += '</div><p style="font-size: 0.95rem;">These classes will be skipped. Proceed with scheduling the rest?</p>';
+
+        const proceed = await Swal.fire({
+          title: 'Data Issues Detected',
+          html: htmlContent,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Proceed Anyway',
+          cancelButtonText: 'Cancel'
+        });
+        if (!proceed.isConfirmed) {
+          return;
+        }
+        setLoading(true);
+      }
+
       // 2. Pass existing schedules — always append mode
       const existingSchedules = schedules || [];
 
@@ -193,7 +241,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
             subjects, rooms, professors, sections,
             days: DAYS, timeSlots: TIME_SLOTS,
             existingSchedules,
-            config: { populationSize: 80, maxGenerations: 100, mutationRate: 0.15 },
+            config: { populationSize: 60, maxGenerations: 150, mutationRate: 0.15 },
             aiProfessorMap,
           }
         });
@@ -367,6 +415,11 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         </label>
       </div>
 
+      {/* Pre-Scheduling Summary */}
+      <div style={{ marginBottom: '15px', padding: '10px 15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+        <strong>Pre-flight Summary:</strong> {sections?.reduce((sum, sec) => sum + (sec.subjects?.length || 0), 0) || 0} subjects total across all sections ready to be scheduled.
+      </div>
+
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
         <button onClick={handleExecute} disabled={loading || clearing || (engineMode !== 'ga' && !targetId)} className="btn" style={{ flex: 1, padding: '14px', fontSize: '1rem', whiteSpace: 'nowrap', minWidth: '200px' }}>
@@ -421,6 +474,36 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           {result.error && (
             <div className="alert-danger" style={{ padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
               <strong>Engine Error:</strong> {result.error}
+            </div>
+          )}
+
+          {/* Data Issues (Pre-flight infeasible items) */}
+          {result.prescriptions?.some(p => p.isDataIssue) && (
+            <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+              <h3 style={{ color: 'var(--warning)', borderBottom: '2px solid var(--warning)', paddingBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                ⚠️ Data Issues ({result.prescriptions.filter(p => p.isDataIssue).length})
+              </h3>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '8px 0 12px' }}>
+                These subjects cannot be scheduled due to missing data (e.g., no eligible professors or rooms). Please fix these in Management before running again.
+              </p>
+              <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'grid', gap: '10px' }}>
+                {result.prescriptions.filter(p => p.isDataIssue).map((p, idx) => (
+                  <div key={idx} style={{
+                    padding: '14px',
+                    background: 'rgba(245,166,35,0.05)',
+                    borderLeft: '4px solid var(--warning)',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                  }}>
+                    <div style={{ fontWeight: '700', color: 'var(--text-main)', marginBottom: '4px' }}>
+                      {p.subject?.code || p.subject?.name} {p.section?.name ? `— ${p.section.name}` : ''}
+                    </div>
+                    <div style={{ color: 'var(--warning)', fontSize: '0.8rem' }}>
+                      {p.reason}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
