@@ -555,10 +555,13 @@ const Dashboard = ({ user, onLogout }) => {
       let pool = rooms;
       
       const isPE = subject && (subject.code || '').toUpperCase().startsWith('PE');
-      const isGym = (r) => (r.name || '').toUpperCase().includes('GYM');
+      const isGymOrStage = (r) => {
+        const name = (r.name || '').toLowerCase();
+        return name.includes('gym') || name.includes('stage');
+      };
 
       if (isPE) {
-        const gyms = rooms.filter(isGym);
+        const gyms = rooms.filter(isGymOrStage);
         if (gyms.length > 0) return { tier1: gyms, tier2: [], tier3: [], flat: gyms };
       }
 
@@ -646,8 +649,10 @@ const Dashboard = ({ user, onLogout }) => {
       const tryPlaceGroup = async (group, roomPool, usePairsOnly) => {
         const { subject, section, count } = group;
         const profPool = fixedProfessor ? [fixedProfessor] : validator._eligibleProfsFor(subject, section, constraints);
+        const hasStage = rooms.some(r => (r.name || '').toLowerCase().includes('stage'));
 
         for (const professor of profPool) {
+          const isJanice = professor.id === 'P04' || (professor.name || '').toLowerCase().includes('ballera');
           const profSchedules = temp.filter(s => String(s.professor?.id) === String(professor.id));
           const uniqueLoad = new Map();
           for (const s of profSchedules) {
@@ -662,6 +667,12 @@ const Dashboard = ({ user, onLogout }) => {
           }
 
           for (const room of roomPool) {
+            if (hasStage) {
+              const isStage = (room.name || '').toLowerCase().includes('stage');
+              if (isJanice && !isStage) continue;
+              if (!isJanice && isStage) continue;
+            }
+
             for (const timeSlot of TIME_SLOTS) {
               const startIdx = getTimeSlotIndex(timeSlot);
               if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting) === 0) continue;

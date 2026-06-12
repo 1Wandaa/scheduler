@@ -190,11 +190,14 @@ export class ScheduleGA {
   _eligibleRoomsFor(a) {
     const sectionDept = getSectionDepartment(a.section);
     const isPE = a.subject && (a.subject.code || '').toUpperCase().startsWith('PE');
-    const isGym = (r) => (r.name || '').toUpperCase().includes('GYM');
+    const isGymOrStage = (r) => {
+      const name = (r.name || '').toLowerCase();
+      return name.includes('gym') || name.includes('stage');
+    };
 
-    // PE subjects must go to gym
+    // PE subjects must go to gym or stage
     if (isPE) {
-      const gyms = this.rooms.filter(isGym);
+      const gyms = this.rooms.filter(isGymOrStage);
       if (gyms.length > 0) return gyms;
     }
 
@@ -376,6 +379,8 @@ export class ScheduleGA {
       const isGym = (r) => (r.name || '').toUpperCase().includes('GYM');
       
       let rooms;
+      const hasStage = this.rooms.some(r => (r.name || '').toLowerCase().includes('stage'));
+
       // If room is locked for this section+subject, force that room
       const lockedRoomId = lockedRoomForSecSub[secSubKey];
       if (lockedRoomId && this.roomMap[lockedRoomId]) {
@@ -459,26 +464,36 @@ export class ScheduleGA {
         const prof = profs[this._randInt(profs.length)];
         if (!prof) break;
 
+        let validRoomsForProf = rooms;
+        if (hasStage) {
+          const isJanice = prof.id === 'P04' || (prof.name || '').toLowerCase().includes('ballera');
+          validRoomsForProf = rooms.filter(r => {
+            const isStage = (r.name || '').toLowerCase().includes('stage');
+            return isJanice ? isStage : !isStage;
+          });
+          if (validRoomsForProf.length === 0) validRoomsForProf = rooms; // Fallback if no valid room found
+        }
+
         let room, timeIdx;
         const usePref = pref && t < this.config.repairTriesPerGene / 2;
 
         if (usePref) {
           room = this.roomMap[pref.roomId];
-          if (!room || !rooms.find(r => r.id === room.id)) {
-            room = rooms[this._randInt(rooms.length)];
+          if (!room || !validRoomsForProf.find(r => r.id === room.id)) {
+            room = validRoomsForProf[this._randInt(validRoomsForProf.length)];
           }
           timeIdx = pref.timeIdx;
         } else {
           const prefRoomIds = prof.preferredRooms || [];
           if (prefRoomIds.length > 0) {
-            const validPrefRooms = rooms.filter(r => prefRoomIds.includes(r.id));
+            const validPrefRooms = validRoomsForProf.filter(r => prefRoomIds.includes(r.id));
             if (validPrefRooms.length > 0) {
               room = validPrefRooms[this._randInt(validPrefRooms.length)];
             } else {
-              room = rooms[this._randInt(rooms.length)];
+              room = validRoomsForProf[this._randInt(validRoomsForProf.length)];
             }
           } else {
-            room = rooms[this._randInt(rooms.length)];
+            room = validRoomsForProf[this._randInt(validRoomsForProf.length)];
           }
           
           const validTimes = this._eligibleTimeSlotsFor(a);
@@ -620,9 +635,21 @@ export class ScheduleGA {
       for (const prof of rescueProfs) {
         if (placed) break;
         
+        const isJanice = prof.id === 'P04' || (prof.name || '').toLowerCase().includes('ballera');
+        const hasStage = this.rooms.some(r => (r.name || '').toLowerCase().includes('stage'));
+
+        let validRoomsForProf = allRooms;
+        if (hasStage) {
+          validRoomsForProf = allRooms.filter(r => {
+            const isStage = (r.name || '').toLowerCase().includes('stage');
+            return isJanice ? isStage : !isStage;
+          });
+          if (validRoomsForProf.length === 0) validRoomsForProf = allRooms;
+        }
+
         const prefRoomIds = prof.preferredRooms || [];
-        const validPrefRooms = allRooms.filter(r => prefRoomIds.includes(r.id));
-        const nonPrefRooms = allRooms.filter(r => !prefRoomIds.includes(r.id));
+        const validPrefRooms = validRoomsForProf.filter(r => prefRoomIds.includes(r.id));
+        const nonPrefRooms = validRoomsForProf.filter(r => !prefRoomIds.includes(r.id));
         const sortedRoomsToTry = [...validPrefRooms, ...nonPrefRooms];
 
         for (const room of sortedRoomsToTry) {
@@ -675,6 +702,7 @@ export class ScheduleGA {
 
     const chrom = this.assignments.map(a => {
       const secSubKey = `${a.section.id}-${a.subject.id}`;
+      const hasStage = this.rooms.some(r => (r.name || '').toLowerCase().includes('stage'));
 
       // Lock professor
       let profId = profForSecSub[secSubKey];
@@ -695,19 +723,30 @@ export class ScheduleGA {
       if (!slot) {
         // First meeting: pick room, time, and a starting day (prefer Mon=0 or Tue=1)
         const rooms = this._eligibleRoomsFor(a);
+        const assignedProf = this.profMap[profId];
+        const isJanice = assignedProf && (assignedProf.id === 'P04' || (assignedProf.name || '').toLowerCase().includes('ballera'));
+        
+        let validRooms = rooms;
+        if (hasStage) {
+          validRooms = rooms.filter(r => {
+            const isStage = (r.name || '').toLowerCase().includes('stage');
+            return isJanice ? isStage : !isStage;
+          });
+          if (validRooms.length === 0) validRooms = rooms;
+        }
+
         let room;
         
-        const assignedProf = this.profMap[profId];
         const prefRoomIds = assignedProf?.preferredRooms || [];
         if (prefRoomIds.length > 0) {
-          const validPrefRooms = rooms.filter(r => prefRoomIds.includes(r.id));
+          const validPrefRooms = validRooms.filter(r => prefRoomIds.includes(r.id));
           if (validPrefRooms.length > 0) {
             room = validPrefRooms[this._randInt(validPrefRooms.length)];
           } else {
-            room = rooms[this._randInt(rooms.length)];
+            room = validRooms[this._randInt(validRooms.length)];
           }
         } else {
-          room = rooms[this._randInt(rooms.length)];
+          room = validRooms[this._randInt(validRooms.length)];
         }
 
         const validTimes = this._eligibleTimeSlotsFor(a);
@@ -862,11 +901,26 @@ export class ScheduleGA {
       if (a.subject.requiredLab && room && !room.hasComputers) { hardScore += PENALTY.LAB_MISMATCH; hardViolations++; }
 
       const isPE = a.subject && (a.subject.code || '').toUpperCase().startsWith('PE');
-      const isGym = room && (room.name || '').toUpperCase().includes('GYM');
+      const isGym = room && ((room.name || '').toUpperCase().includes('GYM') || (room.name || '').toUpperCase().includes('STAGE'));
 
       if (isPE && !isGym) {
-        hardScore -= 100; // PE must be in Gym
+        hardScore -= 100; // PE must be in Gym or Stage
         hardViolations++;
+      }
+
+      const hasStage = this.rooms.some(r => (r.name || '').toLowerCase().includes('stage'));
+      if (hasStage && room && g.professorId) {
+        const prof = this.profMap[g.professorId];
+        const isJanice = prof && (prof.id === 'P04' || (prof.name || '').toLowerCase().includes('ballera'));
+        const isStage = (room.name || '').toLowerCase().includes('stage');
+
+        if (isJanice && !isStage) {
+          hardScore -= 1000;
+          hardViolations++;
+        } else if (!isJanice && isStage) {
+          hardScore -= 1000;
+          hardViolations++;
+        }
       }
     }
 
