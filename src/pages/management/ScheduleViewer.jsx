@@ -3,7 +3,7 @@ import ScheduleTable from '../../components/ScheduleTable/ScheduleTable';
 import PrintableSchedule from '../../components/PrintableSchedule/PrintableSchedule';
 import { DEPARTMENTS } from '../../config/constants';
 
-function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpdateSchedule }) {
+function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, activeSemester = '', activeSchoolYear = '' }) {
     const [viewType, setViewType] = useState('department');
     const [selectedId, setSelectedId] = useState('');
     const [deptSectionId, setDeptSectionId] = useState('');
@@ -306,7 +306,7 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                         ? (sections.find(s => s.id === deptSectionId)?.name || titleName)
                         : titleName
                 }
-                semesterInfo="2nd Sem 2025-2026"
+                semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "2nd Sem 2025-2026"}
             />
 
             {/* Preview Modal */}

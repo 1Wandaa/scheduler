@@ -1,7 +1,7 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { initialRooms, initialProfessors, initialSubjects, initialSections, SEED_VERSION } from '../../config/initialData';
-import { TIME_SLOTS, DAYS } from '../../config/constants';
+import { TIME_SLOTS, DAYS, SEMESTERS, SCHOOL_YEARS } from '../../config/constants';
 import { db } from '../../config/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, writeBatch } from 'firebase/firestore';
 
@@ -13,6 +13,7 @@ import AutoScheduler from '../../components/AutoScheduler/AutoScheduler';
 import RoomManagement from '../management/RoomManagement';
 import FacultyManagement from '../management/FacultyManagement';
 import SubjectManagement from '../management/SubjectManagement';
+import TermManagement from '../management/TermManagement';
 import ScheduleViewer from '../management/ScheduleViewer';
 import SectionManagement from '../management/SectionManagement';
 import Chatbot from '../../components/Chatbot/Chatbot';
@@ -214,6 +215,91 @@ const NavItem = ({ label, iconPath, active, onClick, danger, indent }) => (
   </li>
 );
 
+const CustomDropdown = ({ options, value, onChange, title, alignRight = false }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'relative' }} title={title}>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          cursor: 'pointer', color: '#ffffff', fontSize: '0.88rem', fontWeight: 600, letterSpacing: '0.01em',
+          padding: '4px 6px', borderRadius: '6px',
+          background: isOpen ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+          transition: 'all 0.2s ease',
+          userSelect: 'none',
+          whiteSpace: 'nowrap'
+        }}
+      >
+        <span>{value}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </div>
+      
+      {isOpen && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 8px)', 
+          left: alignRight ? 'auto' : 0,
+          right: alignRight ? 0 : 'auto',
+          background: 'rgba(15, 20, 35, 0.95)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          borderRadius: '12px',
+          padding: '6px',
+          minWidth: '200px',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+          zIndex: 9999,
+          animation: 'fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          display: 'flex', flexDirection: 'column', gap: '2px'
+        }} className="custom-dropdown-menu">
+          {options.map(opt => (
+            <div 
+              key={opt}
+              onClick={() => { onChange(opt); setIsOpen(false); }}
+              onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.color = '#ffffff';
+              }}
+              onMouseLeave={e => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = opt === value ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.8)';
+              }}
+              style={{
+                padding: '10px 14px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '0.86rem',
+                color: opt === value ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.8)',
+                fontWeight: opt === value ? 600 : 500,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {opt}
+              {opt === value && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard = ({ user, onLogout }) => {
   const LOGO_SRC = '/logo.jpg?v=1';
@@ -273,6 +359,17 @@ const Dashboard = ({ user, onLogout }) => {
   const [sections, setSections] = useState([]);
   const [schedules, setSchedules] = useState([]);
 
+  const [activeSemester, setActiveSemester] = useState(SEMESTERS[1]);
+  const [activeSchoolYear, setActiveSchoolYear] = useState(SCHOOL_YEARS[1]);
+
+  const [availableSemesters, setAvailableSemesters] = useState(SEMESTERS);
+  const [availableSchoolYears, setAvailableSchoolYears] = useState(SCHOOL_YEARS);
+
+  const activeSchedules = schedules.filter(s => 
+    s.semester === activeSemester && 
+    s.schoolYear === activeSchoolYear
+  );
+
   const validateScheduleEntry = ({ room, professor, subject, section, day, timeSlot, excludeScheduleId = null }) => {
     const errors = []; const warnings = [];
     if (!room?.id) errors.push('Room is required.');
@@ -298,7 +395,7 @@ const Dashboard = ({ user, onLogout }) => {
 
     const conflicts = findScheduleConflicts(
       { room, professor, subject, section, day, timeSlot },
-      schedules,
+      activeSchedules,
       { excludeScheduleId }
     );
     if (conflicts.room) errors.push(`Room "${room?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
@@ -326,6 +423,28 @@ const Dashboard = ({ user, onLogout }) => {
         await seedBatch.commit();
         await setDoc(doc(db, 'meta', 'seedVersion'), { version: SEED_VERSION });
       }
+
+      // One-time migration for old schedules missing the semester/year tags
+      const schedSnap = await getDocs(collection(db, 'schedules'));
+      const migrateBatch = writeBatch(db);
+      let migrationCount = 0;
+      schedSnap.docs.forEach(d => {
+        const data = d.data();
+        if (!data.semester || !data.schoolYear) {
+          migrateBatch.update(d.ref, { semester: '2nd Semester', schoolYear: '2025-2026' });
+          migrationCount++;
+        }
+      });
+      if (migrationCount > 0) {
+        await migrateBatch.commit();
+        console.log(`Migrated ${migrationCount} legacy schedules to 2nd Semester 2025-2026.`);
+      }
+
+      // Ensure meta/settings exists with default terms
+      const settingsDoc = await getDoc(doc(db, 'meta', 'settings'));
+      if (!settingsDoc.exists()) {
+        await setDoc(doc(db, 'meta', 'settings'), { semesters: SEMESTERS, schoolYears: SCHOOL_YEARS });
+      }
     };
     initializeData();
     const unsubRooms = onSnapshot(collection(db, 'rooms'), snap => setRooms(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
@@ -333,17 +452,32 @@ const Dashboard = ({ user, onLogout }) => {
     const unsubSubj = onSnapshot(collection(db, 'subjects'), snap => setSubjects(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
     const unsubSec = onSnapshot(collection(db, 'sections'), snap => setSections(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
     const unsubSched = onSnapshot(collection(db, 'schedules'), snap => setSchedules(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
-    return () => { unsubRooms(); unsubProfs(); unsubSubj(); unsubSec(); unsubSched(); };
+    const unsubMeta = onSnapshot(doc(db, 'meta', 'settings'), snap => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.semesters) setAvailableSemesters(data.semesters);
+        if (data.schoolYears) setAvailableSchoolYears(data.schoolYears);
+      }
+    });
+    return () => { unsubRooms(); unsubProfs(); unsubSubj(); unsubSec(); unsubSched(); unsubMeta(); };
   }, []);
 
   const validator = {
     validateAssignment: (room, professor, subject, section, day, timeSlot) =>
       validateScheduleEntry({ room, professor, subject, section, day, timeSlot }),
-    addSchedule: (room, professor, subject, section, day, timeSlot) => ({ schedule: { room, professor, subject, section, day, timeSlot } }),
+    addSchedule: (room, professor, subject, section, day, timeSlot) => ({ schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear } }),
     clearAllSchedules: async () => {
+      // Only clear schedules for the currently selected semester!
       const snap = await getDocs(collection(db, 'schedules'));
-      if (snap.empty) { setSchedules([]); return; }
-      const batch = writeBatch(db); snap.docs.forEach(d => batch.delete(d.ref)); await batch.commit(); setSchedules([]);
+      if (snap.empty) return;
+      const batch = writeBatch(db); 
+      snap.docs.forEach(d => {
+        const data = d.data();
+        if ((data.semester === activeSemester || !data.semester) && (data.schoolYear === activeSchoolYear || !data.schoolYear)) {
+          batch.delete(d.ref);
+        }
+      }); 
+      await batch.commit(); 
     },
     autoScheduleForSection: async (sectionId, constraints = { respectLabs: true, preventDoubleBooking: true }) => {
       const section = sections.find(s => s.id === sectionId);
@@ -450,7 +584,7 @@ const Dashboard = ({ user, onLogout }) => {
       const unscheduled = [];
       const fixedRoom = constraints?.fixedRoom || null;
       const fixedProfessor = constraints?.fixedProfessor || null;
-      const temp = [...schedules];
+      const temp = [...activeSchedules];
 
       // 1. GROUP ASSIGNMENTS: Group by Section + Subject
       const groupsMap = new Map();
@@ -580,7 +714,7 @@ const Dashboard = ({ user, onLogout }) => {
       return { results, unscheduled, error: null };
     },
     autoSchedule: async (subjList, constraints) => {
-      const results = []; const unscheduled = []; const tempSchedules = [...schedules];
+      const results = []; const unscheduled = []; const tempSchedules = [...activeSchedules];
       for (const subject of subjList) {
         let scheduled = false;
         const profPool = professors.filter(p => professorMatchesSubject(p, subject));
@@ -623,7 +757,7 @@ const Dashboard = ({ user, onLogout }) => {
     if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
     const check = validateScheduleEntry({ room: newSchedule?.room, professor: newSchedule?.professor, subject: newSchedule?.subject, section: newSchedule?.section || null, day: newSchedule?.day, timeSlot: newSchedule?.timeSlot, excludeScheduleId: null });
     if (!check.valid) return { ok: false, errors: check.errors };
-    await addDoc(collection(db, 'schedules'), newSchedule);
+    await addDoc(collection(db, 'schedules'), { ...newSchedule, semester: activeSemester, schoolYear: activeSchoolYear });
     return { ok: true };
   };
 
@@ -634,7 +768,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const firstName = user?.name?.split?.(/\s+/)?.[0] ?? 'there';
 
-  const enrichedSchedules = schedules.map(s => ({
+  const enrichedSchedules = activeSchedules.map(s => ({
     ...s,
     professor: professors.find(p => String(p.id) === String(s.professor?.id)) || s.professor,
     room: rooms.find(r => String(r.id) === String(s.room?.id)) || s.room,
@@ -706,6 +840,7 @@ const Dashboard = ({ user, onLogout }) => {
                     <NavItem label="Room List" iconPath={NAV_ICONS.rooms} active={activeTab === 'rooms'} onClick={() => handleTabClick('rooms')} indent />
                     <NavItem label="Subject Constraints" iconPath={NAV_ICONS.subjects} active={activeTab === 'subjects'} onClick={() => handleTabClick('subjects')} indent />
                     <NavItem label="Sections" iconPath={NAV_ICONS.sections} active={activeTab === 'sections'} onClick={() => handleTabClick('sections')} indent />
+                    <NavItem label="Semesters & Years" iconPath={NAV_ICONS.manage} active={activeTab === 'terms'} onClick={() => handleTabClick('terms')} indent />
                     <NavItem label="User Management" iconPath={NAV_ICONS.users} active={activeTab === 'users'} onClick={() => handleTabClick('users')} indent />
                   </>
                 )}
@@ -732,6 +867,8 @@ const Dashboard = ({ user, onLogout }) => {
 
         {/* ── Top Bar ── */}
         <header style={{
+          position: 'relative',
+          zIndex: 100,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '4px 0 20px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
@@ -756,6 +893,36 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ 
+              display: 'flex', gap: '8px', alignItems: 'center', 
+              background: 'rgba(255, 255, 255, 0.08)', 
+              backdropFilter: 'blur(12px)',
+              padding: '8px 16px', 
+              borderRadius: '10px', 
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              transition: 'background 0.2s ease',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+            >
+              <CustomDropdown 
+                options={availableSemesters} 
+                value={activeSemester} 
+                onChange={setActiveSemester} 
+                title="Select Semester"
+                alignRight={false}
+              />
+              
+              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.9rem', margin: '0 2px' }}>|</span>
+              
+              <CustomDropdown 
+                options={availableSchoolYears} 
+                value={activeSchoolYear} 
+                onChange={setActiveSchoolYear} 
+                title="Select School Year"
+                alignRight={true}
+              />
+            </div>
             <div style={{
               background: 'rgba(255,255,255,0.06)',
               border: '1px solid rgba(255,255,255,0.1)',
@@ -1022,11 +1189,12 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={enrichedSchedules} />}
 
         {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
-        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={enrichedSchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} />}
+        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={enrichedSchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} />}
 
       </div>
       <Chatbot schedules={enrichedSchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
