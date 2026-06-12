@@ -658,9 +658,9 @@ const Dashboard = ({ user, onLogout }) => {
 
               const isFree = (d) => {
                 const candidate = { room, professor, subject, section, day: d, timeSlot };
-                if (constraints?.preventDoubleBooking) {
-                  if (temp.some(s => schedulesOverlap(candidate, s))) return false;
-                }
+                // ALWAYS check temp for overlaps — temp contains classes placed
+                // during this auto-schedule batch that Firestore hasn't synced yet
+                if (temp.some(s => schedulesOverlap(candidate, s))) return false;
                 const chk = validateScheduleEntry({ room, professor, subject, section, day: d, timeSlot });
                 return chk.valid;
               };
@@ -773,8 +773,9 @@ const Dashboard = ({ user, onLogout }) => {
             for (const timeSlot of TIME_SLOTS) {
               for (const room of rooms) {
                 if (constraints.respectLabs && subject.requiredLab && !room.hasComputers) continue;
-                const isRoomBusy = constraints.preventDoubleBooking ? tempSchedules.some(s => String(s.room?.id) === String(room.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id)) : false;
-                const isProfBusy = constraints.preventDoubleBooking ? tempSchedules.some(s => String(s.professor?.id) === String(prof.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id)) : false;
+                // ALWAYS check tempSchedules for overlaps to prevent time conflicts
+                const isRoomBusy = tempSchedules.some(s => String(s.room?.id) === String(room.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
+                const isProfBusy = tempSchedules.some(s => String(s.professor?.id) === String(prof.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
                 if (!isRoomBusy && !isProfBusy) {
                   const newSchedule = { room, professor: prof, subject, day, timeSlot };
                   tempSchedules.push(newSchedule);
