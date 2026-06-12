@@ -94,7 +94,7 @@ const Login = ({ onLogin }) => {
 
     try {
       const cleanUsername = username.replace('@', '').toLowerCase();
-      const dummyEmail = `${cleanUsername}@smartsched.capsu.local`;
+      const dummyEmail = `${cleanUsername}@gmail.com`;
 
       if (isSignUp) {
         // Validate step 2 fields
