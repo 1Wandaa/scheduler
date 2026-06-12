@@ -537,7 +537,7 @@ const Dashboard = ({ user, onLogout }) => {
 
       if (isPE) {
         const gyms = rooms.filter(isGym);
-        if (gyms.length > 0) return gyms;
+        if (gyms.length > 0) return { tier1: gyms, tier2: [], tier3: [], flat: gyms };
       }
 
       if (constraints?.respectLabs && subject?.requiredLab) { 
@@ -569,7 +569,7 @@ const Dashboard = ({ user, onLogout }) => {
           tier3.push(r);
         }
       }
-      return [...tier1, ...tier2, ...tier3];
+      return { tier1, tier2, tier3, flat: [...tier1, ...tier2, ...tier3] };
     },
     _eligibleProfsFor: (subject, section, constraints) => {
       if (!subject) return [];
@@ -605,7 +605,7 @@ const Dashboard = ({ user, onLogout }) => {
       }
 
       // Sort remaining groups: PE subjects first, then Lab subjects
-      const groups = Array.from(groupsMap.values())
+      const allGroups = Array.from(groupsMap.values())
         .filter(g => g.count > 0)
         .sort((a, b) => {
           const aPE = (a.subject?.code || '').toUpperCase().startsWith('PE') ? 1 : 0;
@@ -618,15 +618,14 @@ const Dashboard = ({ user, onLogout }) => {
         });
 
       const PREFERRED_PAIRS = [['Monday', 'Thursday'], ['Tuesday', 'Friday']];
+      const placedKeys = new Set(); // Track which groups have been placed
 
-      for (const group of groups) {
+      // Helper: attempt to place a single group with a given room pool and day strategy
+      const tryPlaceGroup = async (group, roomPool, usePairsOnly) => {
         const { subject, section, count } = group;
-        const roomPool = fixedRoom ? [fixedRoom] : validator._eligibleRoomsFor(subject, section, constraints);
         const profPool = fixedProfessor ? [fixedProfessor] : validator._eligibleProfsFor(subject, section, constraints);
 
-        let placedCount = 0;
-
-        searchLoop: for (const professor of profPool) {
+        for (const professor of profPool) {
           const profSchedules = temp.filter(s => String(s.professor?.id) === String(professor.id));
           const uniqueLoad = new Map();
           for (const s of profSchedules) {
@@ -654,7 +653,7 @@ const Dashboard = ({ user, onLogout }) => {
                 return chk.valid;
               };
 
-              // Try preferred pairs first
+              // Try preferred pairs first (always attempted for count === 2)
               if (count === 2) {
                 for (const pair of PREFERRED_PAIRS) {
                   if (isFree(pair[0]) && isFree(pair[1])) {
@@ -666,15 +665,14 @@ const Dashboard = ({ user, onLogout }) => {
                     if (w1?.ok !== false && w2?.ok !== false) {
                       temp.push(s1, s2);
                       results.push(s1, s2);
-                      placedCount = 2;
-                      break searchLoop;
+                      return true;
                     }
                   }
                 }
               }
 
-              // FALLBACK: If preferred pairs failed, or count !== 2, find ANY available combination
-              if (placedCount === 0) {
+              // Any-day fallback (skip in Pass 1 for count === 2 to enforce pairs)
+              if (!usePairsOnly) {
                 const validDays = [];
                 for (const day of DAYS) {
                   if (isFree(day)) validDays.push(day);
@@ -693,24 +691,64 @@ const Dashboard = ({ user, onLogout }) => {
                   if (allOk) {
                     temp.push(...writes);
                     results.push(...writes);
-                    placedCount = count;
-                    break searchLoop;
+                    return true;
                   }
                 }
               }
             }
           }
         }
+        return false;
+      };
 
-        if (placedCount < count) {
-          let reason = 'Insufficient slots available or missing qualified faculty.';
-          if (constraints?.respectLabs && subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
-            reason = 'Requires computer lab.';
-          }
-          unscheduled.push({ subject, section, reason });
+      // ══════════════════════════════════════════════════════════
+      //  3-PASS SCHEDULING ALGORITHM
+      // ══════════════════════════════════════════════════════════
+
+      // PASS 1 — STRICT: Department rooms only, preferred day pairs enforced
+      console.log(`[AutoScheduler] Pass 1 (Strict): ${allGroups.length} groups to schedule`);
+      for (const group of allGroups) {
+        const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
+        const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : validator._eligibleRoomsFor(group.subject, group.section, constraints);
+        if (tiers.tier1.length > 0) {
+          const placed = await tryPlaceGroup(group, tiers.tier1, group.count === 2);
+          if (placed) placedKeys.add(groupKey);
         }
       }
 
+      // PASS 2 — SHARED: Department + Shared rooms, any day combos allowed
+      const remainingAfterPass1 = allGroups.filter(g => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
+      console.log(`[AutoScheduler] Pass 2 (Shared): ${remainingAfterPass1.length} groups remaining`);
+      for (const group of remainingAfterPass1) {
+        const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
+        const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : validator._eligibleRoomsFor(group.subject, group.section, constraints);
+        const pool = [...tiers.tier1, ...tiers.tier2];
+        if (pool.length > 0) {
+          const placed = await tryPlaceGroup(group, pool, false);
+          if (placed) placedKeys.add(groupKey);
+        }
+      }
+
+      // PASS 3 — FALLBACK: ALL rooms (including other departments), any day combos
+      const remainingAfterPass2 = allGroups.filter(g => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
+      console.log(`[AutoScheduler] Pass 3 (Fallback): ${remainingAfterPass2.length} groups remaining`);
+      for (const group of remainingAfterPass2) {
+        const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
+        const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : validator._eligibleRoomsFor(group.subject, group.section, constraints);
+        const pool = [...tiers.tier1, ...tiers.tier2, ...tiers.tier3];
+        const placed = await tryPlaceGroup(group, pool, false);
+        if (placed) {
+          placedKeys.add(groupKey);
+        } else {
+          let reason = 'Insufficient slots available or missing qualified faculty.';
+          if (constraints?.respectLabs && group.subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
+            reason = 'Requires computer lab.';
+          }
+          unscheduled.push({ subject: group.subject, section: group.section, reason });
+        }
+      }
+
+      console.log(`[AutoScheduler] Done: ${results.length} placed, ${unscheduled.length} unscheduled`);
       return { results, unscheduled, error: null };
     },
     autoSchedule: async (subjList, constraints) => {
