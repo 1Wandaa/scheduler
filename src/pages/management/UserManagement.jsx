@@ -60,7 +60,16 @@ const UserManagement = ({ onBack }) => {
     if (result.isConfirmed) {
       try {
         await deleteDoc(doc(db, 'users', id.toString()));
-        Swal.fire({ title: 'Deleted', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+        Swal.fire({ 
+          title: 'Profile Deleted', 
+          text: 'Remember to also delete their account in the Firebase Authentication Console!', 
+          icon: 'success', 
+          toast: true, 
+          position: 'top-end', 
+          showConfirmButton: false, 
+          timer: 5000, 
+          customClass: { popup: 'minimal-toast' } 
+        });
       } catch (error) {
         console.error("Error deleting user: ", error);
         Swal.fire({ title: 'Error', text: error.message, icon: 'error', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
