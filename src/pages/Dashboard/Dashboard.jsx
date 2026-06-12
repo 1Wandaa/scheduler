@@ -665,7 +665,7 @@ const Dashboard = ({ user, onLogout }) => {
                 return chk.valid;
               };
 
-              // Try preferred pairs first (always attempted for count === 2)
+              // Try preferred pairs (Mon/Thu, Tue/Fri) — ALWAYS enforced for 2-meeting classes
               if (count === 2) {
                 for (const pair of PREFERRED_PAIRS) {
                   if (isFree(pair[0]) && isFree(pair[1])) {
@@ -681,10 +681,12 @@ const Dashboard = ({ user, onLogout }) => {
                     }
                   }
                 }
+                // For 2-meeting classes, NEVER fall back to random days — 
+                // only Mon/Thu or Tue/Fri pairs are allowed
               }
 
-              // Any-day fallback (skip in Pass 1 for count === 2 to enforce pairs)
-              if (!usePairsOnly) {
+              // Any-day fallback — ONLY for classes that need 1 or 3+ meetings per week
+              if (!usePairsOnly && count !== 2) {
                 const validDays = [];
                 for (const day of DAYS) {
                   if (isFree(day)) validDays.push(day);
