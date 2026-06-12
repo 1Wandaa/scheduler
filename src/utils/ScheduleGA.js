@@ -47,9 +47,9 @@ const BONUS = {
   SPREAD_ACROSS_WEEK: 5,
   SAME_ROOM_TIME_DIFFERENT_DAYS: 30,
   PAIRED_DAY_MATCH: 40,
-  AI_MATCH_1ST: 40,
-  AI_MATCH_2ND: 20,
-  AI_MATCH_3RD: 5,
+  AI_MATCH_1ST: 80,
+  AI_MATCH_2ND: 40,
+  AI_MATCH_3RD: 15,
   DEPARTMENT_ROOM_MATCH: 25,          // Room dept matches section dept
   ROOM_UTILIZATION_SPREAD: 10,        // Reward using more rooms
 };
@@ -171,6 +171,14 @@ export class ScheduleGA {
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr;
+  }
+
+  _biasedSelect(arr) {
+    if (!arr || arr.length === 0) return null;
+    for (let i = 0; i < arr.length; i++) {
+      if (Math.random() < 0.6) return arr[i];
+    }
+    return arr[this._randInt(arr.length)];
   }
 
   /**
@@ -379,7 +387,16 @@ export class ScheduleGA {
         rooms = this._shuffle(eligibleRooms);
       }
 
-      let profs = this._shuffle([...this._eligibleProfsFor(a, profWork)]);
+      let baseProfs = this._eligibleProfsFor(a, profWork);
+      let profs;
+      if (this.aiProfessorMap?.[a.subject.id]) {
+        const aiRankedIds = this.aiProfessorMap[a.subject.id];
+        const ranked = baseProfs.filter(p => aiRankedIds.includes(p.id));
+        const unranked = this._shuffle(baseProfs.filter(p => !aiRankedIds.includes(p.id)));
+        profs = [...ranked, ...unranked];
+      } else {
+        profs = this._shuffle([...baseProfs]);
+      }
 
       // If a professor is already locked for this section+subject, force using that professor
       const lockedProfId = lockedProfForSecSub[secSubKey];
@@ -663,7 +680,12 @@ export class ScheduleGA {
       let profId = profForSecSub[secSubKey];
       if (!profId) {
         const profs = this._eligibleProfsFor(a);
-        const prof = profs[this._randInt(profs.length)];
+        let prof;
+        if (this.aiProfessorMap?.[a.subject.id] && profs.length > 0) {
+          prof = this._biasedSelect(profs);
+        } else {
+          prof = profs[this._randInt(profs.length)];
+        }
         profId = prof?.id || null;
         if (profId) profForSecSub[secSubKey] = profId;
       }
@@ -1080,7 +1102,13 @@ export class ScheduleGA {
           }
           case 3: {
             const dp = this._eligibleProfsFor(a);
-            if (dp && dp.length > 0) g.professorId = dp[this._randInt(dp.length)].id;
+            if (dp && dp.length > 0) {
+              if (this.aiProfessorMap?.[a.subject.id]) {
+                g.professorId = this._biasedSelect(dp).id;
+              } else {
+                g.professorId = dp[this._randInt(dp.length)].id;
+              }
+            }
             break;
           }
         }
