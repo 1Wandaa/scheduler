@@ -142,6 +142,18 @@ const NAV_ICONS = {
     { d: "M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" },
     { d: "M6 14h12v8H6z" },
   ]},
+  // Calendar — semester/term icon
+  calendar: { elements: [
+    { type: 'rect', x: 3, y: 4, width: 18, height: 18, rx: 2, ry: 2 },
+    { type: 'line', x1: 16, y1: 2, x2: 16, y2: 6 },
+    { type: 'line', x1: 8, y1: 2, x2: 8, y2: 6 },
+    { type: 'line', x1: 3, y1: 10, x2: 21, y2: 10 },
+    { type: 'line', x1: 8, y1: 14, x2: 8, y2: 14 },
+    { type: 'line', x1: 12, y1: 14, x2: 12, y2: 14 },
+    { type: 'line', x1: 16, y1: 14, x2: 16, y2: 14 },
+    { type: 'line', x1: 8, y1: 18, x2: 8, y2: 18 },
+    { type: 'line', x1: 12, y1: 18, x2: 12, y2: 18 },
+  ]},
 };
 
 // ─── KPI Tile ───────────────────────────────────────────────────────────────────────
@@ -878,7 +890,7 @@ const Dashboard = ({ user, onLogout }) => {
                     <NavItem label="Room List" iconPath={NAV_ICONS.rooms} active={activeTab === 'rooms'} onClick={() => handleTabClick('rooms')} indent />
                     <NavItem label="Subject Constraints" iconPath={NAV_ICONS.subjects} active={activeTab === 'subjects'} onClick={() => handleTabClick('subjects')} indent />
                     <NavItem label="Sections" iconPath={NAV_ICONS.sections} active={activeTab === 'sections'} onClick={() => handleTabClick('sections')} indent />
-                    <NavItem label="Semesters & Years" iconPath={NAV_ICONS.manage} active={activeTab === 'terms'} onClick={() => handleTabClick('terms')} indent />
+                    <NavItem label="Semesters & Years" iconPath={NAV_ICONS.calendar} active={activeTab === 'terms'} onClick={() => handleTabClick('terms')} indent />
                     <NavItem label="User Management" iconPath={NAV_ICONS.users} active={activeTab === 'users'} onClick={() => handleTabClick('users')} indent />
                   </>
                 )}
