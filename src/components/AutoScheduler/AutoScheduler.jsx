@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { suggestProfessorMatches, analyzeScheduleFailures } from '../../utils/scheduleAI';
+import ScheduleGAWorker from '../../utils/scheduleGA.worker.js?worker';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import { schedulesOverlap, getMeetingTimeLabel } from '../../utils/scheduleUtils';
 import '../../styles/AutoScheduler.css';
@@ -212,10 +213,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       setAiStatus(prev => prev || '⚙️ Starting GA engine in background...');
 
       const gaResult = await new Promise((resolve, reject) => {
-        const worker = new Worker(
-          new URL('../../utils/scheduleGA.worker.js', import.meta.url),
-          { type: 'module' }
-        );
+        const worker = new ScheduleGAWorker();
 
         worker.onmessage = (e) => {
           const msg = e.data;

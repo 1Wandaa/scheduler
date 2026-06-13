@@ -2,7 +2,7 @@
  * Shared scheduling utilities used by GA, Dashboard validation, AI, and AutoScheduler.
  */
 
-import { TIME_SLOTS, getSlotDurationHours } from '../config/constants';
+import { TIME_SLOTS, getSlotDurationHours } from '../config/constants.js';
 
 const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
 
