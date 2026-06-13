@@ -6,8 +6,8 @@ import { schedulesOverlap, getMeetingTimeLabel } from '../../utils/scheduleUtils
 import '../../styles/AutoScheduler.css';
 import Swal from 'sweetalert2';
 
-// 1. ADDED 'schedules' to the props list
-function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, onAutoSchedule }) {
+// 1. ADDED 'schedules' and 'onLogHistory' to the props list
+function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, onAutoSchedule, onLogHistory }) {
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [result, setResult] = useState(null);
@@ -120,6 +120,20 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         }
       } else if (aiAssisted && unscheduledResults.length === 0) {
         setAiStatus('✅ All classes scheduled successfully — no prescriptions needed');
+      }
+
+      if (onLogHistory) {
+        onLogHistory({
+          engineMode,
+          totalAttempted: (r.results || []).length + unscheduledResults.length,
+          successCount: (r.results || []).length,
+          errorCount: unscheduledResults.length,
+          errors: unscheduledResults.map(u => ({
+            subject: u.subject?.code || u.subject?.name || 'Unknown',
+            section: u.section?.name || 'Unknown',
+            reason: u.reason || 'Insufficient slots or conflict'
+          }))
+        });
       }
 
     } catch (e) {
@@ -336,6 +350,20 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         }
       } else if (aiAssisted && unscheduledResults.length === 0) {
         setAiStatus('✅ All classes scheduled successfully — no prescriptions needed');
+      }
+
+      if (onLogHistory) {
+        onLogHistory({
+          engineMode: 'ga',
+          totalAttempted: validResults.length + unscheduledResults.length,
+          successCount: validResults.length,
+          errorCount: unscheduledResults.length,
+          errors: unscheduledResults.map(u => ({
+            subject: u.subject?.code || u.subject?.name || 'Unknown',
+            section: u.section?.name || 'Unknown',
+            reason: u.reason || 'Insufficient slots or conflict'
+          }))
+        });
       }
 
     } catch (error) {

@@ -16,6 +16,7 @@ import SubjectManagement from '../management/SubjectManagement';
 import TermManagement from '../management/TermManagement';
 import ScheduleViewer from '../management/ScheduleViewer';
 import SectionManagement from '../management/SectionManagement';
+import ScheduleHistory from '../management/ScheduleHistory';
 import Chatbot from '../../components/Chatbot/Chatbot';
 import {
   professorMatchesSubject,
@@ -153,6 +154,10 @@ const NAV_ICONS = {
     { type: 'line', x1: 16, y1: 14, x2: 16, y2: 14 },
     { type: 'line', x1: 8, y1: 18, x2: 8, y2: 18 },
     { type: 'line', x1: 12, y1: 18, x2: 12, y2: 18 },
+  ]},
+  history: { elements: [
+    { type: 'circle', cx: 12, cy: 12, r: 10 },
+    { type: 'polyline', points: "12 6 12 12 16 14" },
   ]},
 };
 
@@ -370,6 +375,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [subjects, setSubjects] = useState([]);
   const [sections, setSections] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  const [scheduleHistory, setScheduleHistory] = useState([]);
 
   const [activeSemester, setActiveSemester] = useState(SEMESTERS[1]);
   const [activeSchoolYear, setActiveSchoolYear] = useState(SCHOOL_YEARS[1]);
@@ -474,6 +480,7 @@ const Dashboard = ({ user, onLogout }) => {
       return { ...data, program: prog, id: d.id };
     })));
     const unsubSched = onSnapshot(collection(db, 'schedules'), snap => setSchedules(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
+    const unsubHist = onSnapshot(collection(db, 'scheduleHistory'), snap => setScheduleHistory(snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => b.timestamp - a.timestamp)));
     const unsubMeta = onSnapshot(doc(db, 'meta', 'settings'), snap => {
       if (snap.exists()) {
         const data = snap.data();
@@ -481,8 +488,20 @@ const Dashboard = ({ user, onLogout }) => {
         if (data.schoolYears) setAvailableSchoolYears(data.schoolYears);
       }
     });
-    return () => { unsubRooms(); unsubProfs(); unsubSubj(); unsubSec(); unsubSched(); unsubMeta(); };
+    return () => { unsubRooms(); unsubProfs(); unsubSubj(); unsubSec(); unsubSched(); unsubHist(); unsubMeta(); };
   }, []);
+
+  const handleLogHistory = async (historyData) => {
+    if (!isAdmin) return;
+    try {
+      await addDoc(collection(db, 'scheduleHistory'), {
+        ...historyData,
+        timestamp: new Date()
+      });
+    } catch (e) {
+      console.error("Failed to log schedule history:", e);
+    }
+  };
 
   const validator = {
     validateAssignment: (room, professor, subject, section, day, timeSlot) =>
@@ -919,6 +938,7 @@ const Dashboard = ({ user, onLogout }) => {
                   </>
                 )}
                 <NavItem label="Create Schedule" iconPath={NAV_ICONS.schedule} active={activeTab === 'schedule'} onClick={() => handleTabClick('schedule')} />
+                <NavItem label="Scheduling History" iconPath={NAV_ICONS.history} active={activeTab === 'history'} onClick={() => handleTabClick('history')} />
                 <NavItem label="Faculty Workload" iconPath={NAV_ICONS.workload} active={activeTab === 'workload'} onClick={() => handleTabClick('workload')} />
               </>
             )}
@@ -1257,9 +1277,10 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
             <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} />
-            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={enrichedSchedules} onAutoSchedule={handleAddSchedule} />
+            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={enrichedSchedules} onAutoSchedule={handleAddSchedule} onLogHistory={handleLogHistory} />
           </div>
         )}
+        {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
