@@ -685,7 +685,15 @@ const Dashboard = ({ user, onLogout }) => {
             continue;
           }
 
-          for (const room of roomPool) {
+          const prefRoomIds = professor.preferredRooms || [];
+          let sortedRoomPool = roomPool;
+          if (prefRoomIds.length > 0) {
+            const validPrefRooms = roomPool.filter(r => prefRoomIds.includes(r.id));
+            const nonPrefRooms = roomPool.filter(r => !prefRoomIds.includes(r.id));
+            sortedRoomPool = [...validPrefRooms, ...nonPrefRooms];
+          }
+
+          for (const room of sortedRoomPool) {
             if (hasStage) {
               const isStage = (room.name || '').toLowerCase().includes('stage');
               if (isJanice && !isStage) continue;

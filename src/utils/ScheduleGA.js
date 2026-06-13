@@ -198,7 +198,7 @@ export class ScheduleGA {
     // PE subjects must go to gym or stage
     if (isPE) {
       const gyms = this.rooms.filter(isGymOrStage);
-      if (gyms.length > 0) return gyms;
+      if (gyms.length > 0) return { tier1: gyms, tier2: [], tier3: [], flat: gyms };
     }
 
     let pool = this.rooms;
@@ -226,7 +226,12 @@ export class ScheduleGA {
     }
 
     // Return in priority order: own dept first, then shared, then overflow
-    return [...tier1, ...tier2, ...tier3];
+    return {
+      tier1,
+      tier2,
+      tier3,
+      flat: [...tier1, ...tier2, ...tier3]
+    };
   }
 
   _eligibleTimeSlotsFor(a) {
@@ -386,10 +391,14 @@ export class ScheduleGA {
       if (lockedRoomId && this.roomMap[lockedRoomId]) {
         rooms = [this.roomMap[lockedRoomId]];
       } else if (isPE) {
-        rooms = this._shuffle([...eligibleRooms]);
+        rooms = this._shuffle([...eligibleRooms.flat]);
       } else {
-        // Just shuffle eligible rooms (tier ordering handles priorities)
-        rooms = this._shuffle(eligibleRooms);
+        // Strictly try Tier 1 first, then Tier 2, then Tier 3 (shuffling within tiers only)
+        rooms = [
+          ...this._shuffle([...eligibleRooms.tier1]),
+          ...this._shuffle([...eligibleRooms.tier2]),
+          ...this._shuffle([...eligibleRooms.tier3])
+        ];
       }
 
       let baseProfs = this._eligibleProfsFor(a, profWork);
@@ -568,27 +577,9 @@ export class ScheduleGA {
       }
 
       if (!placed) {
-        if (bestFallback && bestFallback.professorId) {
-          chrom[i] = { professorId: bestFallback.professorId, roomId: bestFallback.roomId, dayIdx: bestFallback.dayIdx, timeIdx: bestFallback.timeIdx };
-          this._occupy({ roomId: chrom[i].roomId, professorId: chrom[i].professorId, sectionId, dayIdx: chrom[i].dayIdx, timeIdx: chrom[i].timeIdx, targetDuration: a.targetDuration }, roomSlots, profSlots, secSlots);
-          profWork[chrom[i].professorId] = (profWork[chrom[i].professorId] || 0) + creditPerSlot;
-          
-          // Lock professor and room for this section+subject
-          if (!lockedProfForSecSub[secSubKey]) {
-            lockedProfForSecSub[secSubKey] = bestFallback.professorId;
-          }
-          if (!lockedRoomForSecSub[secSubKey]) {
-            lockedRoomForSecSub[secSubKey] = bestFallback.roomId;
-          }
-
-          if (!assignedSecSub[secSubKey]) {
-            assignedSecSub[secSubKey] = { roomId: bestFallback.roomId, timeIdx: bestFallback.timeIdx, daysUsed: new Set([bestFallback.dayIdx]) };
-          } else {
-            assignedSecSub[secSubKey].daysUsed.add(bestFallback.dayIdx);
-          }
-        } else {
-          chrom[i] = { professorId: null, roomId: null, dayIdx: 0, timeIdx: 0 };
-        }
+        // Do not force a conflicting placement via bestFallback.
+        // Leave it null so _rescuePass can attempt a comprehensive search across all rooms (including SHARED) and professors.
+        chrom[i] = { professorId: null, roomId: null, dayIdx: 0, timeIdx: 0 };
       }
     }
 
@@ -615,8 +606,13 @@ export class ScheduleGA {
       const secSubKey = `${sectionId}-${a.subject.id}`;
       const creditPerSlot = (Number(a.subject?.credits) || 3) / (a.totalMeetings || Math.max(1, Math.ceil((Number(a.subject?.credits) || 3) / 1.5)));
 
-      // Get broader pools: all rooms (including overflow) and department professors
-      const allRooms = this._shuffle([...this.rooms]);
+      // Get structured pools: department rooms strictly first, then shared, then overflow
+      const eligibleRoomsTiers = this._eligibleRoomsFor(a);
+      const allRooms = [
+        ...this._shuffle([...eligibleRoomsTiers.tier1]),
+        ...this._shuffle([...eligibleRoomsTiers.tier2]),
+        ...this._shuffle([...eligibleRoomsTiers.tier3])
+      ];
       let rescueProfs = this._shuffle([...this._rescueProfsFor(a, profWork)]);
 
       // If professor is locked, still use the locked one
@@ -722,7 +718,7 @@ export class ScheduleGA {
       let slot = slotForSecSub[secSubKey];
       if (!slot) {
         // First meeting: pick room, time, and a starting day (prefer Mon=0 or Tue=1)
-        const rooms = this._eligibleRoomsFor(a);
+        const rooms = this._eligibleRoomsFor(a).flat;
         const assignedProf = this.profMap[profId];
         const isJanice = assignedProf && (assignedProf.id === 'P04' || (assignedProf.name || '').toLowerCase().includes('ballera'));
         
@@ -1139,7 +1135,7 @@ export class ScheduleGA {
         const g = chrom[i], a = this.assignments[i];
         switch (Math.floor(Math.random() * 4)) {
           case 0: {
-            let pool = this._eligibleRoomsFor(a);
+            let pool = this._eligibleRoomsFor(a).flat;
             const prof = this.profMap[g.professorId];
             if (prof && prof.preferredRooms && prof.preferredRooms.length > 0) {
               const prefPool = pool.filter(r => prof.preferredRooms.includes(r.id));
@@ -1264,7 +1260,7 @@ export class ScheduleGA {
 
       // Build a prescription with suggestions
       const sectionDept = getSectionDepartment(a.section);
-      const eligibleRooms = this._eligibleRoomsFor(a);
+      const eligibleRooms = this._eligibleRoomsFor(a).flat;
       const allRooms = this.rooms;
       const eligibleProfs = this._eligibleProfsFor(a);
       const deptProfs = sectionDept
