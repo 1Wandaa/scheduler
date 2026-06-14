@@ -232,6 +232,7 @@ const NavItem = ({ label, iconPath, active, onClick, danger, indent }) => (
   </li>
 );
 
+// ─── CustomDropdown ─────────────────────────────────────────────────────────
 const CustomDropdown = ({ options, value, onChange, title, alignRight = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -316,6 +317,32 @@ const CustomDropdown = ({ options, value, onChange, title, alignRight = false })
     </div>
   );
 };
+
+// ─── Bottom Navigation (Mobile Only) ──────────────────────────────────────
+const BottomNav = ({ activeTab, handleTabClick, isAdmin, setIsMobileMenuOpen }) => (
+  <div className="bottom-nav">
+    {isAdmin && (
+      <button className={`bottom-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => handleTabClick('dashboard')}>
+        <Icon d={NAV_ICONS.dashboard} size={22} />
+        <span>Home</span>
+      </button>
+    )}
+    <button className={`bottom-nav-btn ${activeTab === 'room-utilization' ? 'active' : ''}`} onClick={() => handleTabClick('room-utilization')}>
+      <Icon d={NAV_ICONS.viewSchedules} size={22} />
+      <span>Schedules</span>
+    </button>
+    {isAdmin && (
+      <button className={`bottom-nav-btn ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => handleTabClick('schedule')}>
+        <Icon d={NAV_ICONS.schedule} size={22} />
+        <span>Create</span>
+      </button>
+    )}
+    <button className="bottom-nav-btn" onClick={() => setIsMobileMenuOpen(true)}>
+      <Icon d={NAV_ICONS.menu} size={22} />
+      <span>Menu</span>
+    </button>
+  </div>
+);
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard = ({ user, onLogout }) => {
@@ -1306,6 +1333,7 @@ const Dashboard = ({ user, onLogout }) => {
 
       </div>
       <Chatbot schedules={enrichedSchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
+      <BottomNav activeTab={activeTab} handleTabClick={handleTabClick} isAdmin={isAdmin} setIsMobileMenuOpen={setIsMobileMenuOpen} />
     </div>
   );
 };
