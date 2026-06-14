@@ -3,9 +3,43 @@ import { db } from '../../config/firebase';
 import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 
-function TermManagement({ availableSemesters, availableSchoolYears, onBack }) {
+function TermManagement({ availableSemesters, availableSchoolYears, onBack, publishedTerms = {}, setPublishedTerms }) {
     const [newSemester, setNewSemester] = useState('');
     const [newSchoolYear, setNewSchoolYear] = useState('');
+
+    const [publishSemester, setPublishSemester] = useState(availableSemesters.length > 0 ? availableSemesters[availableSemesters.length - 1] : '');
+    const [publishYear, setPublishYear] = useState(availableSchoolYears.length > 0 ? availableSchoolYears[availableSchoolYears.length - 1] : '');
+
+    const handleTogglePublish = async () => {
+        if (!publishSemester || !publishYear) return;
+        const termKey = `${publishSemester}_${publishYear}`;
+        const isCurrentlyPublished = publishedTerms[termKey] === true;
+        const action = isCurrentlyPublished ? 'Unpublish' : 'Publish';
+
+        const result = await Swal.fire({
+            title: `${action} Schedule?`,
+            text: isCurrentlyPublished 
+                ? "Students will no longer be able to see the schedules for this term."
+                : "This will make the schedules for this term visible to students.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: `Yes, ${action}`,
+            cancelButtonText: 'Cancel',
+            customClass: { popup: 'minimal-swal', confirmButton: isCurrentlyPublished ? 'btn-delete' : 'btn-primary', cancelButton: 'back-btn' },
+            buttonsStyling: false
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const newPublishedTerms = { ...publishedTerms, [termKey]: !isCurrentlyPublished };
+                await handleUpdateSettings({ publishedTerms: newPublishedTerms });
+                if (setPublishedTerms) setPublishedTerms(newPublishedTerms);
+                Swal.fire({ title: 'Success', text: `Schedule has been ${action.toLowerCase()}ed.`, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, customClass: { popup: 'minimal-toast' } });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    };
 
     const handleUpdateSettings = async (newData) => {
         try {
@@ -290,6 +324,50 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack }) {
                     </div>
                 </div>
 
+            </div>
+
+            {/* --- PUBLISH SCHEDULES SECTION --- */}
+            <div style={{ marginTop: '40px', paddingTop: '25px', borderTop: '1px solid var(--border-color)' }}>
+                <h3 className="card-title" style={{ margin: '0 0 15px 0', fontSize: '1.1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    Publish Final Schedules
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '20px' }}>
+                    Select a term and publish its schedules to make them visible to students in the User Mode.
+                </p>
+
+                <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-end', background: 'var(--bg-main)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1', minWidth: '200px' }}>
+                        <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Semester</label>
+                        <select className="form-select" value={publishSemester} onChange={(e) => setPublishSemester(e.target.value)} style={{ padding: '10px 14px' }}>
+                            {availableSemesters.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1', minWidth: '200px' }}>
+                        <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>School Year</label>
+                        <select className="form-select" value={publishYear} onChange={(e) => setPublishYear(e.target.value)} style={{ padding: '10px 14px' }}>
+                            {availableSchoolYears.map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                    </div>
+
+                    <div style={{ flex: '1', minWidth: '200px', display: 'flex', alignItems: 'center' }}>
+                        {publishedTerms[`${publishSemester}_${publishYear}`] === true ? (
+                            <button className="btn btn-delete" onClick={handleTogglePublish} style={{ width: '100%', padding: '10px 14px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                Unpublish Schedule
+                            </button>
+                        ) : (
+                            <button className="btn btn-primary" onClick={handleTogglePublish} style={{ width: '100%', padding: '10px 14px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                Publish Schedule
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

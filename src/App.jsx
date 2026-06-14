@@ -53,33 +53,47 @@ function App() {
       if (firebaseUser) {
         // User is signed in — fetch their role from Firestore
         try {
-          // Extract the username from the dummy email
-          const username = firebaseUser.email.split('@')[0];
+          // Get stored username first to preserve exact casing
+          const storedUsername = localStorage.getItem('smartsched_username');
+          const emailPrefix = firebaseUser.email.split('@')[0];
+          
+          // Use storedUsername if available, otherwise fallback to emailPrefix
+          const searchTargets = [emailPrefix, `@${emailPrefix}`, firebaseUser.email];
+          if (storedUsername && !searchTargets.includes(storedUsername)) {
+            searchTargets.push(storedUsername);
+          }
 
-          const q = query(collection(db, 'users'), where('username', 'in', [username, `@${username}`, firebaseUser.email]));
+          const q = query(collection(db, 'users'), where('username', 'in', searchTargets));
           const snapshot = await getDocs(q);
 
           if (!snapshot.empty) {
-            let userData = snapshot.docs[0].data();
+            let targetDoc = snapshot.docs[0];
             const storedUsername = localStorage.getItem('smartsched_username');
             
             if (storedUsername) {
-              const exactMatch = snapshot.docs.find(doc => doc.data().username === storedUsername);
-              if (exactMatch) {
-                userData = exactMatch.data();
+              const exactMatches = snapshot.docs.filter(doc => doc.data().username === storedUsername);
+              if (exactMatches.length > 0) {
+                // If there are duplicate exact matches, prefer the Admin profile
+                const adminMatch = exactMatches.find(doc => {
+                  const role = doc.data().role || '';
+                  return role === 'Admin' || role === 'Department Head';
+                });
+                targetDoc = adminMatch || exactMatches[0];
               }
             }
+            
+            let userData = targetDoc.data();
 
             setUser({
-              name: userData.name || username,
+              name: userData.name || emailPrefix,
               role: userData.role || 'User',
-              username: userData.username || username
+              username: userData.username || emailPrefix
             });
           } else {
             // Auth exists but no Firestore profile — create one
             const newProfile = {
-              username: username,
-              name: username,
+              username: emailPrefix,
+              name: emailPrefix,
               role: 'Student'
             };
             await addDoc(collection(db, 'users'), newProfile);

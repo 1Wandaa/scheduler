@@ -323,8 +323,9 @@ const Dashboard = ({ user, onLogout }) => {
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
   // --- ROLE IDENTIFICATION ---
-  const isAdmin = user?.role === 'Admin' || user?.role === 'Department Head';
-  const isStudent = user?.role === 'Student' || user?.role === 'User';
+  const userRole = (user?.role || '').toLowerCase().trim();
+  const isAdmin = userRole === 'admin' || userRole === 'department head';
+  const isStudent = !isAdmin;
 
   // Make students default to the 'room-utilization' (View Schedules) tab
   const [activeTab, setActiveTab] = useState(isStudent ? 'room-utilization' : 'dashboard');
@@ -382,6 +383,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   const [availableSemesters, setAvailableSemesters] = useState(SEMESTERS);
   const [availableSchoolYears, setAvailableSchoolYears] = useState(SCHOOL_YEARS);
+  const [publishedTerms, setPublishedTerms] = useState({});
 
   const activeSchedules = schedules.filter(s => 
     s.semester === activeSemester && 
@@ -486,6 +488,7 @@ const Dashboard = ({ user, onLogout }) => {
         const data = snap.data();
         if (data.semesters) setAvailableSemesters(data.semesters);
         if (data.schoolYears) setAvailableSchoolYears(data.schoolYears);
+        if (data.publishedTerms) setPublishedTerms(data.publishedTerms);
       }
     });
     return () => { unsubRooms(); unsubProfs(); unsubSubj(); unsubSec(); unsubSched(); unsubHist(); unsubMeta(); };
@@ -869,7 +872,9 @@ const Dashboard = ({ user, onLogout }) => {
 
   const firstName = user?.name?.split?.(/\s+/)?.[0] ?? 'there';
 
-  const enrichedSchedules = activeSchedules.map(s => ({
+  const displaySchedules = (!isAdmin && publishedTerms[`${activeSemester}_${activeSchoolYear}`] !== true) ? [] : activeSchedules;
+
+  const enrichedSchedules = displaySchedules.map(s => ({
     ...s,
     professor: professors.find(p => String(p.id) === String(s.professor?.id)) || s.professor,
     room: rooms.find(r => String(r.id) === String(s.room?.id)) || s.room,
@@ -1292,12 +1297,12 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} />}
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={enrichedSchedules} />}
 
         {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
-        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={enrichedSchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} />}
+        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={enrichedSchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
 
       </div>
       <Chatbot schedules={enrichedSchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />

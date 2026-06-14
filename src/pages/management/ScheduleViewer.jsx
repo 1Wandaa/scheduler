@@ -3,7 +3,7 @@ import ScheduleTable from '../../components/ScheduleTable/ScheduleTable';
 import PrintableSchedule from '../../components/PrintableSchedule/PrintableSchedule';
 import { DEPARTMENTS } from '../../config/constants';
 
-function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, activeSemester = '', activeSchoolYear = '' }) {
+function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, activeSemester = '', activeSchoolYear = '', isPublished = true }) {
     const [viewType, setViewType] = useState('department');
     const [selectedId, setSelectedId] = useState('');
     const [deptSectionId, setDeptSectionId] = useState('');
@@ -105,6 +105,25 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
         : viewType === 'room' ? 'ROOM' 
         : viewType === 'faculty' ? 'FACULTY' : '';
     const titleName = activeEntity ? activeEntity.name.toUpperCase() : 'SELECT ITEM';
+
+    if (!isAdmin && !isPublished) {
+        return (
+            <div className="card" style={{ animation: 'fadeIn 0.5s', textAlign: 'center', padding: '50px 20px', minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{ marginBottom: '20px', background: 'var(--bg-main)', padding: '24px', borderRadius: '50%' }}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                        <line x1="9" y1="16" x2="15" y2="16"></line>
+                        <line x1="12" y1="13" x2="12" y2="19"></line>
+                    </svg>
+                </div>
+                <h3 style={{ color: 'var(--text-main)', marginBottom: '10px', fontSize: '1.5rem' }}>Schedules Not Available</h3>
+                <p style={{ color: 'var(--text-muted)', maxWidth: '500px', lineHeight: 1.6 }}>The schedules for {activeSemester} {activeSchoolYear} are still being finalized and have not been published yet. Please check back later.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
