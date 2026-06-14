@@ -1004,6 +1004,7 @@ const Dashboard = ({ user, onLogout }) => {
           position: 'relative',
           zIndex: 100,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          flexWrap: 'wrap', gap: '16px',
           padding: '4px 0 20px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           marginBottom: '28px',
@@ -1090,7 +1091,7 @@ const Dashboard = ({ user, onLogout }) => {
 
             {/* Admin preview cards */}
             {isAdmin && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '18px' }}>
                 {/* Faculty preview */}
                 <div className="card" style={{ padding: '22px' }}>
                   <div className="card-header" style={{ marginBottom: '14px' }}>
@@ -1172,7 +1173,7 @@ const Dashboard = ({ user, onLogout }) => {
             )}
 
             {/* --- NEW: Appropriate Dashboard Widgets (Quick Actions & Recent Activity) --- */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
 
               {/* System Reminders Panel */}
               {isAdmin && (
