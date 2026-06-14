@@ -11,6 +11,57 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
   const messagesEndRef = useRef(null);
   const dataRef = useRef({ schedules, professors, subjects, sections, rooms });
 
+  // Drag state
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, moved: false });
+
+  const handlePointerDown = (e) => {
+    if (e.button !== 0 && e.button !== undefined) return; // Left click or touch
+    setIsDragging(true);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialX: position.x,
+      initialY: position.y,
+      moved: false
+    };
+    if (e.target.setPointerCapture && e.pointerId) {
+      e.target.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      dragRef.current.moved = true;
+    }
+    
+    setPosition({
+      x: dragRef.current.initialX + dx,
+      y: dragRef.current.initialY + dy
+    });
+  };
+
+  const handlePointerUp = (e) => {
+    setIsDragging(false);
+    if (e.target.releasePointerCapture && e.pointerId) {
+      try { e.target.releasePointerCapture(e.pointerId); } catch(err){}
+    }
+  };
+
+  const handleFabClick = (e) => {
+    if (dragRef.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    setIsOpen(true);
+  };
+
   // Reset chat session when data changes so context stays current
   useEffect(() => {
     const isDataDifferent = 
@@ -189,9 +240,24 @@ Do not list all data unless explicitly asked. Summarize when appropriate.`;
   };
 
   return (
-    <div className={`chatbot-container ${isOpen ? 'open' : ''}`}>
+    <div 
+      className={`chatbot-container ${isOpen ? 'open' : ''}`}
+      style={{ 
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        transition: isDragging ? 'none' : 'transform 0.1s ease',
+        touchAction: 'none'
+      }}
+    >
       {!isOpen && (
-        <button className="chatbot-fab" onClick={() => setIsOpen(true)}>
+        <button 
+          className="chatbot-fab" 
+          onClick={handleFabClick}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+        >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
@@ -200,7 +266,14 @@ Do not list all data unless explicitly asked. Summarize when appropriate.`;
 
       {isOpen && (
         <div className="chatbot-window">
-          <div className="chatbot-header">
+          <div 
+            className="chatbot-header"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+          >
             <div className="chatbot-title">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>

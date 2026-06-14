@@ -2075,14 +2075,50 @@ h6 {
     width: 100vw !important;
     max-width: 100vw !important;
     box-sizing: border-box !important;
-    padding: 10px !important;
+    padding: 16px 14px 90px 14px !important; /* 90px bottom padding for the BottomNav */
     overflow-x: hidden !important;
   }
 
   .card {
     max-width: 100% !important;
     box-sizing: border-box !important;
-    padding: 15px !important;
+    padding: 16px !important;
+    border-radius: 14px !important;
+  }
+
+  /* --- Mobile Scaling Overrides --- */
+  header h1 {
+    font-size: 1.3rem !important;
+  }
+  
+  header p {
+    font-size: 0.7rem !important;
+  }
+
+  .kpi-tile {
+    padding: 16px 14px !important;
+    gap: 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .kpi-icon {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 10px !important;
+  }
+
+  .kpi-tile > div > div:first-child {
+    font-size: 1.4rem !important; /* The value number */
+  }
+
+  .kpi-tile > div > div:last-child {
+    font-size: 0.7rem !important; /* The label */
+  }
+
+  .data-table th, 
+  .data-table td {
+    padding: 10px 12px !important;
+    font-size: 0.8rem !important;
   }
 
   /* =============================================
