@@ -2032,7 +2032,7 @@ h6 {
 
   .sidebar {
     position: fixed;
-    left: -250px;
+    left: -280px;
     top: 0;
     height: 100dvh;
     transition: left 0.3s ease;

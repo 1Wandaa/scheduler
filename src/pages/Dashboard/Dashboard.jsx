@@ -366,26 +366,36 @@ const Dashboard = ({ user, onLogout }) => {
   // --- Mobile Swipe Gesture for Sidebar ---
   useEffect(() => {
     let touchStartX = 0;
+    let touchStartY = 0;
     
     const handleTouchStart = (e) => {
       touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
     };
     
     const handleTouchEnd = (e) => {
       const touchEndX = e.changedTouches[0].clientX;
-      const diff = touchEndX - touchStartX;
+      const touchEndY = e.changedTouches[0].clientY;
       
-      // If sidebar is closed: swipe right from the left edge to open
-      if (!isMobileMenuOpen && touchStartX < 40 && diff > 50) {
-        setIsMobileMenuOpen(true);
-      }
-      // If sidebar is open: swipe left anywhere to close
-      else if (isMobileMenuOpen && diff < -50) {
-        setIsMobileMenuOpen(false);
-      }
-      // Failsafe: if they specifically swiped left from the right edge (as requested)
-      else if (!isMobileMenuOpen && touchStartX > window.innerWidth - 40 && diff < -50) {
-        setIsMobileMenuOpen(true);
+      const diffX = touchEndX - touchStartX;
+      const diffY = touchEndY - touchStartY;
+      
+      // OPTIMIZATION: Only trigger if the swipe is predominantly horizontal.
+      // This prevents accidental sidebar triggers when the user is scrolling vertically.
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
+        
+        // If sidebar is closed: swipe right from the left edge (or close to it) to open
+        if (!isMobileMenuOpen && touchStartX < 60 && diffX > 40) {
+          setIsMobileMenuOpen(true);
+        }
+        // If sidebar is open: swipe left anywhere to close
+        else if (isMobileMenuOpen && diffX < -40) {
+          setIsMobileMenuOpen(false);
+        }
+        // If sidebar is closed: swipe left from the right edge to open
+        else if (!isMobileMenuOpen && touchStartX > window.innerWidth - 60 && diffX < -40) {
+          setIsMobileMenuOpen(true);
+        }
       }
     };
     
