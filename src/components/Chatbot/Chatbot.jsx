@@ -10,6 +10,7 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
   const [chatSession, setChatSession] = useState(null);
   const messagesEndRef = useRef(null);
   const dataRef = useRef({ schedules, professors, subjects, sections, rooms });
+  const containerRef = useRef(null);
 
   // Drag state
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -61,6 +62,32 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
     }
     setIsOpen(true);
   };
+
+  // Clamp position to viewport when chatbot is opened
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      // Small timeout to allow the window to render fully before measuring
+      setTimeout(() => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const padding = 20;
+        
+        let dx = 0;
+        let dy = 0;
+
+        // Check if out of bounds on any side
+        if (rect.left < padding) dx = padding - rect.left;
+        else if (rect.right > window.innerWidth - padding) dx = window.innerWidth - padding - rect.right;
+        
+        if (rect.top < padding) dy = padding - rect.top;
+        else if (rect.bottom > window.innerHeight - padding) dy = window.innerHeight - padding - rect.bottom;
+
+        if (dx !== 0 || dy !== 0) {
+          setPosition(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+        }
+      }, 10);
+    }
+  }, [isOpen]);
 
   // Reset chat session when data changes so context stays current
   useEffect(() => {
@@ -241,6 +268,7 @@ Do not list all data unless explicitly asked. Summarize when appropriate.`;
 
   return (
     <div 
+      ref={containerRef}
       className={`chatbot-container ${isOpen ? 'open' : ''}`}
       style={{ 
         transform: `translate(${position.x}px, ${position.y}px)`,
