@@ -16,7 +16,7 @@ export default defineConfig({
         short_name: 'SMARTSCHED',
         description: 'SMARTSCHED AI Scheduling System',
         theme_color: '#ffffff',
-        background_color: '#ffffff',
+        background_color: '#0a1b2f',
         display: 'standalone',
         icons: [
           {
