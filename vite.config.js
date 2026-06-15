@@ -26,7 +26,7 @@ export default defineConfig({
             purpose: 'any maskable'
           },
           {
-            src: '/logo.png',
+            src: '/splash.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
