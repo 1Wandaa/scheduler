@@ -128,7 +128,12 @@ function App() {
 
   // Show a loading spinner while checking auth state
   if (loading) {
-    return <div className="login-container"></div>;
+    return (
+      <div className="app-loading-container">
+        <div className="app-loading-spinner"></div>
+        <p className="app-loading-text">Loading SMARTSCHED...</p>
+      </div>
+    );
   }
 
   // If there is no user logged in, show the Login screen
