@@ -2,7 +2,7 @@ import React from 'react';
 import '../../styles/ProfessorWorkload.css';
 
 function ProfessorWorkload({ professors, schedules }) {
-  const LOGO_SRC = '/logo.jpg?v=1';
+  const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
   const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;

@@ -22,7 +22,7 @@ function App() {
     }
     
     const img = new Image();
-    img.src = '/logo.jpg?v=1';
+    img.src = '/logo.png?v=1';
     img.onload = () => {
       // Create a square canvas based on the smaller dimension to prevent stretching
       const size = Math.min(img.width, img.height);

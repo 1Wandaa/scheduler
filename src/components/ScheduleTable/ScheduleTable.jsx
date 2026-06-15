@@ -5,7 +5,7 @@ import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap } from '../
 import '../../styles/ScheduleTable.css';
 
 function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID" }) {
-  const LOGO_SRC = '/logo.jpg?v=1';
+  const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
   const [dragOverCell, setDragOverCell] = useState(null);
