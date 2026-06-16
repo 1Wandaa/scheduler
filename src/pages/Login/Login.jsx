@@ -26,6 +26,42 @@ const YEAR_LEVELS = [
   { value: 4, label: '4th Year' },
 ];
 
+const findUserDocument = async (rawUsername) => {
+  if (!rawUsername) return undefined;
+  const cleanU = rawUsername.replace('@', '').toLowerCase().trim();
+  
+  // 1. Try common variations first (fast)
+  const variations = Array.from(new Set([
+    rawUsername,
+    rawUsername.trim(),
+    cleanU,
+    cleanU.toUpperCase(),
+    cleanU.charAt(0).toUpperCase() + cleanU.slice(1),
+    `@${cleanU}`,
+    `@${cleanU.toUpperCase()}`,
+    `@${cleanU.charAt(0).toUpperCase() + cleanU.slice(1)}`
+  ])).filter(Boolean).slice(0, 10);
+
+  const q = query(collection(db, 'users'), where('username', 'in', variations));
+  const snap = await getDocs(q);
+  
+  let match = snap.docs.find(doc => {
+    const docU = doc.data().username || '';
+    return docU.replace('@', '').toLowerCase().trim() === cleanU;
+  });
+
+  if (match) return match;
+
+  // 2. Fallback: Full collection scan (slow but robust)
+  const allUsersSnap = await getDocs(collection(db, 'users'));
+  match = allUsersSnap.docs.find(doc => {
+    const docU = doc.data().username || '';
+    return docU.replace('@', '').toLowerCase().trim() === cleanU;
+  });
+
+  return match;
+};
+
 const Login = ({ onLogin }) => {
   const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
@@ -119,6 +155,23 @@ const Login = ({ onLogin }) => {
           return;
         }
 
+        // 0. Check if username already exists in Firestore (case-insensitive)
+        const existingDoc = await findUserDocument(username);
+        if (existingDoc) {
+          setError('That username is already taken in our database. Please choose another.');
+          setLoading(false);
+          return;
+        }
+
+        // 0.5. Check if Student ID already exists
+        const studentIdQuery = query(collection(db, 'users'), where('studentId', '==', studentId.trim()));
+        const studentIdSnap = await getDocs(studentIdQuery);
+        if (!studentIdSnap.empty) {
+          setError('An account with this Student ID already exists.');
+          setLoading(false);
+          return;
+        }
+
         // 1. Create user identity in Firebase Auth
         await createUserWithEmailAndPassword(auth, dummyEmail, password);
 
@@ -143,18 +196,18 @@ const Login = ({ onLogin }) => {
 
       } else {
         // LOGIN FLOW (Existing)
+        let firestoreUserDoc = null;
+
         try {
           await signInWithEmailAndPassword(auth, dummyEmail, password);
         } catch (signInErr) {
           // Fallback: If auth fails, check if there's a user manually created in Firestore with a plain-text password
           if (signInErr.code === 'auth/invalid-credential' || signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/wrong-password') {
-            const cleanU = username.replace('@', '').trim();
-            const searchArray = Array.from(new Set([username, username.trim(), cleanU, `@${cleanU}`]));
-            const qCheck = query(collection(db, 'users'), where('username', 'in', searchArray));
-            const snapCheck = await getDocs(qCheck);
             
-            if (!snapCheck.empty) {
-              const firestoreUserData = snapCheck.docs[0].data();
+            firestoreUserDoc = await findUserDocument(username);
+            
+            if (firestoreUserDoc) {
+              const firestoreUserData = firestoreUserDoc.data();
               
               // Verify if the password matches the one set in Firestore manually
               if (firestoreUserData.password && firestoreUserData.password.trim() === password.trim()) {
@@ -182,12 +235,14 @@ const Login = ({ onLogin }) => {
           }
         }
 
-        const cleanU = username.replace('@', '').trim();
-        const searchArray2 = Array.from(new Set([username, username.trim(), cleanU, `@${cleanU}`]));
-        const q = query(collection(db, 'users'), where('username', 'in', searchArray2));
-        const querySnapshot = await getDocs(q);
+        // After successful auth, fetch the user doc if not already fetched from fallback
+        if (!firestoreUserDoc) {
+          firestoreUserDoc = await findUserDocument(username);
+        }
 
-        if (querySnapshot.empty) {
+        if (!firestoreUserDoc) {
+          // Edge case: They have an Auth account but no Firestore doc.
+          // Create the profile to avoid breaking their login.
           const newProfile = {
             username: username,
             name: cleanUsername,
@@ -199,11 +254,11 @@ const Login = ({ onLogin }) => {
           return;
         }
 
-        const userData = querySnapshot.docs[0].data();
+        const userData = firestoreUserDoc.data();
         onLogin({
           name: userData.name || username,
           role: userData.role || 'User',
-          username: username
+          username: userData.username || username
         });
       }
     } catch (err) {
@@ -229,21 +284,23 @@ const Login = ({ onLogin }) => {
 
       const cleanUsername = googleUser.email.split('@')[0];
 
-      const q = query(collection(db, 'users'), where('username', 'in', [cleanUsername, `@${cleanUsername}`, googleUser.email]));
-      const querySnapshot = await getDocs(q);
+      let firestoreUserDoc = await findUserDocument(cleanUsername);
+      if (!firestoreUserDoc) {
+        firestoreUserDoc = await findUserDocument(googleUser.email);
+      }
 
       let role = 'Student';
       let name = googleUser.displayName || cleanUsername;
       let finalUsername = googleUser.email;
 
-      if (querySnapshot.empty) {
+      if (!firestoreUserDoc) {
         await addDoc(collection(db, 'users'), {
           username: finalUsername,
           name: name,
           role: role
         });
       } else {
-        const userData = querySnapshot.docs[0].data();
+        const userData = firestoreUserDoc.data();
         role = userData.role || 'Student';
         name = userData.name || name;
         finalUsername = userData.username || finalUsername;
