@@ -441,6 +441,43 @@ const Dashboard = ({ user, onLogout }) => {
       if (!sectionSubjects.includes(subject.id) && !sectionSubjects.includes(subject.code))
         errors.push(`Section "${section.name}" is not enrolled in subject "${subject.code}".`);
     }
+
+    const roomName = (room?.name || '').toUpperCase().replace(/\s+/g, '');
+    const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+    
+    let sectionDept = null;
+    if (section) {
+      const program = (section.program || '').toUpperCase();
+      for (const d of ['BSCS', 'BAEL', 'BSOA', 'BSFT']) { if (program.includes(d)) { sectionDept = d; break; } }
+      if (!sectionDept) {
+        const name = (section.name || '').toUpperCase();
+        for (const d of ['BSCS', 'BAEL', 'BSOA', 'BSFT']) { if (name.startsWith(d)) { sectionDept = d; break; } }
+      }
+    }
+
+    if (isBscsExclusive) {
+      if (section && sectionDept !== 'BSCS') {
+        errors.push(`Room "${room?.name}" is reserved for BSCS students and faculty only.`);
+      }
+      if (professor && professor.department && professor.department.toUpperCase() !== 'BSCS') {
+        errors.push(`Room "${room?.name}" cannot be used by non-BSCS faculty (${professor.name}).`);
+      }
+    }
+
+    const isRoom204 = roomName === 'ROOM204' || roomName === '204';
+    if (isRoom204) {
+      const isBSCS = (!sectionDept || sectionDept === 'BSCS') && (!professor || !professor.department || professor.department.toUpperCase() === 'BSCS');
+      const isBSOALab = sectionDept === 'BSOA' && subject?.requiredLab && (!professor || !professor.department || professor.department.toUpperCase() === 'BSOA');
+      
+      if (!isBSCS && !isBSOALab) {
+        if (sectionDept === 'BSOA' && !subject?.requiredLab) {
+          errors.push(`Room "${room?.name}" can only be used by BSOA for Laboratory subjects.`);
+        } else {
+          errors.push(`Room "${room?.name}" is reserved for BSCS (and BSOA Labs only).`);
+        }
+      }
+    }
+
     if (errors.length > 0) return { valid: false, errors, warnings };
 
     const startIdx = getTimeSlotIndex(timeSlot);
@@ -642,7 +679,25 @@ const Dashboard = ({ user, onLogout }) => {
       const tier1 = []; // Dept-owned rooms
       const tier2 = []; // SHARED rooms
       const tier3 = []; // Other dept rooms (overflow)
+      
+      const profDept = constraints?.fixedProfessor?.department?.toUpperCase();
+
       for (const r of pool) {
+        const roomName = (r.name || '').toUpperCase().replace(/\s+/g, '');
+        const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+
+        if (isBscsExclusive) {
+          if (sectionDept && sectionDept !== 'BSCS') continue;
+          if (profDept && profDept !== 'BSCS') continue;
+        }
+
+        const isRoom204 = roomName === 'ROOM204' || roomName === '204';
+        if (isRoom204) {
+          const isBSCS = (!sectionDept || sectionDept === 'BSCS') && (!profDept || profDept === 'BSCS');
+          const isBSOALab = sectionDept === 'BSOA' && subject?.requiredLab && (!profDept || profDept === 'BSOA');
+          if (!isBSCS && !isBSOALab) continue;
+        }
+
         const roomDept = (r.department || 'SHARED').toUpperCase();
         const roomBldg = (r.building || 'Unassigned').toUpperCase();
         if (roomDept === 'SHARED' || roomBldg === 'UNASSIGNED' || roomBldg === 'GENERAL BUILDING' || roomBldg === 'GYMNASIUM') {
