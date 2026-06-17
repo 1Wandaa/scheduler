@@ -220,6 +220,15 @@ export class ScheduleGA {
         continue;
       }
 
+      const isSpeechLab = roomName.includes('SPEECH');
+      if (isSpeechLab) {
+        if (sectionDept !== 'BAEL') continue;
+        if (a.subject) {
+          const code = (a.subject.code || '').toUpperCase();
+          if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) continue;
+        }
+      }
+
       const isRoom204 = roomName === 'ROOM204' || roomName === '204';
       if (isRoom204) {
         const isBSCS = !sectionDept || sectionDept === 'BSCS';
@@ -493,6 +502,15 @@ export class ScheduleGA {
           const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
           if (isBscsExclusive && profDept && profDept !== 'BSCS') return false;
 
+          const isSpeechLab = roomName.includes('SPEECH');
+          if (isSpeechLab) {
+            if (profDept !== 'BAEL') return false;
+            if (a.subject) {
+              const code = (a.subject.code || '').toUpperCase();
+              if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) return false;
+            }
+          }
+
           const isRoom204 = roomName === 'ROOM204' || roomName === '204';
           if (isRoom204) {
             const secDept = a.section ? getSectionDepartment(a.section) : null;
@@ -671,6 +689,15 @@ export class ScheduleGA {
           const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
           if (isBscsExclusive && profDept && profDept !== 'BSCS') return false;
 
+          const isSpeechLab = roomName.includes('SPEECH');
+          if (isSpeechLab) {
+            if (profDept !== 'BAEL') return false;
+            if (a.subject) {
+              const code = (a.subject.code || '').toUpperCase();
+              if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) return false;
+            }
+          }
+
           const isRoom204 = roomName === 'ROOM204' || roomName === '204';
           if (isRoom204) {
             const secDept = a.section ? getSectionDepartment(a.section) : null;
@@ -775,6 +802,15 @@ export class ScheduleGA {
           const roomName = (r.name || '').toUpperCase().replace(/\s+/g, '');
           const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
           if (isBscsExclusive && profDept && profDept !== 'BSCS') return false;
+
+          const isSpeechLab = roomName.includes('SPEECH');
+          if (isSpeechLab) {
+            if (profDept !== 'BAEL') return false;
+            if (a.subject) {
+              const code = (a.subject.code || '').toUpperCase();
+              if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) return false;
+            }
+          }
 
           const isRoom204 = roomName === 'ROOM204' || roomName === '204';
           if (isRoom204) {
@@ -980,6 +1016,43 @@ export class ScheduleGA {
         } else if (!isJanice && isStage) {
           hardScore -= 1000;
           hardViolations++;
+        }
+      }
+
+      // Check Speech Lab, BSCS Exclusive, and Room 204
+      if (room && g.professorId) {
+        const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
+        const prof = this.profMap[g.professorId];
+        const profDept = (prof?.department || '').toUpperCase();
+        const sectionDept = getSectionDepartment(a.section);
+        
+        const isSpeechLab = roomName.includes('SPEECH');
+        if (isSpeechLab) {
+          let isGenEd = false;
+          if (a.subject) {
+            const code = (a.subject.code || '').toUpperCase();
+            isGenEd = code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP');
+          }
+          if (sectionDept !== 'BAEL' || profDept !== 'BAEL' || isGenEd) {
+            hardScore -= 1000;
+            hardViolations++;
+          }
+        }
+
+        const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+        if (isBscsExclusive && (sectionDept !== 'BSCS' || (profDept && profDept !== 'BSCS'))) {
+          hardScore -= 1000;
+          hardViolations++;
+        }
+
+        const isRoom204 = roomName === 'ROOM204' || roomName === '204';
+        if (isRoom204) {
+          const isBSCS = (!sectionDept || sectionDept === 'BSCS') && (!profDept || profDept === 'BSCS');
+          const isBSOALab = sectionDept === 'BSOA' && a.subject?.requiredLab && (!profDept || profDept === 'BSOA');
+          if (!isBSCS && !isBSOALab) {
+            hardScore -= 1000;
+            hardViolations++;
+          }
         }
       }
     }

@@ -455,6 +455,23 @@ const Dashboard = ({ user, onLogout }) => {
       }
     }
 
+    const isSpeechLab = roomName.includes('SPEECH');
+    if (isSpeechLab) {
+      if (section && sectionDept !== 'BAEL') {
+        errors.push(`Room "${room?.name}" is reserved exclusively for BAEL sections.`);
+      }
+      const profDept = professor?.department ? professor.department.toUpperCase() : null;
+      if (profDept !== 'BAEL') {
+        errors.push(`Room "${room?.name}" can only be used by BAEL faculty.`);
+      }
+      if (subject) {
+        const code = (subject.code || '').toUpperCase();
+        if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) {
+          errors.push(`Room "${room?.name}" can only be used for BAEL major subjects (no GE, PE, or NSTP).`);
+        }
+      }
+    }
+
     if (isBscsExclusive) {
       if (section && sectionDept !== 'BSCS') {
         errors.push(`Room "${room?.name}" is reserved for BSCS students and faculty only.`);
@@ -685,6 +702,16 @@ const Dashboard = ({ user, onLogout }) => {
       for (const r of pool) {
         const roomName = (r.name || '').toUpperCase().replace(/\s+/g, '');
         const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+
+        const isSpeechLab = roomName.includes('SPEECH');
+        if (isSpeechLab) {
+          if (sectionDept && sectionDept !== 'BAEL') continue;
+          if (profDept !== 'BAEL') continue;
+          if (subject) {
+            const code = (subject.code || '').toUpperCase();
+            if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) continue;
+          }
+        }
 
         if (isBscsExclusive) {
           if (sectionDept && sectionDept !== 'BSCS') continue;
