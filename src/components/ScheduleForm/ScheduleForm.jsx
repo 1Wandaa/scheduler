@@ -3,7 +3,7 @@ import { TIME_SLOTS, DAYS } from '../../config/constants';
 import { getEligibleProfessors, slotsNeededFromIndex, getMeetingTimeLabel } from '../../utils/scheduleUtils';
 import '../../styles/SchedulerForm.css';
 
-function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, validator }) {
+function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, validator, activeSemester }) {
   const [formData, setFormData] = useState({
     subject: '',
     section: '',
@@ -95,8 +95,8 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             required
           >
             <option value="">Select a subject</option>
-            {[...subjects].sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' })).map(subject => (
-              <option key={subject.id} value={subject.id}>
+            {[...subjects].filter(s => !s.semester || s.semester === 'Both' || s.semester === activeSemester).sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' })).map(subject => (
+                <option key={subject.id} value={subject.id}>
                 {subject.code} - {subject.name}
               </option>
             ))}

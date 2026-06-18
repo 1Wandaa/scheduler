@@ -7,7 +7,7 @@ import '../../styles/AutoScheduler.css';
 import Swal from 'sweetalert2';
 
 // 1. ADDED 'schedules' and 'onLogHistory' to the props list
-function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, onAutoSchedule, onLogHistory }) {
+function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, activeSemester, onAutoSchedule, onLogHistory }) {
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [result, setResult] = useState(null);
@@ -22,6 +22,9 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   const [aiAssisted, setAiAssisted] = useState(true);
   const [aiStatus, setAiStatus] = useState('');
   const [aiInsights, setAiInsights] = useState(null);
+
+  // Only consider subjects that match the currently selected active semester
+  const activeSemesterSubjects = subjects.filter(sub => !sub.semester || sub.semester === 'Both' || sub.semester === activeSemester);
 
   // ─── CLEAR ALL SCHEDULES (Independent action) ───
   const handleClearAll = async () => {
@@ -71,7 +74,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       if (aiAssisted) {
         try {
           setAiStatus('🧠 AI analyzing professor-subject compatibility...');
-          aiProfessorMap = await suggestProfessorMatches(professors, subjects, sections, schedules);
+          aiProfessorMap = await suggestProfessorMatches(professors, activeSemesterSubjects, sections, schedules);
           if (aiProfessorMap) {
             setAiStatus('✅ AI matching complete — starting targeted engine with optimized assignments');
           } else {
@@ -160,7 +163,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       const missingRoomsItems = [];
       for (const sec of sections) {
         for (const subId of (sec.subjects || [])) {
-          const sub = subjects.find(s => s.id === subId || s.code === subId);
+          const sub = activeSemesterSubjects.find(s => s.id === subId || s.code === subId);
           if (!sub) continue;
           
           const profs = validator._eligibleProfsFor(sub, sec);
@@ -211,7 +214,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       if (aiAssisted) {
         try {
           setAiStatus('🧠 AI analyzing professor-subject compatibility...');
-          aiProfessorMap = await suggestProfessorMatches(professors, subjects, sections, existingSchedules);
+          aiProfessorMap = await suggestProfessorMatches(professors, activeSemesterSubjects, sections, existingSchedules);
           if (aiProfessorMap) {
             setAiStatus('✅ AI matching complete — starting GA with optimized assignments');
           } else {
@@ -250,7 +253,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         worker.postMessage({
           type: 'start',
           payload: {
-            subjects, rooms, professors, sections,
+            subjects: activeSemesterSubjects, rooms, professors, sections,
             days: DAYS, timeSlots: TIME_SLOTS,
             existingSchedules,
             config: { populationSize: 60, maxGenerations: 150, mutationRate: 0.15 },

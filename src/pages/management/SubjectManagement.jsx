@@ -4,7 +4,7 @@ import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestor
 import Swal from 'sweetalert2';
 import { DEPARTMENTS } from '../../config/constants';
 
-const SubjectManagement = ({ subjects, onBack }) => {
+const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, onBack }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -12,11 +12,11 @@ const SubjectManagement = ({ subjects, onBack }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
-    id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major'
+    id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: 'Both'
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major' });
+    setFormData({ id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || 'Both' });
     setEditMode(false);
     setError(null);
     setShowModal(true);
@@ -30,6 +30,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
     }
     // Set category fallback for older data
     normalized.category = normalized.category || 'Major';
+    normalized.semester = normalized.semester || 'Both';
 
     setFormData(normalized);
     setCurrentId(subject.id);
@@ -112,8 +113,9 @@ const SubjectManagement = ({ subjects, onBack }) => {
 
   // Split subjects into categories
   const filteredSubjects = subjects.filter(s => 
-    (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (s.code || '').toLowerCase().includes(searchQuery.toLowerCase())
+    (!s.semester || s.semester === 'Both' || s.semester === activeSemester) &&
+    ((s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (s.code || '').toLowerCase().includes(searchQuery.toLowerCase()))
   ).sort((a, b) => {
     const codeA = (a.code || '').replace(/\s+/g, '').toUpperCase();
     const codeB = (b.code || '').replace(/\s+/g, '').toUpperCase();
@@ -140,7 +142,7 @@ const SubjectManagement = ({ subjects, onBack }) => {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Code</th><th>Name</th><th>Department(s)</th><th>Units</th><th>Meeting Time</th><th>Lab Required</th><th>Actions</th>
+              <th>Code</th><th>Name</th><th>Semester</th><th>Department(s)</th><th>Units</th><th>Meeting Time</th><th>Lab Required</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -148,6 +150,9 @@ const SubjectManagement = ({ subjects, onBack }) => {
               <tr key={s.id}>
                 <td><strong style={{ color: 'var(--accent-primary)' }}>{s.code}</strong></td>
                 <td style={{ fontWeight: '500' }}>{s.name}</td>
+                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                  {s.semester && s.semester !== 'Both' ? s.semester.replace(' Semester', ' Sem') : 'Both'}
+                </td>
                 <td>
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {getSubjectDepts(s).length > 0 ? getSubjectDepts(s).map(dept => (
@@ -295,13 +300,25 @@ const SubjectManagement = ({ subjects, onBack }) => {
             <div className="form-group"><label className="form-label">Subject Code</label><input className="form-input" value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. CS101" /></div>
             <div className="form-group"><label className="form-label">Subject Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Intro to Programming" /></div>
 
-            {/* Added Category Dropdown */}
-            <div className="form-group">
-              <label className="form-label">Category</label>
-              <select className="form-select" value={formData.category || 'Major'} onChange={e => setFormData({ ...formData, category: e.target.value })}>
-                <option value="Major">Major Subject</option>
-                <option value="Minor">Minor Subject</option>
-              </select>
+            <div style={{ display: 'flex', gap: '15px' }}>
+              {/* Added Category Dropdown */}
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Category</label>
+                <select className="form-select" value={formData.category || 'Major'} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                  <option value="Major">Major Subject</option>
+                  <option value="Minor">Minor Subject</option>
+                </select>
+              </div>
+
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Semester</label>
+                <select className="form-select" value={formData.semester || 'Both'} onChange={e => setFormData({ ...formData, semester: e.target.value })}>
+                  {availableSemesters.map(sem => (
+                    <option key={sem} value={sem}>{sem}</option>
+                  ))}
+                  <option value="Both">Both Semesters</option>
+                </select>
+              </div>
             </div>
 
             <div className="form-group" style={{ marginBottom: '20px' }}>

@@ -617,7 +617,9 @@ const Dashboard = ({ user, onLogout }) => {
     autoScheduleForSection: async (sectionId, constraints = { respectLabs: true, preventDoubleBooking: true }) => {
       const section = sections.find(s => s.id === sectionId);
       if (!section) return { results: [], unscheduled: [], error: `Section "${sectionId}" not found.` };
-      const subjectObjs = (section.subjects || []).map(subId => subjects.find(su => su.id === subId || su.code === subId)).filter(Boolean);
+      const subjectObjs = (section.subjects || []).map(subId => subjects.find(su => su.id === subId || su.code === subId))
+        .filter(Boolean)
+        .filter(su => !su.semester || su.semester === 'Both' || su.semester === activeSemester);
       const assignments = [];
       for (const subject of subjectObjs) {
         const credits = Number(subject.credits) || 3;
@@ -634,7 +636,7 @@ const Dashboard = ({ user, onLogout }) => {
       for (const section of sections) {
         for (const subId of (section.subjects || [])) {
           const subject = subjects.find(su => su.id === subId || su.code === subId);
-          if (subject) {
+          if (subject && (!subject.semester || subject.semester === 'Both' || subject.semester === activeSemester)) {
             const credits = Number(subject.credits) || 3;
             const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
             const meetings = Math.max(1, Math.ceil(credits / targetDuration));
@@ -653,8 +655,8 @@ const Dashboard = ({ user, onLogout }) => {
         for (const subId of (section.subjects || [])) {
           const subject = subjects.find(su => su.id === subId || su.code === subId);
 
-          // FIX: Only add to assignments if the professor actually teaches this subject!
-          if (subject && professorMatchesSubject(professor, subject)) {
+          // FIX: Only add to assignments if the professor actually teaches this subject, and it matches the active semester
+          if (subject && professorMatchesSubject(professor, subject) && (!subject.semester || subject.semester === 'Both' || subject.semester === activeSemester)) {
             const credits = Number(subject.credits) || 3;
             const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
             const meetings = Math.max(1, Math.ceil(credits / targetDuration));
@@ -1409,16 +1411,16 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'users' && <UserManagement onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
-            <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} />
-            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={enrichedSchedules} onAutoSchedule={handleAddSchedule} onLogHistory={handleLogHistory} />
+            <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} activeSemester={activeSemester} />
+            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={enrichedSchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onLogHistory={handleLogHistory} />
           </div>
         )}
         {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} availableSemesters={availableSemesters} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} />}
-        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={enrichedSchedules} />}
 
         {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
