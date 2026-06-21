@@ -171,20 +171,35 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
         <div className="form-row" style={{ display: 'flex', gap: '15px' }}>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">Day *</label>
-            <select
-              className="form-select"
-              name="day"
-              value={formData.day}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select a day</option>
-              {DAYS.map(day => (
-                <option key={day} value={day}>
-                  {day}
-                </option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+              {DAYS.map(day => {
+                const shortDay = day.substring(0, 3);
+                const isActive = formData.day === day;
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, day }));
+                      setValidation(null);
+                    }}
+                    style={{
+                      flex: '1 0 auto', minWidth: '44px', height: '42px', borderRadius: '10px',
+                      background: isActive ? 'var(--accent-primary)' : 'var(--bg-secondary, #f1f5f9)',
+                      color: isActive ? '#fff' : 'var(--text-main)',
+                      border: isActive ? 'none' : '1px solid var(--border-color)',
+                      fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}
+                  >
+                    {shortDay}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Hidden input to maintain HTML5 validation if needed */}
+            <input type="hidden" name="day" value={formData.day} required />
           </div>
 
           <div className="form-group" style={{ flex: 1 }}>

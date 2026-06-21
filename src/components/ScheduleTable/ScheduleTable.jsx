@@ -18,6 +18,10 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   const [successToast, setSuccessToast] = useState(null);
   const [fitScale, setFitScale] = useState(1);
   const [previewImage, setPreviewImage] = useState(null);
+  const [activeMobileDay, setActiveMobileDay] = useState(() => {
+    const day = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    return DAYS.includes(day) ? day : 'Monday';
+  });
 
   const showToast = (msg, isError = true) => {
     if (isError) {
@@ -271,8 +275,29 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     return DEFAULT_DEPT_COLOR;
   };
 
-  const GridView = () => (
-    <div className="table-wrapper">
+  const GridView = () => {
+    const displayDays = (isMobile && !isFullscreen) ? [activeMobileDay] : DAYS;
+    return (
+    <div className="table-wrapper" onTouchStart={(isMobile && !isFullscreen) ? handleTouchStart : undefined} onTouchEnd={(isMobile && !isFullscreen) ? handleTouchEnd : undefined}>
+      {(isMobile && !isFullscreen) && (
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '12px', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', background: '#fff', borderBottom: '1px solid var(--border-color)' }}>
+          {DAYS.map(day => (
+            <button
+              key={day}
+              onClick={() => setActiveMobileDay(day)}
+              style={{
+                flex: '1 0 auto', padding: '8px 16px', borderRadius: '20px',
+                background: activeMobileDay === day ? 'var(--accent-primary)' : 'transparent',
+                color: activeMobileDay === day ? '#fff' : 'var(--text-muted)',
+                border: `1px solid ${activeMobileDay === day ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+                fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s ease'
+              }}
+            >
+              {day.substring(0, 3)}
+            </button>
+          ))}
+        </div>
+      )}
       <table 
         className="schedule-table"
         style={isFullscreen && fitScale < 1 ? { zoom: fitScale } : {}}
@@ -280,7 +305,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         <thead>
           <tr>
             <th>Time Slot</th>
-            {DAYS.map(day => <th key={day}>{day}</th>)}
+            {displayDays.map(day => <th key={day}>{day}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -301,7 +326,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                     <td className="time-label" style={{ borderTop: '2px solid var(--border-color)', borderBottom: '2px solid var(--border-color)' }}>
                       <strong>12:00 - 1:00</strong>
                     </td>
-                    <td colSpan={DAYS.length} style={{ textAlign: 'center', letterSpacing: '8px', color: '#64748b', fontSize: '0.9rem', borderTop: '2px solid var(--border-color)', borderBottom: '2px solid var(--border-color)' }}>
+                    <td colSpan={displayDays.length} style={{ textAlign: 'center', letterSpacing: '8px', color: '#64748b', fontSize: '0.9rem', borderTop: '2px solid var(--border-color)', borderBottom: '2px solid var(--border-color)' }}>
                       <strong>LUNCH BREAK</strong>
                     </td>
                   </tr>
@@ -312,7 +337,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                       <strong>{hourLabel}</strong>
                     </td>
                   )}
-              {DAYS.map(day => {
+              {displayDays.map(day => {
                 const cellKey = `${day}-${timeSlot.id}`;
                 if (window[`skip_cell_${cellKey}`]) {
                   delete window[`skip_cell_${cellKey}`];
@@ -396,12 +421,30 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         </tbody>
       </table>
     </div>
-  );
+    );
+  };
+
+  const handleTouchStart = (e) => {
+    if (!containerRef.current) return;
+    containerRef.current.touchStartX = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!containerRef.current || containerRef.current.touchStartX == null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchEndX - containerRef.current.touchStartX;
+    if (Math.abs(diff) > 50) {
+      const currentIndex = DAYS.indexOf(activeMobileDay);
+      if (diff > 0 && currentIndex > 0) setActiveMobileDay(DAYS[currentIndex - 1]); // Swipe right
+      if (diff < 0 && currentIndex < DAYS.length - 1) setActiveMobileDay(DAYS[currentIndex + 1]); // Swipe left
+    }
+    containerRef.current.touchStartX = null;
+  };
 
   const CardView = () => (
     <div className="schedule-card-view">
       {DAYS.map(day => {
-        const daySched = schedulesByDay[day];
+        const daySched = schedulesByDay[day] || [];
         return (
           <div key={day} className="schedule-day-group">
             <div className="schedule-day-header" style={{ borderLeftColor: DAY_COLORS[day] }}>

@@ -320,7 +320,7 @@ const CustomDropdown = ({ options, value, onChange, title, alignRight = false })
 
 // ─── Bottom Navigation (Mobile Only) ──────────────────────────────────────
 const BottomNav = ({ activeTab, handleTabClick, isAdmin, setIsMobileMenuOpen }) => (
-  <div className="bottom-nav">
+  <div className="bottom-nav" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
     {isAdmin && (
       <button className={`bottom-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => handleTabClick('dashboard')}>
         <Icon d={NAV_ICONS.dashboard} size={22} />
@@ -360,6 +360,14 @@ const Dashboard = ({ user, onLogout }) => {
   const [isManageDataOpen, setIsManageDataOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isScheduleFormOpen, setIsScheduleFormOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleTabClick = (tab) => { setActiveTab(tab); setIsMobileMenuOpen(false); };
 
@@ -1411,7 +1419,9 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'users' && <UserManagement onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
-            <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} activeSemester={activeSemester} />
+            {!isMobile && (
+              <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} activeSemester={activeSemester} />
+            )}
             <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={enrichedSchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onLogHistory={handleLogHistory} />
           </div>
         )}
@@ -1429,6 +1439,69 @@ const Dashboard = ({ user, onLogout }) => {
       </div>
       <Chatbot schedules={enrichedSchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
       <BottomNav activeTab={activeTab} handleTabClick={handleTabClick} isAdmin={isAdmin} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+
+      {/* --- Mobile Floating Action Button (FAB) --- */}
+      {isAdmin && isMobile && (activeTab === 'room-utilization' || activeTab === 'schedule') && (
+        <button
+          onClick={() => setIsScheduleFormOpen(true)}
+          style={{
+            position: 'fixed',
+            bottom: '80px', // above bottom nav
+            right: '20px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, var(--accent-primary), #7c3aed)',
+            color: '#fff',
+            border: 'none',
+            boxShadow: '0 4px 14px rgba(86,69,238,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: 9999,
+            transition: 'transform 0.2s ease',
+          }}
+          onActive={e => e.currentTarget.style.transform = 'scale(0.95)'}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+      )}
+
+      {/* --- Bottom Sheet Modal for Schedule Form --- */}
+      {isAdmin && isMobile && isScheduleFormOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100000,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'flex-end',
+          animation: 'fadeIn 0.3s ease'
+        }} onClick={() => setIsScheduleFormOpen(false)}>
+          <div style={{
+            background: 'var(--bg-main)',
+            width: '100%',
+            maxHeight: '85vh',
+            overflowY: 'auto',
+            borderTopLeftRadius: '24px',
+            borderTopRightRadius: '24px',
+            padding: '20px',
+            animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            position: 'relative'
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: '40px', height: '5px', background: 'var(--border-color)', borderRadius: '3px', margin: '0 auto 16px' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)' }}>Add Schedule</h2>
+              <button onClick={() => setIsScheduleFormOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={async (sched) => {
+              const res = await handleAddSchedule(sched);
+              if (res && res.ok) setIsScheduleFormOpen(false);
+              return res;
+            }} validator={validator} activeSemester={activeSemester} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
