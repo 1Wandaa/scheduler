@@ -1,68 +1,110 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { TIME_SLOTS } from '../../config/constants';
 import { slotsNeededFromIndex } from '../../utils/scheduleUtils';
 import '../../styles/PrintableSchedule.css';
 
-/** Map printable row index to TIME_SLOTS array index (skips LUNCH row). */
-function printIndexToSlotIndex(printIdx) {
-  if (printIdx <= 4) return printIdx;
-  return printIdx - 1;
-}
+/**
+ * Map each 30-min TIME_SLOTS id → printable row index in fixedTimeSlots.
+ * The printable grid uses 1-hour blocks; each maps to two 30-min slot IDs.
+ *
+ *  fixedTimeSlots index 0 "7:30 - 8:30"  ← slot ids 2,3
+ *  fixedTimeSlots index 1 "8:30 - 9:30"  ← slot ids 4,5
+ *  fixedTimeSlots index 2 "9:30 - 10:30" ← slot ids 6,7
+ *  fixedTimeSlots index 3 "10:30 - 11:30"← slot ids 8,9
+ *  fixedTimeSlots index 4 "11:30 - 12:00"← slot id  10
+ *  fixedTimeSlots index 5 "LUNCH"         (no data)
+ *  fixedTimeSlots index 6 "1:00 - 2:00"  ← slot ids 11,12
+ *  fixedTimeSlots index 7 "2:00 - 3:00"  ← slot ids 13,14
+ *  fixedTimeSlots index 8 "3:00 - 4:00"  ← slot ids 15,16
+ *  fixedTimeSlots index 9 "4:00 - 5:00"  ← slot ids 17,18
+ */
+const SLOT_TO_ROW = {
+    2: 0, 3: 0,     // 7:30-8:30
+    4: 1, 5: 1,     // 8:30-9:30
+    6: 2, 7: 2,     // 9:30-10:30
+    8: 3, 9: 3,     // 10:30-11:30
+    10: 4,           // 11:30-12:00
+    11: 6, 12: 6,   // 1:00-2:00
+    13: 7, 14: 7,   // 2:00-3:00
+    15: 8, 16: 8,   // 3:00-4:00
+    17: 9, 18: 9,   // 4:00-5:00
+};
 
-/** How many printable rows a class spans (includes LUNCH row when crossed). */
-function printRowsSpanned(printStartIdx, hoursPerMeeting, fixedTimeSlots) {
-  const target = Number(hoursPerMeeting) || 1.5;
-  const slotIdx = printIndexToSlotIndex(printStartIdx);
-  const slotRows = slotsNeededFromIndex(slotIdx, target);
-  if (slotRows <= 0) return 1;
+/**
+ * Given a schedule entry, return the sorted list of printable row indices it occupies.
+ * Uses the real TIME_SLOTS + slotsNeededFromIndex for accurate duration calculation.
+ */
+function getOccupiedPrintRows(schedule) {
+    if (!schedule?.timeSlot) return [];
+    const startId = parseInt(schedule.timeSlot.id);
+    const startRow = SLOT_TO_ROW[startId];
+    if (startRow === undefined) return [];
 
-  let printRows = 0;
-  let slotsCounted = 0;
-  let idx = printStartIdx;
-  while (idx < fixedTimeSlots.length && slotsCounted < slotRows) {
-    if (fixedTimeSlots[idx] !== 'LUNCH') slotsCounted++;
-    printRows++;
-    idx++;
-  }
-  return Math.max(1, printRows);
+    const startIdx = TIME_SLOTS.findIndex(ts => ts.id === startId);
+    if (startIdx < 0) return [startRow];
+
+    const count = slotsNeededFromIndex(startIdx, schedule.subject?.hoursPerMeeting);
+    if (count <= 0) return [startRow];
+
+    const rows = new Set();
+    for (let i = 0; i < count; i++) {
+        const slot = TIME_SLOTS[startIdx + i];
+        if (!slot) break;
+        const row = SLOT_TO_ROW[slot.id];
+        if (row !== undefined) rows.add(row);
+    }
+
+    return [...rows].sort((a, b) => a - b);
 }
 
 const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-    // Using the exact time slots and order requested
     const fixedTimeSlots = [
-        "7:30 - 8:30",
-        "8:30 - 9:30",
-        "9:30 - 10:30",
-        "10:30 - 11:30",
-        "11:30 - 12:00",
-        "LUNCH", // Special row marker
-        "1:00 - 2:00",
-        "2:00 - 3:00",
-        "3:00 - 4:00",
-        "4:00 - 5:00"
+        "7:30 - 8:30",   // index 0
+        "8:30 - 9:30",   // index 1
+        "9:30 - 10:30",  // index 2
+        "10:30 - 11:30", // index 3
+        "11:30 - 12:00", // index 4
+        "LUNCH",         // index 5
+        "1:00 - 2:00",   // index 6
+        "2:00 - 3:00",   // index 7
+        "3:00 - 4:00",   // index 8
+        "4:00 - 5:00"    // index 9
     ];
 
-    const getSlotId = (timeLabel) => {
-        switch (timeLabel) {
-            case "7:30 - 8:30": return 1;
-            case "8:30 - 9:30": return 2;
-            case "9:30 - 10:30": return 3;
-            case "10:30 - 11:30": return 4;
-            case "11:30 - 12:00": return 5;
-            // id 6 is Lunch (12:00 - 1:00)
-            case "1:00 - 2:00": return 7;
-            case "2:00 - 3:00": return 8;
-            case "3:00 - 4:00": return 9;
-            case "4:00 - 5:00": return 10;
-            default: return null;
-        }
+    /** Find the schedule entry whose start time falls into the given printable row */
+    const getClassForRow = (day, rowIndex) => {
+        return scheduleItems.find(s => {
+            if (s.day !== day || !s.timeSlot) return false;
+            return SLOT_TO_ROW[parseInt(s.timeSlot.id)] === rowIndex;
+        });
     };
 
-    const getClass = (day, timeLabel) => {
-        const slotId = getSlotId(timeLabel);
-        return scheduleItems.find(s => s.day === day && s.timeSlot && parseInt(s.timeSlot.id) === slotId);
-    };
+    // Pre-compute rowSpan values and which cells to skip
+    const { skipCells, spanInfo } = useMemo(() => {
+        const skip = new Set();
+        const spans = {};
+
+        scheduleItems.forEach(schedule => {
+            if (!schedule.day || !schedule.timeSlot) return;
+            const printRows = getOccupiedPrintRows(schedule);
+            if (printRows.length <= 1) return;
+
+            const startRow = printRows[0];
+            const day = schedule.day;
+            const cellKey = `${day}-${startRow}`;
+
+            spans[cellKey] = printRows.length;
+
+            // Mark all rows except the first as skipped for this day
+            for (let i = 1; i < printRows.length; i++) {
+                skip.add(`${day}-${printRows[i]}`);
+            }
+        });
+
+        return { skipCells: skip, spanInfo: spans };
+    }, [scheduleItems]);
 
     return (
         <div className="printable-iso-document">
@@ -80,7 +122,6 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
                     </tr>
                     <tr>
                         <td className="bold" style={{ fontSize: '10pt' }}>ISO 9001:2015</td>
-                        {/* DOCUMENTED INFORMATION spans here */}
                         <td className="bold">Revision No.</td>
                         <td>00</td>
                     </tr>
@@ -91,7 +132,6 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
                         <td>June 25, 2018</td>
                     </tr>
                     <tr>
-                        {/* CLASS SCHEDULE spans here */}
                         <td className="bold">Page</td>
                         <td>1 of 1</td>
                     </tr>
@@ -120,7 +160,8 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
                         if (timeLabel === "LUNCH") {
                             return (
                                 <tr key="lunch">
-                                    <td colSpan="6" className="lunch-break center">
+                                    <td className="time-cell bold lunch-break-time">12:00 - 1:00</td>
+                                    <td colSpan="5" className="lunch-break">
                                         LUNCH BREAK
                                     </td>
                                 </tr>
@@ -129,31 +170,25 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
 
                         return (
                             <tr key={timeLabel}>
-                                <td className="bold" style={{ whiteSpace: 'nowrap' }}>{timeLabel}</td>
+                                <td className="time-cell bold">{timeLabel}</td>
                                 {days.map(day => {
-                                    const cellKey = `${day}-${timeLabel}`;
-                                    if (window[`print_skip_${cellKey}`]) {
-                                        delete window[`print_skip_${cellKey}`];
+                                    const cellKey = `${day}-${index}`;
+
+                                    // This cell is covered by a rowSpan from above
+                                    if (skipCells.has(cellKey)) {
                                         return null;
                                     }
 
-                                    const cls = getClass(day, timeLabel);
-                                    let rowSpan = 1;
-                                    if (cls) {
-                                        rowSpan = printRowsSpanned(index, cls.subject?.hoursPerMeeting, fixedTimeSlots);
-                                        for (let skip = 1; skip < rowSpan; skip++) {
-                                            const skipLabel = fixedTimeSlots[index + skip];
-                                            if (skipLabel) window[`print_skip_${day}-${skipLabel}`] = true;
-                                        }
-                                    }
+                                    const cls = getClassForRow(day, index);
+                                    const rowSpan = spanInfo[cellKey] || 1;
 
                                     return (
-                                        <td key={cellKey} rowSpan={rowSpan}>
+                                        <td key={cellKey} className="schedule-cell" rowSpan={rowSpan}>
                                             {cls ? (
-                                                <div>
-                                                    <div style={{ fontWeight: 'bold' }}>{cls.subject?.code || 'N/A'}</div>
-                                                    <div style={{ fontSize: '9pt' }}>{cls.professor?.name || 'TBA'}</div>
-                                                    <div style={{ fontSize: '9pt' }}>{cls.room?.name || 'TBA'}</div>
+                                                <div className="cell-content">
+                                                    <div className="cell-subject">{cls.subject?.code || 'N/A'}</div>
+                                                    <div className="cell-professor">{cls.professor?.name || 'TBA'}</div>
+                                                    <div className="cell-room">{cls.room?.name || 'TBA'}</div>
                                                 </div>
                                             ) : null}
                                         </td>

@@ -48,17 +48,36 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       const oldViewMode = viewMode;
       setViewMode('grid');
       
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 300));
 
       const toolbar = containerRef.current.querySelector('.schedule-toolbar');
       if (toolbar) toolbar.style.display = 'none';
 
-      const canvas = await html2canvas(containerRef.current, { 
+      // Clone the container into a fixed-width off-screen element to avoid distortion
+      const clone = containerRef.current.cloneNode(true);
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'absolute';
+      wrapper.style.top = '-10000px';
+      wrapper.style.left = '-10000px';
+      wrapper.style.width = '1100px';
+      wrapper.style.backgroundColor = '#ffffff';
+      wrapper.style.padding = '16px';
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+
+      // Copy computed styles for the cloned table
+      const clonedToolbar = clone.querySelector('.schedule-toolbar');
+      if (clonedToolbar) clonedToolbar.style.display = 'none';
+
+      const canvas = await html2canvas(wrapper, { 
           scale: 2, 
           useCORS: true,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          width: 1100,
+          windowWidth: 1100
       });
 
+      document.body.removeChild(wrapper);
       if (toolbar) toolbar.style.display = 'flex';
 
       const imgData = canvas.toDataURL('image/png');
@@ -482,21 +501,42 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                   const oldViewMode = viewMode;
                   setViewMode('grid');
                   
-                  await new Promise(r => setTimeout(r, 200));
+                  await new Promise(r => setTimeout(r, 300));
 
                   const toolbar = containerRef.current.querySelector('.schedule-toolbar');
                   if (toolbar) toolbar.style.display = 'none';
 
-                  const canvas = await html2canvas(containerRef.current, { 
+                  // Clone into a fixed-width off-screen container for consistent capture
+                  const clone = containerRef.current.cloneNode(true);
+                  const wrapper = document.createElement('div');
+                  wrapper.style.position = 'absolute';
+                  wrapper.style.top = '-10000px';
+                  wrapper.style.left = '-10000px';
+                  wrapper.style.width = '1100px';
+                  wrapper.style.backgroundColor = '#ffffff';
+                  wrapper.style.padding = '16px';
+                  wrapper.appendChild(clone);
+                  document.body.appendChild(wrapper);
+
+                  const clonedToolbar = clone.querySelector('.schedule-toolbar');
+                  if (clonedToolbar) clonedToolbar.style.display = 'none';
+
+                  const canvas = await html2canvas(wrapper, { 
                       scale: 2, 
                       useCORS: true,
-                      backgroundColor: '#ffffff'
+                      backgroundColor: '#ffffff',
+                      width: 1100,
+                      windowWidth: 1100
                   });
 
+                  document.body.removeChild(wrapper);
                   if (toolbar) toolbar.style.display = 'flex';
                   setViewMode(oldViewMode);
 
                   const imgData = canvas.toDataURL('image/png');
+                  // Get actual pixel dimensions for proper aspect ratio
+                  const imgW = canvas.width;
+                  const imgH = canvas.height;
                   
                   const iframe = document.createElement('iframe');
                   iframe.style.position = 'fixed';
@@ -511,13 +551,26 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                       <head>
                           <title>Print Schedule</title>
                           <style>
-                              @page { size: landscape; margin: 0.5in; }
-                              body { margin: 0; padding: 0; display: flex; justify-content: center; background: #fff; }
-                              img { max-width: 100%; height: auto; }
+                              @page { size: landscape; margin: 0.3in; }
+                              * { margin: 0; padding: 0; box-sizing: border-box; }
+                              html, body { width: 100%; height: 100%; background: #fff; }
+                              body {
+                                  display: flex;
+                                  align-items: center;
+                                  justify-content: center;
+                              }
+                              img {
+                                  display: block;
+                                  max-width: 100%;
+                                  max-height: 100vh;
+                                  width: auto;
+                                  height: auto;
+                                  object-fit: contain;
+                              }
                           </style>
                       </head>
                       <body>
-                          <img src="${imgData}" />
+                          <img src="${imgData}" width="${imgW}" height="${imgH}" />
                       </body>
                       </html>
                   `);

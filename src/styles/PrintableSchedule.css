@@ -1,9 +1,172 @@
 /* src/styles/PrintableSchedule.css */
+
+/* ─── SHARED ISO STYLES (used by both screen preview & print) ─── */
+
+.printable-iso-document {
+    font-family: "Times New Roman", Times, serif;
+    color: #000;
+    background: #fff;
+}
+
+/* ─── ISO HEADER TABLE ─── */
+
+.iso-header-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 10pt;
+}
+
+.iso-header-table td,
+.iso-header-table th {
+    border: 1px solid #000;
+    padding: 6px;
+    text-align: left;
+}
+
+.iso-header-table .bold {
+    font-weight: bold;
+}
+
+.iso-header-table .center {
+    text-align: center;
+}
+
+/* ─── META INFO BAR ─── */
+
+.meta-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10pt;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+}
+
+.meta-value {
+    font-weight: normal;
+    text-decoration: underline;
+}
+
+/* ─── SCHEDULE TABLE: FIXED BOX GRID (NO rowSpan, NO overlap) ─── */
+
+.iso-schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11pt;
+    table-layout: fixed; /* Force fixed column widths */
+}
+
+.iso-schedule-table th,
+.iso-schedule-table td {
+    border: 1px solid #000;
+    text-align: center;
+    vertical-align: middle;
+    box-sizing: border-box;
+    /* Every cell is exactly this height — fixed square box */
+    height: 52px;
+    overflow: hidden; /* Absolutely prevent content from overflowing */
+}
+
+.iso-schedule-table th {
+    background-color: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    padding: 6px 4px;
+    font-size: 10pt;
+    height: 32px;
+}
+
+/* ─── TIME COLUMN ─── */
+
+.iso-schedule-table .time-cell {
+    white-space: nowrap;
+    font-weight: bold;
+    font-size: 9pt;
+    padding: 2px 4px;
+}
+
+/* ─── EVERY SCHEDULE CELL: fixed box ─── */
+
+.iso-schedule-table .schedule-cell {
+    padding: 0;
+    height: 52px;
+    overflow: hidden;
+}
+
+/* Content wrapper inside a schedule cell */
+.iso-schedule-table .cell-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 3px;
+    height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.iso-schedule-table .cell-subject {
+    font-weight: bold;
+    font-size: 10pt;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.iso-schedule-table .cell-professor {
+    font-size: 8.5pt;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    margin-top: 1px;
+}
+
+.iso-schedule-table .cell-room {
+    font-size: 8.5pt;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    margin-top: 1px;
+}
+
+/* ─── LUNCH BREAK ROW ─── */
+
+.iso-schedule-table .lunch-break {
+    background-color: #e0e0e0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-weight: bold;
+    letter-spacing: 5px;
+    padding: 4px;
+    height: 30px;
+    overflow: hidden;
+    font-size: 10pt;
+}
+
+.iso-schedule-table .lunch-break-time {
+    background-color: #e0e0e0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    height: 30px;
+    font-size: 8.5pt;
+}
+
+/* ─── SCREEN VISIBILITY ─── */
+
 @media screen {
     .printable-iso-document {
         display: none;
     }
 }
+
+/* ─── PRINT STYLES ─── */
 
 @media print {
     @page {
@@ -30,70 +193,11 @@
         top: 0;
         left: 0;
         width: 100%;
-        font-family: "Times New Roman", Times, serif;
-        color: #000;
-    }
-
-    .iso-header-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-        font-size: 10pt;
-    }
-
-    .iso-header-table td,
-    .iso-header-table th {
-        border: 1px solid #000;
-        padding: 6px;
-        text-align: left;
-    }
-
-    .iso-header-table .bold {
-        font-weight: bold;
-    }
-
-    .iso-header-table .center {
-        text-align: center;
-    }
-
-    .meta-info {
-        display: flex;
-        justify-content: space-between;
-        font-size: 10pt;
-        font-weight: bold;
-        margin-bottom: 15px;
-        text-transform: uppercase;
-    }
-
-    .meta-value {
-        font-weight: normal;
-        text-decoration: underline;
-    }
-
-    .iso-schedule-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 11pt;
-    }
-
-    .iso-schedule-table th,
-    .iso-schedule-table td {
-        border: 1px solid #000;
-        padding: 10px;
-        text-align: center;
-        vertical-align: middle;
     }
 
     .iso-schedule-table th {
         background-color: #f0f0f0 !important;
         -webkit-print-color-adjust: exact;
-    }
-
-    .lunch-break {
-        background-color: #e0e0e0 !important;
-        -webkit-print-color-adjust: exact;
-        font-weight: bold;
-        letter-spacing: 5px;
-        padding: 5px;
+        print-color-adjust: exact;
     }
 }
