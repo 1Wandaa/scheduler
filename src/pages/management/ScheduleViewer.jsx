@@ -21,6 +21,17 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
         setSelectedYearLevel('');
     }, [viewType, rooms, professors, sections]);
 
+    // Listen for custom events to change view type from mobile Speed Dial
+    useEffect(() => {
+        const handleViewChange = (e) => {
+            if (e.detail && ['department', 'faculty', 'room', 'section'].includes(e.detail)) {
+                setViewType(e.detail);
+            }
+        };
+        window.addEventListener('change-viewer-type', handleViewChange);
+        return () => window.removeEventListener('change-viewer-type', handleViewChange);
+    }, []);
+
     // When selectedId or yearLevel changes, reset section filter and auto-select first matching section
     useEffect(() => {
         if (viewType === 'department' && selectedId) {

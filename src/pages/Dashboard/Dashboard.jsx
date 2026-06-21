@@ -161,11 +161,10 @@ const NAV_ICONS = {
   ]},
 };
 
-const DraggableSpeedDial = ({ onAddSchedule, onAutoSchedule }) => {
+const DraggableSpeedDial = ({ onAddSchedule, onNavigateViewer }) => {
   const [position, setPosition] = useState({ x: window.innerWidth - 76, y: window.innerHeight - 136 });
-  const [isDragging, setIsDragging] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, dragged: false });
+  const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, dragged: false, isDragging: false });
 
   useEffect(() => {
     const handleResize = () => {
@@ -178,21 +177,21 @@ const DraggableSpeedDial = ({ onAddSchedule, onAutoSchedule }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handlePointerDown = (e) => {
-    dragRef.current.startX = e.clientX;
-    dragRef.current.startY = e.clientY;
+  // Use passive touch listeners on the document to avoid React's synthetic event issues
+  const handleStart = (clientX, clientY) => {
+    dragRef.current.startX = clientX;
+    dragRef.current.startY = clientY;
     dragRef.current.initialX = position.x;
     dragRef.current.initialY = position.y;
     dragRef.current.dragged = false;
-    e.target.setPointerCapture(e.pointerId);
-    setIsDragging(true);
+    dragRef.current.isDragging = true;
   };
 
-  const handlePointerMove = (e) => {
-    if (!isDragging) return;
-    const dx = e.clientX - dragRef.current.startX;
-    const dy = e.clientY - dragRef.current.startY;
-    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+  const handleMove = (clientX, clientY) => {
+    if (!dragRef.current.isDragging) return;
+    const dx = clientX - dragRef.current.startX;
+    const dy = clientY - dragRef.current.startY;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
       dragRef.current.dragged = true;
       setPosition({
         x: Math.max(0, Math.min(dragRef.current.initialX + dx, window.innerWidth - 56)),
@@ -201,9 +200,9 @@ const DraggableSpeedDial = ({ onAddSchedule, onAutoSchedule }) => {
     }
   };
 
-  const handlePointerUp = (e) => {
-    e.target.releasePointerCapture(e.pointerId);
-    setIsDragging(false);
+  const handleEnd = () => {
+    if (!dragRef.current.isDragging) return;
+    dragRef.current.isDragging = false;
     if (!dragRef.current.dragged) {
       setIsOpen(!isOpen);
     }
@@ -222,6 +221,7 @@ const DraggableSpeedDial = ({ onAddSchedule, onAutoSchedule }) => {
           width: '56px',
           height: '56px',
           zIndex: 9999,
+          touchAction: 'none'
         }}
       >
         {/* Speed Dial Menu Items */}
@@ -236,21 +236,36 @@ const DraggableSpeedDial = ({ onAddSchedule, onAutoSchedule }) => {
         }}>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ background: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>Auto-Scheduler</span>
-            <button 
-              onClick={() => { setIsOpen(false); onAutoSchedule(); }}
-              style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fff', color: '#8b5cf6', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <span style={{ background: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>Gen. by Faculty</span>
+            <button onClick={() => { setIsOpen(false); onNavigateViewer('faculty'); }} style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fff', color: '#10b981', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ background: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>Gen. by Room</span>
+            <button onClick={() => { setIsOpen(false); onNavigateViewer('room'); }} style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fff', color: '#f59e0b', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-1"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ background: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>Gen. by Subject/Dept</span>
+            <button onClick={() => { setIsOpen(false); onNavigateViewer('department'); }} style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fff', color: '#3b82f6', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ background: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>Gen. by Section</span>
+            <button onClick={() => { setIsOpen(false); onNavigateViewer('section'); }} style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fff', color: '#8b5cf6', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
             </button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ background: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>Manual Schedule</span>
-            <button 
-              onClick={() => { setIsOpen(false); onAddSchedule(); }}
-              style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fff', color: 'var(--accent-primary)', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-            >
+            <button onClick={() => { setIsOpen(false); onAddSchedule(); }} style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fff', color: 'var(--accent-primary)', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
           </div>
@@ -258,15 +273,19 @@ const DraggableSpeedDial = ({ onAddSchedule, onAutoSchedule }) => {
 
         {/* Main FAB */}
         <button
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
+          onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
+          onMouseMove={(e) => handleMove(e.clientX, e.clientY)}
+          onMouseUp={handleEnd}
+          onMouseLeave={handleEnd}
+          onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
+          onTouchMove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)}
+          onTouchEnd={handleEnd}
           style={{
             width: '100%', height: '100%', borderRadius: '50%',
             background: 'linear-gradient(135deg, var(--accent-primary), #7c3aed)',
             color: '#fff', border: 'none', boxShadow: '0 4px 14px rgba(86,69,238,0.4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: isDragging ? 'grabbing' : 'grab',
+            cursor: dragRef.current?.isDragging ? 'grabbing' : 'grab',
             transform: isOpen ? 'rotate(45deg)' : 'none',
             transition: 'transform 0.2s ease',
             touchAction: 'none',
@@ -1563,7 +1582,11 @@ const Dashboard = ({ user, onLogout }) => {
       {isAdmin && isMobile && (activeTab === 'room-utilization' || activeTab === 'schedule') && (
         <DraggableSpeedDial 
           onAddSchedule={() => setIsScheduleFormOpen(true)} 
-          onAutoSchedule={() => setActiveTab('schedule')} 
+          onNavigateViewer={(viewType) => {
+            setActiveTab('room-utilization');
+            // We dispatch a custom event to tell ScheduleViewer to change its viewType
+            window.dispatchEvent(new CustomEvent('change-viewer-type', { detail: viewType }));
+          }} 
         />
       )}
 
