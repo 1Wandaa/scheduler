@@ -161,6 +161,125 @@ const NAV_ICONS = {
   ]},
 };
 
+const DraggableSpeedDial = ({ onAddSchedule, onAutoSchedule }) => {
+  const [position, setPosition] = useState({ x: window.innerWidth - 76, y: window.innerHeight - 136 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, dragged: false });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setPosition(prev => ({
+        x: Math.min(prev.x, window.innerWidth - 56),
+        y: Math.min(prev.y, window.innerHeight - 56)
+      }));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handlePointerDown = (e) => {
+    dragRef.current.startX = e.clientX;
+    dragRef.current.startY = e.clientY;
+    dragRef.current.initialX = position.x;
+    dragRef.current.initialY = position.y;
+    dragRef.current.dragged = false;
+    e.target.setPointerCapture(e.pointerId);
+    setIsDragging(true);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      dragRef.current.dragged = true;
+      setPosition({
+        x: Math.max(0, Math.min(dragRef.current.initialX + dx, window.innerWidth - 56)),
+        y: Math.max(0, Math.min(dragRef.current.initialY + dy, window.innerHeight - 56))
+      });
+    }
+  };
+
+  const handlePointerUp = (e) => {
+    e.target.releasePointerCapture(e.pointerId);
+    setIsDragging(false);
+    if (!dragRef.current.dragged) {
+      setIsOpen(!isOpen);
+    }
+  };
+
+  return (
+    <>
+      {isOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(2px)' }} onClick={() => setIsOpen(false)} />
+      )}
+      <div 
+        style={{
+          position: 'fixed',
+          left: position.x,
+          top: position.y,
+          width: '56px',
+          height: '56px',
+          zIndex: 9999,
+        }}
+      >
+        {/* Speed Dial Menu Items */}
+        <div style={{ 
+          position: 'absolute',
+          bottom: '68px',
+          right: '0px',
+          display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end',
+          opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? 'auto' : 'none',
+          transform: isOpen ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.8)',
+          transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        }}>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ background: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>Auto-Scheduler</span>
+            <button 
+              onClick={() => { setIsOpen(false); onAutoSchedule(); }}
+              style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fff', color: '#8b5cf6', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ background: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>Manual Schedule</span>
+            <button 
+              onClick={() => { setIsOpen(false); onAddSchedule(); }}
+              style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fff', color: 'var(--accent-primary)', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Main FAB */}
+        <button
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          style={{
+            width: '100%', height: '100%', borderRadius: '50%',
+            background: 'linear-gradient(135deg, var(--accent-primary), #7c3aed)',
+            color: '#fff', border: 'none', boxShadow: '0 4px 14px rgba(86,69,238,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            transform: isOpen ? 'rotate(45deg)' : 'none',
+            transition: 'transform 0.2s ease',
+            touchAction: 'none',
+            position: 'absolute', top: 0, left: 0
+          }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+      </div>
+    </>
+  );
+};
+
 // ─── KPI Tile ───────────────────────────────────────────────────────────────────────
 const KpiTile = ({ label, value, iconPath, color }) => {
   const lighten = (hex, amt) => {
@@ -1442,30 +1561,10 @@ const Dashboard = ({ user, onLogout }) => {
 
       {/* --- Mobile Floating Action Button (FAB) --- */}
       {isAdmin && isMobile && (activeTab === 'room-utilization' || activeTab === 'schedule') && (
-        <button
-          onClick={() => setIsScheduleFormOpen(true)}
-          style={{
-            position: 'fixed',
-            bottom: '80px', // above bottom nav
-            right: '20px',
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--accent-primary), #7c3aed)',
-            color: '#fff',
-            border: 'none',
-            boxShadow: '0 4px 14px rgba(86,69,238,0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            zIndex: 9999,
-            transition: 'transform 0.2s ease',
-          }}
-          onActive={e => e.currentTarget.style.transform = 'scale(0.95)'}
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        </button>
+        <DraggableSpeedDial 
+          onAddSchedule={() => setIsScheduleFormOpen(true)} 
+          onAutoSchedule={() => setActiveTab('schedule')} 
+        />
       )}
 
       {/* --- Bottom Sheet Modal for Schedule Form --- */}
