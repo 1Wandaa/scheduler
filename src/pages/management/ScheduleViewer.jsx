@@ -15,12 +15,16 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
     // Close export dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (isExportOpen && !e.target.closest('.export-dropdown-container')) {
+            if (isExportOpen && e.target.closest && !e.target.closest('.export-dropdown-container')) {
                 setIsExportOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside); // Added for better mobile support
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
     }, [isExportOpen]);
 
     useEffect(() => {

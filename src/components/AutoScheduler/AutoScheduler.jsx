@@ -23,6 +23,18 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   const [aiStatus, setAiStatus] = useState('');
   const [aiInsights, setAiInsights] = useState(null);
 
+  // Listen for custom events to change engine mode from mobile Speed Dial
+  React.useEffect(() => {
+    const handleModeChange = (e) => {
+      if (e.detail) {
+        setEngineMode(e.detail);
+        setTargetId('');
+      }
+    };
+    window.addEventListener('change-autoscheduler-mode', handleModeChange);
+    return () => window.removeEventListener('change-autoscheduler-mode', handleModeChange);
+  }, []);
+
   // Only consider subjects that match the currently selected active semester
   const activeSemesterSubjects = subjects.filter(sub => !sub.semester || sub.semester === 'Both' || sub.semester === activeSemester);
 

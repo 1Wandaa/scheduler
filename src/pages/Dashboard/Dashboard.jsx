@@ -161,7 +161,7 @@ const NAV_ICONS = {
   ]},
 };
 
-const DraggableSpeedDial = ({ onAddSchedule, onNavigateViewer }) => {
+const DraggableSpeedDial = ({ onAddSchedule, onNavigateViewer, onFullTimetable }) => {
   const [position, setPosition] = useState({ x: window.innerWidth - 76, y: window.innerHeight - 136 });
   const [isOpen, setIsOpen] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, dragged: false, isDragging: false });
@@ -200,11 +200,12 @@ const DraggableSpeedDial = ({ onAddSchedule, onNavigateViewer }) => {
     }
   };
 
-  const handleEnd = () => {
+  const handleEnd = (e) => {
+    if (e && e.cancelable) e.preventDefault(); // Prevent ghost mouse events on mobile
     if (!dragRef.current.isDragging) return;
     dragRef.current.isDragging = false;
     if (!dragRef.current.dragged) {
-      setIsOpen(!isOpen);
+      setIsOpen(prev => !prev);
     }
   };
 
@@ -234,6 +235,13 @@ const DraggableSpeedDial = ({ onAddSchedule, onNavigateViewer }) => {
           transform: isOpen ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.8)',
           transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
         }}>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ background: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>Full Timetable (GA)</span>
+            <button onClick={() => { setIsOpen(false); onFullTimetable && onFullTimetable(); }} style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fff', color: '#6366f1', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            </button>
+          </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ background: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>Gen. by Faculty</span>
@@ -285,7 +293,7 @@ const DraggableSpeedDial = ({ onAddSchedule, onNavigateViewer }) => {
             background: 'linear-gradient(135deg, var(--accent-primary), #7c3aed)',
             color: '#fff', border: 'none', boxShadow: '0 4px 14px rgba(86,69,238,0.4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: dragRef.current?.isDragging ? 'grabbing' : 'grab',
+            cursor: 'grab',
             transform: isOpen ? 'rotate(45deg)' : 'none',
             transition: 'transform 0.2s ease',
             touchAction: 'none',
@@ -1585,8 +1593,16 @@ const Dashboard = ({ user, onLogout }) => {
           onNavigateViewer={(viewType) => {
             setActiveTab('room-utilization');
             // We dispatch a custom event to tell ScheduleViewer to change its viewType
-            window.dispatchEvent(new CustomEvent('change-viewer-type', { detail: viewType }));
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('change-viewer-type', { detail: viewType }));
+            }, 100);
           }} 
+          onFullTimetable={() => {
+            setActiveTab('schedule');
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('change-autoscheduler-mode', { detail: 'ga' }));
+            }, 100);
+          }}
         />
       )}
 
