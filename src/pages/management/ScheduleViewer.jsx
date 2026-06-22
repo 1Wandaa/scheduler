@@ -10,6 +10,18 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
     const [selectedYearLevel, setSelectedYearLevel] = useState('');
     const [previewImage, setPreviewImage] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isExportOpen, setIsExportOpen] = useState(false);
+
+    // Close export dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (isExportOpen && !e.target.closest('.export-dropdown-container')) {
+                setIsExportOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isExportOpen]);
 
     useEffect(() => {
         if (viewType === 'department' && DEPARTMENTS.length > 0) setSelectedId(DEPARTMENTS[0]);
@@ -149,125 +161,148 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Filter schedules by department{isAdmin ? ', faculty, or room' : ' or room'}</p>
                 </div>
 
-                <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', textTransform: 'uppercase', marginRight: '4px' }}>ISO Format:</span>
-                    <button className="btn btn-sm" onClick={async () => {
-                        setIsGenerating(true);
-                        const printContent = document.querySelector('.printable-iso-document');
-                        if (!printContent) {
-                            setIsGenerating(false);
-                            return;
-                        }
-                        const tempContainer = document.createElement('div');
-                        tempContainer.style.position = 'absolute';
-                        tempContainer.style.top = '-10000px';
-                        tempContainer.style.left = '-10000px';
-                        tempContainer.style.width = '1100px'; 
-                        tempContainer.style.backgroundColor = 'white';
-                        // INJECTED CSS FOR EXACT ISO LAYOUT ON EXPORT — FIXED BOX GRID
-                        tempContainer.innerHTML = `
-                            <style>
-                                .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
-                                .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
-                                .iso-header-table .bold { font-weight: bold; }
-                                .iso-header-table .center { text-align: center; }
-                                .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
-                                .meta-value { font-weight: normal; text-decoration: underline; }
-                                .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; table-layout: fixed; }
-                                .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 52px; overflow: hidden; box-sizing: border-box; }
-                                .iso-schedule-table th { background-color: #f0f0f0 !important; padding: 6px 4px; height: 32px; font-size: 9pt; }
-                                .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8pt; padding: 2px 4px; }
-                                .iso-schedule-table .schedule-cell { padding: 0; height: 52px; overflow: hidden; }
-                                .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; }
-                                .cell-subject { font-weight: bold; font-size: 9pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-                                .cell-professor { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                .cell-room { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                .lunch-break { background-color: #e0e0e0 !important; font-weight: bold; letter-spacing: 5px; padding: 4px; height: 30px; overflow: hidden; font-size: 9pt; }
-                                .lunch-break-time { background-color: #e0e0e0 !important; height: 30px; font-size: 8pt; }
-                            </style>
-                            <div style="padding: 40px;">
-                                ${printContent.innerHTML}
-                            </div>
-                        `;
-                        document.body.appendChild(tempContainer);
-                        
-                        try {
-                            const html2canvas = (await import('html2canvas')).default;
-                            const canvas = await html2canvas(tempContainer, { 
-                                scale: 2, 
-                                useCORS: true,
-                                width: 1100,
-                                windowWidth: 1100
-                            });
-                            setPreviewImage(canvas.toDataURL('image/png'));
-                        } catch (error) {
-                            console.error('Failed to save image:', error);
-                            alert('Failed to generate preview. Please try again.');
-                        } finally {
-                            document.body.removeChild(tempContainer);
-                            setIsGenerating(false);
-                        }
-                    }} style={{ background: 'transparent', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '5px' }} disabled={isGenerating}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        {isGenerating ? 'Generating...' : 'Save Image'}
+                <div className="no-print export-dropdown-container" style={{ position: 'relative' }}>
+                    <button className="btn btn-sm" onClick={() => setIsExportOpen(!isExportOpen)} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        {isGenerating ? 'Generating...' : 'Export Options'}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </button>
-
-                    <button className="btn btn-sm" onClick={() => {
-                        const printContent = document.querySelector('.printable-iso-document');
-                        if (!printContent) return;
-                        const iframe = document.createElement('iframe');
-                        iframe.style.position = 'fixed';
-                        iframe.style.top = '-10000px';
-                        iframe.style.left = '-10000px';
-                        iframe.style.width = '0';
-                        iframe.style.height = '0';
-                        document.body.appendChild(iframe);
-                        const doc = iframe.contentDocument || iframe.contentWindow.document;
-                        doc.open();
-                        // INJECTED CSS FOR EXACT ISO LAYOUT ON PRINT PDF — FIXED BOX GRID
-                        doc.write(`
-                            <html>
-                            <head>
-                                <style>
-                                    @page { size: letter landscape; margin: 0; }
-                                    body { font-family: "Times New Roman", Times, serif; color: #000; margin: 0; padding: 0.5in; }
-                                    .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
-                                    .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
-                                    .iso-header-table .bold { font-weight: bold; }
-                                    .iso-header-table .center { text-align: center; }
-                                    .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
-                                    .meta-value { font-weight: normal; text-decoration: underline; }
-                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
-                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 52px; overflow: hidden; box-sizing: border-box; }
-                                    .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 6px 4px; height: 32px; font-size: 9pt; }
-                                    .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8pt; padding: 2px 4px; }
-                                    .iso-schedule-table .schedule-cell { padding: 0; height: 52px; overflow: hidden; }
-                                    .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; }
-                                    .cell-subject { font-weight: bold; font-size: 9pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-                                    .cell-professor { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                    .cell-room { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                    .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; padding: 4px; height: 30px; overflow: hidden; font-size: 9pt; }
-                                    .lunch-break-time { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; height: 30px; font-size: 8pt; }
-                                </style>
-                            </head>
-                            <body>${printContent.innerHTML}</body>
-                            </html>
-                        `);
-                        doc.close();
-                        iframe.contentWindow.focus();
-                        setTimeout(() => {
-                            iframe.contentWindow.print();
-                            setTimeout(() => document.body.removeChild(iframe), 1000);
-                        }, 250);
-                    }} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                        Print
-                    </button>
+                    {isExportOpen && (
+                        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 100, minWidth: '200px', overflow: 'hidden' }}>
+                            <div style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)', backgroundColor: '#f9fafb', borderBottom: '1px solid var(--border-color)' }}>ISO FORMAT</div>
+                            <button onClick={async () => {
+                                setIsExportOpen(false);
+                                setIsGenerating(true);
+                                const printContent = document.querySelector('.printable-iso-document');
+                                if (!printContent) {
+                                    setIsGenerating(false);
+                                    return;
+                                }
+                                const tempContainer = document.createElement('div');
+                                tempContainer.style.position = 'absolute';
+                                tempContainer.style.top = '-10000px';
+                                tempContainer.style.left = '-10000px';
+                                tempContainer.style.width = '1100px'; 
+                                tempContainer.style.backgroundColor = 'white';
+                                tempContainer.innerHTML = `
+                                    <style>
+                                        .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
+                                        .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
+                                        .iso-header-table .bold { font-weight: bold; }
+                                        .iso-header-table .center { text-align: center; }
+                                        .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
+                                        .meta-value { font-weight: normal; text-decoration: underline; }
+                                        .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; table-layout: fixed; }
+                                        .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 52px; overflow: hidden; box-sizing: border-box; }
+                                        .iso-schedule-table th { background-color: #f0f0f0 !important; padding: 6px 4px; height: 32px; font-size: 9pt; }
+                                        .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8pt; padding: 2px 4px; }
+                                        .iso-schedule-table .schedule-cell { padding: 0; height: 52px; overflow: hidden; }
+                                        .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; }
+                                        .cell-subject { font-weight: bold; font-size: 9pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+                                        .cell-professor { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                        .cell-room { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                        .lunch-break { background-color: #e0e0e0 !important; font-weight: bold; letter-spacing: 5px; padding: 4px; height: 30px; overflow: hidden; font-size: 9pt; }
+                                        .lunch-break-time { background-color: #e0e0e0 !important; height: 30px; font-size: 8pt; }
+                                    </style>
+                                    <div style="padding: 40px;">
+                                        ${printContent.innerHTML}
+                                    </div>
+                                `;
+                                document.body.appendChild(tempContainer);
+                                
+                                try {
+                                    const html2canvas = (await import('html2canvas')).default;
+                                    const canvas = await html2canvas(tempContainer, { 
+                                        scale: 2, 
+                                        useCORS: true,
+                                        width: 1100,
+                                        windowWidth: 1100
+                                    });
+                                    setPreviewImage(canvas.toDataURL('image/png'));
+                                } catch (error) {
+                                    console.error('Failed to save image:', error);
+                                    alert('Failed to generate preview. Please try again.');
+                                } finally {
+                                    document.body.removeChild(tempContainer);
+                                    setIsGenerating(false);
+                                }
+                            }} style={{ width: '100%', padding: '10px 16px', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                Save Image
+                            </button>
+                            <button onClick={() => {
+                                setIsExportOpen(false);
+                                const printContent = document.querySelector('.printable-iso-document');
+                                if (!printContent) return;
+                                const iframe = document.createElement('iframe');
+                                iframe.style.position = 'fixed';
+                                iframe.style.top = '-10000px';
+                                iframe.style.left = '-10000px';
+                                iframe.style.width = '0';
+                                iframe.style.height = '0';
+                                document.body.appendChild(iframe);
+                                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                                doc.open();
+                                doc.write(`
+                                    <html>
+                                    <head>
+                                        <style>
+                                            @page { size: letter landscape; margin: 0; }
+                                            body { font-family: "Times New Roman", Times, serif; color: #000; margin: 0; padding: 0.5in; }
+                                            .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
+                                            .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
+                                            .iso-header-table .bold { font-weight: bold; }
+                                            .iso-header-table .center { text-align: center; }
+                                            .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
+                                            .meta-value { font-weight: normal; text-decoration: underline; }
+                                            .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
+                                            .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 52px; overflow: hidden; box-sizing: border-box; }
+                                            .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 6px 4px; height: 32px; font-size: 9pt; }
+                                            .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8pt; padding: 2px 4px; }
+                                            .iso-schedule-table .schedule-cell { padding: 0; height: 52px; overflow: hidden; }
+                                            .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; }
+                                            .cell-subject { font-weight: bold; font-size: 9pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+                                            .cell-professor { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                            .cell-room { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                            .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; padding: 4px; height: 30px; overflow: hidden; font-size: 9pt; }
+                                            .lunch-break-time { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; height: 30px; font-size: 8pt; }
+                                        </style>
+                                    </head>
+                                    <body>${printContent.innerHTML}</body>
+                                    </html>
+                                `);
+                                doc.close();
+                                iframe.contentWindow.focus();
+                                setTimeout(() => {
+                                    iframe.contentWindow.print();
+                                    setTimeout(() => document.body.removeChild(iframe), 1000);
+                                }, 250);
+                            }} style={{ width: '100%', padding: '10px 16px', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                                Print Document
+                            </button>
+                            <div style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)', backgroundColor: '#f9fafb', borderBottom: '1px solid var(--border-color)' }}>ORDINARY GRID</div>
+                            <button onClick={() => {
+                                setIsExportOpen(false);
+                                window.dispatchEvent(new Event('export-ordinary-image'));
+                            }} style={{ width: '100%', padding: '10px 16px', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                Save Image
+                            </button>
+                            <button onClick={() => {
+                                setIsExportOpen(false);
+                                window.dispatchEvent(new Event('export-ordinary-print'));
+                            }} style={{ width: '100%', padding: '10px 16px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                                Print Document
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Filters Row: Dedicated block with responsive grid */}
-            <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter By</label>

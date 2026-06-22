@@ -90,6 +90,103 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     }
   };
 
+  const handleExportPrint = async () => {
+    if (!containerRef.current) return;
+    try {
+      showToast('Preparing print, please wait...', false);
+      const html2canvas = (await import('html2canvas')).default;
+      
+      const oldViewMode = viewMode;
+      setViewMode('grid');
+      
+      await new Promise(r => setTimeout(r, 300));
+
+      const toolbar = containerRef.current.querySelector('.schedule-toolbar');
+      if (toolbar) toolbar.style.display = 'none';
+
+      const clone = containerRef.current.cloneNode(true);
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'absolute';
+      wrapper.style.top = '-10000px';
+      wrapper.style.left = '-10000px';
+      wrapper.style.width = '1100px';
+      wrapper.style.backgroundColor = '#ffffff';
+      wrapper.style.padding = '16px';
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+
+      const clonedToolbar = clone.querySelector('.schedule-toolbar');
+      if (clonedToolbar) clonedToolbar.style.display = 'none';
+
+      const canvas = await html2canvas(wrapper, { 
+          scale: 2, 
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          width: 1100,
+          windowWidth: 1100
+      });
+
+      document.body.removeChild(wrapper);
+      if (toolbar) toolbar.style.display = 'flex';
+      setViewMode(oldViewMode);
+
+      const imgData = canvas.toDataURL('image/png');
+      const imgW = canvas.width;
+      const imgH = canvas.height;
+      
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-10000px';
+      iframe.style.left = '-10000px';
+      document.body.appendChild(iframe);
+      
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write(`
+          <html>
+          <head>
+              <title>Print Schedule</title>
+              <style>
+                  @page { size: landscape; margin: 0.3in; }
+                  * { margin: 0; padding: 0; box-sizing: border-box; }
+                  html, body { width: 100%; height: 100%; background: #fff; }
+                  body { display: flex; align-items: center; justify-content: center; }
+                  img { display: block; max-width: 100%; max-height: 100vh; width: auto; height: auto; object-fit: contain; }
+              </style>
+          </head>
+          <body>
+              <img src="${imgData}" width="${imgW}" height="${imgH}" />
+          </body>
+          </html>
+      `);
+      doc.close();
+      
+      iframe.contentWindow.focus();
+      setTimeout(() => {
+          iframe.contentWindow.print();
+          setTimeout(() => {
+              if (document.body.contains(iframe)) document.body.removeChild(iframe);
+          }, 1000);
+      }, 300);
+
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to print schedule.');
+    }
+  };
+
+  useEffect(() => {
+    const onExportImage = () => handleExportImage();
+    const onExportPrint = () => handleExportPrint();
+    window.addEventListener('export-ordinary-image', onExportImage);
+    window.addEventListener('export-ordinary-print', onExportPrint);
+    return () => {
+      window.removeEventListener('export-ordinary-image', onExportImage);
+      window.removeEventListener('export-ordinary-print', onExportPrint);
+    };
+  }, [viewMode, schedules, title]);
+
+
   // Init once
   useEffect(() => {
     if (window.innerWidth <= 768) {
@@ -119,19 +216,14 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     return () => { document.body.style.overflow = ''; };
   }, [isFullscreen]);
 
-  // Handle Fit Scale for Mobile Fullscreen
+  // Handle Fit Scale for Mobile Fullscreen & Grid View
   useEffect(() => {
-    if (!isFullscreen) {
-      setFitScale(1);
-      return;
-    }
     const updateFitScale = () => {
-      // The fullscreen container has 1rem padding = 32px total horizontal padding
       const padding = 32; 
       const availableWidth = window.innerWidth - padding;
       const minTableWidth = 680; // from CSS
       
-      if (availableWidth < minTableWidth) {
+      if (availableWidth < minTableWidth && (isFullscreen || viewMode === 'grid')) {
         setFitScale(availableWidth / minTableWidth);
       } else {
         setFitScale(1);
@@ -141,7 +233,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     updateFitScale();
     window.addEventListener('resize', updateFitScale);
     return () => window.removeEventListener('resize', updateFitScale);
-  }, [isFullscreen]);
+  }, [isFullscreen, viewMode]);
 
   // Listen to native fullscreen changes
   useEffect(() => {
@@ -275,7 +367,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     <div className="table-wrapper">
       <table 
         className="schedule-table"
-        style={isFullscreen && fitScale < 1 ? { zoom: fitScale } : {}}
+        style={(isFullscreen || viewMode === 'grid') && fitScale < 1 ? { zoom: fitScale } : {}}
       >
         <thead>
           <tr>
@@ -477,127 +569,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
           </button>
         </div>
 
-        {/* Export Actions */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 'bold', textTransform: 'uppercase', marginRight: '4px' }}>ORDINARY FORMAT:</span>
-            <button
-            className="fullscreen-btn"
-            onClick={handleExportImage}
-            title="Export Schedule as Image"
-            style={{ background: '#e6f4ea', color: '#137333', border: '1px solid #ceead6' }}
-            >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-            <span style={{ fontWeight: 600 }}>Save Image</span>
-            </button>
-
-            <button
-            className="fullscreen-btn"
-            onClick={async () => {
-                if (!containerRef.current) return;
-                try {
-                  showToast('Preparing print, please wait...', false);
-                  const html2canvas = (await import('html2canvas')).default;
-                  
-                  const oldViewMode = viewMode;
-                  setViewMode('grid');
-                  
-                  await new Promise(r => setTimeout(r, 300));
-
-                  const toolbar = containerRef.current.querySelector('.schedule-toolbar');
-                  if (toolbar) toolbar.style.display = 'none';
-
-                  // Clone into a fixed-width off-screen container for consistent capture
-                  const clone = containerRef.current.cloneNode(true);
-                  const wrapper = document.createElement('div');
-                  wrapper.style.position = 'absolute';
-                  wrapper.style.top = '-10000px';
-                  wrapper.style.left = '-10000px';
-                  wrapper.style.width = '1100px';
-                  wrapper.style.backgroundColor = '#ffffff';
-                  wrapper.style.padding = '16px';
-                  wrapper.appendChild(clone);
-                  document.body.appendChild(wrapper);
-
-                  const clonedToolbar = clone.querySelector('.schedule-toolbar');
-                  if (clonedToolbar) clonedToolbar.style.display = 'none';
-
-                  const canvas = await html2canvas(wrapper, { 
-                      scale: 2, 
-                      useCORS: true,
-                      backgroundColor: '#ffffff',
-                      width: 1100,
-                      windowWidth: 1100
-                  });
-
-                  document.body.removeChild(wrapper);
-                  if (toolbar) toolbar.style.display = 'flex';
-                  setViewMode(oldViewMode);
-
-                  const imgData = canvas.toDataURL('image/png');
-                  // Get actual pixel dimensions for proper aspect ratio
-                  const imgW = canvas.width;
-                  const imgH = canvas.height;
-                  
-                  const iframe = document.createElement('iframe');
-                  iframe.style.position = 'fixed';
-                  iframe.style.top = '-10000px';
-                  iframe.style.left = '-10000px';
-                  document.body.appendChild(iframe);
-                  
-                  const doc = iframe.contentDocument || iframe.contentWindow.document;
-                  doc.open();
-                  doc.write(`
-                      <html>
-                      <head>
-                          <title>Print Schedule</title>
-                          <style>
-                              @page { size: landscape; margin: 0.3in; }
-                              * { margin: 0; padding: 0; box-sizing: border-box; }
-                              html, body { width: 100%; height: 100%; background: #fff; }
-                              body {
-                                  display: flex;
-                                  align-items: center;
-                                  justify-content: center;
-                              }
-                              img {
-                                  display: block;
-                                  max-width: 100%;
-                                  max-height: 100vh;
-                                  width: auto;
-                                  height: auto;
-                                  object-fit: contain;
-                              }
-                          </style>
-                      </head>
-                      <body>
-                          <img src="${imgData}" width="${imgW}" height="${imgH}" />
-                      </body>
-                      </html>
-                  `);
-                  doc.close();
-                  
-                  iframe.contentWindow.focus();
-                  setTimeout(() => {
-                      iframe.contentWindow.print();
-                      setTimeout(() => {
-                          if (document.body.contains(iframe)) {
-                              document.body.removeChild(iframe);
-                          }
-                      }, 1000);
-                  }, 300);
-
-                } catch (err) {
-                  console.error(err);
-                  showToast('Failed to print schedule.');
-                }
-            }}
-            title="Print Schedule"
-            style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' }}
-            >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-            <span style={{ fontWeight: 600 }}>Print</span>
-            </button>
-        </div>
+        <div style={{ marginLeft: 'auto' }}></div>
 
         {/* Fullscreen toggle (grid view only) */}
         {viewMode === 'grid' && (
