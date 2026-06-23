@@ -3,7 +3,7 @@ import ScheduleTable from '../../components/ScheduleTable/ScheduleTable';
 import PrintableSchedule from '../../components/PrintableSchedule/PrintableSchedule';
 import { DEPARTMENTS } from '../../config/constants';
 
-function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, activeSemester = '', activeSchoolYear = '', isPublished = true }) {
+function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, activeSemester = '', activeSchoolYear = '', isPublished = true }) {
     const [viewType, setViewType] = useState('department');
     const [selectedId, setSelectedId] = useState('');
     const [deptSectionId, setDeptSectionId] = useState('');
@@ -28,14 +28,25 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
     }, [isExportOpen]);
 
     useEffect(() => {
-        if (viewType === 'department' && DEPARTMENTS.length > 0) setSelectedId(DEPARTMENTS[0]);
+        if (viewType === 'department') {
+            if (user?.department && DEPARTMENTS.includes(user.department)) {
+                setSelectedId(user.department);
+            } else if (DEPARTMENTS.length > 0) {
+                setSelectedId(DEPARTMENTS[0]);
+            }
+        }
         else if (viewType === 'room' && rooms.length > 0) setSelectedId(rooms[0].id);
         else if (viewType === 'faculty' && professors.length > 0) setSelectedId(professors[0].id);
         else setSelectedId('');
 
+        if (viewType === 'department' && user?.yearLevel) {
+            setSelectedYearLevel(user.yearLevel.toString());
+        } else {
+            setSelectedYearLevel('');
+        }
+        
         setDeptSectionId('');
-        setSelectedYearLevel('');
-    }, [viewType, rooms, professors, sections]);
+    }, [viewType, rooms, professors, sections, user]);
 
     // Listen for custom events to change view type from mobile Speed Dial
     useEffect(() => {
@@ -56,14 +67,20 @@ function ScheduleViewer({ schedules, rooms, professors, sections, isAdmin, onUpd
                 matching = matching.filter(sec => String(sec.yearLevel) === String(selectedYearLevel));
             }
             if (matching.length > 0) {
-                setDeptSectionId(matching[0].id);
+                // If user has a specific section and it's in the matching list, select it
+                if (user?.section && matching.some(sec => sec.name === user.section)) {
+                    const userSec = matching.find(sec => sec.name === user.section);
+                    setDeptSectionId(userSec.id);
+                } else {
+                    setDeptSectionId(matching[0].id);
+                }
             } else {
                 setDeptSectionId('');
             }
         } else {
             setDeptSectionId('');
         }
-    }, [viewType, selectedId, selectedYearLevel, sections]);
+    }, [viewType, selectedId, selectedYearLevel, sections, user]);
 
     // Compute unique year levels from sections for the selected department
     const availableYearLevels = viewType === 'department' && selectedId

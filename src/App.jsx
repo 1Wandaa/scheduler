@@ -99,6 +99,7 @@ function App() {
             let userData = targetDoc.data();
 
             setUser({
+              ...userData,
               name: userData.name || emailPrefix,
               role: userData.role || 'User',
               username: userData.username || emailPrefix

@@ -74,6 +74,8 @@ const Login = ({ onLogin }) => {
 
   // Sign-up personal info
   const [fullName, setFullName] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState('');
   const [studentId, setStudentId] = useState('');
 
   // Academic info
@@ -134,6 +136,16 @@ const Login = ({ onLogin }) => {
 
       if (isSignUp) {
         // Validate step 2 fields
+        if (!age || parseInt(age) <= 0) {
+          setError('Please enter a valid age.');
+          setLoading(false);
+          return;
+        }
+        if (!gender) {
+          setError('Please select a gender.');
+          setLoading(false);
+          return;
+        }
         if (!studentId.trim()) {
           setError('Student ID is required.');
           setLoading(false);
@@ -177,8 +189,10 @@ const Login = ({ onLogin }) => {
 
         // 2. Save user to Firestore with all student info
         await addDoc(collection(db, 'users'), {
-          username: username,
+          username: cleanUsername,
           name: fullName,
+          age: parseInt(age) || null,
+          gender: gender,
           role: 'Student',
           studentId: studentId.trim(),
           department: department,
@@ -189,9 +203,16 @@ const Login = ({ onLogin }) => {
 
         // 3. Log them in directly after sign up
         onLogin({
+          username: cleanUsername,
           name: fullName,
           role: 'Student',
-          username: username
+          age: parseInt(age) || null,
+          gender: gender,
+          studentId: studentId.trim(),
+          department: department,
+          program: derivedProgram,
+          yearLevel: parseInt(yearLevel),
+          section: section
         });
 
       } else {
@@ -320,11 +341,19 @@ const Login = ({ onLogin }) => {
   };
 
   // Validate step 1 before moving to step 2
-  const canProceedToStep2 = fullName.trim() && username.trim() && password.trim() && password.length >= 6;
+  const canProceedToStep2 = fullName.trim() && age && gender && username.trim() && password.trim() && password.length >= 6;
 
   const handleNextStep = () => {
     if (!fullName.trim()) {
       setError('Full name is required.');
+      return;
+    }
+    if (!age || parseInt(age) <= 0) {
+      setError('Age is required.');
+      return;
+    }
+    if (!gender) {
+      setError('Gender is required.');
       return;
     }
     if (!username.trim()) {
@@ -346,7 +375,7 @@ const Login = ({ onLogin }) => {
         <div className="step-line"></div>
         <div className="step-dot">2</div>
       </div>
-      <p className="step-label">Personal & Account Information</p>
+      <p className="step-label">Personal &amp; Account Information</p>
 
       <div className="input-group">
         <label>
@@ -360,6 +389,40 @@ const Login = ({ onLogin }) => {
           onChange={e => setFullName(e.target.value)}
           placeholder="e.g. Ryan James Mora"
         />
+      </div>
+
+      <div className="signup-row" style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+        <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+          <label>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+            Age
+          </label>
+          <input
+            required
+            type="number"
+            min="1"
+            value={age}
+            onChange={e => setAge(e.target.value)}
+            placeholder="e.g. 20"
+          />
+        </div>
+
+        <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+          <label>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+            Gender
+          </label>
+          <select
+            required
+            value={gender}
+            onChange={e => setGender(e.target.value)}
+          >
+            <option value="">Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
       </div>
 
       <div className="input-group">
@@ -530,180 +593,144 @@ const Login = ({ onLogin }) => {
   );
 
   return (
-    <div className="login-container">
-      {/* Animated background orbs */}
-      <div className="login-bg-orbs" aria-hidden="true">
-        <div className="login-orb login-orb-1"></div>
-        <div className="login-orb login-orb-2"></div>
-        <div className="login-orb login-orb-3"></div>
-        <div className="login-orb login-orb-4"></div>
+    <div className="login-fullscreen">
+      {/* Fullscreen campus background */}
+      <div className="login-bg" aria-hidden="true">
+        <img src="/background2.jpg?v=1" alt="" className="login-bg-img" />
       </div>
+      <div className="login-bg-overlay" aria-hidden="true"></div>
 
-      <div className="login-split-layout">
-        {/* LEFT — Branded Hero Panel with campus background */}
-        <div className="login-hero-panel">
-          <div className="login-hero-bg" aria-hidden="true">
-            <img src="/background2.jpg?v=1" alt="" className="login-hero-bg-img" />
-          </div>
-          <div className="login-hero-overlay" aria-hidden="true"></div>
-          <div className="login-hero-content">
+      {/* Centered content */}
+      <div className="login-center-wrapper">
+        {/* Form card */}
+        <div className={`login-card ${isSignUp ? 'login-card-wide' : ''}`}>
+          {/* Branding inside card */}
+          <div className="login-branding">
             <img
               src={LOGO_SRC}
               alt="CAPSU Logo"
-              className="login-hero-logo"
+              className="login-logo"
               onError={(e) => {
                 e.currentTarget.onerror = null;
                 e.currentTarget.src = FALLBACK_LOGO;
               }}
             />
-            <h1 className="login-hero-title">SMARTSCHED</h1>
-            <p className="login-hero-subtitle">Capiz State University<br />Mambusao Poblacion Campus</p>
-            <div className="login-hero-features">
-              <div className="login-hero-feature">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-                <span>Smart Class Scheduling</span>
-              </div>
-              <div className="login-hero-feature">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
-                <span>Conflict-free Timetables</span>
-              </div>
-              <div className="login-hero-feature">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-                <span>Multi-role Access Control</span>
-              </div>
+            <h1 className="login-system-title">SMARTSCHED</h1>
+            <p className="login-school-name">Capiz State University<br />Mambusao Poblacion Campus</p>
+          </div>
+
+          {isSignUp ? (
+            <>
+              <h2 className="login-card-title">Create Account</h2>
+              <p className="login-card-subtitle">Register as a student to get started</p>
+            </>
+          ) : (
+            <div style={{ height: '12px' }}></div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="login-error-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+              {error}
             </div>
-          </div>
-          <p className="login-hero-footer">© 2026 Capiz State University</p>
-        </div>
+          )}
 
-        {/* Mobile campus banner — only visible on small screens */}
-        <div className="login-mobile-banner">
-          <img src="/background2.jpg?v=1" alt="" className="login-mobile-banner-bg" />
-          <div className="login-mobile-banner-overlay"></div>
-          <div className="login-mobile-banner-content">
-            <img
-              src={LOGO_SRC}
-              alt="CAPSU Logo"
-              className="login-mobile-banner-logo"
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = FALLBACK_LOGO;
-              }}
-            />
-            <span className="login-mobile-banner-title">SMARTSCHED</span>
-          </div>
-        </div>
-
-        {/* RIGHT — Form Panel */}
-        <div className="login-form-panel">
-          <div className={`login-box ${isSignUp ? 'login-box-wide' : ''}`}>
-            <h2 className="login-form-title">
-              {isSignUp ? 'Create Account' : 'Welcome Back'}
-            </h2>
-            <p className="login-form-subtitle">
-              {isSignUp ? 'Register as a student to get started' : 'Sign in to continue to SmartSched'}
-            </p>
-
-            {/* Error Alert Box */}
-            {error && (
-              <div className="login-error-box">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit}>
-              {isSignUp ? (
-                signUpStep === 1 ? renderSignUpStep1() : renderSignUpStep2()
-              ) : (
-                <>
-                  <div className="input-group">
-                    <label>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-                      Username
-                    </label>
-                    <input
-                      id="login-username"
-                      required
-                      type="text"
-                      value={username}
-                      onChange={e => setUsername(e.target.value)}
-                      placeholder="e.g. @admin @jelly123"
-                    />
-                  </div>
-
-                  <div className="input-group">
-                    <label>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                      Password
-                    </label>
-                    <input
-                      id="login-password"
-                      required
-                      type="password"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                    />
-                  </div>
-
-                  <button type="submit" id="login-submit" className="btn-login" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <span className="btn-spinner"></span>
-                        Authenticating...
-                      </>
-                    ) : (
-                      <>
-                        Sign In
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}><path d="m9 18 6-6-6-6" /></svg>
-                      </>
-                    )}
-                  </button>
-                </>
-              )}
-            </form>
-
-            {/* Divider — only show on login or step 1 */}
-            {(!isSignUp || signUpStep === 1) && (
+          <form onSubmit={handleSubmit}>
+            {isSignUp ? (
+              signUpStep === 1 ? renderSignUpStep1() : renderSignUpStep2()
+            ) : (
               <>
-                <div className="login-divider">
-                  <span>OR</span>
+                <div className="input-group">
+                  <label>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                    Username
+                  </label>
+                  <input
+                    id="login-username"
+                    required
+                    type="text"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    placeholder="e.g. @admin @jelly123"
+                  />
                 </div>
 
-                <button
-                  onClick={handleGoogleLogin}
-                  className="btn-login btn-google"
-                  disabled={loading}
-                  id="login-google"
-                >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '18px', height: '18px' }} />
-                  Sign in with Google
+                <div className="input-group">
+                  <label>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                    Password
+                  </label>
+                  <input
+                    id="login-password"
+                    required
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                  />
+                </div>
+
+                <button type="submit" id="login-submit" className="btn-login" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <span className="btn-spinner"></span>
+                      Authenticating...
+                    </>
+                  ) : (
+                    <>
+                      Sign In
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}><path d="m9 18 6-6-6-6" /></svg>
+                    </>
+                  )}
                 </button>
               </>
             )}
+          </form>
 
-            {/* Toggle between Login and Sign Up */}
-            <div className="login-toggle">
-              {isSignUp ? "Already have an account? " : "Don't have an account? "}
-              <span
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setError('');
-                  setSignUpStep(1);
-                  setFullName('');
-                  setStudentId('');
-                  setDepartment('');
-                  setYearLevel('');
-                  setSection('');
-                }}
-                className="login-toggle-link"
+          {/* Divider — only show on login or step 1 */}
+          {(!isSignUp || signUpStep === 1) && (
+            <>
+              <div className="login-divider">
+                <span>OR</span>
+              </div>
+
+              <button
+                onClick={handleGoogleLogin}
+                className="btn-login btn-google"
+                disabled={loading}
+                id="login-google"
               >
-                {isSignUp ? 'Log in here' : 'Sign up here'}
-              </span>
-            </div>
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '18px', height: '18px' }} />
+                Sign in with Google
+              </button>
+            </>
+          )}
+
+          {/* Toggle between Login and Sign Up */}
+          <div className="login-toggle">
+            {isSignUp ? "Already have an account? " : "Don't have an account? "}
+            <span
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setError('');
+                setSignUpStep(1);
+                setFullName('');
+                setAge('');
+                setGender('');
+                setStudentId('');
+                setDepartment('');
+                setYearLevel('');
+                setSection('');
+              }}
+              className="login-toggle-link"
+            >
+              {isSignUp ? 'Log in here' : 'Sign up here'}
+            </span>
           </div>
         </div>
+
+        <p className="login-footer">© 2026 Capiz State University</p>
       </div>
     </div>
   );

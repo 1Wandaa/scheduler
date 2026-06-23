@@ -18,6 +18,7 @@ import TermManagement from '../management/TermManagement';
 import ScheduleViewer from '../management/ScheduleViewer';
 import SectionManagement from '../management/SectionManagement';
 import ScheduleHistory from '../management/ScheduleHistory';
+import Profile from '../../components/Profile/Profile';
 import Chatbot from '../../components/Chatbot/Chatbot';
 import {
   professorMatchesSubject,
@@ -1248,6 +1249,7 @@ const Dashboard = ({ user, onLogout }) => {
           {/* Divider + Logout */}
           <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', margin: '10px 0' }} />
           <ul style={{ margin: 0, padding: 0 }}>
+            <NavItem label="Profile" iconPath={NAV_ICONS.users} active={activeTab === 'profile'} onClick={() => handleTabClick('profile')} />
             <NavItem label="Log Out" iconPath={NAV_ICONS.logout} danger onClick={onLogout} />
           </ul>
         </nav>
@@ -1591,7 +1593,9 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={enrichedSchedules} />}
 
         {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
-        {activeTab === 'room-utilization' && <ScheduleViewer rooms={rooms} professors={professors} sections={sections} schedules={enrichedSchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
+        {activeTab === 'room-utilization' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={enrichedSchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
+
+        {activeTab === 'profile' && <Profile user={user} onBack={() => setActiveTab(isAdmin ? 'dashboard' : 'room-utilization')} />}
 
       </div>
       <Chatbot schedules={enrichedSchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
