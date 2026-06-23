@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { auth, db } from './config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import Login from './pages/Login/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
+import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
 import './styles/App.css';
 
 
@@ -148,12 +150,6 @@ function App() {
     );
   }
 
-  // If there is no user logged in, show the Login screen
-  if (!user) {
-    return <Login onLogin={handleLogin} />;
-  }
-
-  // If logged in, show the SMARTSCHED Dashboard
   return (
     <>
       {isOffline && (
@@ -168,7 +164,21 @@ function App() {
           You are currently offline. Viewing cached schedule.
         </div>
       )}
-      <Dashboard user={user} onLogout={handleLogout} />
+      <Routes>
+        <Route 
+          path="/" 
+          element={!user ? <Login onLogin={handleLogin} /> : <Navigate to="/dashboard" replace />} 
+        />
+        <Route 
+          path="/dashboard/*" 
+          element={
+            <ProtectedRoute user={user}>
+              <Dashboard user={user} onLogout={handleLogout} />
+            </ProtectedRoute>
+          } 
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </>
   );
 }

@@ -1,5 +1,6 @@
 // src/Dashboard.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { initialRooms, initialProfessors, initialSubjects, initialSections, SEED_VERSION } from '../../config/initialData';
 import { TIME_SLOTS, DAYS, SEMESTERS, SCHOOL_YEARS } from '../../config/constants';
 import { db } from '../../config/firebase';
@@ -500,8 +501,18 @@ const Dashboard = ({ user, onLogout }) => {
   const isAdmin = userRole === 'admin' || userRole === 'department head';
   const isStudent = !isAdmin;
 
-  // Make students default to the 'room-utilization' (View Schedules) tab
-  const [activeTab, setActiveTab] = useState(isStudent ? 'room-utilization' : 'dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const pathParts = location.pathname.split('/');
+  const activeTab = pathParts[2] || (isStudent ? 'room-utilization' : 'dashboard');
+
+  const setActiveTab = (tab) => {
+    if (tab === 'dashboard') {
+      navigate('/dashboard');
+    } else {
+      navigate(`/dashboard/${tab}`);
+    }
+  };
 
   const [isManageDataOpen, setIsManageDataOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
