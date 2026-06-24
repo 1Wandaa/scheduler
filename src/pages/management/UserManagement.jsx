@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../config/firebase';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import UserTable from '../../components/UserTable/UserTable';
 
 // Mock data to initialize database
 const initialUsers = [
@@ -10,12 +11,9 @@ const initialUsers = [
   { id: 3, username: '@ryan', name: 'Ryan James Mora', role: 'Student' },
 ];
 
-
-
 const UserManagement = ({ onBack }) => {
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     const initializeUsers = async () => {
@@ -35,9 +33,15 @@ const UserManagement = ({ onBack }) => {
     return () => unsub();
   }, []);
 
+  const filteredUsers = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return users.filter(u => 
+      u.name.toLowerCase().includes(query) || 
+      u.username.toLowerCase().includes(query) ||
+      u.role.toLowerCase().includes(query)
+    );
+  }, [users, searchQuery]);
 
-
-  // --- UPDATED FORCED DELETE FUNCTION ---
   const handleDeleteUser = async (id) => {
     const result = await Swal.fire({
       title: 'Delete User?',
@@ -58,6 +62,7 @@ const UserManagement = ({ onBack }) => {
     });
 
     if (result.isConfirmed) {
+      Swal.showLoading();
       try {
         await deleteDoc(doc(db, 'users', id.toString()));
         Swal.fire({ 
@@ -76,31 +81,6 @@ const UserManagement = ({ onBack }) => {
       }
     }
   };
-
-  // Helper function to render colored badges based on role
-  const renderRoleBadge = (role) => {
-    let badgeStyle = {
-      padding: '4px 10px',
-      borderRadius: '20px',
-      fontSize: '0.75rem',
-      fontWeight: '600',
-      display: 'inline-block'
-    };
-
-    if (role === 'Admin') {
-      badgeStyle = { ...badgeStyle, backgroundColor: 'var(--danger)', color: 'white' };
-    } else if (role === 'Department Head') {
-      badgeStyle = { ...badgeStyle, backgroundColor: 'var(--accent-primary)', color: 'white' };
-    } else if (role === 'Faculty') {
-      badgeStyle = { ...badgeStyle, backgroundColor: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning)' };
-    } else {
-      badgeStyle = { ...badgeStyle, backgroundColor: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success)' };
-    }
-
-    return <span style={badgeStyle}>{role}</span>;
-  };
-
-
 
   return (
     <>
@@ -142,35 +122,9 @@ const UserManagement = ({ onBack }) => {
       </div>
 
       {/* --- DATA TABLE --- */}
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Full Name</th>
-            <th>Role</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.filter(u => 
-            u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-            u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            u.role.toLowerCase().includes(searchQuery.toLowerCase())
-          ).map(u => (
-            <tr key={u.id}>
-              <td style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>{u.username}</td>
-              <td style={{ fontWeight: '500' }}>{u.name}</td>
-              <td>{renderRoleBadge(u.role)}</td>
-              <td style={{ whiteSpace: 'nowrap' }}>
-                <button className="btn-delete" onClick={() => handleDeleteUser(u.id)}>Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <UserTable users={filteredUsers} onDeleteUser={handleDeleteUser} />
+      
       </div>
-
-
     </>
   );
 };
