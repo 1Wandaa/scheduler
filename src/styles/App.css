@@ -1060,6 +1060,25 @@ h6 {
               0 0 0 8px rgba(86, 69, 238, 0.2);
 }
 
+.dashboard-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid white;
+  box-shadow: 0 6px 24px rgba(86, 69, 238, 0.2),
+              0 0 0 6px rgba(86, 69, 238, 0.12);
+  margin: 0 auto 12px;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  display: block;
+}
+
+.dashboard-logo:hover {
+  transform: scale(1.05) rotate(2deg);
+  box-shadow: 0 10px 32px rgba(86, 69, 238, 0.3),
+              0 0 0 8px rgba(86, 69, 238, 0.2);
+}
+
 .login-system-title {
   font-family: 'Poppins', sans-serif;
   font-size: 1.5rem;

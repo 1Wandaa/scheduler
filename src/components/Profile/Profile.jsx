@@ -150,7 +150,7 @@ const Profile = ({ user, onBack }) => {
       if (!gender) throw new Error('Gender is required.');
       if (!studentId.trim()) throw new Error('ID Number is required.');
       if (!department) throw new Error('Department is required.');
-      
+
       // Check if ID is already used by another user
       const studentIdQuery = query(collection(db, 'users'), where('studentId', '==', studentId.trim()));
       const studentIdSnap = await getDocs(studentIdQuery);
@@ -164,7 +164,7 @@ const Profile = ({ user, onBack }) => {
         age: parseInt(age) || null,
         gender: gender,
         studentId: studentId.trim(),
-        department, 
+        department,
         program: derivedProgram,
         ...(yearLevel && { yearLevel: parseInt(yearLevel) }),
         ...(section && { section }),
@@ -231,26 +231,26 @@ const Profile = ({ user, onBack }) => {
             <h1 className="profile-name-title">{fullName || 'User'}</h1>
             <p className="profile-username-subtitle">@{user.username}</p>
           </div>
-          
+
           <div className="profile-header-actions">
-             {!isEditing ? (
-                <button className="btn-premium-edit" onClick={() => setIsEditing(true)}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                  Edit Profile
-                </button>
-              ) : (
-                <button className="btn-premium-cancel" onClick={handleCancel}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                  Cancel Edit
-                </button>
-              )}
+            {!isEditing ? (
+              <button className="btn-premium-edit" onClick={() => setIsEditing(true)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                Edit Profile
+              </button>
+            ) : (
+              <button className="btn-premium-cancel" onClick={handleCancel}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                Cancel Edit
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       <div className="profile-body">
         <form onSubmit={handleSave} className="profile-cards-grid">
-          
+
           {/* PERSONAL INFO CARD */}
           <div className="profile-glass-card">
             <div className="glass-card-header">
@@ -259,7 +259,7 @@ const Profile = ({ user, onBack }) => {
             </div>
             <div className="glass-card-content">
               <div className="form-grid">
-                
+
                 <div className="form-field full-width">
                   <label>Full Name</label>
                   {!isEditing ? (
@@ -303,7 +303,7 @@ const Profile = ({ user, onBack }) => {
             </div>
             <div className="glass-card-content">
               <div className="form-grid">
-                
+
                 <div className="form-field full-width">
                   <label>ID Number</label>
                   {!isEditing ? (
@@ -328,7 +328,7 @@ const Profile = ({ user, onBack }) => {
                 </div>
 
                 <div className="form-field">
-                  <label>Year Level {!isEditing && <span className="opt-label">(Optional)</span>}</label>
+                  <label>Year Level {!isEditing && <span className="opt-label"></span>}</label>
                   {!isEditing ? (
                     <div className="read-only-value">{yearLevel ? YEAR_LEVELS.find(y => y.value.toString() === yearLevel)?.label : '—'}</div>
                   ) : (
@@ -342,7 +342,7 @@ const Profile = ({ user, onBack }) => {
                 </div>
 
                 <div className="form-field">
-                  <label>Section {!isEditing && <span className="opt-label">(Optional)</span>}</label>
+                  <label>Section {!isEditing && <span className="opt-label"></span>}</label>
                   {!isEditing ? (
                     <div className="read-only-value">{section || '—'}</div>
                   ) : (

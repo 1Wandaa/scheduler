@@ -31,8 +31,24 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         setTargetId('');
       }
     };
+    const handleExecuteEvent = (e) => {
+      if (e.detail) {
+        if (e.detail === 'ga' || e.detail.mode === 'ga') {
+          setEngineMode('ga');
+          setTargetId('');
+        } else {
+          setEngineMode(e.detail.mode);
+          setTargetId(e.detail.targetId);
+        }
+        setTimeout(() => document.getElementById('btn-execute-autoschedule')?.click(), 100);
+      }
+    };
     window.addEventListener('change-autoscheduler-mode', handleModeChange);
-    return () => window.removeEventListener('change-autoscheduler-mode', handleModeChange);
+    window.addEventListener('execute-autoscheduler', handleExecuteEvent);
+    return () => {
+      window.removeEventListener('change-autoscheduler-mode', handleModeChange);
+      window.removeEventListener('execute-autoscheduler', handleExecuteEvent);
+    };
   }, []);
 
   // Only consider subjects that match the currently selected active semester
@@ -463,7 +479,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
-        <button onClick={handleExecute} disabled={loading || clearing || (engineMode !== 'ga' && !targetId)} className="btn" style={{ flex: 1, padding: '14px', fontSize: '1rem', whiteSpace: 'nowrap', minWidth: '200px' }}>
+        <button id="btn-execute-autoschedule" onClick={handleExecute} disabled={loading || clearing || (engineMode !== 'ga' && !targetId)} className="btn" style={{ flex: 1, padding: '14px', fontSize: '1rem', whiteSpace: 'nowrap', minWidth: '200px' }}>
           {loading ? 'Processing Schedule...' : 'Generate Timetable'}
         </button>
         <button
