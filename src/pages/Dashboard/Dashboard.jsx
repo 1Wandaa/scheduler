@@ -583,8 +583,10 @@ const Dashboard = ({ user, onLogout }) => {
           font-size: 0.95rem !important;
           background: var(--bg-main) !important;
           color: var(--text-main) !important;
-          margin-top: 24px !important;
+          margin: 24px 0 0 0 !important;
           width: 100% !important;
+          max-width: 100% !important;
+          display: block !important;
           box-sizing: border-box !important;
           font-weight: 500 !important;
           box-shadow: inset 0 2px 6px rgba(0,0,0,0.02) !important;
@@ -599,6 +601,27 @@ const Dashboard = ({ user, onLogout }) => {
           box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
           outline: none !important;
         }
+        .modern-swal-actions {
+          display: flex !important;
+          gap: 12px !important;
+          width: 100% !important;
+          margin-top: 1.5em !important;
+          justify-content: center !important;
+        }
+        @media (max-width: 480px) {
+          .modern-swal-actions {
+            flex-direction: column !important;
+            gap: 10px !important;
+          }
+          .modern-swal-confirm-btn, .modern-swal-cancel-btn {
+            width: 100% !important;
+            margin: 0 !important;
+          }
+          .modern-glass-popup {
+            padding: 24px 16px 20px !important;
+            width: 92% !important;
+          }
+        }
       `;
       document.head.appendChild(style);
     }
@@ -610,7 +633,8 @@ const Dashboard = ({ user, onLogout }) => {
         popup: 'modern-glass-popup',
         confirmButton: 'modern-swal-confirm-btn',
         cancelButton: 'modern-swal-cancel-btn',
-        input: 'modern-swal-input'
+        input: 'modern-swal-input',
+        actions: 'modern-swal-actions'
       },
       buttonsStyling: false,
       showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
