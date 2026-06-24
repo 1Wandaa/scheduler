@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
-import { collection, addDoc, deleteDoc, doc, updateDoc, deleteField } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
-import { ROOM_TYPES, BUILDINGS, DEPARTMENTS } from '../../config/constants';
+import { ROOM_TYPES, BUILDINGS, DEPARTMENTS, getDeptColor } from '../../config/constants';
+import RoomTable from '../../components/RoomTable/RoomTable';
 
 const RoomManagement = ({ rooms, onBack }) => {
   const [showModal, setShowModal] = useState(false);
@@ -12,6 +13,7 @@ const RoomManagement = ({ rooms, onBack }) => {
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [filterBuilding, setFilterBuilding] = useState('');
   const [error, setError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, building: '', department: 'SHARED'
@@ -53,7 +55,7 @@ const RoomManagement = ({ rooms, onBack }) => {
       setError(`A room named "${formData.name.trim()}" already exists.`);
       return;
     }
-    const isCSBuilding = formData.name.trim().toLowerCase().includes('computer science') || formData.name.trim().toLowerCase().includes('bscs');
+    const isCSBuilding = formData.building === 'BSCS Building' || formData.department === 'BSCS';
     const payload = {
       name: formData.name,
       type: formData.type,
@@ -61,14 +63,23 @@ const RoomManagement = ({ rooms, onBack }) => {
       building: formData.building || 'Unassigned',
       department: formData.department || 'SHARED',
     };
-    if (editMode) {
-      // Replaced the deleteField workaround with a pure payload update
-      await updateDoc(doc(db, 'rooms', currentId.toString()), payload);
-    } else {
-      const newId = formData.id || `R${Date.now().toString().slice(-4)}`;
-      await addDoc(collection(db, 'rooms'), { ...payload, id: newId });
+    
+    setIsSaving(true);
+    try {
+      if (editMode) {
+        // Replaced the deleteField workaround with a pure payload update
+        await updateDoc(doc(db, 'rooms', currentId.toString()), payload);
+      } else {
+        const newId = formData.id || `R${Date.now().toString().slice(-4)}`;
+        await addDoc(collection(db, 'rooms'), { ...payload, id: newId });
+      }
+      setShowModal(false);
+    } catch (err) {
+      console.error("Error saving room:", err);
+      setError("Failed to save room. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
-    setShowModal(false);
   };
   const handleDelete = async (id) => {
     const result = await Swal.fire({
@@ -102,50 +113,14 @@ const RoomManagement = ({ rooms, onBack }) => {
 
 
 
-  const getRoomTypeBadge = (room) => {
-    let bg = 'var(--success-bg)';
-    let color = 'var(--success)';
-
-    if (room.type === 'lab') {
-      bg = 'var(--warning-bg)';
-      color = 'var(--warning)';
-    }
-
-    const facilities = [];
-    if (room.hasComputers) facilities.push('Computers');
-
-    return (
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-        <span style={{
-          background: bg,
-          color: color,
-          padding: '3px 8px', 
-          borderRadius: '4px', 
-          fontSize: '0.75rem', 
-          fontWeight: '600', 
-          textTransform: 'capitalize'
-        }}>
-          {room.type}
-        </span>
-        
-        {facilities.length > 0 && (
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {facilities.map(f => (
-              <span key={f} style={{ 
-                fontSize: '0.7rem', 
-                color: 'var(--text-muted)', 
-                border: '1px solid var(--border-color)', 
-                padding: '2px 6px', 
-                borderRadius: '4px' 
-              }}>
-                {f}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const filteredRooms = useMemo(() => {
+    return rooms.filter(r => {
+      const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesBuilding = filterBuilding ? r.building === filterBuilding : true;
+      const matchesDept = departmentFilter === 'All' ? true : (r.department || 'SHARED') === departmentFilter;
+      return matchesSearch && matchesBuilding && matchesDept;
+    }).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [rooms, searchQuery, filterBuilding, departmentFilter]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -153,17 +128,6 @@ const RoomManagement = ({ rooms, onBack }) => {
       if (e.target.placeholder && e.target.placeholder.toLowerCase().includes('search')) return;
       e.preventDefault();
       handleSave();
-    }
-  };
-
-  const getDeptColor = (dept) => {
-    switch(dept) {
-      case 'BSCS': return '#109EEF'; // Blue
-      case 'BAEL': return '#EAB308'; // Yellow
-      case 'BSOA': return '#8B5CF6'; // Purple
-      case 'BSFT': return '#16A34A'; // Green
-      case 'SHARED': return '#64748B'; // Slate
-      default: return 'var(--accent-primary)';
     }
   };
 
@@ -237,37 +201,7 @@ const RoomManagement = ({ rooms, onBack }) => {
         </div>
       </div>
 
-      <table className="data-table">
-        <thead><tr><th>Name</th><th>Dept Owner</th><th>Building</th><th>Type & Facilities</th><th>Actions</th></tr></thead>
-        <tbody>
-          {rooms.filter(r => {
-            const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesBuilding = filterBuilding ? r.building === filterBuilding : true;
-            const matchesDept = departmentFilter === 'All' ? true : (r.department || 'SHARED') === departmentFilter;
-            return matchesSearch && matchesBuilding && matchesDept;
-          }).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => (
-            <tr key={r.id}>
-              <td><strong style={{ color: 'var(--text-main)' }}>{r.name}</strong></td>
-              <td>
-                <span style={{
-                  fontSize: '0.75rem', padding: '3px 10px', borderRadius: 6, fontWeight: 700,
-                  background: (r.department && r.department !== 'SHARED')
-                    ? 'linear-gradient(135deg, #EEF2FF, #E0E7FF)' : '#F1F5F9',
-                  color: (r.department && r.department !== 'SHARED') ? '#4338ca' : '#64748b',
-                }}>
-                  {r.department || 'SHARED'}
-                </span>
-              </td>
-              <td>{r.building || 'Unassigned'}</td>
-              <td>{getRoomTypeBadge(r)}</td>
-              <td style={{ whiteSpace: 'nowrap' }}>
-                <button className="btn-edit" onClick={() => handleOpenEdit(r)}>Edit</button>
-                <button className="btn-delete" onClick={() => handleDelete(r.id)}>Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <RoomTable roomList={filteredRooms} onEdit={handleOpenEdit} onDelete={handleDelete} />
       </div>
 
       {showModal && (
@@ -308,13 +242,22 @@ const RoomManagement = ({ rooms, onBack }) => {
 
             <div style={{ display: 'flex', gap: '20px', marginBottom: '25px', padding: '12px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input type="checkbox" checked={(formData.name.toLowerCase().includes('computer science') || formData.name.toLowerCase().includes('bscs')) ? true : formData.hasComputers} disabled={formData.name.toLowerCase().includes('computer science') || formData.name.toLowerCase().includes('bscs')} onChange={e => setFormData({ ...formData, hasComputers: e.target.checked })} style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} /> Has Computers
+                <input 
+                  type="checkbox" 
+                  checked={(formData.building === 'BSCS Building' || formData.department === 'BSCS') ? true : formData.hasComputers} 
+                  disabled={formData.building === 'BSCS Building' || formData.department === 'BSCS'} 
+                  onChange={e => setFormData({ ...formData, hasComputers: e.target.checked })} 
+                  style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} 
+                /> 
+                Has Computers
               </label>
             </div>
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowModal(false)} style={{ padding: '10px 18px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-muted)' }}>Cancel</button>
-              <button className="btn" onClick={handleSave}>Save Room</button>
+              <button onClick={() => setShowModal(false)} style={{ padding: '10px 18px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-muted)' }} disabled={isSaving}>Cancel</button>
+              <button className="btn" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save Room'}
+              </button>
             </div>
           </div>
         </div>
