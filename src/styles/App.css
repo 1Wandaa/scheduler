@@ -985,17 +985,17 @@ h6 {
    ========================================= */
 .login-fullscreen {
   position: relative;
-  display: flex;
   min-height: 100dvh;
   width: 100%;
-  overflow: hidden;
-  align-items: center;
-  justify-content: center;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Campus background image layer */
 .login-bg {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
 }
@@ -1009,7 +1009,7 @@ h6 {
 
 /* Dark gradient overlay for text readability */
 .login-bg-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 1;
   background: linear-gradient(
@@ -1030,7 +1030,9 @@ h6 {
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 20px;
+  min-height: 100dvh;
+  padding: 40px 20px;
+  box-sizing: border-box;
 }
 
 /* Branding */
@@ -1117,6 +1119,51 @@ h6 {
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.5);
   text-align: center;
+}
+
+@media (max-width: 480px) {
+  .login-center-wrapper {
+    padding: 16px 28px; /* Even more breathing room on the sides */
+  }
+  .login-card {
+    padding: 20px 16px; /* Even smaller inner padding */
+    border-radius: 14px;
+    width: 100%;
+    max-width: 300px; /* Even narrower maximum width */
+  }
+  .login-logo {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 6px;
+  }
+  .login-system-title {
+    font-size: 1.05rem;
+  }
+  .login-school-name {
+    font-size: 0.75rem;
+  }
+  .login-card-title {
+    font-size: 1.15rem;
+  }
+  .login-card-subtitle {
+    font-size: 0.8rem;
+    margin-bottom: 16px;
+  }
+  .input-group label {
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+  }
+  .input-group input, 
+  .input-group select {
+    padding: 8px 10px;
+    font-size: 0.82rem;
+    border-radius: 8px;
+  }
+  .btn-login {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    border-radius: 10px;
+  }
 }
 
 /* =========================================
