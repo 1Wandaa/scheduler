@@ -33,7 +33,7 @@ const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], onTo
           <label key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
             <input
               type="checkbox"
-              checked={selectedSubjects.includes(sub.id)}
+              checked={selectedSubjects.includes(sub.id) || selectedSubjects.includes(sub.code) || selectedSubjects.includes(sub.name)}
               onChange={() => onToggleSubject(sub.id)}
               style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
             />

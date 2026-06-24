@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
-import { DEPARTMENTS } from '../../config/constants';
+import { DEPARTMENTS, getDeptColor } from '../../config/constants';
+import FacultyTable from '../../components/FacultyTable/FacultyTable';
+import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
 
 const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], activeSemester, onBack }) => {
   const [showModal, setShowModal] = useState(false);
@@ -10,10 +12,9 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [currentId, setCurrentId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
-  const [subjectModalFilter, setSubjectModalFilter] = useState('All');
   const [sectionSearchQuery, setSectionSearchQuery] = useState('');
   const [error, setError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: [], assignedSections: []
@@ -23,13 +24,15 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
     setFormData({ id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: [], assignedSections: [] });
     setEditMode(false);
     setError(null);
-    setSubjectSearchQuery('');
-    setSubjectModalFilter('All');
     setSectionSearchQuery('');
     setShowModal(true);
   };
 
-  const handleSubjectToggle = (subject) => {
+  const handleSubjectToggle = (subjectId) => {
+    // SubjectSelector only passes the subjectId
+    const subject = subjects.find(s => s.id === subjectId);
+    if (!subject) return;
+
     setFormData(prev => {
       const current = prev.specialization || [];
       const isChecked = current.includes(subject.id) || current.includes(subject.code) || current.includes(subject.name);
@@ -99,8 +102,6 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
     setCurrentId(prof.id);
     setEditMode(true);
     setError(null);
-    setSubjectSearchQuery('');
-    setSubjectModalFilter('All');
     setSectionSearchQuery('');
     setShowModal(true);
   };
@@ -135,13 +136,21 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
 
     const dataToSave = { ...formData, name: combinedName };
 
-    if (editMode) {
-      await updateDoc(doc(db, 'professors', currentId.toString()), dataToSave);
-    } else {
-      const newId = formData.id || `P${Date.now().toString().slice(-4)}`;
-      await addDoc(collection(db, 'professors'), { ...dataToSave, id: newId });
+    setIsSaving(true);
+    try {
+      if (editMode) {
+        await updateDoc(doc(db, 'professors', currentId.toString()), dataToSave);
+      } else {
+        const newId = formData.id || `P${Date.now().toString().slice(-4)}`;
+        await addDoc(collection(db, 'professors'), { ...dataToSave, id: newId });
+      }
+      setShowModal(false);
+    } catch (err) {
+      console.error("Error saving faculty:", err);
+      setError("Failed to save faculty. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
-    setShowModal(false);
   };
 
   const handleDelete = async (id) => {
@@ -174,15 +183,36 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
     }
   };
 
-  const getDeptColor = (dept) => {
-    switch(dept) {
-      case 'BSCS': return '#109EEF'; // Blue
-      case 'BAEL': return '#EAB308'; // Yellow
-      case 'BSOA': return '#8B5CF6'; // Purple
-      case 'BSFT': return '#16A34A'; // Green
-      default: return 'var(--accent-primary)';
-    }
-  };
+  const filteredProfessors = useMemo(() => {
+    return professors
+      .map(p => ({
+        ...p,
+        formattedName: (() => {
+          if (!p.name) return '';
+          if (p.name.includes(',')) return p.name;
+          const titles = ['Dr.', 'Prof.', 'Mr.', 'Mrs.', 'Ms.', 'Engr.', 'Atty.'];
+          let parts = p.name.trim().split(/\s+/);
+          let title = '';
+          if (parts.length > 0 && titles.includes(parts[0])) title = parts.shift();
+          if (parts.length < 2) return p.name;
+          const surname = parts.pop();
+          return `${surname}, ${title ? title + ' ' : ''}${parts.join(' ')}`.trim();
+        })()
+      }))
+      .filter(p => departmentFilter === 'All' || p.department === departmentFilter)
+      .filter(p => p.formattedName.toLowerCase().includes(searchQuery.toLowerCase()) || p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .sort((a, b) => a.formattedName.localeCompare(b.formattedName));
+  }, [professors, departmentFilter, searchQuery]);
+
+  const filteredSections = useMemo(() => {
+    return [...sections]
+      .filter(sec => (sec.name || '').toLowerCase().includes(sectionSearchQuery.toLowerCase()))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [sections, sectionSearchQuery]);
+
+  const sortedRooms = useMemo(() => {
+    return [...rooms].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [rooms]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -260,49 +290,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
           </div>
         </div>
 
-        <table className="data-table">
-          <thead><tr><th>Name</th><th>Department</th><th>Max Load</th><th>Subjects</th><th>Sections</th><th>Rooms</th><th>Actions</th></tr></thead>
-          <tbody>
-            {professors
-              .map(p => ({
-                ...p,
-                formattedName: (() => {
-                  if (!p.name) return '';
-                  if (p.name.includes(',')) return p.name;
-                  const titles = ['Dr.', 'Prof.', 'Mr.', 'Mrs.', 'Ms.', 'Engr.', 'Atty.'];
-                  let parts = p.name.trim().split(/\s+/);
-                  let title = '';
-                  if (parts.length > 0 && titles.includes(parts[0])) title = parts.shift();
-                  if (parts.length < 2) return p.name;
-                  const surname = parts.pop();
-                  return `${surname}, ${title ? title + ' ' : ''}${parts.join(' ')}`.trim();
-                })()
-              }))
-              .filter(p => departmentFilter === 'All' || p.department === departmentFilter)
-              .filter(p => p.formattedName.toLowerCase().includes(searchQuery.toLowerCase()) || p.name.toLowerCase().includes(searchQuery.toLowerCase()))
-              .sort((a, b) => a.formattedName.localeCompare(b.formattedName))
-              .map(p => (
-                <tr key={p.id}>
-                  <td><strong style={{ color: 'var(--text-main)' }}>{p.formattedName}</strong></td>
-                  <td>{p.department}</td>
-                  <td><span style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '600' }}>{p.maxUnits || p.maxHours || 12} units</span></td>
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {(p.specialization || []).length} subject{(p.specialization || []).length !== 1 ? 's' : ''}
-                  </td>
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {(p.assignedSections || []).length} section{(p.assignedSections || []).length !== 1 ? 's' : ''}
-                  </td>
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {(p.preferredRooms || []).length} room{(p.preferredRooms || []).length !== 1 ? 's' : ''}
-                  </td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    <button className="btn-edit" onClick={() => handleOpenEdit(p)}>Edit</button>
-                    <button className="btn-delete" onClick={() => handleDelete(p.id)}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
+        <FacultyTable facultyList={filteredProfessors} onEdit={handleOpenEdit} onDelete={handleDelete} />
       </div>
 
       {showModal && (
@@ -345,109 +333,19 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
 
             <div className="form-group">
               <label className="form-label">Assigned Subjects</label>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                {['All', 'Minor', ...DEPARTMENTS].map(dept => (
-                  <button
-                    key={dept}
-                    onClick={() => setSubjectModalFilter(dept)}
-                    type="button"
-                    style={{
-                      padding: '4px 12px',
-                      borderRadius: '16px',
-                      border: subjectModalFilter === dept ? `1.5px solid ${getDeptColor(dept)}` : '1px solid var(--border-color)',
-                      background: subjectModalFilter === dept ? getDeptColor(dept) : 'transparent',
-                      color: subjectModalFilter === dept ? '#fff' : 'var(--text-muted)',
-                      cursor: 'pointer',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={(e) => { if (subjectModalFilter !== dept) { e.target.style.borderColor = getDeptColor(dept); e.target.style.color = getDeptColor(dept); } }}
-                    onMouseLeave={(e) => { if (subjectModalFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
-                  >
-                    {dept === 'All' ? 'All Subjects' : dept === 'Minor' ? 'Minor Subjects' : dept}
-                  </button>
-                ))}
-              </div>
-              <input 
-                type="text" 
-                className="form-input" 
-                placeholder="Search subject code or name..." 
-                value={subjectSearchQuery} 
-                onChange={(e) => setSubjectSearchQuery(e.target.value)}
-                style={{ marginBottom: '10px', marginTop: '5px' }}
+              <SubjectSelector
+                subjects={subjects}
+                activeSemester={activeSemester}
+                selectedSubjects={formData.specialization || []}
+                onToggleSubject={handleSubjectToggle}
               />
-              <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
-                {subjects.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No subjects available.</p>}
-                
-                {(() => {
-                  const filteredSubjects = subjects.filter(sub => 
-                    (!sub.semester || sub.semester === 'Both' || sub.semester === activeSemester) &&
-                    ((sub.code || '').toLowerCase().includes(subjectSearchQuery.toLowerCase()) || 
-                    (sub.name || '').toLowerCase().includes(subjectSearchQuery.toLowerCase()))
-                  ).sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' }));
-
-                  const minorSubjects = filteredSubjects.filter(s => s.category === 'Minor');
-                  const majorSubjects = filteredSubjects.filter(s => s.category !== 'Minor');
-
-                  const getSubjectDepts = (subject) => {
-                    if (Array.isArray(subject.departments) && subject.departments.length > 0) return subject.departments;
-                    if (subject.department) return [subject.department];
-                    return [];
-                  };
-
-                  const renderSubjectGroup = (title, subjectList, color) => {
-                    if (subjectList.length === 0) return null;
-                    return (
-                      <div key={title} style={{ marginBottom: '15px' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: color, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${color}`, paddingBottom: '4px' }}>
-                          {title}
-                        </div>
-                        {subjectList.map(sub => (
-                          <label key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
-                            <input
-                              type="checkbox"
-                              checked={(formData.specialization || []).includes(sub.id) || (formData.specialization || []).includes(sub.code) || (formData.specialization || []).includes(sub.name)}
-                              onChange={() => handleSubjectToggle(sub)}
-                              style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
-                            />
-                            <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{sub.code}</span>
-                            <span>{sub.name}</span>
-                            <span style={{ marginLeft: 'auto', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '10px', background: 'var(--border-color)', color: 'var(--text-muted)', fontWeight: '600' }}>
-                              {sub.semester && sub.semester !== 'Both' ? sub.semester.replace(' Semester', ' Sem') : 'Both Sem'}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    );
-                  };
-
-                  return (
-                    <>
-                      {(subjectModalFilter === 'All' || subjectModalFilter === 'Minor') && renderSubjectGroup("Minor Subjects", minorSubjects, "var(--warning)")}
-                      
-                      {DEPARTMENTS.map(dept => {
-                        if (subjectModalFilter !== 'All' && subjectModalFilter !== dept) return null;
-                        const deptMajors = majorSubjects.filter(s => getSubjectDepts(s).includes(dept));
-                        return renderSubjectGroup(`${dept} Major Subjects`, deptMajors, getDeptColor(dept));
-                      })}
-
-                      {subjectModalFilter === 'All' && renderSubjectGroup(
-                        "Unassigned Major Subjects",
-                        majorSubjects.filter(s => getSubjectDepts(s).length === 0),
-                        "var(--text-muted)"
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
             </div>
 
             <div className="form-group" style={{ marginBottom: '25px' }}>
               <label className="form-label">Preferred Rooms (Optional)</label>
               <div style={{ marginTop: '8px', maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
-                {rooms.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No rooms available.</p>}
-                {[...rooms].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(room => (
+                {sortedRooms.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No rooms available.</p>}
+                {sortedRooms.map(room => (
                   <label key={room.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
                     <input
                       type="checkbox"
@@ -472,10 +370,8 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                 style={{ marginBottom: '10px', marginTop: '5px' }}
               />
               <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
-                {sections.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No sections available.</p>}
-                {[...sections]
-                  .filter(sec => (sec.name || '').toLowerCase().includes(sectionSearchQuery.toLowerCase()))
-                  .sort((a, b) => a.name.localeCompare(b.name)).map(sec => (
+                {filteredSections.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No sections available.</p>}
+                {filteredSections.map(sec => (
                   <label key={sec.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
                     <input
                       type="checkbox"
@@ -490,8 +386,10 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
             </div>
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowModal(false)} style={{ padding: '10px 18px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-muted)' }}>Cancel</button>
-              <button className="btn" onClick={handleSave}>Save Faculty</button>
+              <button onClick={() => setShowModal(false)} style={{ padding: '10px 18px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-muted)' }} disabled={isSaving}>Cancel</button>
+              <button className="btn" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save Faculty'}
+              </button>
             </div>
           </div>
         </div>
