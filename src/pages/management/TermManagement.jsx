@@ -4,8 +4,7 @@ import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 
 function TermManagement({ availableSemesters, availableSchoolYears, onBack, publishedTerms = {}, setPublishedTerms }) {
-    const [newSemester, setNewSemester] = useState('');
-    const [newSchoolYear, setNewSchoolYear] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
     const [publishSemester, setPublishSemester] = useState(availableSemesters.length > 0 ? availableSemesters[availableSemesters.length - 1] : '');
     const [publishYear, setPublishYear] = useState(availableSchoolYears.length > 0 ? availableSchoolYears[availableSchoolYears.length - 1] : '');
@@ -30,6 +29,7 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
         });
 
         if (result.isConfirmed) {
+            setIsSaving(true);
             try {
                 const newPublishedTerms = { ...publishedTerms, [termKey]: !isCurrentlyPublished };
                 await handleUpdateSettings({ publishedTerms: newPublishedTerms });
@@ -37,6 +37,8 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
                 Swal.fire({ title: 'Success', text: `Schedule has been ${action.toLowerCase()}ed.`, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, customClass: { popup: 'minimal-toast' } });
             } catch (e) {
                 console.error(e);
+            } finally {
+                setIsSaving(false);
             }
         }
     };
@@ -65,11 +67,16 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
         }
     };
 
-    const handleAddSemester = async () => {
+    const handleAddTerm = async (type) => {
+        const isSem = type === 'semester';
+        const list = isSem ? availableSemesters : availableSchoolYears;
+        const typeName = isSem ? 'Semester' : 'School Year';
+        const fieldName = isSem ? 'semesters' : 'schoolYears';
+
         const { value: term } = await Swal.fire({
-            title: 'Add New Semester',
+            title: `Add New ${typeName}`,
             input: 'text',
-            inputPlaceholder: 'e.g. 1st Semester',
+            inputPlaceholder: isSem ? 'e.g. 1st Semester' : 'e.g. 2028-2029',
             showCancelButton: true,
             confirmButtonText: 'Add',
             customClass: { popup: 'minimal-swal', title: 'minimal-title', confirmButton: 'btn-primary', cancelButton: 'back-btn' },
@@ -79,45 +86,28 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
         if (!term) return;
         const trimmed = term.trim();
         if (!trimmed) return;
-        if (availableSemesters.includes(trimmed)) {
-            Swal.fire({ title: 'Duplicate', text: 'This semester already exists.', icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+
+        const isDuplicate = list.some(item => item.toLowerCase() === trimmed.toLowerCase());
+        if (isDuplicate) {
+            Swal.fire({ title: 'Duplicate', text: `This ${typeName.toLowerCase()} already exists.`, icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
             return;
         }
+
+        Swal.showLoading();
+        const updated = [...list, trimmed];
+        await handleUpdateSettings({ [fieldName]: updated });
         
-        const updated = [...availableSemesters, trimmed];
-        await handleUpdateSettings({ semesters: updated });
-        
-        Swal.fire({ title: 'Added', text: `Semester "${trimmed}" added.`, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+        Swal.fire({ title: 'Added', text: `${typeName} "${trimmed}" added.`, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
     };
 
-    const handleAddYear = async () => {
-        const { value: term } = await Swal.fire({
-            title: 'Add School Year',
-            input: 'text',
-            inputPlaceholder: 'e.g. 2028-2029',
-            showCancelButton: true,
-            confirmButtonText: 'Add',
-            customClass: { popup: 'minimal-swal', title: 'minimal-title', confirmButton: 'btn-primary', cancelButton: 'back-btn' },
-            buttonsStyling: false
-        });
+    const handleEditTerm = async (type, oldTerm) => {
+        const isSem = type === 'semester';
+        const list = isSem ? availableSemesters : availableSchoolYears;
+        const typeName = isSem ? 'Semester' : 'School Year';
+        const fieldName = isSem ? 'semesters' : 'schoolYears';
 
-        if (!term) return;
-        const trimmed = term.trim();
-        if (!trimmed) return;
-        if (availableSchoolYears.includes(trimmed)) {
-            Swal.fire({ title: 'Duplicate', text: 'This school year already exists.', icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
-            return;
-        }
-        
-        const updated = [...availableSchoolYears, trimmed];
-        await handleUpdateSettings({ schoolYears: updated });
-        
-        Swal.fire({ title: 'Added', text: `School Year "${trimmed}" added.`, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
-    };
-
-    const handleEditSemester = async (oldTerm) => {
         const { value: term } = await Swal.fire({
-            title: 'Edit Semester',
+            title: `Edit ${typeName}`,
             input: 'text',
             inputValue: oldTerm,
             showCancelButton: true,
@@ -129,46 +119,29 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
         if (!term) return;
         const trimmed = term.trim();
         if (!trimmed || trimmed === oldTerm) return;
-        if (availableSemesters.includes(trimmed)) {
-            Swal.fire({ title: 'Duplicate', text: 'This semester already exists.', icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+
+        const isDuplicate = list.some(item => item !== oldTerm && item.toLowerCase() === trimmed.toLowerCase());
+        if (isDuplicate) {
+            Swal.fire({ title: 'Duplicate', text: `This ${typeName.toLowerCase()} already exists.`, icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
             return;
         }
+
+        Swal.showLoading();
+        const updated = list.map(item => item === oldTerm ? trimmed : item);
+        await handleUpdateSettings({ [fieldName]: updated });
         
-        const updated = availableSemesters.map(s => s === oldTerm ? trimmed : s);
-        await handleUpdateSettings({ semesters: updated });
-        
-        Swal.fire({ title: 'Updated', text: `Semester updated to "${trimmed}".`, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+        Swal.fire({ title: 'Updated', text: `${typeName} updated to "${trimmed}".`, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
     };
 
-    const handleEditYear = async (oldTerm) => {
-        const { value: term } = await Swal.fire({
-            title: 'Edit School Year',
-            input: 'text',
-            inputValue: oldTerm,
-            showCancelButton: true,
-            confirmButtonText: 'Save',
-            customClass: { popup: 'minimal-swal', title: 'minimal-title', confirmButton: 'btn-primary', cancelButton: 'back-btn' },
-            buttonsStyling: false
-        });
+    const handleDeleteTerm = async (type, term) => {
+        const isSem = type === 'semester';
+        const list = isSem ? availableSemesters : availableSchoolYears;
+        const typeName = isSem ? 'Semester' : 'School Year';
+        const fieldName = isSem ? 'semesters' : 'schoolYears';
 
-        if (!term) return;
-        const trimmed = term.trim();
-        if (!trimmed || trimmed === oldTerm) return;
-        if (availableSchoolYears.includes(trimmed)) {
-            Swal.fire({ title: 'Duplicate', text: 'This school year already exists.', icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
-            return;
-        }
-        
-        const updated = availableSchoolYears.map(y => y === oldTerm ? trimmed : y);
-        await handleUpdateSettings({ schoolYears: updated });
-        
-        Swal.fire({ title: 'Updated', text: `School Year updated to "${trimmed}".`, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
-    };
-
-    const handleDeleteSemester = async (sem) => {
         const result = await Swal.fire({
-            title: 'Delete Semester?',
-            text: `Remove "${sem}" from predefined options?`,
+            title: `Delete ${typeName}?`,
+            text: `Remove "${term}" from predefined options?`,
             showCancelButton: true,
             confirmButtonText: 'Delete',
             cancelButtonText: 'Cancel',
@@ -185,34 +158,9 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
         });
         
         if (result.isConfirmed) {
-            const updated = availableSemesters.filter(s => s !== sem);
-            await handleUpdateSettings({ semesters: updated });
-            Swal.fire({ title: 'Deleted', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, customClass: { popup: 'minimal-toast' } });
-        }
-    };
-
-    const handleDeleteYear = async (year) => {
-        const result = await Swal.fire({
-            title: 'Delete School Year?',
-            text: `Remove "${year}" from predefined options?`,
-            showCancelButton: true,
-            confirmButtonText: 'Delete',
-            cancelButtonText: 'Cancel',
-            customClass: {
-                popup: 'minimal-swal',
-                title: 'minimal-title',
-                htmlContainer: 'minimal-text',
-                actions: 'minimal-actions',
-                confirmButton: 'btn-delete',
-                cancelButton: 'back-btn'
-            },
-            buttonsStyling: false,
-            focusCancel: true
-        });
-        
-        if (result.isConfirmed) {
-            const updated = availableSchoolYears.filter(y => y !== year);
-            await handleUpdateSettings({ schoolYears: updated });
+            Swal.showLoading();
+            const updated = list.filter(item => item !== term);
+            await handleUpdateSettings({ [fieldName]: updated });
             Swal.fire({ title: 'Deleted', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, customClass: { popup: 'minimal-toast' } });
         }
     };
@@ -242,8 +190,8 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <button className="btn" onClick={handleAddSemester}>+ Add Semester</button>
-                    <button className="btn" onClick={handleAddYear}>+ Add Year</button>
+                    <button className="btn" onClick={() => handleAddTerm('semester')}>+ Add Semester</button>
+                    <button className="btn" onClick={() => handleAddTerm('schoolYear')}>+ Add Year</button>
                 </div>
             </div>
 
@@ -271,8 +219,8 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
                                             <td style={{ fontWeight: 500 }}>{sem}</td>
                                             <td style={{ textAlign: 'center' }}>
                                                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                                    <button className="btn-edit" onClick={() => handleEditSemester(sem)}>Edit</button>
-                                                    <button className="btn-delete" onClick={() => handleDeleteSemester(sem)}>Delete</button>
+                                                    <button className="btn-edit" onClick={() => handleEditTerm('semester', sem)}>Edit</button>
+                                                    <button className="btn-delete" onClick={() => handleDeleteTerm('semester', sem)}>Delete</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -304,8 +252,8 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
                                             <td style={{ fontWeight: 500 }}>{year}</td>
                                             <td style={{ textAlign: 'center' }}>
                                                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                                    <button className="btn-edit" onClick={() => handleEditYear(year)}>Edit</button>
-                                                    <button className="btn-delete" onClick={() => handleDeleteYear(year)}>Delete</button>
+                                                    <button className="btn-edit" onClick={() => handleEditTerm('schoolYear', year)}>Edit</button>
+                                                    <button className="btn-delete" onClick={() => handleDeleteTerm('schoolYear', year)}>Delete</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -348,14 +296,14 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
 
                     <div style={{ flex: '1', minWidth: '200px', display: 'flex', alignItems: 'center' }}>
                         {publishedTerms[`${publishSemester}_${publishYear}`] === true ? (
-                            <button className="btn btn-delete" onClick={handleTogglePublish} style={{ width: '100%', padding: '10px 14px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                            <button className="btn btn-delete" onClick={handleTogglePublish} disabled={isSaving} style={{ width: '100%', padding: '10px 14px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                                Unpublish Schedule
+                                {isSaving ? 'Unpublishing...' : 'Unpublish Schedule'}
                             </button>
                         ) : (
-                            <button className="btn btn-primary" onClick={handleTogglePublish} style={{ width: '100%', padding: '10px 14px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                            <button className="btn btn-primary" onClick={handleTogglePublish} disabled={isSaving} style={{ width: '100%', padding: '10px 14px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                Publish Schedule
+                                {isSaving ? 'Publishing...' : 'Publish Schedule'}
                             </button>
                         )}
                     </div>
