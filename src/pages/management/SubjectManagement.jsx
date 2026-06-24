@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
+import SubjectTable, { getSubjectDepts } from '../../components/SubjectTable/SubjectTable';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
-import { DEPARTMENTS } from '../../config/constants';
+import { DEPARTMENTS, getDeptColor } from '../../config/constants';
 
 const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, onBack }) => {
   const [showModal, setShowModal] = useState(false);
@@ -11,12 +12,13 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
-    id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: 'Both'
+    id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || (availableSemesters[0] || '')
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || 'Both' });
+    setFormData({ id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || (availableSemesters[0] || '') });
     setEditMode(false);
     setError(null);
     setShowModal(true);
@@ -30,7 +32,7 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
     }
     // Set category fallback for older data
     normalized.category = normalized.category || 'Major';
-    normalized.semester = normalized.semester || 'Both';
+    normalized.semester = (normalized.semester && normalized.semester !== 'Both') ? normalized.semester : (normalized.category === 'Minor' ? 'Both' : (activeSemester || (availableSemesters[0] || '')));
 
     setFormData(normalized);
     setCurrentId(subject.id);
@@ -45,6 +47,11 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
       setError("Subject code and name are required.");
       return;
     }
+
+    if (formData.category !== 'Minor' && (!formData.departments || formData.departments.length === 0)) {
+      setError("Major subjects must have at least one department assigned.");
+      return;
+    }
     
     const normalize = str => (str || '').replace(/\s+/g, '').toUpperCase();
     const isDuplicate = subjects.some(s => s.id !== currentId && normalize(s.code) === normalize(formData.code));
@@ -54,13 +61,21 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
       return;
     }
 
-    if (editMode) {
-      await updateDoc(doc(db, 'subjects', currentId.toString()), formData);
-    } else {
-      const newId = formData.id || `S${Date.now().toString().slice(-4)}`;
-      await addDoc(collection(db, 'subjects'), { ...formData, id: newId });
+    setIsSaving(true);
+    try {
+      if (editMode) {
+        await updateDoc(doc(db, 'subjects', currentId.toString()), formData);
+      } else {
+        const newId = formData.id || `S${Date.now().toString().slice(-4)}`;
+        await addDoc(collection(db, 'subjects'), { ...formData, id: newId });
+      }
+      setShowModal(false);
+    } catch (err) {
+      console.error("Error saving subject:", err);
+      setError("Failed to save subject. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
-    setShowModal(false);
   };
 
   const handleDelete = async (id) => {
@@ -104,84 +119,23 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
     });
   };
 
-  // Helper to display departments (handles both old string and new array format)
-  const getSubjectDepts = (subject) => {
-    if (Array.isArray(subject.departments) && subject.departments.length > 0) return subject.departments;
-    if (subject.department) return [subject.department];
-    return [];
-  };
-
-  // Split subjects into categories
-  const filteredSubjects = subjects.filter(s => 
-    (!s.semester || s.semester === 'Both' || s.semester === activeSemester) &&
-    ((s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (s.code || '').toLowerCase().includes(searchQuery.toLowerCase()))
-  ).sort((a, b) => {
-    const codeA = (a.code || '').replace(/\s+/g, '').toUpperCase();
-    const codeB = (b.code || '').replace(/\s+/g, '').toUpperCase();
-    return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
-  });
-  const minorSubjects = filteredSubjects.filter(s => s.category === 'Minor');
-  const majorSubjects = filteredSubjects.filter(s => s.category !== 'Minor'); // Default to major
-
-  // Helper to render a formatted table
-  const renderSubjectTable = (subjectList, title, titleColor = 'var(--accent-primary)') => {
-    if (subjectList.length === 0) return null;
-    return (
-      <div style={{ marginBottom: '30px' }}>
-        <h4 style={{
-          color: titleColor,
-          marginBottom: '12px',
-          borderBottom: `2px solid ${titleColor}`,
-          paddingBottom: '5px',
-          display: 'inline-block',
-          marginTop: '10px'
-        }}>
-          {title}
-        </h4>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Code</th><th>Name</th><th>Semester</th><th>Department(s)</th><th>Units</th><th>Meeting Time</th><th>Lab Required</th><th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {subjectList.map(s => (
-              <tr key={s.id}>
-                <td><strong style={{ color: 'var(--accent-primary)' }}>{s.code}</strong></td>
-                <td style={{ fontWeight: '500' }}>{s.name}</td>
-                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                  {s.semester && s.semester !== 'Both' ? s.semester.replace(' Semester', ' Sem') : 'Both'}
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                    {getSubjectDepts(s).length > 0 ? getSubjectDepts(s).map(dept => (
-                      <span key={dept} style={{ background: 'var(--bg-main)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent-primary)' }}>{dept}</span>
-                    )) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>None</span>}
-                  </div>
-                </td>
-                <td style={{ fontWeight: '500', textAlign: 'center' }}>{s.credits || 3}</td>
-                <td style={{ fontWeight: '500', color: 'var(--text-muted)' }}>{s.hoursPerMeeting || 1.5} hrs</td>
-                <td>
-                  <span style={{
-                    background: s.requiredLab ? 'var(--danger-bg)' : 'var(--success-bg)',
-                    color: s.requiredLab ? 'var(--danger)' : 'var(--success)',
-                    padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600'
-                  }}>
-                    {s.requiredLab ? 'Yes' : 'No'}
-                  </span>
-                </td>
-                <td style={{ whiteSpace: 'nowrap' }}>
-                  <button className="btn-edit" onClick={() => handleOpenEdit(s)}>Edit</button>
-                  <button className="btn-delete" onClick={() => handleDelete(s.id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
+  // Split subjects into categories using useMemo for performance
+  const { minorSubjects, majorSubjects } = useMemo(() => {
+    const filteredSubjects = subjects.filter(s => 
+      (!s.semester || s.semester === 'Both' || s.semester === activeSemester) &&
+      ((s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (s.code || '').toLowerCase().includes(searchQuery.toLowerCase()))
+    ).sort((a, b) => {
+      const codeA = (a.code || '').replace(/\s+/g, '').toUpperCase();
+      const codeB = (b.code || '').replace(/\s+/g, '').toUpperCase();
+      return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+    });
+    
+    return {
+      minorSubjects: filteredSubjects.filter(s => s.category === 'Minor'),
+      majorSubjects: filteredSubjects.filter(s => s.category !== 'Minor') // Default to major
+    };
+  }, [subjects, searchQuery, activeSemester]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -189,18 +143,6 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
       if (e.target.placeholder && e.target.placeholder.toLowerCase().includes('search')) return;
       e.preventDefault();
       handleSave();
-    }
-  };
-
-  const getDeptColor = (dept) => {
-    switch(dept) {
-      case 'BSCS': return '#109EEF'; // Blue
-      case 'BAEL': return '#EAB308'; // Yellow
-      case 'BSOA': return '#8B5CF6'; // Purple
-      case 'BSFT': return '#16A34A'; // Green
-      case 'SHARED': return '#64748B'; // Slate
-      case 'Minor': return '#F5A623'; // Orange
-      default: return 'var(--accent-primary)';
     }
   };
 
@@ -269,20 +211,41 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
         {/* --- DYNAMIC TABLES INSTEAD OF ONE BIG TABLE --- */}
 
         {/* Render Minor Subjects First */}
-        {(departmentFilter === 'All' || departmentFilter === 'Minor') && renderSubjectTable(minorSubjects, "Minor / General Education Subjects", "var(--warning)")}
+        {(departmentFilter === 'All' || departmentFilter === 'Minor') && (
+          <SubjectTable 
+            subjectList={minorSubjects} 
+            title="Minor / General Education Subjects" 
+            titleColor="var(--warning)" 
+            onEdit={handleOpenEdit} 
+            onDelete={handleDelete} 
+          />
+        )}
 
         {/* Render Major Subjects grouped by Department */}
         {DEPARTMENTS.map(dept => {
           if (departmentFilter !== 'All' && departmentFilter !== dept) return null;
           const deptMajors = majorSubjects.filter(s => getSubjectDepts(s).includes(dept));
-          return renderSubjectTable(deptMajors, `${dept} Major Subjects`, "var(--accent-primary)");
+          return (
+            <SubjectTable 
+              key={dept}
+              subjectList={deptMajors} 
+              title={`${dept} Major Subjects`} 
+              titleColor="var(--accent-primary)" 
+              onEdit={handleOpenEdit} 
+              onDelete={handleDelete} 
+            />
+          );
         })}
 
         {/* Fallback for major subjects that don't have a department assigned yet */}
-        {(departmentFilter === 'All') && renderSubjectTable(
-          majorSubjects.filter(s => getSubjectDepts(s).length === 0),
-          "Unassigned Major Subjects",
-          "var(--text-muted)"
+        {(departmentFilter === 'All') && (
+          <SubjectTable 
+            subjectList={majorSubjects.filter(s => getSubjectDepts(s).length === 0)} 
+            title="Unassigned Major Subjects" 
+            titleColor="var(--text-muted)" 
+            onEdit={handleOpenEdit} 
+            onDelete={handleDelete} 
+          />
         )}
 
       </div>
@@ -304,7 +267,14 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
               {/* Added Category Dropdown */}
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Category</label>
-                <select className="form-select" value={formData.category || 'Major'} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                <select className="form-select" value={formData.category || 'Major'} onChange={e => {
+                  const newCategory = e.target.value;
+                  const updates = { category: newCategory };
+                  if (newCategory !== 'Minor' && formData.semester === 'Both') {
+                    updates.semester = activeSemester || availableSemesters[0] || '';
+                  }
+                  setFormData({ ...formData, ...updates });
+                }}>
                   <option value="Major">Major Subject</option>
                   <option value="Minor">Minor Subject</option>
                 </select>
@@ -312,11 +282,11 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
 
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Semester</label>
-                <select className="form-select" value={formData.semester || 'Both'} onChange={e => setFormData({ ...formData, semester: e.target.value })}>
+                <select className="form-select" value={formData.semester || (activeSemester || (availableSemesters[0] || ''))} onChange={e => setFormData({ ...formData, semester: e.target.value })}>
                   {availableSemesters.map(sem => (
                     <option key={sem} value={sem}>{sem}</option>
                   ))}
-                  <option value="Both">Both Semesters</option>
+                  {formData.category === 'Minor' && <option value="Both">Both Semesters</option>}
                 </select>
               </div>
             </div>
@@ -358,8 +328,10 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
               </label>
             </div>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowModal(false)} style={{ padding: '10px 18px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-muted)' }}>Cancel</button>
-              <button className="btn" onClick={handleSave}>Save Subject</button>
+              <button onClick={() => setShowModal(false)} style={{ padding: '10px 18px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-muted)' }} disabled={isSaving}>Cancel</button>
+              <button className="btn" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save Subject'}
+              </button>
             </div>
           </div>
         </div>

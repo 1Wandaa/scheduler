@@ -41,3 +41,28 @@ export const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
 export const BUILDINGS = ['BSOA Building', 'BAEL Building', 'BSFT Building', 'BSCS Building', 'General Building', 'Gymnasium'];
 export const SEMESTERS = ['1st Semester', '2nd Semester', 'Summer'];
 export const SCHOOL_YEARS = ['2024-2025', '2025-2026', '2026-2027', '2027-2028'];
+
+// Map full program names to their short department codes for grouping
+export const PROGRAM_DEPARTMENTS = {
+  'Bachelor of Science in Computer Science': 'BSCS',
+  'BS Computer Science': 'BSCS',
+  'Bachelor of Science in Food Technology': 'BSFT',
+  'BS Food Technology': 'BSFT',
+  'Bachelor of Science in Office Administration': 'BSOA',
+  'BS Office Administration': 'BSOA',
+  'Bachelor of Arts in English Language': 'BAEL',
+  'BA English Language': 'BAEL',
+  'BS Information Technology': 'BSIT',
+};
+
+export const getDeptColor = (dept) => {
+  switch(dept) {
+    case 'BSCS': return '#109EEF'; // Blue
+    case 'BAEL': return '#EAB308'; // Yellow
+    case 'BSOA': return '#8B5CF6'; // Purple
+    case 'BSFT': return '#16A34A'; // Green
+    case 'SHARED': return '#64748B'; // Slate
+    case 'Minor': return '#F5A623'; // Orange
+    default: return 'var(--accent-primary)';
+  }
+};
