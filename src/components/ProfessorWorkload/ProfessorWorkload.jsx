@@ -1,135 +1,227 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import '../../styles/ProfessorWorkload.css';
 
 function ProfessorWorkload({ professors, schedules }) {
   const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('All');
+  const [sortBy, setSortBy] = useState('name'); // 'name' or 'utilization'
+
   const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
+  const matchesProfessor = (s, professor) => professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);
 
-  const matchesProfessor = (s, professor) =>
-    professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);
-
-  const DEPT_COLORS = {
-    BSCS: { bg: 'rgba(16, 158, 239, 0.1)', border: 'rgba(16, 158, 239, 0.3)', solid: '#109EEF' },  // Blue
-    BSFT: { bg: 'rgba(22, 163, 74, 0.1)', border: 'rgba(22, 163, 74, 0.3)', solid: '#16A34A' },   // Green
-    BSOA: { bg: 'rgba(139, 92, 246, 0.1)', border: 'rgba(139, 92, 246, 0.3)', solid: '#8B5CF6' }, // Purple
-    BAEL: { bg: 'rgba(234, 179, 8, 0.1)', border: 'rgba(234, 179, 8, 0.3)', solid: '#EAB308' },   // Yellow
+  const getDeptColor = (dept) => {
+    if (!dept) return '#64748b'; // default slate
+    const d = dept.toUpperCase();
+    if (d.includes('BSCS')) return '#10b981'; // green
+    if (d.includes('BSFT')) return '#f59e0b'; // amber
+    if (d.includes('BSOA')) return '#8b5cf6'; // purple
+    if (d.includes('BAEL')) return '#ec4899'; // pink
+    if (d.includes('CRIM')) return '#ef4444'; // red
+    if (d.includes('AGRI')) return '#84cc16'; // lime
+    return '#3b82f6'; // blue
   };
 
-  const getDeptTheme = (dept) => {
-    if (!dept) return null;
-    const upper = dept.toUpperCase();
-    for (const [key, theme] of Object.entries(DEPT_COLORS)) {
-      if (upper.includes(key)) return theme;
+  const processedProfessors = useMemo(() => {
+    return professors.map(professor => {
+      const profSchedules = schedules.filter(s => matchesProfessor(s, professor));
+      
+      const uniqueSubjectSections = new Map();
+      for (const s of profSchedules) {
+        const subjectId = s.subject?.id || s.subject?.code || 'unknown';
+        const sectionId = s.section?.id || 'no-section';
+        const key = `${subjectId}__${sectionId}`;
+        if (!uniqueSubjectSections.has(key)) {
+          uniqueSubjectSections.set(key, Number(s.subject?.credits) || 3);
+        }
+      }
+      
+      const units = Array.from(uniqueSubjectSections.values()).reduce((sum, c) => sum + c, 0);
+      const cap = Math.max(1, Number(professor.maxUnits || professor.maxHours || 12));
+      const utilization = (units / cap) * 100;
+
+      let statusColor = '#10b981'; // Green
+      let statusBg = 'rgba(16,185,129,0.15)';
+      if (utilization > 100) {
+        statusColor = '#ef4444'; // Red
+        statusBg = 'rgba(239,68,68,0.15)';
+      } else if (utilization >= 80) {
+        statusColor = '#f59e0b'; // Yellow
+        statusBg = 'rgba(245,158,11,0.15)';
+      }
+
+      return {
+        ...professor,
+        profSchedules,
+        units,
+        cap,
+        utilization,
+        statusColor,
+        statusBg
+      };
+    });
+  }, [professors, schedules]);
+
+  const filteredAndSortedProfessors = useMemo(() => {
+    let result = processedProfessors;
+
+    // Filter by Search
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(p => (p.name || '').toLowerCase().includes(q));
     }
-    return null;
-  };
+
+    // Filter by Department
+    if (departmentFilter !== 'All') {
+      result = result.filter(p => p.department === departmentFilter);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      if (sortBy === 'utilization') {
+        return b.utilization - a.utilization; // Descending
+      } else {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+    });
+
+    return result;
+  }, [processedProfessors, searchQuery, departmentFilter, sortBy]);
+
+  const uniqueDepartments = useMemo(() => {
+    const depts = new Set(professors.map(p => p.department).filter(Boolean));
+    return ['All', ...Array.from(depts).sort()];
+  }, [professors]);
 
   return (
-    <div className="professor-workload-container card" style={{ animation: 'fadeIn 0.5s' }}>
+    <div className="professor-workload-container pw-animate">
 
-      {/* MODERNIZED ISO FORMAT HEADER */}
-      <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '25px', backgroundColor: 'var(--card-bg)', color: 'var(--text-main)', overflow: 'hidden' }}>
-        <div style={{ flex: '0 0 100px', padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid var(--border-color)', backgroundColor: 'var(--table-header)' }}>
+      {/* --- Premium Header --- */}
+      <div className="pw-header">
+        <div className="pw-header-logo">
           <img
             src={LOGO_SRC}
             alt="Logo"
-            style={{ width: '65px', height: '65px', objectFit: 'cover', borderRadius: '50%' }}
             onError={(e) => {
               e.currentTarget.onerror = null;
               e.currentTarget.src = FALLBACK_LOGO;
             }}
           />
         </div>
-        <div style={{ flex: 1, padding: '15px', textAlign: 'center', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <h2 style={{ margin: '0 0 5px 0', fontSize: '1.2rem', fontWeight: '700', color: 'var(--accent-dark)', letterSpacing: '1px' }}>CAPIZ STATE UNIVERSITY</h2>
-          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px' }}>FACULTY WORKLOAD REPORT</h3>
+        <div className="pw-header-content">
+          <h2 className="pw-header-title">CAPIZ STATE UNIVERSITY</h2>
+          <h3 className="pw-header-subtitle">Faculty Workload Report</h3>
         </div>
-        <div style={{ flex: '0 0 180px', padding: '15px', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', backgroundColor: 'var(--table-header)', color: 'var(--text-muted)' }}>
-          <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '4px', marginBottom: '4px' }}><strong>Doc. Code:</strong> CAPSU-F-046</div>
-          <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '4px', marginBottom: '4px' }}><strong>Revision No.:</strong> 01</div>
+        <div className="pw-header-meta">
+          <div><strong>Doc. Code:</strong> CAPSU-F-046</div>
+          <div><strong>Revision No.:</strong> 01</div>
           <div><strong>Effectivity:</strong> Sept 2023</div>
         </div>
       </div>
 
-      <div className="workload-list">
-        {professors.map(professor => {
-          const profSchedules = schedules.filter(s => matchesProfessor(s, professor));
+      {/* --- Controls --- */}
+      <div className="pw-controls">
+        <div className="pw-search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input 
+            type="text" 
+            placeholder="Search faculty..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <select 
+          className="pw-select" 
+          value={departmentFilter}
+          onChange={(e) => setDepartmentFilter(e.target.value)}
+        >
+          {uniqueDepartments.map(dept => (
+            <option key={dept} value={dept}>{dept === 'All' ? 'All Departments' : dept}</option>
+          ))}
+        </select>
+        <select 
+          className="pw-select" 
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+        >
+          <option value="name">Sort by Name</option>
+          <option value="utilization">Sort by Highest Workload</option>
+        </select>
+      </div>
 
-          // Count unique subject-section pairs to avoid double-counting multi-meeting subjects
-          const uniqueSubjectSections = new Map();
-          for (const s of profSchedules) {
-            const subjectId = s.subject?.id || s.subject?.code || 'unknown';
-            const sectionId = s.section?.id || 'no-section';
-            const key = `${subjectId}__${sectionId}`;
-            if (!uniqueSubjectSections.has(key)) {
-              uniqueSubjectSections.set(key, Number(s.subject?.credits) || 3);
-            }
-          }
-          const units = Array.from(uniqueSubjectSections.values()).reduce((sum, c) => sum + c, 0);
-          const cap = Math.max(1, Number(professor.maxUnits || professor.maxHours || 12));
-          const utilization = (units / cap) * 100;
-
-          let statusClass = 'normal';
-          let statusColor = 'var(--success)';
-          if (utilization > 100) { statusClass = 'overload'; statusColor = 'var(--danger)'; }
-          else if (utilization > 80) { statusClass = 'warning'; statusColor = 'var(--warning)'; }
-
-          const deptTheme = getDeptTheme(professor.department);
-          const cardStyle = { position: 'relative', overflow: 'hidden' };
-          
-          if (deptTheme) {
-            cardStyle.background = `linear-gradient(135deg, ${deptTheme.bg}, rgba(255, 255, 255, 0.95))`;
-            cardStyle.borderColor = deptTheme.border;
-          }
-
-          return (
-            <div key={professor.id} className={`workload-card ${statusClass}`} style={cardStyle}>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', backgroundColor: statusColor }}></div>
-
-              <h3 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                {professor.name}
-                <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '12px', backgroundColor: 'var(--bg-main)', color: statusColor, border: `1px solid ${statusColor}` }}>
-                  {utilization.toFixed(0)}%
-                </span>
-              </h3>
-              <p className="department">{professor.department}</p>
-
-              <div className="workload-bar">
-                <div className="bar-fill" style={{ width: `${Math.min(utilization, 100)}%`, backgroundColor: statusColor }}></div>
+      {/* --- Cards Grid --- */}
+      {filteredAndSortedProfessors.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '16px', opacity: 0.5 }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-main)' }}>No faculty found</h3>
+          <p style={{ margin: 0 }}>Try adjusting your search or filter criteria.</p>
+        </div>
+      ) : (
+        <div className="workload-list">
+          {filteredAndSortedProfessors.map((prof) => (
+            <div 
+              key={prof.id} 
+              className="pw-card"
+              style={{ '--status-color': prof.statusColor, '--status-bg': prof.statusBg }}
+            >
+              
+              <div className="pw-card-header">
+                <div>
+                  <h3 className="pw-card-name">{prof.name}</h3>
+                  <p className="pw-card-dept" style={{ color: getDeptColor(prof.department) }}>
+                    {prof.department}
+                  </p>
+                </div>
+                <div className="pw-badge">
+                  {prof.utilization.toFixed(0)}%
+                </div>
               </div>
 
-              <p className="workload-text" style={{ color: 'var(--text-main)' }}>
-                <strong>{units}</strong> / {cap} units assigned
-              </p>
+              <div className="pw-progress-container">
+                <div className="pw-progress-bg">
+                  <div className="pw-progress-fill" style={{ width: `${Math.min(prof.utilization, 100)}%` }}></div>
+                </div>
+              </div>
 
-              <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
-                <p style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase' }}>Recent Assignments</p>
-                {profSchedules.slice(0, 3).map((schedule, idx) => {
+              <div className="pw-progress-text">
+                {prof.units} <span>/ {prof.cap} units assigned</span>
+              </div>
+
+              <div className="pw-assignments">
+                <h4 className="pw-assignments-title">Recent Assignments</h4>
+                {prof.profSchedules.slice(0, 3).map((schedule, idx) => {
                   const dayShort = typeof schedule.day === 'string' ? schedule.day.slice(0, 3) : '—';
                   const timeStr = schedule.timeSlot?.time ?? schedule.timeSlot?.label ?? '';
                   const timeStart = typeof timeStr === 'string' && timeStr.includes(' - ')
                     ? timeStr.split(' - ')[0]
                     : timeStr || '—';
                   return (
-                  <div key={schedule.id ?? idx} className="schedule-item" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--accent-primary)', fontWeight: '500' }}>{schedule.subject?.code ?? '—'}</span>
-                    <span>{dayShort} • {timeStart}</span>
-                  </div>
+                    <div key={schedule.id ?? idx} className="pw-assignment-item">
+                      <span className="pw-assignment-subj">{schedule.subject?.code ?? '—'}</span>
+                      <span className="pw-assignment-time">{dayShort} • {timeStart}</span>
+                    </div>
                   );
                 })}
-                {profSchedules.length === 0 && (
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No classes assigned yet.</p>
+                
+                {prof.profSchedules.length === 0 && (
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0, padding: '8px 0' }}>
+                    No classes assigned yet.
+                  </p>
                 )}
-                {profSchedules.length > 3 && (
-                  <p className="more-items">+{profSchedules.length - 3} more classes</p>
+                
+                {prof.profSchedules.length > 3 && (
+                  <button className="pw-more-btn">
+                    +{prof.profSchedules.length - 3} more classes
+                  </button>
                 )}
               </div>
+
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1774,7 +1774,7 @@ const Dashboard = ({ user, onLogout }) => {
         )}
         {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={enrichedSchedules} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} availableSemesters={availableSemesters} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} />}
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}

@@ -6,7 +6,7 @@ import { DEPARTMENTS, getDeptColor } from '../../config/constants';
 import FacultyTable from '../../components/FacultyTable/FacultyTable';
 import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
 
-const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], activeSemester, onBack }) => {
+const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], schedules = [], activeSemester, onBack }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState('All');
@@ -290,7 +290,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
           </div>
         </div>
 
-        <FacultyTable facultyList={filteredProfessors} onEdit={handleOpenEdit} onDelete={handleDelete} />
+        <FacultyTable facultyList={filteredProfessors} schedules={schedules} onEdit={handleOpenEdit} onDelete={handleDelete} />
       </div>
 
       {showModal && (
