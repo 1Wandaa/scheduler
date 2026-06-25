@@ -78,7 +78,14 @@ function App() {
           }
 
           const q = query(collection(db, 'users'), where('username', 'in', searchTargets));
-          const snapshot = await getDocs(q);
+          
+          // Implement a timeout for getDocs to prevent infinite loading on flaky mobile networks
+          const fetchPromise = getDocs(q);
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Firestore request timed out')), 5000);
+          });
+          
+          const snapshot = await Promise.race([fetchPromise, timeoutPromise]);
 
           if (!snapshot.empty) {
             let targetDoc = snapshot.docs[0];
@@ -116,7 +123,15 @@ function App() {
           }
         } catch (error) {
           console.error('Error restoring session:', error);
-          setUser(null);
+          // Fallback to minimal user profile to avoid logging them out on slow networks
+          const emailPrefix = firebaseUser.email ? firebaseUser.email.split('@')[0] : 'User';
+          const storedUsername = localStorage.getItem('smartsched_username') || emailPrefix;
+          setUser({
+            name: firebaseUser.displayName || storedUsername,
+            username: storedUsername,
+            role: 'Student', // Safe default fallback
+            email: firebaseUser.email
+          });
         }
       } else {
         // User is signed out
