@@ -168,10 +168,10 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
           </select>
         </div>
 
-        <div className="form-row" style={{ display: 'flex', gap: '15px' }}>
-          <div className="form-group" style={{ flex: 1 }}>
+        <div className="form-row">
+          <div className="form-group">
             <label className="form-label">Day *</label>
-            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+            <div className="day-selector">
               {DAYS.map(day => {
                 const shortDay = day.substring(0, 3);
                 const isActive = formData.day === day;
@@ -183,15 +183,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                       setFormData(prev => ({ ...prev, day }));
                       setValidation(null);
                     }}
-                    style={{
-                      flex: '1 0 auto', minWidth: '44px', height: '42px', borderRadius: '10px',
-                      background: isActive ? 'var(--accent-primary)' : 'var(--bg-secondary, #f1f5f9)',
-                      color: isActive ? '#fff' : 'var(--text-main)',
-                      border: isActive ? 'none' : '1px solid var(--border-color)',
-                      fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}
+                    className={`day-btn ${isActive ? 'active' : ''}`}
                   >
                     {shortDay}
                   </button>
@@ -202,7 +194,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             <input type="hidden" name="day" value={formData.day} required />
           </div>
 
-          <div className="form-group" style={{ flex: 1 }}>
+          <div className="form-group">
             <label className="form-label">Time Slot *</label>
             <select
               className="form-select"
@@ -227,7 +219,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
           </div>
         </div>
 
-        <button type="submit" disabled={loading} className="btn" style={{ width: '100%', padding: '14px', fontSize: '1.05rem', marginTop: '10px' }}>
+        <button type="submit" disabled={loading} className="submit-btn" style={{ width: '100%', marginTop: '10px' }}>
           {loading ? 'Scheduling...' : 'Add to Schedule'}
         </button>
       </form>
@@ -239,7 +231,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       )}
 
       {selectedSubject && eligibleProfessors.length === 0 && (
-        <div className="info-box" style={{ borderColor: 'var(--danger)' }}>
+        <div className="info-box danger">
           No faculty is authorized for this subject{selectedSection ? ` in section ${selectedSection.name}` : ''}. Assign a specialization in Faculty Management.
         </div>
       )}

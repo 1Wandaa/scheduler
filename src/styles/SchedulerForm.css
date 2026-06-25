@@ -148,3 +148,43 @@
 .validation-box li {
   margin: 0.25rem 0;
 }
+
+/* Day Selector */
+.day-selector {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.day-selector::-webkit-scrollbar {
+  display: none;
+}
+
+.day-btn {
+  flex: 1 0 auto;
+  min-width: 44px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--bg-secondary, #f1f5f9);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.day-btn.active {
+  background: var(--accent-primary);
+  color: #fff;
+  border: none;
+}
+
+.info-box.danger {
+  border-left-color: var(--danger);
+}
