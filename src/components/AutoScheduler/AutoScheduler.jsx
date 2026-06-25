@@ -485,22 +485,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         <button
           onClick={handleClearAll}
           disabled={loading || clearing}
-          style={{
-            flex: 1,
-            padding: '14px 20px',
-            fontSize: '0.9rem',
-            fontWeight: 700,
-            borderRadius: '12px',
-            border: '2px solid var(--danger)',
-            background: 'transparent',
-            color: 'var(--danger)',
-            cursor: (loading || clearing) ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s ease',
-            opacity: (loading || clearing) ? 0.5 : 1,
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={e => { if (!loading && !clearing) { e.currentTarget.style.background = 'var(--danger)'; e.currentTarget.style.color = '#fff'; } }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--danger)'; }}
+          className="btn-danger-outline"
         >
           {clearing ? 'Clearing...' : '🗑 Clear All Schedules'}
         </button>
@@ -508,7 +493,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
       {/* AI Status */}
       {aiStatus && (
-        <div style={{ marginTop: '12px', padding: '10px 14px', background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.08))', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--accent-primary)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="ai-status-panel">
           {aiStatus}
         </div>
       )}
@@ -536,26 +521,20 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
           {/* Data Issues (Pre-flight infeasible items) */}
           {result.prescriptions?.some(p => p.isDataIssue) && (
-            <div style={{ marginTop: '20px', marginBottom: '20px' }}>
-              <h3 style={{ color: 'var(--warning)', borderBottom: '2px solid var(--warning)', paddingBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="result-section data-issues-section">
+              <h3>
                 ⚠️ Data Issues ({result.prescriptions.filter(p => p.isDataIssue).length})
               </h3>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '8px 0 12px' }}>
+              <p className="section-description">
                 These subjects cannot be scheduled due to missing data (e.g., no eligible professors or rooms). Please fix these in Management before running again.
               </p>
-              <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'grid', gap: '10px' }}>
+              <div className="card-list">
                 {result.prescriptions.filter(p => p.isDataIssue).map((p, idx) => (
-                  <div key={idx} style={{
-                    padding: '14px',
-                    background: 'rgba(245,166,35,0.05)',
-                    borderLeft: '4px solid var(--warning)',
-                    borderRadius: '8px',
-                    fontSize: '0.85rem',
-                  }}>
-                    <div style={{ fontWeight: '700', color: 'var(--text-main)', marginBottom: '4px' }}>
+                  <div key={idx} className="data-issue-card">
+                    <div className="card-title">
                       {p.subject?.code || p.subject?.name} {p.section?.name ? `— ${p.section.name}` : ''}
                     </div>
-                    <div style={{ color: 'var(--warning)', fontSize: '0.8rem' }}>
+                    <div className="card-reason">
                       {p.reason}
                     </div>
                   </div>
@@ -566,31 +545,31 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
           {/* Success Grouped by Day */}
           {result.schedule.length > 0 && (
-            <div>
-              <h3 style={{ color: 'var(--success)', borderBottom: '2px solid var(--success)', paddingBottom: '5px' }}>
+            <div className="result-section success-section">
+              <h3>
                 Successfully Scheduled ({result.schedule.length})
               </h3>
 
-              <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '10px' }}>
+              <div className="schedule-list">
                 {DAYS.map(day => {
                   const dayClasses = groupedSchedule[day];
                   if (!dayClasses || dayClasses.length === 0) return null;
 
                   return (
-                    <div key={day} style={{ marginBottom: '15px' }}>
-                      <h4 style={{ margin: '10px 0 5px 0', color: 'var(--accent-dark)' }}>{day}</h4>
-                      <div style={{ display: 'grid', gap: '8px' }}>
+                    <div key={day} className="day-group">
+                      <h4>{day}</h4>
+                      <div className="card-list">
                         {dayClasses.map((item, idx) => (
-                          <div key={idx} style={{ padding: '10px', background: 'var(--success-bg)', borderLeft: item.prescriptionNote ? '4px solid var(--warning)' : '4px solid var(--success)', borderRadius: '4px', fontSize: '0.85rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                          <div key={idx} className={`schedule-card ${item.prescriptionNote ? 'warning-border' : 'success-border'}`}>
+                            <div className="schedule-card-header">
                               <span>{item.subject.code} {item.section ? `(${item.section.name})` : ''}</span>
                               <span>{getMeetingTimeLabel(item.timeSlot, item.subject?.hoursPerMeeting) || item.timeSlot.label}</span>
                             </div>
-                            <div style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
+                            <div className="schedule-card-body">
                               {item.room.name} • Prof. {item.professor.name}
                             </div>
                             {item.prescriptionNote && (
-                              <div style={{ marginTop: '6px', padding: '6px 10px', background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.2)', borderRadius: '6px', fontSize: '0.78rem', color: 'var(--warning)' }}>
+                              <div className="schedule-card-warning">
                                 ⚠️ {item.prescriptionNote}
                               </div>
                             )}
@@ -606,14 +585,14 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
           {/* Prescriptions Required (replaces "Could Not Schedule") */}
           {result.unscheduled.length > 0 && (
-            <div style={{ marginTop: '20px' }}>
-              <h3 style={{ color: 'var(--danger)', borderBottom: '2px solid var(--danger)', paddingBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="result-section prescriptions-section">
+              <h3>
                 📋 Prescriptions Required ({result.unscheduled.length})
               </h3>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '8px 0 12px' }}>
+              <p className="section-description">
                 These classes need manual intervention or overflow placement. Review the prescriptions below.
               </p>
-              <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'grid', gap: '10px' }}>
+              <div className="card-list">
                 {result.unscheduled.map((s, idx) => {
                   // Find matching GA prescription if available
                   const gaPrescription = (result.prescriptions || []).find(
@@ -621,39 +600,32 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                   );
 
                   return (
-                    <div key={idx} style={{
-                      padding: '14px',
-                      background: 'linear-gradient(135deg, rgba(239,68,68,0.04), rgba(249,115,22,0.04))',
-                      border: '1px solid rgba(239,68,68,0.15)',
-                      borderLeft: '4px solid var(--danger)',
-                      borderRadius: '8px',
-                      fontSize: '0.85rem',
-                    }}>
-                      <div style={{ fontWeight: '700', color: 'var(--text-main)', marginBottom: '4px' }}>
+                    <div key={idx} className="prescription-card">
+                      <div className="card-title">
                         {s?.subject?.code || s?.subject?.name || 'Unknown Subject'}
                         {s?.section?.name ? ` — ${s.section.name}` : ''}
                       </div>
-                      <div style={{ color: 'var(--danger)', fontSize: '0.8rem', marginBottom: '8px' }}>
+                      <div className="card-reason">
                         Reason: {s?.reason || 'Insufficient slots or conflict'}
                       </div>
                       
                       {/* GA Engine Suggestions */}
                       {gaPrescription && (
-                        <div style={{ padding: '10px 12px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: '6px', marginTop: '6px' }}>
-                          <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                        <div className="engine-prescription">
+                          <div className="engine-prescription-title">
                             Engine Prescription:
                           </div>
                           {gaPrescription.suggestedRooms?.length > 0 && (
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-main)', marginBottom: '4px' }}>
+                            <div className="engine-prescription-item">
                               <strong>Rooms:</strong> {gaPrescription.suggestedRooms.map(r => `${r.name} (${r.department})`).join(', ')}
                             </div>
                           )}
                           {gaPrescription.suggestedProfessors?.length > 0 && (
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-main)', marginBottom: '4px' }}>
+                            <div className="engine-prescription-item">
                               <strong>Professors:</strong> {gaPrescription.suggestedProfessors.map(p => `${p.name} (${p.department})`).join(', ')}
                             </div>
                           )}
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px', fontStyle: 'italic' }}>
+                          <div className="engine-prescription-action">
                             {gaPrescription.suggestedAction}
                           </div>
                         </div>
@@ -667,60 +639,53 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
           {/* AI Prescriptions Panel */}
           {aiInsights && aiInsights.length > 0 && (
-            <div style={{ marginTop: '20px' }}>
-              <h3 style={{ color: 'var(--accent-primary)', borderBottom: '2px solid var(--accent-primary)', paddingBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="result-section ai-prescriptions-section">
+              <h3>
                 🧠 AI Prescriptions ({aiInsights.length})
               </h3>
-              <div style={{ display: 'grid', gap: '10px', marginTop: '10px' }}>
+              <div className="card-list">
                 {aiInsights.map((insight, idx) => (
-                  <div key={idx} style={{
-                    padding: '14px',
-                    background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.06))',
-                    border: '1px solid rgba(99,102,241,0.15)',
-                    borderLeft: '4px solid var(--accent-primary)',
-                    borderRadius: '8px',
-                    fontSize: '0.85rem',
-                  }}>
-                    <div style={{ fontWeight: '700', color: 'var(--text-main)', marginBottom: '6px' }}>
+                  <div key={idx} className="ai-prescription-card">
+                    <div className="card-title">
                       {insight.subject}{insight.section ? ` — ${insight.section}` : ''}
                     </div>
-                    <div style={{ color: 'var(--text-muted)', marginBottom: '8px', lineHeight: '1.5' }}>
+                    <div className="card-description">
                       {insight.problem}
                     </div>
                     
                     {/* Concrete suggestion from AI */}
                     {(insight.suggestedRoom || insight.suggestedDay || insight.suggestedTime || insight.suggestedProfessor) && (
-                      <div style={{ padding: '10px 12px', background: insight.validated ? 'rgba(5,150,105,0.06)' : 'rgba(245,166,35,0.06)', border: `1px solid ${insight.validated ? 'rgba(5,150,105,0.15)' : 'rgba(245,166,35,0.2)'}`, borderRadius: '6px', marginBottom: '8px' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: '700', color: insight.validated ? 'var(--success)' : 'var(--warning)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                      <div className={`ai-suggestion-box ${insight.validated ? 'validated' : 'unverified'}`}>
+                        <div className="ai-suggestion-title">
                           {insight.validated ? 'Validated Placement:' : 'Suggested Placement (unverified):'}
                         </div>
                         {insight.validationWarnings?.length > 0 && (
-                          <div style={{ fontSize: '0.78rem', color: 'var(--warning)', marginBottom: '6px' }}>
+                          <div className="ai-suggestion-warnings">
                             {insight.validationWarnings.map((w, wi) => <div key={wi}>⚠️ {w}</div>)}
                           </div>
                         )}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '6px', fontSize: '0.82rem' }}>
+                        <div className="ai-suggestion-grid">
                           {insight.suggestedRoom && (
-                            <div><strong style={{ color: 'var(--text-muted)' }}>Room:</strong> <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{insight.suggestedRoom}</span></div>
+                            <div><strong>Room:</strong> <span>{insight.suggestedRoom}</span></div>
                           )}
                           {insight.suggestedDay && (
-                            <div><strong style={{ color: 'var(--text-muted)' }}>Day:</strong> <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{insight.suggestedDay}</span></div>
+                            <div><strong>Day:</strong> <span>{insight.suggestedDay}</span></div>
                           )}
                           {insight.suggestedTime && (
-                            <div><strong style={{ color: 'var(--text-muted)' }}>Time:</strong> <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{insight.suggestedTime}</span></div>
+                            <div><strong>Time:</strong> <span>{insight.suggestedTime}</span></div>
                           )}
                           {insight.suggestedProfessor && (
-                            <div><strong style={{ color: 'var(--text-muted)' }}>Prof:</strong> <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{insight.suggestedProfessor}</span></div>
+                            <div><strong>Prof:</strong> <span>{insight.suggestedProfessor}</span></div>
                           )}
                         </div>
                       </div>
                     )}
 
-                    <div style={{ marginTop: '4px' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: '600', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Actions:</span>
-                      <ul style={{ margin: '6px 0 0', paddingLeft: '18px', lineHeight: '1.7' }}>
+                    <div className="ai-actions">
+                      <span className="ai-actions-title">Actions:</span>
+                      <ul>
                         {(insight.solutions || []).map((sol, sIdx) => (
-                          <li key={sIdx} style={{ color: 'var(--text-main)', fontSize: '0.83rem' }}>{sol}</li>
+                          <li key={sIdx}>{sol}</li>
                         ))}
                       </ul>
                     </div>

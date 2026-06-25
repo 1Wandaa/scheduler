@@ -182,3 +182,298 @@
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* === New Semantic Classes === */
+.btn-danger-outline {
+  flex: 1;
+  padding: 14px 20px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border-radius: 12px;
+  border: 2px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-danger-outline:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-danger-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-status-panel {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.08));
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--accent-primary);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.result-section {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.result-section h3 {
+  padding-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.data-issues-section h3 {
+  color: var(--warning);
+  border-bottom: 2px solid var(--warning);
+}
+
+.success-section h3 {
+  color: var(--success);
+  border-bottom: 2px solid var(--success);
+}
+
+.prescriptions-section h3 {
+  color: var(--danger);
+  border-bottom: 2px solid var(--danger);
+}
+
+.ai-prescriptions-section h3 {
+  color: var(--accent-primary);
+  border-bottom: 2px solid var(--accent-primary);
+}
+
+.section-description {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 8px 0 12px;
+}
+
+.card-list {
+  display: grid;
+  gap: 10px;
+  max-height: 350px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.data-issue-card {
+  padding: 14px;
+  background: rgba(245,166,35,0.05);
+  border-left: 4px solid var(--warning);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.card-title {
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+
+.card-reason {
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
+.data-issue-card .card-reason {
+  color: var(--warning);
+}
+
+.day-group {
+  margin-bottom: 15px;
+}
+
+.day-group h4 {
+  margin: 10px 0 5px 0;
+  color: var(--accent-dark);
+}
+
+.schedule-card {
+  padding: 10px;
+  background: var(--success-bg);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.schedule-card.success-border {
+  border-left: 4px solid var(--success);
+}
+
+.schedule-card.warning-border {
+  border-left: 4px solid var(--warning);
+}
+
+.schedule-card-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+}
+
+.schedule-card-body {
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.schedule-card-warning {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: rgba(245,166,35,0.1);
+  border: 1px solid rgba(245,166,35,0.2);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: var(--warning);
+}
+
+.prescription-card {
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(239,68,68,0.04), rgba(249,115,22,0.04));
+  border: 1px solid rgba(239,68,68,0.15);
+  border-left: 4px solid var(--danger);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.prescription-card .card-reason {
+  margin-bottom: 8px;
+}
+
+.engine-prescription {
+  padding: 10px 12px;
+  background: rgba(99,102,241,0.06);
+  border: 1px solid rgba(99,102,241,0.12);
+  border-radius: 6px;
+  margin-top: 6px;
+}
+
+.engine-prescription-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.engine-prescription-item {
+  font-size: 0.8rem;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+
+.engine-prescription-action {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.ai-prescription-card {
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.06));
+  border: 1px solid rgba(99,102,241,0.15);
+  border-left: 4px solid var(--accent-primary);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.ai-prescription-card .card-description {
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.ai-suggestion-box {
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.ai-suggestion-box.validated {
+  background: rgba(5,150,105,0.06);
+  border: 1px solid rgba(5,150,105,0.15);
+}
+
+.ai-suggestion-box.unverified {
+  background: rgba(245,166,35,0.06);
+  border: 1px solid rgba(245,166,35,0.2);
+}
+
+.ai-suggestion-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.ai-suggestion-box.validated .ai-suggestion-title {
+  color: var(--success);
+}
+
+.ai-suggestion-box.unverified .ai-suggestion-title {
+  color: var(--warning);
+}
+
+.ai-suggestion-warnings {
+  font-size: 0.78rem;
+  color: var(--warning);
+  margin-bottom: 6px;
+}
+
+.ai-suggestion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 6px;
+  font-size: 0.82rem;
+}
+
+.ai-suggestion-grid strong {
+  color: var(--text-muted);
+}
+
+.ai-suggestion-grid span {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.ai-actions {
+  margin-top: 4px;
+}
+
+.ai-actions-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ai-actions ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  line-height: 1.7;
+}
+
+.ai-actions li {
+  color: var(--text-main);
+  font-size: 0.83rem;
+}
+
+/* Make card-list responsive */
+@media (max-width: 600px) {
+  .ai-suggestion-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -61,6 +61,12 @@
   gap: 1.25rem;
 }
 
+@media (max-width: 600px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .submit-btn {
   padding: 13px 24px;
   background: linear-gradient(135deg, var(--accent-primary), #7c3aed);

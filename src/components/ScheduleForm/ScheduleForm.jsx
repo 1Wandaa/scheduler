@@ -85,87 +85,91 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     <div className="schedule-form-container">
       <h2>Create Schedule</h2>
       <form onSubmit={handleSubmit} className="schedule-form">
-        <div className="form-group">
-          <label className="form-label">Subject *</label>
-          <select
-            className="form-select"
-            name="subject"
-            value={formData.subject}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select a subject</option>
-            {[...subjects].filter(s => !s.semester || s.semester === 'Both' || s.semester === activeSemester).sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' })).map(subject => (
-                <option key={subject.id} value={subject.id}>
-                {subject.code} - {subject.name}
-              </option>
-            ))}
-          </select>
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Subject *</label>
+            <select
+              className="form-select"
+              name="subject"
+              value={formData.subject}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select a subject</option>
+              {[...subjects].filter(s => !s.semester || s.semester === 'Both' || s.semester === activeSemester).sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' })).map(subject => (
+                  <option key={subject.id} value={subject.id}>
+                  {subject.code} - {subject.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Section *</label>
+            <select
+              className="form-select"
+              name="section"
+              value={formData.section}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select a section</option>
+              {sections && [...sections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(sec => (
+                <option key={sec.id} value={sec.id}>
+                  {sec.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Section *</label>
-          <select
-            className="form-select"
-            name="section"
-            value={formData.section}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select a section</option>
-            {sections && [...sections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(sec => (
-              <option key={sec.id} value={sec.id}>
-                {sec.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Professor *</label>
+            <select
+              className="form-select"
+              name="professor"
+              value={formData.professor}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select a professor</option>
+              {[...eligibleProfessors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(professor => (
+                <option key={professor.id} value={professor.id}>
+                  {professor.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div className="form-group">
-          <label className="form-label">Professor *</label>
-          <select
-            className="form-select"
-            name="professor"
-            value={formData.professor}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select a professor</option>
-            {[...eligibleProfessors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(professor => (
-              <option key={professor.id} value={professor.id}>
-                {professor.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Room *</label>
-          <select
-            className="form-select"
-            name="room"
-            value={formData.room}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select a room</option>
-            {Object.entries(rooms.reduce((acc, r) => {
-              const b = r.building || 'Other';
-              if (!acc[b]) acc[b] = [];
-              acc[b].push(r);
-              return acc;
-            }, {}))
-            .sort(([bA], [bB]) => bA.localeCompare(bB))
-            .map(([building, bRooms]) => (
-              <optgroup key={building} label={building}>
-                {bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => (
-                  <option key={room.id} value={room.id}>
-                    {room.name}{room.hasComputers ? ' (Lab)' : ''}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+          <div className="form-group">
+            <label className="form-label">Room *</label>
+            <select
+              className="form-select"
+              name="room"
+              value={formData.room}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select a room</option>
+              {Object.entries(rooms.reduce((acc, r) => {
+                const b = r.building || 'Other';
+                if (!acc[b]) acc[b] = [];
+                acc[b].push(r);
+                return acc;
+              }, {}))
+              .sort(([bA], [bB]) => bA.localeCompare(bB))
+              .map(([building, bRooms]) => (
+                <optgroup key={building} label={building}>
+                  {bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => (
+                    <option key={room.id} value={room.id}>
+                      {room.name}{room.hasComputers ? ' (Lab)' : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="form-row">
