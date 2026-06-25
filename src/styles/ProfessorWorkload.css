@@ -168,7 +168,7 @@
 /* --- Cards Grid --- */
 .workload-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 20px;
 }
 
@@ -378,6 +378,9 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .professor-workload-container {
+    padding: 1rem;
+  }
   .pw-header {
     flex-direction: column;
   }
@@ -386,20 +389,28 @@
     border-bottom: 1px solid var(--border-color);
     padding: 16px;
   }
+  .pw-header-content {
+    padding: 16px;
+    text-align: center;
+    align-items: center;
+  }
+  .pw-header-title {
+    font-size: 1.2rem;
+  }
+  .pw-header-subtitle {
+    font-size: 0.85rem;
+  }
   .pw-header-meta {
     border-left: none;
     border-top: 1px solid var(--border-color);
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: 12px;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
   }
   .pw-header-meta > div {
     border-bottom: none;
-    border-right: 1px solid var(--border-color);
-    padding: 0 12px 0 0;
-  }
-  .pw-header-meta > div:last-child {
     border-right: none;
+    padding: 0;
   }
 }
