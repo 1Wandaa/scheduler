@@ -55,7 +55,7 @@ const Dashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const pathParts = location.pathname.split('/');
-  const activeTab = pathParts[2] || (isStudent ? 'room-utilization' : 'dashboard');
+  const activeTab = pathParts[2] || (isStudent ? 'view-schedules' : 'dashboard');
 
   const setActiveTab = (tab) => {
     if (tab === 'dashboard') {
@@ -800,7 +800,7 @@ const Dashboard = ({ user, onLogout }) => {
               </>
             )}
 
-            <NavItem label="View Schedules" iconPath={NAV_ICONS.viewSchedules} active={activeTab === 'room-utilization'} onClick={() => handleTabClick('room-utilization')} />
+            <NavItem label="View Schedules" iconPath={NAV_ICONS.viewSchedules} active={activeTab === 'view-schedules'} onClick={() => handleTabClick('view-schedules')} />
           </ul>
 
           {/* Divider + Logout */}
@@ -997,7 +997,7 @@ const Dashboard = ({ user, onLogout }) => {
               {isAdmin && <SystemReminders />}
 
               {/* Recently Scheduled Feed */}
-              <RecentActivity schedules={enrichedSchedules} onViewAll={() => setActiveTab('room-utilization')} />
+              <RecentActivity schedules={enrichedSchedules} onViewAll={() => setActiveTab('view-schedules')} />
 
             </div>
 
@@ -1024,16 +1024,16 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={enrichedSchedules} />}
 
         {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
-        {activeTab === 'room-utilization' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={enrichedSchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
+        {activeTab === 'view-schedules' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={enrichedSchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
 
-        {activeTab === 'profile' && <Profile user={user} onBack={() => setActiveTab(isAdmin ? 'dashboard' : 'room-utilization')} />}
+        {activeTab === 'profile' && <Profile user={user} onBack={() => setActiveTab(isAdmin ? 'dashboard' : 'view-schedules')} />}
 
       </div>
       <Chatbot schedules={enrichedSchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
       <BottomNav activeTab={activeTab} handleTabClick={handleTabClick} isAdmin={isAdmin} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 
       {/* --- Mobile Floating Action Button (FAB) --- */}
-      {isAdmin && isMobile && (activeTab === 'room-utilization' || activeTab === 'schedule') && (
+      {isAdmin && isMobile && (activeTab === 'view-schedules' || activeTab === 'schedule') && (
         <DraggableSpeedDial 
           onAddSchedule={() => setIsScheduleFormOpen(true)} 
           onAutoScheduleAction={handleAutoScheduleAction}

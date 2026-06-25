@@ -9,7 +9,7 @@ const BottomNav = ({ activeTab, handleTabClick, isAdmin, setIsMobileMenuOpen }) 
         <span>Home</span>
       </button>
     )}
-    <button className={`bottom-nav-btn ${activeTab === 'room-utilization' ? 'active' : ''}`} onClick={() => handleTabClick('room-utilization')}>
+    <button className={`bottom-nav-btn ${activeTab === 'view-schedules' ? 'active' : ''}`} onClick={() => handleTabClick('view-schedules')}>
       <Icon d={NAV_ICONS.viewSchedules} size={22} />
       <span>Schedules</span>
     </button>
