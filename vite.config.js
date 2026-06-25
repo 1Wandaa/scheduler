@@ -54,7 +54,7 @@ export default defineConfig({
       }
     })
   ],
-  base: './', // <-- Add this line
+  base: '/',
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx']
   }
