@@ -38,6 +38,9 @@ import KpiTile from './components/KpiTile';
 import NavItem from './components/NavItem';
 import CustomDropdown from './components/CustomDropdown';
 import BottomNav from './components/BottomNav';
+import SystemReminders from './components/SystemReminders';
+import RecentActivity from './components/RecentActivity';
+import { showAutoScheduleModal } from './utils/autoScheduleModals';
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard = ({ user, onLogout }) => {
@@ -78,202 +81,16 @@ const Dashboard = ({ user, onLogout }) => {
   const handleTabClick = (tab) => { setActiveTab(tab); setIsMobileMenuOpen(false); };
 
   const handleAutoScheduleAction = (mode) => {
-    // --- Modernized Swal Styling Configuration ---
-    if (!document.getElementById('modern-swal-styles')) {
-      const style = document.createElement('style');
-      style.id = 'modern-swal-styles';
-      style.innerHTML = `
-        .modern-glass-popup {
-          border-radius: 24px !important;
-          border: 1px solid var(--border-color) !important;
-          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.2) inset !important;
-          padding: 32px 24px 24px !important;
-          background: var(--card-bg) !important;
-          color: var(--text-main) !important;
-          backdrop-filter: blur(20px) !important;
-          font-family: inherit !important;
-        }
-        .modern-swal-confirm-btn {
-          background: linear-gradient(135deg, var(--accent-primary, #6366f1), #8b5cf6) !important;
-          color: white !important;
-          border: none !important;
-          border-radius: 14px !important;
-          padding: 14px 28px !important;
-          font-weight: 700 !important;
-          font-size: 0.95rem !important;
-          cursor: pointer !important;
-          box-shadow: 0 6px 16px rgba(99, 102, 241, 0.25) !important;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-          margin: 0 8px !important;
-          letter-spacing: 0.02em !important;
-        }
-        .modern-swal-confirm-btn:hover {
-          transform: translateY(-2px) !important;
-          box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35) !important;
-        }
-        .modern-swal-cancel-btn {
-          background: transparent !important;
-          color: var(--text-muted) !important;
-          border: 2px solid var(--border-color) !important;
-          border-radius: 14px !important;
-          padding: 12px 28px !important;
-          font-weight: 700 !important;
-          font-size: 0.95rem !important;
-          cursor: pointer !important;
-          transition: all 0.2s ease !important;
-          margin: 0 8px !important;
-        }
-        .modern-swal-cancel-btn:hover {
-          background: rgba(0, 0, 0, 0.03) !important;
-          color: var(--text-main) !important;
-          border-color: rgba(0,0,0,0.15) !important;
-        }
-        .modern-swal-input {
-          border-radius: 12px !important;
-          border: 2px solid var(--border-color) !important;
-          padding: 14px 18px !important;
-          font-size: 0.95rem !important;
-          background: var(--bg-main) !important;
-          color: var(--text-main) !important;
-          margin: 24px 0 0 0 !important;
-          width: 100% !important;
-          max-width: 100% !important;
-          display: block !important;
-          box-sizing: border-box !important;
-          font-weight: 500 !important;
-          box-shadow: inset 0 2px 6px rgba(0,0,0,0.02) !important;
-          transition: all 0.2s ease !important;
-          appearance: none !important;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
-          background-repeat: no-repeat !important;
-          background-position: right 16px center !important;
-        }
-        .modern-swal-input:focus {
-          border-color: var(--accent-primary, #6366f1) !important;
-          box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
-          outline: none !important;
-        }
-        .modern-swal-actions {
-          display: flex !important;
-          gap: 12px !important;
-          width: 100% !important;
-          margin-top: 1.5em !important;
-          justify-content: center !important;
-        }
-        @media (max-width: 480px) {
-          .modern-swal-actions {
-            flex-direction: column !important;
-            gap: 10px !important;
-          }
-          .modern-swal-confirm-btn, .modern-swal-cancel-btn {
-            width: 100% !important;
-            margin: 0 !important;
-          }
-          .modern-glass-popup {
-            padding: 24px 16px 20px !important;
-            width: 92% !important;
-          }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
-    const swalConfig = {
-      background: 'transparent',
-      backdrop: 'rgba(15, 20, 35, 0.5)',
-      customClass: {
-        popup: 'modern-glass-popup',
-        confirmButton: 'modern-swal-confirm-btn',
-        cancelButton: 'modern-swal-cancel-btn',
-        input: 'modern-swal-input',
-        actions: 'modern-swal-actions'
-      },
-      buttonsStyling: false,
-      showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
-      hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' }
-    };
-
-    if (mode === 'ga') {
-      setIsFabHidden(true);
-      Swal.fire({
-        ...swalConfig,
-        html: `
-          <div style="text-align: center;">
-            <div style="width: 72px; height: 72px; background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.12)); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; border: 1px solid rgba(99,102,241,0.25); box-shadow: 0 8px 20px rgba(99,102,241,0.15);">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-            </div>
-            <h2 style="margin: 0 0 12px; font-size: 1.5rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.03em;">Generate Full Timetable?</h2>
-            <p style="margin: 0; font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">This will use the powerful Genetic Algorithm engine to automatically generate conflict-free schedules for all sections.</p>
-          </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Generate Now',
-        cancelButtonText: 'Cancel'
-      }).then((result) => {
-        setIsFabHidden(false);
-        if (result.isConfirmed) {
-          setActiveTab('schedule');
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('execute-autoscheduler', { detail: 'ga' }));
-          }, 100);
-        }
-      });
-    } else {
-      let options = {};
-      let title = '';
-      let color = '';
-      let icon = '';
-      if (mode === 'faculty') {
-        title = 'Faculty';
-        color = '#10b981';
-        icon = '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>';
-        professors.forEach(p => { options[p.id] = p.name; });
-      } else if (mode === 'room') {
-        title = 'Room';
-        color = '#f59e0b';
-        icon = '<path d="M3 9l9-7 9 7v11a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-1"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>';
-        rooms.forEach(r => { options[r.id] = r.name; });
-      } else if (mode === 'section') {
-        title = 'Section';
-        color = '#8b5cf6';
-        icon = '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>';
-        sections.forEach(s => { options[s.id] = s.name; });
+    setIsFabHidden(true);
+    showAutoScheduleModal(mode, { professors, rooms, sections }, (result) => {
+      setIsFabHidden(false);
+      if (result) {
+        setActiveTab('schedule');
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('execute-autoscheduler', { detail: result }));
+        }, 100);
       }
-
-      setIsFabHidden(true);
-      Swal.fire({
-        ...swalConfig,
-        html: `
-          <div style="text-align: center; margin-bottom: 8px;">
-            <div style="width: 72px; height: 72px; background: linear-gradient(135deg, ${color}1A, ${color}0D); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; border: 1px solid ${color}33; box-shadow: 0 8px 20px ${color}20;">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>
-            </div>
-            <h2 style="margin: 0 0 12px; font-size: 1.5rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.03em;">Generate by ${title}</h2>
-            <p style="margin: 0; font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">Please select a specific ${title.toLowerCase()} to generate an optimized schedule for.</p>
-          </div>
-        `,
-        input: 'select',
-        inputOptions: options,
-        inputPlaceholder: `Choose a ${title.toLowerCase()}...`,
-        showCancelButton: true,
-        confirmButtonText: 'Generate Now',
-        cancelButtonText: 'Cancel',
-        inputValidator: (value) => {
-          return new Promise((resolve) => {
-            if (value) resolve();
-            else resolve(`You need to select a ${title.toLowerCase()}`);
-          });
-        }
-      }).then((result) => {
-        setIsFabHidden(false);
-        if (result.isConfirmed) {
-          setActiveTab('schedule');
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('execute-autoscheduler', { detail: { mode: mode, targetId: result.value } }));
-          }, 100);
-        }
-      });
-    }
+    });
   };
 
   // --- Mobile Swipe Gesture for Sidebar ---
@@ -1177,136 +994,10 @@ const Dashboard = ({ user, onLogout }) => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
 
               {/* System Reminders Panel */}
-              {isAdmin && (
-                <div className="card" style={{ padding: '22px' }}>
-                  <h3 className="card-title" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{
-                      width: 28, height: 28, borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #5645EE, #8B5CF6)',
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', boxShadow: '0 2px 8px rgba(86,69,238,0.25)'
-                    }}>
-                      <Icon d={NAV_ICONS.manage} size={14} />
-                    </span>
-                    System Reminders
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-                    <div style={{
-                      padding: '14px 16px', borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #EEF2FF, #F5F3FF)',
-                      border: '1px solid rgba(86,69,238,0.1)',
-                      display: 'flex', gap: '12px', alignItems: 'flex-start',
-                      transition: 'transform 0.2s ease',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                    >
-                      <span style={{
-                        width: 32, height: 32, borderRadius: '8px', flexShrink: 0,
-                        background: 'rgba(86,69,238,0.12)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#5645EE',
-                      }}>
-                        <Icon d={NAV_ICONS.subjects} size={16} />
-                      </span>
-                      <div>
-                        <strong style={{ display: 'block', marginBottom: '4px', fontSize: '0.88rem', color: '#312e81' }}>Pre-Scheduling Checklist</strong>
-                        <span style={{ fontSize: '0.8rem', color: '#6366f1', lineHeight: 1.5 }}>Ensure all faculty specializations and lab requirements are accurate before running the algorithm.</span>
-                      </div>
-                    </div>
-
-                    <div style={{
-                      padding: '14px 16px', borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #FEF6E9, #FFF7ED)',
-                      border: '1px solid rgba(245,166,35,0.15)',
-                      display: 'flex', gap: '12px', alignItems: 'flex-start',
-                      transition: 'transform 0.2s ease',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                    >
-                      <span style={{
-                        width: 32, height: 32, borderRadius: '8px', flexShrink: 0,
-                        background: 'rgba(245,166,35,0.15)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#d97706',
-                      }}>
-                        <Icon d={NAV_ICONS.workload} size={16} />
-                      </span>
-                      <div>
-                        <strong style={{ display: 'block', marginBottom: '4px', fontSize: '0.88rem', color: '#92400e' }}>Monitor Workloads</strong>
-                        <span style={{ fontSize: '0.8rem', color: '#b45309', lineHeight: 1.5 }}>Regularly check the Workload Report. Assignments exceeding max units will be flagged.</span>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-              )}
+              {isAdmin && <SystemReminders />}
 
               {/* Recently Scheduled Feed */}
-              <div className="card" style={{ padding: '20px' }}>
-                <div className="card-header" style={{ marginBottom: '14px', borderBottom: 'none', paddingBottom: 0 }}>
-                  <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Icon d={NAV_ICONS.schedule} size={16} /> Recently Scheduled
-                  </h3>
-                  <button className="btn btn-sm" onClick={() => setActiveTab('room-utilization')} style={{ background: 'transparent', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', boxShadow: 'none' }}>
-                    View All
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {enrichedSchedules.slice(-4).reverse().map((s, i) => {
-                    const colors = ['#5645EE', '#059669', '#d97706', '#0288d1'];
-                    const accentColor = colors[i % colors.length];
-                    return (
-                      <div key={s.id || i} style={{
-                        padding: '14px 16px',
-                        borderRadius: '12px',
-                        border: '1px solid var(--border-color)',
-                        background: 'var(--bg-main)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        borderLeft: `3px solid ${accentColor}`,
-                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.transform = 'translateX(4px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.transform = 'translateX(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                            {s.subject?.code} {s.section && <span style={{ fontWeight: 500, color: 'var(--text-muted)' }}>({s.section?.name})</span>}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '3px', fontWeight: 500 }}>
-                            {s.professor?.name} • {s.room?.name}
-                          </div>
-                        </div>
-                        <div style={{
-                          textAlign: 'center',
-                          background: `linear-gradient(135deg, ${accentColor}12, ${accentColor}08)`,
-                          padding: '8px 14px',
-                          borderRadius: '10px',
-                          border: `1px solid ${accentColor}20`,
-                          minWidth: '52px',
-                        }}>
-                          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                            {typeof s.day === 'string' ? s.day.slice(0, 3) : s.day}
-                          </div>
-                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 1 }}>
-                            {s.timeSlot?.label?.split(' - ')[0]}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {enrichedSchedules.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '40px 0', border: '1px dashed var(--border-color)', borderRadius: '12px', background: 'var(--bg-main)' }}>
-                      <Icon d={NAV_ICONS.schedule} size={32} />
-                      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0 0' }}>No classes scheduled yet.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <RecentActivity schedules={enrichedSchedules} onViewAll={() => setActiveTab('room-utilization')} />
 
             </div>
 
