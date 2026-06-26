@@ -226,3 +226,181 @@ export function creditPerMeeting(subject) {
   const meetings = Math.max(1, Math.ceil(credits / targetDuration));
   return credits / meetings;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CANONICAL ROOM ELIGIBILITY — Single source of truth for all room rules.
+//  Used by: ScheduleGA, Dashboard validator, targeted heuristic engine.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Check whether a specific professor is allowed to use a specific room,
+ * given the subject and section context.
+ *
+ * This handles professor-specific room restrictions:
+ *  - Stage rooms are reserved for the designated Stage professor(s)
+ *  - BSCS-exclusive rooms reject non-BSCS faculty
+ *  - Speech Lab rejects non-BAEL faculty
+ *  - Room 204 rejects non-BSCS faculty (except BSOA lab override)
+ *
+ * @param {Object} room
+ * @param {Object|null} professor
+ * @param {Object|null} subject
+ * @param {Object|null} section
+ * @param {Object[]} allRooms - Full rooms list (used to check if Stage exists)
+ * @returns {boolean}
+ */
+export function isProfessorAllowedInRoom(room, professor, subject, section, allRooms) {
+  if (!room || !professor) return true;
+
+  const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
+  const profDept = (professor.department || '').toUpperCase();
+  const sectionDept = getSectionDepartment(section);
+
+  // Stage constraint: only designated Stage professor(s) may use Stage, and they must use Stage
+  const hasStage = (allRooms || []).some(r => (r.name || '').toLowerCase().includes('stage'));
+  if (hasStage) {
+    const isStageProf = isProfessorStageLocked(professor);
+    const isStageRoom = (room.name || '').toLowerCase().includes('stage');
+    if (isStageProf && !isStageRoom) return false;
+    if (!isStageProf && isStageRoom) return false;
+  }
+
+  // BSCS-exclusive rooms: NB04, NB05, NB06, Room 203
+  const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+  if (isBscsExclusive && profDept && profDept !== 'BSCS') return false;
+
+  // Speech Lab: BAEL faculty only, no GE/PE/NSTP subjects
+  const isSpeechLab = roomName.includes('SPEECH');
+  if (isSpeechLab) {
+    if (profDept !== 'BAEL') return false;
+    if (subject) {
+      const code = (subject.code || '').toUpperCase();
+      if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) return false;
+    }
+  }
+
+  // Room 204: BSCS faculty, or BSOA faculty for lab subjects
+  const isRoom204 = roomName === 'ROOM204' || roomName === '204';
+  if (isRoom204) {
+    const isBSCS = (!sectionDept || sectionDept === 'BSCS') && (!profDept || profDept === 'BSCS');
+    const isBSOALab = sectionDept === 'BSOA' && subject?.requiredLab && (!profDept || profDept === 'BSOA');
+    if (!isBSCS && !isBSOALab) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Determine if a professor is "Stage-locked" (must always use the Stage room).
+ * Currently checks professor ID 'P04' or name containing 'ballera'.
+ *
+ * Centralised here so the hardcoded identity lives in exactly one place.
+ */
+export function isProfessorStageLocked(professor) {
+  if (!professor) return false;
+  return professor.id === 'P04' || (professor.name || '').toLowerCase().includes('ballera');
+}
+
+/**
+ * Check whether a room is allowed for a given subject + section combination,
+ * independent of which professor is assigned.
+ *
+ * This handles section-level room restrictions:
+ *  - PE subjects must go to Gym/Stage rooms
+ *  - Lab subjects prefer rooms with computers
+ *  - BSCS-exclusive rooms reject non-BSCS sections
+ *  - Speech Lab rejects non-BAEL sections and GE/PE/NSTP subjects
+ *  - Room 204 rejects non-BSCS sections (except BSOA labs)
+ *
+ * @param {Object} room
+ * @param {Object|null} subject
+ * @param {Object|null} section
+ * @returns {boolean}
+ */
+export function isRoomAllowedFor(room, subject, section) {
+  if (!room) return false;
+
+  const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
+  const sectionDept = getSectionDepartment(section);
+
+  // BSCS-exclusive rooms: reject non-BSCS sections
+  const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+  if (isBscsExclusive && sectionDept !== 'BSCS') return false;
+
+  // Speech Lab: BAEL sections only, no GE/PE/NSTP subjects
+  const isSpeechLab = roomName.includes('SPEECH');
+  if (isSpeechLab) {
+    if (sectionDept !== 'BAEL') return false;
+    if (subject) {
+      const code = (subject.code || '').toUpperCase();
+      if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) return false;
+    }
+  }
+
+  // Room 204: BSCS sections, or BSOA sections for lab subjects
+  const isRoom204 = roomName === 'ROOM204' || roomName === '204';
+  if (isRoom204) {
+    const isBSCS = !sectionDept || sectionDept === 'BSCS';
+    const isBSOALab = sectionDept === 'BSOA' && subject?.requiredLab;
+    if (!isBSCS && !isBSOALab) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Build tiered eligible room pools for an assignment.
+ *
+ * - PE subjects → Gym/Stage rooms only
+ * - Lab subjects → filter to rooms with computers first
+ * - Tier 1: Rooms owned by the section's department
+ * - Tier 2: SHARED / unassigned-building rooms
+ * - Tier 3: Other department rooms (overflow)
+ *
+ * @param {Object[]} rooms - All available rooms
+ * @param {Object} subject
+ * @param {Object|null} section
+ * @returns {{ tier1: Object[], tier2: Object[], tier3: Object[], flat: Object[] }}
+ */
+export function getEligibleRoomsTiered(rooms, subject, section) {
+  const sectionDept = getSectionDepartment(section);
+  const isPE = subject && (subject.code || '').toUpperCase().startsWith('PE');
+  const isGymOrStage = (r) => {
+    const name = (r.name || '').toLowerCase();
+    return name.includes('gym') || name.includes('stage');
+  };
+
+  // PE subjects must go to gym or stage
+  if (isPE) {
+    const gyms = rooms.filter(isGymOrStage);
+    if (gyms.length > 0) return { tier1: gyms, tier2: [], tier3: [], flat: gyms };
+  }
+
+  let pool = rooms;
+  // Lab filter first
+  if (subject?.requiredLab) {
+    const labs = rooms.filter(r => r.hasComputers);
+    if (labs.length > 0) pool = labs;
+  }
+
+  const tier1 = []; // Department-owned rooms matching this section
+  const tier2 = []; // SHARED rooms
+  const tier3 = []; // Other department rooms (overflow)
+
+  for (const r of pool) {
+    // Apply section-level room restrictions
+    if (!isRoomAllowedFor(r, subject, section)) continue;
+
+    const roomDept = (r.department || 'SHARED').toUpperCase();
+    const roomBldg = (r.building || 'Unassigned').toUpperCase();
+    if (roomDept === 'SHARED' || roomBldg === 'UNASSIGNED' || roomBldg === 'GENERAL BUILDING' || roomBldg === 'GYMNASIUM') {
+      tier2.push(r);
+    } else if (sectionDept && roomDept === sectionDept) {
+      tier1.push(r);
+    } else {
+      tier3.push(r);
+    }
+  }
+
+  return { tier1, tier2, tier3, flat: [...tier1, ...tier2, ...tier3] };
+}

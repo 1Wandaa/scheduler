@@ -30,6 +30,10 @@ import {
   slotsNeededFromIndex,
   getTimeSlotIndex,
   schedulesOverlap,
+  getSectionDepartment,
+  getEligibleRoomsTiered,
+  isRoomAllowedFor,
+  isProfessorAllowedInRoom,
 } from '../../utils/scheduleUtils';
 
 import { Icon, NAV_ICONS } from './components/Icon';
@@ -172,55 +176,40 @@ const Dashboard = ({ user, onLogout }) => {
         errors.push(`Section "${section.name}" is not enrolled in subject "${subject.code}".`);
     }
 
-    const roomName = (room?.name || '').toUpperCase().replace(/\s+/g, '');
-    const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
-    
-    let sectionDept = null;
-    if (section) {
-      const program = (section.program || '').toUpperCase();
-      for (const d of ['BSCS', 'BAEL', 'BSOA', 'BSFT']) { if (program.includes(d)) { sectionDept = d; break; } }
-      if (!sectionDept) {
-        const name = (section.name || '').toUpperCase();
-        for (const d of ['BSCS', 'BAEL', 'BSOA', 'BSFT']) { if (name.startsWith(d)) { sectionDept = d; break; } }
-      }
-    }
+    // Room eligibility — uses canonical shared functions
+    if (room?.id && subject) {
+      if (!isRoomAllowedFor(room, subject, section)) {
+        const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
+        const sectionDept = getSectionDepartment(section);
+        const isSpeechLab = roomName.includes('SPEECH');
+        const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+        const isRoom204 = roomName === 'ROOM204' || roomName === '204';
 
-    const isSpeechLab = roomName.includes('SPEECH');
-    if (isSpeechLab) {
-      if (section && sectionDept !== 'BAEL') {
-        errors.push(`Room "${room?.name}" is reserved exclusively for BAEL sections.`);
-      }
-      const profDept = professor?.department ? professor.department.toUpperCase() : null;
-      if (profDept !== 'BAEL') {
-        errors.push(`Room "${room?.name}" can only be used by BAEL faculty.`);
-      }
-      if (subject) {
-        const code = (subject.code || '').toUpperCase();
-        if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) {
-          errors.push(`Room "${room?.name}" can only be used for BAEL major subjects (no GE, PE, or NSTP).`);
+        if (isSpeechLab && sectionDept !== 'BAEL') {
+          errors.push(`Room "${room.name}" is reserved exclusively for BAEL sections.`);
+        } else if (isSpeechLab) {
+          const code = (subject.code || '').toUpperCase();
+          if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) {
+            errors.push(`Room "${room.name}" can only be used for BAEL major subjects (no GE, PE, or NSTP).`);
+          }
+        } else if (isBscsExclusive) {
+          errors.push(`Room "${room.name}" is reserved for BSCS students and faculty only.`);
+        } else if (isRoom204) {
+          if (sectionDept === 'BSOA' && !subject?.requiredLab) {
+            errors.push(`Room "${room.name}" can only be used by BSOA for Laboratory subjects.`);
+          } else {
+            errors.push(`Room "${room.name}" is reserved for BSCS (and BSOA Labs only).`);
+          }
         }
       }
-    }
-
-    if (isBscsExclusive) {
-      if (section && sectionDept !== 'BSCS') {
-        errors.push(`Room "${room?.name}" is reserved for BSCS students and faculty only.`);
-      }
-      if (professor && professor.department && professor.department.toUpperCase() !== 'BSCS') {
-        errors.push(`Room "${room?.name}" cannot be used by non-BSCS faculty (${professor.name}).`);
-      }
-    }
-
-    const isRoom204 = roomName === 'ROOM204' || roomName === '204';
-    if (isRoom204) {
-      const isBSCS = (!sectionDept || sectionDept === 'BSCS') && (!professor || !professor.department || professor.department.toUpperCase() === 'BSCS');
-      const isBSOALab = sectionDept === 'BSOA' && subject?.requiredLab && (!professor || !professor.department || professor.department.toUpperCase() === 'BSOA');
-      
-      if (!isBSCS && !isBSOALab) {
-        if (sectionDept === 'BSOA' && !subject?.requiredLab) {
-          errors.push(`Room "${room?.name}" can only be used by BSOA for Laboratory subjects.`);
-        } else {
-          errors.push(`Room "${room?.name}" is reserved for BSCS (and BSOA Labs only).`);
+      if (professor?.id && !isProfessorAllowedInRoom(room, professor, subject, section, rooms)) {
+        const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
+        const isSpeechLab = roomName.includes('SPEECH');
+        const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+        if (isSpeechLab) {
+          errors.push(`Room "${room.name}" can only be used by BAEL faculty.`);
+        } else if (isBscsExclusive) {
+          errors.push(`Room "${room.name}" cannot be used by non-BSCS faculty (${professor.name}).`);
         }
       }
     }
@@ -397,77 +386,20 @@ const Dashboard = ({ user, onLogout }) => {
       return validator._autoScheduleAssignments(assignments, { ...constraints, fixedProfessor: professor });
     },
     _eligibleRoomsFor: (subject, section, constraints) => {
-      let pool = rooms;
-      
-      const isPE = subject && (subject.code || '').toUpperCase().startsWith('PE');
-      const isGymOrStage = (r) => {
-        const name = (r.name || '').toLowerCase();
-        return name.includes('gym') || name.includes('stage');
-      };
-
-      if (isPE) {
-        const gyms = rooms.filter(isGymOrStage);
-        if (gyms.length > 0) return { tier1: gyms, tier2: [], tier3: [], flat: gyms };
+      // Use canonical shared function, then apply professor-specific filters if needed
+      const tiers = getEligibleRoomsTiered(rooms, subject, section);
+      const fixedProf = constraints?.fixedProfessor;
+      if (fixedProf) {
+        // Further filter by professor-room compatibility
+        const filterProf = (arr) => arr.filter(r => isProfessorAllowedInRoom(r, fixedProf, subject, section, rooms));
+        return {
+          tier1: filterProf(tiers.tier1),
+          tier2: filterProf(tiers.tier2),
+          tier3: filterProf(tiers.tier3),
+          flat: filterProf(tiers.flat),
+        };
       }
-
-      if (constraints?.respectLabs && subject?.requiredLab) { 
-        const labs = rooms.filter(r => r.hasComputers); 
-        if (labs.length > 0) pool = labs; 
-      }
-
-      // Tier rooms by department ownership
-      const sectionDept = (() => {
-        if (!section) return null;
-        const program = (section.program || '').toUpperCase();
-        for (const d of ['BSCS', 'BAEL', 'BSOA', 'BSFT']) { if (program.includes(d)) return d; }
-        const name = (section.name || '').toUpperCase();
-        for (const d of ['BSCS', 'BAEL', 'BSOA', 'BSFT']) { if (name.startsWith(d)) return d; }
-        return null;
-      })();
-
-      const tier1 = []; // Dept-owned rooms
-      const tier2 = []; // SHARED rooms
-      const tier3 = []; // Other dept rooms (overflow)
-      
-      const profDept = constraints?.fixedProfessor?.department?.toUpperCase();
-
-      for (const r of pool) {
-        const roomName = (r.name || '').toUpperCase().replace(/\s+/g, '');
-        const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
-
-        const isSpeechLab = roomName.includes('SPEECH');
-        if (isSpeechLab) {
-          if (sectionDept && sectionDept !== 'BAEL') continue;
-          if (profDept !== 'BAEL') continue;
-          if (subject) {
-            const code = (subject.code || '').toUpperCase();
-            if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) continue;
-          }
-        }
-
-        if (isBscsExclusive) {
-          if (sectionDept && sectionDept !== 'BSCS') continue;
-          if (profDept && profDept !== 'BSCS') continue;
-        }
-
-        const isRoom204 = roomName === 'ROOM204' || roomName === '204';
-        if (isRoom204) {
-          const isBSCS = (!sectionDept || sectionDept === 'BSCS') && (!profDept || profDept === 'BSCS');
-          const isBSOALab = sectionDept === 'BSOA' && subject?.requiredLab && (!profDept || profDept === 'BSOA');
-          if (!isBSCS && !isBSOALab) continue;
-        }
-
-        const roomDept = (r.department || 'SHARED').toUpperCase();
-        const roomBldg = (r.building || 'Unassigned').toUpperCase();
-        if (roomDept === 'SHARED' || roomBldg === 'UNASSIGNED' || roomBldg === 'GENERAL BUILDING' || roomBldg === 'GYMNASIUM') {
-          tier2.push(r);
-        } else if (sectionDept && roomDept === sectionDept) {
-          tier1.push(r);
-        } else {
-          tier3.push(r);
-        }
-      }
-      return { tier1, tier2, tier3, flat: [...tier1, ...tier2, ...tier3] };
+      return tiers;
     },
     _eligibleProfsFor: (subject, section, constraints) => {
       if (!subject) return [];
@@ -714,6 +646,43 @@ const Dashboard = ({ user, onLogout }) => {
     if (!check.valid) return { ok: false, errors: check.errors };
     await addDoc(collection(db, 'schedules'), { ...newSchedule, semester: activeSemester, schoolYear: activeSchoolYear });
     return { ok: true };
+  };
+
+  const handleAddSchedulesBatch = async (newSchedules) => {
+    if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
+    
+    // Validate all schedules first
+    const validSchedules = [];
+    const errors = [];
+    
+    for (const s of newSchedules) {
+      const check = validateScheduleEntry({ room: s.room, professor: s.professor, subject: s.subject, section: s.section || null, day: s.day, timeSlot: s.timeSlot, excludeScheduleId: null });
+      if (check.valid) {
+        validSchedules.push(s);
+      } else {
+        errors.push(`Failed to validate ${s.subject?.code}: ${check.errors.join(', ')}`);
+      }
+    }
+
+    if (validSchedules.length === 0) {
+      return { ok: false, errors: errors.length > 0 ? errors : ['No valid schedules to add.'] };
+    }
+
+    // Execute batch write
+    try {
+      const batch = writeBatch(db);
+      const schedulesRef = collection(db, 'schedules');
+      
+      for (const s of validSchedules) {
+        const newDocRef = doc(schedulesRef); // Auto-generate ID
+        batch.set(newDocRef, { ...s, semester: activeSemester, schoolYear: activeSchoolYear });
+      }
+      
+      await batch.commit();
+      return { ok: true, errors: errors.length > 0 ? errors : null, writtenCount: validSchedules.length };
+    } catch (e) {
+      return { ok: false, errors: [e.message] };
+    }
   };
 
   const handleRemoveSchedule = async (id) => {
@@ -1012,7 +981,7 @@ const Dashboard = ({ user, onLogout }) => {
             {!isMobile && (
               <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} activeSemester={activeSemester} />
             )}
-            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={enrichedSchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onLogHistory={handleLogHistory} />
+            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={enrichedSchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onAutoScheduleBatch={handleAddSchedulesBatch} onLogHistory={handleLogHistory} />
           </div>
         )}
         {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}

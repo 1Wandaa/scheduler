@@ -10,6 +10,10 @@ import {
   getEligibleProfessors,
   applyAIRanking,
   slotsNeededFromIndex,
+  getEligibleRoomsTiered,
+  isRoomAllowedFor,
+  isProfessorAllowedInRoom,
+  isProfessorStageLocked,
 } from './scheduleUtils.js';
 
 const DEFAULT_CONFIG = {
@@ -71,6 +75,7 @@ export class ScheduleGA {
     this._validateInputs();
     this._buildLookups();
     this.assignments = this._buildAssignmentList();
+    this._eligibleProfsCache = this._buildEligibleProfsCache();
   }
 
   _validateInputs() {
@@ -161,6 +166,24 @@ export class ScheduleGA {
     return list;
   }
 
+  /**
+   * Pre-compute eligible professor IDs for each unique (subject, section) pair.
+   * Used by _fitness() to avoid calling getEligibleProfessors() per gene per generation.
+   * Returns { "subjectId_sectionId": Set<professorId> }
+   */
+  _buildEligibleProfsCache() {
+    const cache = {};
+    const seen = new Set();
+    for (const a of this.assignments) {
+      const key = `${a.subject.id}_${a.section.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const eligible = getEligibleProfessors(this.professors, a.subject, a.section);
+      cache[key] = new Set(eligible.map(p => p.id));
+    }
+    return cache;
+  }
+
   _randInt(n) {
     return Math.floor(Math.random() * n);
   }
@@ -183,77 +206,10 @@ export class ScheduleGA {
 
   /**
    * Get eligible rooms for an assignment, tiered by department ownership.
-   * Tier 1: Rooms owned by the section's department
-   * Tier 2: SHARED rooms
-   * Tier 3: All other rooms (overflow — cross-department)
+   * Delegates to the canonical getEligibleRoomsTiered() in scheduleUtils.
    */
   _eligibleRoomsFor(a) {
-    const sectionDept = getSectionDepartment(a.section);
-    const isPE = a.subject && (a.subject.code || '').toUpperCase().startsWith('PE');
-    const isGymOrStage = (r) => {
-      const name = (r.name || '').toLowerCase();
-      return name.includes('gym') || name.includes('stage');
-    };
-
-    // PE subjects must go to gym or stage
-    if (isPE) {
-      const gyms = this.rooms.filter(isGymOrStage);
-      if (gyms.length > 0) return { tier1: gyms, tier2: [], tier3: [], flat: gyms };
-    }
-
-    let pool = this.rooms;
-    // Lab filter first
-    if (a.subject.requiredLab) {
-      const labs = this.rooms.filter(r => r.hasComputers);
-      if (labs.length > 0) pool = labs;
-    }
-
-    // Tier the rooms by department ownership
-    const tier1 = []; // Department-owned rooms matching this section
-    const tier2 = []; // SHARED rooms
-    const tier3 = []; // Other department rooms (overflow)
-
-    for (const r of pool) {
-      const roomName = (r.name || '').toUpperCase().replace(/\s+/g, '');
-      const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
-      if (isBscsExclusive && sectionDept !== 'BSCS') {
-        continue;
-      }
-
-      const isSpeechLab = roomName.includes('SPEECH');
-      if (isSpeechLab) {
-        if (sectionDept !== 'BAEL') continue;
-        if (a.subject) {
-          const code = (a.subject.code || '').toUpperCase();
-          if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) continue;
-        }
-      }
-
-      const isRoom204 = roomName === 'ROOM204' || roomName === '204';
-      if (isRoom204) {
-        const isBSCS = !sectionDept || sectionDept === 'BSCS';
-        const isBSOALab = sectionDept === 'BSOA' && a.subject?.requiredLab;
-        if (!isBSCS && !isBSOALab) continue;
-      }
-
-      const roomDept = (r.department || 'SHARED').toUpperCase();
-      const roomBldg = (r.building || 'Unassigned').toUpperCase();
-      if (roomDept === 'SHARED' || roomBldg === 'UNASSIGNED' || roomBldg === 'GENERAL BUILDING' || roomBldg === 'GYMNASIUM') {
-        tier2.push(r);
-      } else if (sectionDept && roomDept === sectionDept) {
-        tier1.push(r);
-      } else {
-        tier3.push(r);
-      }
-    }
-
-    // Return in priority order: own dept first, then shared, then overflow
-    return {
-      tier1,
-      tier2,
-      tier3,
-      flat: [...tier1, ...tier2, ...tier3]
-    };
+    return getEligibleRoomsTiered(this.rooms, a.subject, a.section);
   }
 
   _eligibleTimeSlotsFor(a) {
@@ -403,10 +359,8 @@ export class ScheduleGA {
 
       const eligibleRooms = this._eligibleRoomsFor(a);
       const isPE = a.subject && (a.subject.code || '').toUpperCase().startsWith('PE');
-      const isGym = (r) => (r.name || '').toUpperCase().includes('GYM');
       
       let rooms;
-      const hasStage = this.rooms.some(r => (r.name || '').toLowerCase().includes('stage'));
 
       // If room is locked for this section+subject, force that room
       const lockedRoomId = lockedRoomForSecSub[secSubKey];
@@ -495,41 +449,11 @@ export class ScheduleGA {
         const prof = profs[this._randInt(profs.length)];
         if (!prof) break;
 
-        let validRoomsForProf = rooms;
-        const profDept = (prof.department || '').toUpperCase();
-        validRoomsForProf = validRoomsForProf.filter(r => {
-          const roomName = (r.name || '').toUpperCase().replace(/\s+/g, '');
-          const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
-          if (isBscsExclusive && profDept && profDept !== 'BSCS') return false;
-
-          const isSpeechLab = roomName.includes('SPEECH');
-          if (isSpeechLab) {
-            if (profDept !== 'BAEL') return false;
-            if (a.subject) {
-              const code = (a.subject.code || '').toUpperCase();
-              if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) return false;
-            }
-          }
-
-          const isRoom204 = roomName === 'ROOM204' || roomName === '204';
-          if (isRoom204) {
-            const secDept = a.section ? getSectionDepartment(a.section) : null;
-            const isBSCS = (!secDept || secDept === 'BSCS') && (!profDept || profDept === 'BSCS');
-            const isBSOALab = secDept === 'BSOA' && a.subject?.requiredLab && (!profDept || profDept === 'BSOA');
-            if (!isBSCS && !isBSOALab) return false;
-          }
-
-          return true;
-        });
-
-        if (hasStage) {
-          const isJanice = prof.id === 'P04' || (prof.name || '').toLowerCase().includes('ballera');
-          validRoomsForProf = validRoomsForProf.filter(r => {
-            const isStage = (r.name || '').toLowerCase().includes('stage');
-            return isJanice ? isStage : !isStage;
-          });
-          if (validRoomsForProf.length === 0) validRoomsForProf = rooms; // Fallback if no valid room found
-        }
+        // Filter rooms by professor-specific restrictions (canonical function)
+        let validRoomsForProf = rooms.filter(r =>
+          isProfessorAllowedInRoom(r, prof, a.subject, a.section, this.rooms)
+        );
+        if (validRoomsForProf.length === 0) validRoomsForProf = rooms; // Fallback if no valid room found
 
         let room, timeIdx;
         const usePref = pref && t < this.config.repairTriesPerGene / 2;
@@ -678,44 +602,12 @@ export class ScheduleGA {
       let placed = false;
       for (const prof of rescueProfs) {
         if (placed) break;
-        
-        const isJanice = prof.id === 'P04' || (prof.name || '').toLowerCase().includes('ballera');
-        const hasStage = this.rooms.some(r => (r.name || '').toLowerCase().includes('stage'));
 
-        let validRoomsForProf = allRooms;
-        const profDept = (prof.department || '').toUpperCase();
-        validRoomsForProf = validRoomsForProf.filter(r => {
-          const roomName = (r.name || '').toUpperCase().replace(/\s+/g, '');
-          const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
-          if (isBscsExclusive && profDept && profDept !== 'BSCS') return false;
-
-          const isSpeechLab = roomName.includes('SPEECH');
-          if (isSpeechLab) {
-            if (profDept !== 'BAEL') return false;
-            if (a.subject) {
-              const code = (a.subject.code || '').toUpperCase();
-              if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) return false;
-            }
-          }
-
-          const isRoom204 = roomName === 'ROOM204' || roomName === '204';
-          if (isRoom204) {
-            const secDept = a.section ? getSectionDepartment(a.section) : null;
-            const isBSCS = (!secDept || secDept === 'BSCS') && (!profDept || profDept === 'BSCS');
-            const isBSOALab = secDept === 'BSOA' && a.subject?.requiredLab && (!profDept || profDept === 'BSOA');
-            if (!isBSCS && !isBSOALab) return false;
-          }
-
-          return true;
-        });
-
-        if (hasStage) {
-          validRoomsForProf = validRoomsForProf.filter(r => {
-            const isStage = (r.name || '').toLowerCase().includes('stage');
-            return isJanice ? isStage : !isStage;
-          });
-          if (validRoomsForProf.length === 0) validRoomsForProf = allRooms;
-        }
+        // Filter rooms by professor-specific restrictions (canonical function)
+        let validRoomsForProf = allRooms.filter(r =>
+          isProfessorAllowedInRoom(r, prof, a.subject, a.section, this.rooms)
+        );
+        if (validRoomsForProf.length === 0) validRoomsForProf = allRooms;
 
         const prefRoomIds = prof.preferredRooms || [];
         const validPrefRooms = validRoomsForProf.filter(r => prefRoomIds.includes(r.id));
@@ -794,42 +686,12 @@ export class ScheduleGA {
         // First meeting: pick room, time, and a starting day (prefer Mon=0 or Tue=1)
         const rooms = this._eligibleRoomsFor(a).flat;
         const assignedProf = this.profMap[profId];
-        const isJanice = assignedProf && (assignedProf.id === 'P04' || (assignedProf.name || '').toLowerCase().includes('ballera'));
         
-        let validRooms = rooms;
-        const profDept = (assignedProf?.department || '').toUpperCase();
-        validRooms = validRooms.filter(r => {
-          const roomName = (r.name || '').toUpperCase().replace(/\s+/g, '');
-          const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
-          if (isBscsExclusive && profDept && profDept !== 'BSCS') return false;
-
-          const isSpeechLab = roomName.includes('SPEECH');
-          if (isSpeechLab) {
-            if (profDept !== 'BAEL') return false;
-            if (a.subject) {
-              const code = (a.subject.code || '').toUpperCase();
-              if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) return false;
-            }
-          }
-
-          const isRoom204 = roomName === 'ROOM204' || roomName === '204';
-          if (isRoom204) {
-            const secDept = a.section ? getSectionDepartment(a.section) : null;
-            const isBSCS = (!secDept || secDept === 'BSCS') && (!profDept || profDept === 'BSCS');
-            const isBSOALab = secDept === 'BSOA' && a.subject?.requiredLab && (!profDept || profDept === 'BSOA');
-            if (!isBSCS && !isBSOALab) return false;
-          }
-
-          return true;
-        });
-
-        if (hasStage) {
-          validRooms = validRooms.filter(r => {
-            const isStage = (r.name || '').toLowerCase().includes('stage');
-            return isJanice ? isStage : !isStage;
-          });
-          if (validRooms.length === 0) validRooms = rooms;
-        }
+        // Filter rooms by professor-specific restrictions (canonical function)
+        let validRooms = rooms.filter(r =>
+          isProfessorAllowedInRoom(r, assignedProf, a.subject, a.section, this.rooms)
+        );
+        if (validRooms.length === 0) validRooms = rooms;
 
         let room;
         
@@ -1004,52 +866,16 @@ export class ScheduleGA {
         hardViolations++;
       }
 
-      const hasStage = this.rooms.some(r => (r.name || '').toLowerCase().includes('stage'));
-      if (hasStage && room && g.professorId) {
-        const prof = this.profMap[g.professorId];
-        const isJanice = prof && (prof.id === 'P04' || (prof.name || '').toLowerCase().includes('ballera'));
-        const isStage = (room.name || '').toLowerCase().includes('stage');
-
-        if (isJanice && !isStage) {
-          hardScore -= 1000;
-          hardViolations++;
-        } else if (!isJanice && isStage) {
+      // Room eligibility constraint: uses canonical functions for all room rules
+      // (Stage lock, BSCS-exclusive, Speech Lab, Room 204)
+      if (room) {
+        if (!isRoomAllowedFor(room, a.subject, a.section)) {
           hardScore -= 1000;
           hardViolations++;
         }
-      }
-
-      // Check Speech Lab, BSCS Exclusive, and Room 204
-      if (room && g.professorId) {
-        const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
-        const prof = this.profMap[g.professorId];
-        const profDept = (prof?.department || '').toUpperCase();
-        const sectionDept = getSectionDepartment(a.section);
-        
-        const isSpeechLab = roomName.includes('SPEECH');
-        if (isSpeechLab) {
-          let isGenEd = false;
-          if (a.subject) {
-            const code = (a.subject.code || '').toUpperCase();
-            isGenEd = code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP');
-          }
-          if (sectionDept !== 'BAEL' || profDept !== 'BAEL' || isGenEd) {
-            hardScore -= 1000;
-            hardViolations++;
-          }
-        }
-
-        const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
-        if (isBscsExclusive && (sectionDept !== 'BSCS' || (profDept && profDept !== 'BSCS'))) {
-          hardScore -= 1000;
-          hardViolations++;
-        }
-
-        const isRoom204 = roomName === 'ROOM204' || roomName === '204';
-        if (isRoom204) {
-          const isBSCS = (!sectionDept || sectionDept === 'BSCS') && (!profDept || profDept === 'BSCS');
-          const isBSOALab = sectionDept === 'BSOA' && a.subject?.requiredLab && (!profDept || profDept === 'BSOA');
-          if (!isBSCS && !isBSOALab) {
+        if (g.professorId) {
+          const prof = this.profMap[g.professorId];
+          if (!isProfessorAllowedInRoom(room, prof, a.subject, a.section, this.rooms)) {
             hardScore -= 1000;
             hardViolations++;
           }
@@ -1076,11 +902,11 @@ export class ScheduleGA {
         }
       }
 
-      // AI match bonus — only when professor is in the eligible pool for this assignment
+      // AI match bonus — uses pre-computed eligible pool for performance
       const assignment = this.assignments[i];
-      const eligibleForBonus = getEligibleProfessors(this.professors, assignment.subject, assignment.section);
-      const eligibleIds = new Set(eligibleForBonus.map(p => p.id));
-      if (eligibleIds.has(chrom[i].professorId) && this.aiProfessorMap?.[assignment.subject.id]) {
+      const cacheKey = `${assignment.subject.id}_${assignment.section.id}`;
+      const eligibleIds = this._eligibleProfsCache[cacheKey];
+      if (eligibleIds?.has(chrom[i].professorId) && this.aiProfessorMap?.[assignment.subject.id]) {
         const rankedIds = this.aiProfessorMap[assignment.subject.id].filter(id => eligibleIds.has(id));
         const rank = rankedIds.indexOf(chrom[i].professorId);
         if (rank === 0) softScore += BONUS.AI_MATCH_1ST;

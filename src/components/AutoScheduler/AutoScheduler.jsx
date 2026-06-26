@@ -6,8 +6,8 @@ import { schedulesOverlap, getMeetingTimeLabel } from '../../utils/scheduleUtils
 import '../../styles/AutoScheduler.css';
 import Swal from 'sweetalert2';
 
-// 1. ADDED 'schedules' and 'onLogHistory' to the props list
-function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, activeSemester, onAutoSchedule, onLogHistory }) {
+// 1. ADDED 'schedules', 'onLogHistory', and 'onAutoScheduleBatch' to the props list
+function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, activeSemester, onAutoSchedule, onAutoScheduleBatch, onLogHistory }) {
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [result, setResult] = useState(null);
@@ -306,6 +306,8 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         }
       }
 
+      const toSave = [];
+
       // Validate the GA output before claiming success
       for (const entry of gaResult.schedule) {
         if (entry.failed) {
@@ -335,22 +337,45 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           }
         }
 
-        // Attempt to save to database
-        try {
-          const writeResult = await onAutoSchedule(entry);
-          if (writeResult && writeResult.ok === false) {
-            unscheduledResults.push({ ...entry, reason: writeResult.errors?.join(', ') || 'Database validation failed.' });
-          } else {
-            savedSchedules.push(entry);
-            validResults.push(entry);
-            // Track the professor for this section+subject
-            if (entry.section?.id && entry.subject?.id && entry.professor?.id) {
-              const secSubKey = `${entry.section.id}-${entry.subject.id}`;
-              if (!profForSecSub[secSubKey]) profForSecSub[secSubKey] = String(entry.professor.id);
+        // It passed local validation; queue for batch save
+        toSave.push(entry);
+        savedSchedules.push(entry);
+        if (entry.section?.id && entry.subject?.id && entry.professor?.id) {
+          const secSubKey = `${entry.section.id}-${entry.subject.id}`;
+          if (!profForSecSub[secSubKey]) profForSecSub[secSubKey] = String(entry.professor.id);
+        }
+      }
+
+      // Attempt to save all valid entries to database via batch
+      if (toSave.length > 0) {
+        if (onAutoScheduleBatch) {
+          try {
+            const batchResult = await onAutoScheduleBatch(toSave);
+            if (batchResult && batchResult.ok === false) {
+              // If batch failed entirely or partial failures happened, just push generic error to all toSave
+              toSave.forEach(entry => {
+                unscheduledResults.push({ ...entry, reason: batchResult.errors?.join(', ') || 'Database validation failed in batch.' });
+              });
+            } else {
+              validResults.push(...toSave);
+            }
+          } catch (e) {
+            toSave.forEach(entry => unscheduledResults.push({ ...entry, reason: 'Failed to save to database.' }));
+          }
+        } else {
+          // Fallback to one-by-one if batch function isn't provided
+          for (const entry of toSave) {
+            try {
+              const writeResult = await onAutoSchedule(entry);
+              if (writeResult && writeResult.ok === false) {
+                unscheduledResults.push({ ...entry, reason: writeResult.errors?.join(', ') || 'Database validation failed.' });
+              } else {
+                validResults.push(entry);
+              }
+            } catch (e) {
+              unscheduledResults.push({ ...entry, reason: 'Failed to save to database.' });
             }
           }
-        } catch (e) {
-          unscheduledResults.push({ ...entry, reason: 'Failed to save to database.' });
         }
       }
 
