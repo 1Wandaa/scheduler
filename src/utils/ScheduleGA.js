@@ -239,35 +239,12 @@ export class ScheduleGA {
   }
 
   /**
-   * Broader professor pool for rescue pass: any professor in the same department,
-   * even without exact specialization match.
+   * Broader professor pool for rescue pass: allows workload overload,
+   * but strictly enforces subject specialization and assigned sections.
    */
   _rescueProfsFor(a, profWork = null) {
-    const sectionDept = getSectionDepartment(a.section);
-    let pool = sectionDept
-      ? this.professors.filter(p => (p.department || '').toUpperCase() === sectionDept)
-      : [...this.professors];
-
-    // --- ASSIGNED SECTIONS FILTER ---
-    const sectionId = a.section?.id;
-    const sectionName = a.section?.name;
-    
-    pool = pool.filter(p => {
-      if (p.assignedSections && p.assignedSections.length > 0) {
-        return p.assignedSections.includes(sectionId) || (sectionName && p.assignedSections.includes(sectionName));
-      }
-      return true;
-    });
-
-    if ((sectionId || sectionName) && pool.length > 0) {
-      const explicitProfs = pool.filter(p => {
-        const assigned = p.assignedSections || [];
-        return assigned.includes(sectionId) || (sectionName && assigned.includes(sectionName));
-      });
-      if (explicitProfs.length > 0) {
-        pool = explicitProfs;
-      }
-    }
+    // Strictly enforce subject specialization and assigned sections
+    let pool = getEligibleProfessors(this.professors, a.subject, a.section);
 
     if (!profWork) return pool;
 
@@ -278,7 +255,7 @@ export class ScheduleGA {
     return pool.filter(p => {
       const max = Number(p.maxUnits) || Number(p.maxHours) || 12;
       const w = Number(profWork[p.id]) || 0;
-      return w + creditPerSlot <= max + 0.01;
+      return (w + creditPerSlot) <= (max + 6); // Allow overload in rescue, but strict on subjects/sections
     });
   }
 
@@ -594,11 +571,8 @@ export class ScheduleGA {
         if (lp) rescueProfs = [lp];
       }
 
-      // If no rescue profs found, try ALL professors
-      if (rescueProfs.length === 0) {
-        rescueProfs = this._shuffle([...this.professors]);
-      }
-
+      // Strict enforcement: if no rescue profs found, we DO NOT fall back to ALL professors.
+      // This ensures professors are never scheduled in unassigned subjects/sections.
       let placed = false;
       for (const prof of rescueProfs) {
         if (placed) break;
