@@ -1,10 +1,23 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { initialRooms, initialProfessors, initialSubjects, initialSections, SEED_VERSION } from '../../config/initialData';
-import { TIME_SLOTS, DAYS, SEMESTERS, SCHOOL_YEARS } from '../../config/constants';
-import { db } from '../../config/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, writeBatch } from 'firebase/firestore';
+import { SEMESTERS, SCHOOL_YEARS } from '../../config/constants';
+import { useFirestoreData } from '../../hooks/useFirestoreData';
+import {
+  validateScheduleEntry,
+  addSchedule,
+  updateSchedule,
+  removeSchedule,
+  addSchedulesBatch,
+  clearAllSchedules,
+  logScheduleHistory,
+} from '../../services/validationService';
+import {
+  autoScheduleForSection,
+  autoScheduleForRoom,
+  autoScheduleForFaculty,
+  autoScheduleLegacy,
+} from '../../services/schedulingService';
 import Swal from 'sweetalert2';
 
 import UserManagement from '../management/UserManagement';
@@ -21,20 +34,6 @@ import SectionManagement from '../management/SectionManagement';
 import ScheduleHistory from '../management/ScheduleHistory';
 import Profile from '../../components/Profile/Profile';
 import Chatbot from '../../components/Chatbot/Chatbot';
-import {
-  professorMatchesSubject,
-  findScheduleConflicts,
-  getEligibleProfessors,
-  applyAIRanking,
-  creditPerMeeting,
-  slotsNeededFromIndex,
-  getTimeSlotIndex,
-  schedulesOverlap,
-  getSectionDepartment,
-  getEligibleRoomsTiered,
-  isRoomAllowedFor,
-  isProfessorAllowedInRoom,
-} from '../../utils/scheduleUtils';
 
 import { Icon, NAV_ICONS } from './components/Icon';
 import DraggableSpeedDial from './components/DraggableSpeedDial';
@@ -69,6 +68,7 @@ const Dashboard = ({ user, onLogout }) => {
     }
   };
 
+  // ─── UI state ─────────────────────────────────────────────────────
   const [isManageDataOpen, setIsManageDataOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -76,6 +76,19 @@ const Dashboard = ({ user, onLogout }) => {
   const [isFabHidden, setIsFabHidden] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
+  // ─── Term selection ───────────────────────────────────────────────
+  const [activeSemester, setActiveSemester] = useState(SEMESTERS[1]);
+  const [activeSchoolYear, setActiveSchoolYear] = useState(SCHOOL_YEARS[1]);
+
+  // ─── Centralized data from Firestore ──────────────────────────────
+  const data = useFirestoreData(activeSemester, activeSchoolYear);
+  const {
+    rooms, professors, subjects, sections,
+    schedules, activeSchedules, enrichedSchedules, scheduleHistory,
+    availableSemesters, availableSchoolYears, publishedTerms, setPublishedTerms,
+  } = data;
+
+  // ─── Responsive handler ──────────────────────────────────────────
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', handleResize);
@@ -114,19 +127,13 @@ const Dashboard = ({ user, onLogout }) => {
       const diffX = touchEndX - touchStartX;
       const diffY = touchEndY - touchStartY;
       
-      // OPTIMIZATION: Only trigger if the swipe is predominantly horizontal.
-      // This prevents accidental sidebar triggers when the user is scrolling vertically.
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
-        
-        // If sidebar is closed: swipe right from the left edge (or close to it) to open
         if (!isMobileMenuOpen && touchStartX < 60 && diffX > 40) {
           setIsMobileMenuOpen(true);
         }
-        // If sidebar is open: swipe left anywhere to close
         else if (isMobileMenuOpen && diffX < -40) {
           setIsMobileMenuOpen(false);
         }
-        // If sidebar is closed: swipe left from the right edge to open
         else if (!isMobileMenuOpen && touchStartX > window.innerWidth - 60 && diffX < -40) {
           setIsMobileMenuOpen(true);
         }
@@ -142,565 +149,51 @@ const Dashboard = ({ user, onLogout }) => {
     };
   }, [isMobileMenuOpen]);
 
-  const [rooms, setRooms] = useState([]);
-  const [professors, setProfessors] = useState([]);
-  const [subjects, setSubjects] = useState([]);
-  const [sections, setSections] = useState([]);
-  const [schedules, setSchedules] = useState([]);
-  const [scheduleHistory, setScheduleHistory] = useState([]);
+  // ─── CRUD wrappers (delegate to services) ─────────────────────────
 
-  const [activeSemester, setActiveSemester] = useState(SEMESTERS[1]);
-  const [activeSchoolYear, setActiveSchoolYear] = useState(SCHOOL_YEARS[1]);
-
-  const [availableSemesters, setAvailableSemesters] = useState(SEMESTERS);
-  const [availableSchoolYears, setAvailableSchoolYears] = useState(SCHOOL_YEARS);
-  const [publishedTerms, setPublishedTerms] = useState({});
-
-  const activeSchedules = schedules.filter(s => 
-    s.semester === activeSemester && 
-    s.schoolYear === activeSchoolYear
-  );
-
-  const validateScheduleEntry = ({ room, professor, subject, section, day, timeSlot, excludeScheduleId = null }) => {
-    const errors = []; const warnings = [];
-    if (!room?.id) errors.push('Room is required.');
-    if (!professor?.id) errors.push('Faculty is required.');
-    if (!subject?.id) errors.push('Subject is required.');
-    if (!day) errors.push('Day is required.');
-    if (!timeSlot?.id) errors.push('Time slot is required.');
-    if (professor && subject && !professorMatchesSubject(professor, subject))
-      errors.push(`Faculty "${professor.name}" is not authorized to teach "${subject.code}".`);
-    if (section && subject) {
-      const sectionSubjects = section.subjects || [];
-      if (!sectionSubjects.includes(subject.id) && !sectionSubjects.includes(subject.code))
-        errors.push(`Section "${section.name}" is not enrolled in subject "${subject.code}".`);
-    }
-
-    // Room eligibility — uses canonical shared functions
-    if (room?.id && subject) {
-      if (!isRoomAllowedFor(room, subject, section)) {
-        const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
-        const sectionDept = getSectionDepartment(section);
-        const isSpeechLab = roomName.includes('SPEECH');
-        const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
-        const isRoom204 = roomName === 'ROOM204' || roomName === '204';
-
-        if (isSpeechLab && sectionDept !== 'BAEL') {
-          errors.push(`Room "${room.name}" is reserved exclusively for BAEL sections.`);
-        } else if (isSpeechLab) {
-          const code = (subject.code || '').toUpperCase();
-          if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) {
-            errors.push(`Room "${room.name}" can only be used for BAEL major subjects (no GE, PE, or NSTP).`);
-          }
-        } else if (isBscsExclusive) {
-          errors.push(`Room "${room.name}" is reserved for BSCS students and faculty only.`);
-        } else if (isRoom204) {
-          if (sectionDept === 'BSOA' && !subject?.requiredLab) {
-            errors.push(`Room "${room.name}" can only be used by BSOA for Laboratory subjects.`);
-          } else {
-            errors.push(`Room "${room.name}" is reserved for BSCS (and BSOA Labs only).`);
-          }
-        }
-      }
-      if (professor?.id && !isProfessorAllowedInRoom(room, professor, subject, section, rooms)) {
-        const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
-        const isSpeechLab = roomName.includes('SPEECH');
-        const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
-        if (isSpeechLab) {
-          errors.push(`Room "${room.name}" can only be used by BAEL faculty.`);
-        } else if (isBscsExclusive) {
-          errors.push(`Room "${room.name}" cannot be used by non-BSCS faculty (${professor.name}).`);
-        }
-      }
-    }
-
-    if (errors.length > 0) return { valid: false, errors, warnings };
-
-    const startIdx = getTimeSlotIndex(timeSlot);
-    const needed = slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting);
-    if (startIdx < 0 || needed === 0) {
-      errors.push(`Time slot does not fit the ${subject?.hoursPerMeeting || 1.5}hr meeting duration.`);
-      return { valid: false, errors, warnings };
-    }
-
-    const conflicts = findScheduleConflicts(
-      { room, professor, subject, section, day, timeSlot },
-      activeSchedules,
-      { excludeScheduleId }
-    );
-    if (conflicts.room) errors.push(`Room "${room?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
-    if (conflicts.professor) errors.push(`Faculty "${professor?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
-    if (section?.id && conflicts.section) errors.push(`Section "${section?.name}" already has a class for ${day} (${timeSlot?.label}).`);
-    if (subject?.requiredLab && !room?.hasComputers) errors.push('Requires Lab.');
-    return { valid: errors.length === 0, errors, warnings };
-  };
-
-  useEffect(() => {
-    const initializeData = async () => {
-      const versionDoc = await getDoc(doc(db, 'meta', 'seedVersion'));
-      const storedVersion = versionDoc.exists() ? versionDoc.data().version : null;
-      if (storedVersion !== SEED_VERSION) {
-        const collectionsToWipe = ['rooms', 'professors', 'subjects', 'sections', 'schedules'];
-        for (const colName of collectionsToWipe) {
-          const snap = await getDocs(collection(db, colName));
-          if (!snap.empty) { const batch = writeBatch(db); snap.docs.forEach(d => batch.delete(d.ref)); await batch.commit(); }
-        }
-        const seedBatch = writeBatch(db);
-        initialRooms.forEach(r => seedBatch.set(doc(db, 'rooms', r.id.toString()), r));
-        initialProfessors.forEach(p => seedBatch.set(doc(db, 'professors', p.id.toString()), p));
-        initialSubjects.forEach(s => seedBatch.set(doc(db, 'subjects', s.id.toString()), s));
-        initialSections.forEach(sec => seedBatch.set(doc(db, 'sections', sec.id.toString()), sec));
-        await seedBatch.commit();
-        await setDoc(doc(db, 'meta', 'seedVersion'), { version: SEED_VERSION });
-      }
-
-      // One-time migration for old schedules missing the semester/year tags
-      const schedSnap = await getDocs(collection(db, 'schedules'));
-      const migrateBatch = writeBatch(db);
-      let migrationCount = 0;
-      schedSnap.docs.forEach(d => {
-        const data = d.data();
-        if (!data.semester || !data.schoolYear) {
-          migrateBatch.update(d.ref, { semester: '2nd Semester', schoolYear: '2025-2026' });
-          migrationCount++;
-        }
-      });
-      if (migrationCount > 0) {
-        await migrateBatch.commit();
-        console.log(`Migrated ${migrationCount} legacy schedules to 2nd Semester 2025-2026.`);
-      }
-
-      // Ensure meta/settings exists with default terms
-      const settingsDoc = await getDoc(doc(db, 'meta', 'settings'));
-      if (!settingsDoc.exists()) {
-        await setDoc(doc(db, 'meta', 'settings'), { semesters: SEMESTERS, schoolYears: SCHOOL_YEARS });
-      }
-    };
-    initializeData();
-    const unsubRooms = onSnapshot(collection(db, 'rooms'), snap => setRooms(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
-    const unsubProfs = onSnapshot(collection(db, 'professors'), snap => setProfessors(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
-    const unsubSubj = onSnapshot(collection(db, 'subjects'), snap => setSubjects(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
-    const unsubSec = onSnapshot(collection(db, 'sections'), snap => setSections(snap.docs.map(d => {
-      const data = d.data();
-      // Normalize program name for getSectionDepartment
-      let prog = data.program || '';
-      const pUp = prog.toUpperCase();
-      if (pUp.includes('COMPUTER SCIENCE')) prog = 'BSCS';
-      else if (pUp.includes('ENGLISH LANGUAGE')) prog = 'BAEL';
-      else if (pUp.includes('OFFICE ADMINISTRATION')) prog = 'BSOA';
-      else if (pUp.includes('FOOD TECHNOLOGY')) prog = 'BSFT';
-      return { ...data, program: prog, id: d.id };
-    })));
-    const unsubSched = onSnapshot(collection(db, 'schedules'), snap => setSchedules(snap.docs.map(d => ({ ...d.data(), id: d.id }))));
-    const unsubHist = onSnapshot(collection(db, 'scheduleHistory'), snap => setScheduleHistory(snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => b.timestamp - a.timestamp)));
-    const unsubMeta = onSnapshot(doc(db, 'meta', 'settings'), snap => {
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data.semesters) setAvailableSemesters(data.semesters);
-        if (data.schoolYears) setAvailableSchoolYears(data.schoolYears);
-        if (data.publishedTerms) setPublishedTerms(data.publishedTerms);
-      }
-    });
-    return () => { unsubRooms(); unsubProfs(); unsubSubj(); unsubSec(); unsubSched(); unsubHist(); unsubMeta(); };
-  }, []);
-
-  const handleLogHistory = async (historyData) => {
-    if (!isAdmin) return;
-    try {
-      await addDoc(collection(db, 'scheduleHistory'), {
-        ...historyData,
-        timestamp: new Date()
-      });
-    } catch (e) {
-      console.error("Failed to log schedule history:", e);
-    }
-  };
-
-  const validator = {
-    validateAssignment: (room, professor, subject, section, day, timeSlot) =>
-      validateScheduleEntry({ room, professor, subject, section, day, timeSlot }),
-    addSchedule: (room, professor, subject, section, day, timeSlot) => ({ schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear } }),
-    clearAllSchedules: async () => {
-      // Only clear schedules for the currently selected semester!
-      const snap = await getDocs(collection(db, 'schedules'));
-      if (snap.empty) return;
-      const batch = writeBatch(db); 
-      snap.docs.forEach(d => {
-        const data = d.data();
-        if ((data.semester === activeSemester || !data.semester) && (data.schoolYear === activeSchoolYear || !data.schoolYear)) {
-          batch.delete(d.ref);
-        }
-      }); 
-      await batch.commit(); 
-    },
-    autoScheduleForSection: async (sectionId, constraints = { respectLabs: true, preventDoubleBooking: true }) => {
-      const section = sections.find(s => s.id === sectionId);
-      if (!section) return { results: [], unscheduled: [], error: `Section "${sectionId}" not found.` };
-      const subjectObjs = (section.subjects || []).map(subId => subjects.find(su => su.id === subId || su.code === subId))
-        .filter(Boolean)
-        .filter(su => !su.semester || su.semester === 'Both' || su.semester === activeSemester);
-      const assignments = [];
-      for (const subject of subjectObjs) {
-        const credits = Number(subject.credits) || 3;
-        const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
-        const meetings = Math.max(1, Math.ceil(credits / targetDuration));
-        for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1, targetDuration });
-      }
-      return validator._autoScheduleAssignments(assignments, { ...constraints });
-    },
-    autoScheduleForRoom: async (roomId, constraints = { respectLabs: true, preventDoubleBooking: true }) => {
-      const room = rooms.find(r => r.id === roomId);
-      if (!room) return { results: [], unscheduled: [], error: `Room "${roomId}" not found.` };
-      const assignments = [];
-      for (const section of sections) {
-        for (const subId of (section.subjects || [])) {
-          const subject = subjects.find(su => su.id === subId || su.code === subId);
-          if (subject && (!subject.semester || subject.semester === 'Both' || subject.semester === activeSemester)) {
-            const credits = Number(subject.credits) || 3;
-            const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
-            const meetings = Math.max(1, Math.ceil(credits / targetDuration));
-            for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1, targetDuration });
-          }
-        }
-      }
-      return validator._autoScheduleAssignments(assignments, { ...constraints, fixedRoom: room });
-    },
-    autoScheduleForFaculty: async (professorId, constraints = { respectLabs: true, preventDoubleBooking: true }) => {
-      const professor = professors.find(p => p.id === professorId);
-      if (!professor) return { results: [], unscheduled: [], error: `Faculty "${professorId}" not found.` };
-
-      const assignments = [];
-      for (const section of sections) {
-        for (const subId of (section.subjects || [])) {
-          const subject = subjects.find(su => su.id === subId || su.code === subId);
-
-          // FIX: Only add to assignments if the professor actually teaches this subject, and it matches the active semester
-          if (subject && professorMatchesSubject(professor, subject) && (!subject.semester || subject.semester === 'Both' || subject.semester === activeSemester)) {
-            const credits = Number(subject.credits) || 3;
-            const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
-            const meetings = Math.max(1, Math.ceil(credits / targetDuration));
-            for (let i = 0; i < meetings; i++) assignments.push({ subject, section, meetingIndex: i + 1, targetDuration });
-          }
-        }
-      }
-      return validator._autoScheduleAssignments(assignments, { ...constraints, fixedProfessor: professor });
-    },
-    _eligibleRoomsFor: (subject, section, constraints) => {
-      // Use canonical shared function, then apply professor-specific filters if needed
-      const tiers = getEligibleRoomsTiered(rooms, subject, section);
-      const fixedProf = constraints?.fixedProfessor;
-      if (fixedProf) {
-        // Further filter by professor-room compatibility
-        const filterProf = (arr) => arr.filter(r => isProfessorAllowedInRoom(r, fixedProf, subject, section, rooms));
-        return {
-          tier1: filterProf(tiers.tier1),
-          tier2: filterProf(tiers.tier2),
-          tier3: filterProf(tiers.tier3),
-          flat: filterProf(tiers.flat),
-        };
-      }
-      return tiers;
-    },
-    _eligibleProfsFor: (subject, section, constraints) => {
-      if (!subject) return [];
-      const basePool = getEligibleProfessors(professors, subject, section);
-      if (constraints?.aiProfessorMap?.[subject.id]) {
-        return applyAIRanking(basePool, constraints.aiProfessorMap[subject.id]);
-      }
-      return basePool;
-    },
-    _autoScheduleAssignments: async (assignments, constraints) => {
-      const results = [];
-      const unscheduled = [];
-      const fixedRoom = constraints?.fixedRoom || null;
-      const fixedProfessor = constraints?.fixedProfessor || null;
-      const temp = [...activeSchedules];
-
-      // 1. GROUP ASSIGNMENTS: Group by Section + Subject
-      const groupsMap = new Map();
-      for (const a of assignments) {
-        const key = `${a.section?.id || 'none'}_${a.subject?.id}`;
-        if (!groupsMap.has(key)) {
-          groupsMap.set(key, { subject: a.subject, section: a.section, count: 0 });
-        }
-        groupsMap.get(key).count++;
-      }
-
-      // REDUCE counts by what is already scheduled to prevent duplicates
-      for (const s of temp) {
-        const key = `${s.section?.id || 'none'}_${s.subject?.id}`;
-        if (groupsMap.has(key)) {
-          groupsMap.get(key).count--;
-        }
-      }
-
-      // Sort remaining groups: PE subjects first, then Lab subjects
-      const allGroups = Array.from(groupsMap.values())
-        .filter(g => g.count > 0)
-        .sort((a, b) => {
-          const aPE = (a.subject?.code || '').toUpperCase().startsWith('PE') ? 1 : 0;
-          const bPE = (b.subject?.code || '').toUpperCase().startsWith('PE') ? 1 : 0;
-          if (aPE !== bPE) return bPE - aPE; // PE first
-
-          const aLab = a.subject?.requiredLab ? 1 : 0;
-          const bLab = b.subject?.requiredLab ? 1 : 0;
-          return bLab - aLab; // Lab second
-        });
-
-      const PREFERRED_PAIRS = [['Monday', 'Thursday'], ['Tuesday', 'Friday']];
-      const placedKeys = new Set(); // Track which groups have been placed
-
-      // Helper: attempt to place a single group with a given room pool and day strategy
-      const tryPlaceGroup = async (group, roomPool, usePairsOnly) => {
-        const { subject, section, count } = group;
-        const profPool = fixedProfessor ? [fixedProfessor] : validator._eligibleProfsFor(subject, section, constraints);
-        const hasStage = rooms.some(r => (r.name || '').toLowerCase().includes('stage'));
-
-        for (const professor of profPool) {
-          const isJanice = professor.id === 'P04' || (professor.name || '').toLowerCase().includes('ballera');
-          const profSchedules = temp.filter(s => String(s.professor?.id) === String(professor.id));
-          const uniqueLoad = new Map();
-          for (const s of profSchedules) {
-            const k = `${s.subject?.id || 'x'}__${s.section?.id || 'x'}`;
-            if (!uniqueLoad.has(k)) uniqueLoad.set(k, creditPerMeeting(s.subject));
-          }
-          const profCurrentLoad = Array.from(uniqueLoad.values()).reduce((s, c) => s + c, 0);
-          const perMeeting = creditPerMeeting(subject);
-
-          if (profCurrentLoad + perMeeting > (Number(professor.maxUnits) || Number(professor.maxHours) || 12) + 0.01) {
-            continue;
-          }
-
-          const prefRoomIds = professor.preferredRooms || [];
-          let sortedRoomPool = roomPool;
-          if (prefRoomIds.length > 0) {
-            const validPrefRooms = roomPool.filter(r => prefRoomIds.includes(r.id));
-            const nonPrefRooms = roomPool.filter(r => !prefRoomIds.includes(r.id));
-            sortedRoomPool = [...validPrefRooms, ...nonPrefRooms];
-          }
-
-          for (const room of sortedRoomPool) {
-            if (hasStage) {
-              const isStage = (room.name || '').toLowerCase().includes('stage');
-              if (isJanice && !isStage) continue;
-              if (!isJanice && isStage) continue;
-            }
-
-            for (const timeSlot of TIME_SLOTS) {
-              const startIdx = getTimeSlotIndex(timeSlot);
-              if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting) === 0) continue;
-
-              const isFree = (d) => {
-                const candidate = { room, professor, subject, section, day: d, timeSlot };
-                // ALWAYS check temp for overlaps — temp contains classes placed
-                // during this auto-schedule batch that Firestore hasn't synced yet
-                if (temp.some(s => schedulesOverlap(candidate, s))) return false;
-                const chk = validateScheduleEntry({ room, professor, subject, section, day: d, timeSlot });
-                return chk.valid;
-              };
-
-              // Try preferred pairs (Mon/Thu, Tue/Fri) — ALWAYS enforced for 2-meeting classes
-              if (count === 2) {
-                for (const pair of PREFERRED_PAIRS) {
-                  if (isFree(pair[0]) && isFree(pair[1])) {
-                    const s1 = { room, professor, subject, section, day: pair[0], timeSlot };
-                    const s2 = { room, professor, subject, section, day: pair[1], timeSlot };
-                    const w1 = await handleAddSchedule(s1);
-                    const w2 = await handleAddSchedule(s2);
-
-                    if (w1?.ok !== false && w2?.ok !== false) {
-                      temp.push(s1, s2);
-                      results.push(s1, s2);
-                      return true;
-                    }
-                  }
-                }
-                // For 2-meeting classes, NEVER fall back to random days — 
-                // only Mon/Thu or Tue/Fri pairs are allowed
-              }
-
-              // Any-day fallback — ONLY for classes that need 1 or 3+ meetings per week
-              if (!usePairsOnly && count !== 2) {
-                const validDays = [];
-                for (const day of DAYS) {
-                  if (isFree(day)) validDays.push(day);
-                  if (validDays.length === count) break;
-                }
-
-                if (validDays.length === count) {
-                  let allOk = true;
-                  const writes = [];
-                  for (const d of validDays) {
-                    const sc = { room, professor, subject, section, day: d, timeSlot };
-                    const w = await handleAddSchedule(sc);
-                    if (w?.ok === false) { allOk = false; break; }
-                    writes.push(sc);
-                  }
-                  if (allOk) {
-                    temp.push(...writes);
-                    results.push(...writes);
-                    return true;
-                  }
-                }
-              }
-            }
-          }
-        }
-        return false;
-      };
-
-      // ══════════════════════════════════════════════════════════
-      //  3-PASS SCHEDULING ALGORITHM
-      // ══════════════════════════════════════════════════════════
-
-      // PASS 1 — STRICT: Department rooms only, preferred day pairs enforced
-      console.log(`[AutoScheduler] Pass 1 (Strict): ${allGroups.length} groups to schedule`);
-      for (const group of allGroups) {
-        const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
-        const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : validator._eligibleRoomsFor(group.subject, group.section, constraints);
-        if (tiers.tier1.length > 0) {
-          const placed = await tryPlaceGroup(group, tiers.tier1, group.count === 2);
-          if (placed) placedKeys.add(groupKey);
-        }
-      }
-
-      // PASS 2 — SHARED: Department + Shared rooms, any day combos allowed
-      const remainingAfterPass1 = allGroups.filter(g => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
-      console.log(`[AutoScheduler] Pass 2 (Shared): ${remainingAfterPass1.length} groups remaining`);
-      for (const group of remainingAfterPass1) {
-        const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
-        const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : validator._eligibleRoomsFor(group.subject, group.section, constraints);
-        const pool = [...tiers.tier1, ...tiers.tier2];
-        if (pool.length > 0) {
-          const placed = await tryPlaceGroup(group, pool, false);
-          if (placed) placedKeys.add(groupKey);
-        }
-      }
-
-      // PASS 3 — FALLBACK: ALL rooms (including other departments), any day combos
-      const remainingAfterPass2 = allGroups.filter(g => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
-      console.log(`[AutoScheduler] Pass 3 (Fallback): ${remainingAfterPass2.length} groups remaining`);
-      for (const group of remainingAfterPass2) {
-        const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
-        const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : validator._eligibleRoomsFor(group.subject, group.section, constraints);
-        const pool = [...tiers.tier1, ...tiers.tier2, ...tiers.tier3];
-        const placed = await tryPlaceGroup(group, pool, false);
-        if (placed) {
-          placedKeys.add(groupKey);
-        } else {
-          let reason = 'Insufficient slots available or missing qualified faculty.';
-          if (constraints?.respectLabs && group.subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
-            reason = 'Requires computer lab.';
-          }
-          unscheduled.push({ subject: group.subject, section: group.section, reason });
-        }
-      }
-
-      console.log(`[AutoScheduler] Done: ${results.length} placed, ${unscheduled.length} unscheduled`);
-      return { results, unscheduled, error: null };
-    },
-    autoSchedule: async (subjList, constraints) => {
-      const results = []; const unscheduled = []; const tempSchedules = [...activeSchedules];
-      for (const subject of subjList) {
-        let scheduled = false;
-        const profPool = professors.filter(p => professorMatchesSubject(p, subject));
-        searchLoop: for (const prof of profPool) {
-          for (const day of DAYS) {
-            for (const timeSlot of TIME_SLOTS) {
-              for (const room of rooms) {
-                if (constraints.respectLabs && subject.requiredLab && !room.hasComputers) continue;
-                // ALWAYS check tempSchedules for overlaps to prevent time conflicts
-                const isRoomBusy = tempSchedules.some(s => String(s.room?.id) === String(room.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
-                const isProfBusy = tempSchedules.some(s => String(s.professor?.id) === String(prof.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
-                if (!isRoomBusy && !isProfBusy) {
-                  const newSchedule = { room, professor: prof, subject, day, timeSlot };
-                  tempSchedules.push(newSchedule);
-                  const writeResult = await handleAddSchedule(newSchedule);
-                  if (writeResult?.ok === false) continue;
-                  results.push(newSchedule); scheduled = true; break searchLoop;
-                }
-              }
-            }
-          }
-        }
-        if (!scheduled) unscheduled.push(subject);
-      }
-      return { results, unscheduled, error: null };
-    }
+  const handleAddSchedule = async (newSchedule) => {
+    return addSchedule(newSchedule, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin);
   };
 
   const handleUpdateSchedule = async (scheduleId, newDay, newTimeSlotId) => {
-    if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
-    const newTimeSlot = TIME_SLOTS.find(ts => ts.id === newTimeSlotId);
-    const existing = schedules.find(s => s.id === scheduleId);
-    if (!existing) return { ok: false, errors: ['Schedule not found.'] };
-    const check = validateScheduleEntry({ room: existing.room, professor: existing.professor, subject: existing.subject, section: existing.section || null, day: newDay, timeSlot: newTimeSlot, excludeScheduleId: scheduleId });
-    if (!check.valid) { return { ok: false, errors: check.errors }; }
-    await updateDoc(doc(db, 'schedules', scheduleId.toString()), { day: newDay, timeSlot: newTimeSlot });
-    return { ok: true };
-  };
-
-  const handleAddSchedule = async (newSchedule) => {
-    if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
-    const check = validateScheduleEntry({ room: newSchedule?.room, professor: newSchedule?.professor, subject: newSchedule?.subject, section: newSchedule?.section || null, day: newSchedule?.day, timeSlot: newSchedule?.timeSlot, excludeScheduleId: null });
-    if (!check.valid) return { ok: false, errors: check.errors };
-    await addDoc(collection(db, 'schedules'), { ...newSchedule, semester: activeSemester, schoolYear: activeSchoolYear });
-    return { ok: true };
-  };
-
-  const handleAddSchedulesBatch = async (newSchedules) => {
-    if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
-    
-    // Validate all schedules first
-    const validSchedules = [];
-    const errors = [];
-    
-    for (const s of newSchedules) {
-      const check = validateScheduleEntry({ room: s.room, professor: s.professor, subject: s.subject, section: s.section || null, day: s.day, timeSlot: s.timeSlot, excludeScheduleId: null });
-      if (check.valid) {
-        validSchedules.push(s);
-      } else {
-        errors.push(`Failed to validate ${s.subject?.code}: ${check.errors.join(', ')}`);
-      }
-    }
-
-    if (validSchedules.length === 0) {
-      return { ok: false, errors: errors.length > 0 ? errors : ['No valid schedules to add.'] };
-    }
-
-    // Execute batch write
-    try {
-      const batch = writeBatch(db);
-      const schedulesRef = collection(db, 'schedules');
-      
-      for (const s of validSchedules) {
-        const newDocRef = doc(schedulesRef); // Auto-generate ID
-        batch.set(newDocRef, { ...s, semester: activeSemester, schoolYear: activeSchoolYear });
-      }
-      
-      await batch.commit();
-      return { ok: true, errors: errors.length > 0 ? errors : null, writtenCount: validSchedules.length };
-    } catch (e) {
-      return { ok: false, errors: [e.message] };
-    }
+    return updateSchedule(scheduleId, newDay, newTimeSlotId, schedules, activeSchedules, rooms, isAdmin);
   };
 
   const handleRemoveSchedule = async (id) => {
-    if (!isAdmin) return;
-    await deleteDoc(doc(db, 'schedules', id.toString()));
+    return removeSchedule(id, isAdmin);
+  };
+
+  const handleAddSchedulesBatch = async (newSchedules) => {
+    return addSchedulesBatch(newSchedules, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin);
+  };
+
+  const handleLogHistory = async (historyData) => {
+    return logScheduleHistory(historyData, isAdmin);
+  };
+
+  // ─── Validator object (passed to child components) ────────────────
+  const schedulerContext = { professors, rooms, subjects, sections, activeSchedules };
+
+  const validator = {
+    validateAssignment: (room, professor, subject, section, day, timeSlot) =>
+      validateScheduleEntry({ room, professor, subject, section, day, timeSlot }, activeSchedules, rooms),
+    addSchedule: (room, professor, subject, section, day, timeSlot) => ({
+      schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear }
+    }),
+    clearAllSchedules: () => clearAllSchedules(activeSemester, activeSchoolYear),
+    autoScheduleForSection: (sectionId, constraints) =>
+      autoScheduleForSection(sectionId, schedulerContext, constraints, handleAddSchedule, activeSemester),
+    autoScheduleForRoom: (roomId, constraints) =>
+      autoScheduleForRoom(roomId, schedulerContext, constraints, handleAddSchedule, activeSemester),
+    autoScheduleForFaculty: (professorId, constraints) =>
+      autoScheduleForFaculty(professorId, schedulerContext, constraints, handleAddSchedule, activeSemester),
+    autoSchedule: (subjList, constraints) =>
+      autoScheduleLegacy(subjList, schedulerContext, constraints, handleAddSchedule),
   };
 
   const firstName = user?.name?.split?.(/\s+/)?.[0] ?? 'there';
 
-  const displaySchedules = (!isAdmin && publishedTerms[`${activeSemester}_${activeSchoolYear}`] !== true) ? [] : activeSchedules;
-
-  const enrichedSchedules = displaySchedules.map(s => ({
-    ...s,
-    professor: professors.find(p => String(p.id) === String(s.professor?.id)) || s.professor,
-    room: rooms.find(r => String(r.id) === String(s.room?.id)) || s.room,
-    section: sections.find(sec => String(sec.id) === String(s.section?.id)) || s.section,
-    subject: subjects.find(sub => String(sub.id) === String(s.subject?.id)) || s.subject
-  }));
+  const displaySchedules = (!isAdmin && publishedTerms[`${activeSemester}_${activeSchoolYear}`] !== true) ? [] : enrichedSchedules;
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -744,14 +237,12 @@ const Dashboard = ({ user, onLogout }) => {
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '12px 8px' }}>
           <ul style={{ margin: 0, padding: 0 }}>
-            {/* HIDE DASHBOARD TAB FOR STUDENTS */}
             {!isStudent && (
               <NavItem label="Dashboard" iconPath={NAV_ICONS.dashboard} active={activeTab === 'dashboard'} onClick={() => handleTabClick('dashboard')} />
             )}
 
             {isAdmin && (
               <>
-                {/* Manage Data accordion */}
                 <NavItem label={`Manage Data ${isManageDataOpen ? '▾' : '▸'}`} iconPath={NAV_ICONS.manage} onClick={() => setIsManageDataOpen(o => !o)} />
                 {isManageDataOpen && (
                   <>
@@ -873,7 +364,7 @@ const Dashboard = ({ user, onLogout }) => {
               <KpiTile label="Faculty Members" value={professors.length} iconPath={NAV_ICONS.faculty} color="#0288d1" />
               <KpiTile label="Rooms" value={rooms.length} iconPath={NAV_ICONS.rooms} color="#7c3aed" />
               <KpiTile label="Sections" value={sections.length} iconPath={NAV_ICONS.sections} color="#059669" />
-              <KpiTile label="Scheduled Classes" value={enrichedSchedules.length} iconPath={NAV_ICONS.schedule} color="#d97706" />
+              <KpiTile label="Scheduled Classes" value={displaySchedules.length} iconPath={NAV_ICONS.schedule} color="#d97706" />
             </div>
 
             {/* Admin preview cards */}
@@ -959,46 +450,41 @@ const Dashboard = ({ user, onLogout }) => {
               </div>
             )}
 
-            {/* --- NEW: Appropriate Dashboard Widgets (Quick Actions & Recent Activity) --- */}
+            {/* Dashboard Widgets */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
-
-              {/* System Reminders Panel */}
               {isAdmin && <SystemReminders />}
-
-              {/* Recently Scheduled Feed */}
-              <RecentActivity schedules={enrichedSchedules} onViewAll={() => setActiveTab('view-schedules')} />
-
+              <RecentActivity schedules={displaySchedules} onViewAll={() => setActiveTab('view-schedules')} />
             </div>
 
 
           </div>
         )}
 
-        {/* ── Other Tabs (unchanged) ── */}
+        {/* ── Other Tabs ── */}
         {isAdmin && activeTab === 'users' && <UserManagement onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
             {!isMobile && (
               <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} activeSemester={activeSemester} />
             )}
-            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={enrichedSchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onAutoScheduleBatch={handleAddSchedulesBatch} onLogHistory={handleLogHistory} />
+            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onAutoScheduleBatch={handleAddSchedulesBatch} onLogHistory={handleLogHistory} />
           </div>
         )}
         {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={enrichedSchedules} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} availableSemesters={availableSemesters} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} />}
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={enrichedSchedules} />}
+        {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} />}
 
         {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
-        {activeTab === 'view-schedules' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={enrichedSchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
+        {activeTab === 'view-schedules' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={displaySchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
 
         {activeTab === 'profile' && <Profile user={user} onBack={() => setActiveTab(isAdmin ? 'dashboard' : 'view-schedules')} />}
 
       </div>
-      <Chatbot schedules={enrichedSchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
+      <Chatbot schedules={displaySchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
       <BottomNav activeTab={activeTab} handleTabClick={handleTabClick} isAdmin={isAdmin} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 
       {/* --- Mobile Floating Action Button (FAB) --- */}

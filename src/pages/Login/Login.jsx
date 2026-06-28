@@ -652,7 +652,7 @@ const Login = ({ onLogin }) => {
                     type="text"
                     value={username}
                     onChange={e => setUsername(e.target.value)}
-                    placeholder="e.g. @admin @jelly123"
+                    placeholder="Enter your username"
                   />
                 </div>
 

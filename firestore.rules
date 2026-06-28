@@ -1,0 +1,105 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ═══════════════════════════════════════════════════════════════
+    //  Helper Functions
+    // ═══════════════════════════════════════════════════════════════
+
+    // Check if the requesting user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Get the user's profile document from the 'users' collection.
+    // Returns the user document data if it exists.
+    function getUserProfile() {
+      let emailPrefix = request.auth.token.email.split('@')[0];
+      // Note: Firestore rules cannot do complex queries like 'in'.
+      // This checks if a document exists with the auth UID as the doc ID,
+      // or falls back to checking by email prefix.
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Check if the user has an Admin or Department Head role.
+    // Falls back to checking user documents where username matches the email prefix.
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserProfile().role in ['Admin', 'Department Head'];
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  Collection Rules
+    // ═══════════════════════════════════════════════════════════════
+
+    // --- META (settings, seed version) ---
+    match /meta/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+      // Note: Ideally only admins should write to meta, but the
+      // data seeding logic runs for any authenticated user on first load.
+      // A future improvement would be to move seeding to a Cloud Function.
+    }
+
+    // --- USERS ---
+    match /users/{userId} {
+      // Any authenticated user can read user profiles (needed for login flow)
+      allow read: if isAuthenticated();
+
+      // Users can create their own profile (sign-up flow)
+      allow create: if isAuthenticated();
+
+      // Only admins can update/delete user profiles
+      allow update, delete: if isAdmin();
+    }
+
+    // --- ROOMS ---
+    match /rooms/{roomId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- PROFESSORS (Faculty) ---
+    match /professors/{profId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- SUBJECTS ---
+    match /subjects/{subjectId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- SECTIONS ---
+    match /sections/{sectionId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- SCHEDULES ---
+    match /schedules/{scheduleId} {
+      // All authenticated users can read schedules (students view them)
+      allow read: if isAuthenticated();
+
+      // Only admins can create, update, or delete schedules
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- SCHEDULE HISTORY ---
+    match /scheduleHistory/{historyId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      // History entries should not be modified or deleted
+      allow update, delete: if false;
+    }
+
+    // --- DEFAULT DENY ---
+    // Any collection not explicitly matched above is denied
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

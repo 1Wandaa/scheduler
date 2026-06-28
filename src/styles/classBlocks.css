@@ -1,0 +1,25 @@
+/* Class Blocks */
+.class-block {
+  border-radius: 4px;
+  padding: 5px;
+  text-align: left;
+  height: 100%;
+  box-sizing: border-box;
+  font-weight: 500;
+}
+
+.class-blue {
+  background-color: #E0E7FF;
+  color: var(--accent-primary);
+}
+
+.class-green {
+  background-color: var(--success-bg);
+  color: var(--success);
+}
+
+.class-red {
+  background-color: var(--danger-bg);
+  color: var(--danger);
+}
+

@@ -1,0 +1,188 @@
+/* Sidebar */
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  height: 100dvh;
+  min-height: 100dvh;
+  background: linear-gradient(180deg, #15133C 0%, #1a1750 50%, #15133C 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 0;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+  overflow-y: auto;
+  border-right: 1px solid rgba(86, 69, 238, 0.1);
+  position: sticky;
+  top: 0;
+  transition: margin-left 0.3s ease, opacity 0.3s ease;
+}
+
+/* Collapsed sidebar - slides off screen */
+.sidebar.collapsed {
+  margin-left: -260px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Toggle button */
+.sidebar-toggle-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.logo-area {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 0 20px;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.logo-area img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  image-rendering: auto;
+  display: block;
+  border-radius: 50%;
+}
+
+.logo-area h3 {
+  margin: 10px 0 0;
+  font-size: 1rem;
+  color: #0288d1;
+}
+
+.nav-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.nav-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  color: var(--sidebar-text-muted);
+  font-weight: 500;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+  margin: 2px 10px;
+  border-radius: 10px;
+}
+
+/* Icon inside nav items */
+.nav-item svg {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
+}
+
+.nav-item:hover svg {
+  transform: scale(1.12);
+  filter: drop-shadow(0 0 4px rgba(86, 69, 238, 0.5));
+}
+
+.nav-item.active svg {
+  animation: iconBounce 0.4s ease-out;
+  filter: drop-shadow(0 0 6px rgba(86, 69, 238, 0.6));
+}
+
+/* Hover & Active State — rounded pill style */
+.nav-item:hover {
+  background: rgba(86, 69, 238, 0.08);
+  color: var(--sidebar-text-active);
+}
+
+.nav-item.active {
+  background: linear-gradient(135deg, rgba(86, 69, 238, 0.25) 0%, rgba(139, 92, 246, 0.15) 100%);
+  color: var(--sidebar-text-active);
+  font-weight: 600;
+  box-shadow: 0 0 20px rgba(86, 69, 238, 0.1), inset 0 0 0 1px rgba(86, 69, 238, 0.15);
+}
+
+/* Active nav item animated indicator dot */
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background: var(--accent-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(86, 69, 238, 0.8);
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Ripple-like hover effect */
+.nav-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(86, 69, 238, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  border-radius: 10px;
+}
+
+.nav-item:hover::after {
+  opacity: 1;
+}
+
+.nav-sub-item {
+  padding: 8px 20px 8px 50px;
+  font-size: 0.9rem;
+  color: var(--sidebar-text-muted);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.nav-sub-item:hover {
+  color: var(--accent-primary);
+}
+
+/* Sidebar Stats Grey Box - Converted for Dark Mode */
+.sidebar-stats-box {
+  background: rgba(255, 255, 255, 0.05);
+  margin: 15px;
+  padding: 15px;
+  border-radius: 12px;
+  color: var(--sidebar-text-active);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.sidebar-stats-box .stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--sidebar-text-muted);
+}
+
+.sidebar-stats-box .stat-row strong {
+  font-size: 1.1rem;
+  color: var(--sidebar-text-active);
+}
+

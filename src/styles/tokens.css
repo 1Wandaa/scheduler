@@ -1,0 +1,29 @@
+:root {
+  /* --- NEW LINEAR/STRIPE INSPIRED PALETTE --- */
+  --accent-dark: #2A265F;
+  --accent-primary: #5645EE;
+  --success: #02B974;
+  --success-bg: #E6F8F0;
+  --danger: #EF2A66;
+  --danger-bg: #FDEAEF;
+  --warning: #F5A623;
+  --warning-bg: #FEF6E9;
+
+  /* Structural Colors */
+  --bg-main: #F4F5F7;
+  --card-bg: rgba(255, 255, 255, 0.98);
+  --text-main: #1E293B;
+  --text-muted: #64748B;
+  --table-header: #F8FAFC;
+  --border-color: #E2E8F0;
+
+  /* --- NEW DARK SIDEBAR COLORS --- */
+  --sidebar-bg: #15133C;
+  /* Deep, premium Navy Blue */
+  --sidebar-hover: #282463;
+  /* Slightly lighter Navy for hover states */
+  --sidebar-text-muted: #8E8CB0;
+  /* Muted lavender/grey for unselected text */
+  --sidebar-text-active: #FFFFFF;
+  /* Crisp white for active items */
+}

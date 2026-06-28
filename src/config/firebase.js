@@ -4,16 +4,25 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
 
+// ─── Firebase Configuration (from environment variables) ────────────
 const firebaseConfig = {
-  apiKey: "AIzaSyA8-k0LhdhGBkG4KcZiTz9dsCiMRDf_SAE",
-  authDomain: "scheduler-app2503.firebaseapp.com",
-  databaseURL: "https://scheduler-app2503-default-rtdb.firebaseio.com",
-  projectId: "scheduler-app2503",
-  storageBucket: "scheduler-app2503.firebasestorage.app",
-  messagingSenderId: "125166548137",
-  appId: "1:125166548137:web:9af20b6a36bcadbb2e65b8",
-  measurementId: "G-2L97MG6SJW"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
+
+// Validate required config at startup
+const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'appId'];
+for (const key of requiredKeys) {
+  if (!firebaseConfig[key]) {
+    console.error(`Missing required Firebase config: ${key}. Check your .env file.`);
+  }
+}
 
 const app = initializeApp(firebaseConfig);
 getAnalytics(app);

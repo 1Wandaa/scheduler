@@ -257,20 +257,20 @@ export function isProfessorAllowedInRoom(room, professor, subject, section, allR
   const sectionDept = getSectionDepartment(section);
 
   // Stage constraint: only designated Stage professor(s) may use Stage, and they must use Stage
-  const hasStage = (allRooms || []).some(r => (r.name || '').toLowerCase().includes('stage'));
+  const hasStage = (allRooms || []).some(r => r.isStage || (r.name || '').toLowerCase().includes('stage'));
   if (hasStage) {
     const isStageProf = isProfessorStageLocked(professor);
-    const isStageRoom = (room.name || '').toLowerCase().includes('stage');
+    const isStageRoom = room.isStage || (room.name || '').toLowerCase().includes('stage');
     if (isStageProf && !isStageRoom) return false;
     if (!isStageProf && isStageRoom) return false;
   }
 
-  // BSCS-exclusive rooms: NB04, NB05, NB06, Room 203
-  const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+  // BSCS-exclusive rooms: reject non-BSCS faculty
+  const isBscsExclusive = room.bscsExclusive || roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
   if (isBscsExclusive && profDept && profDept !== 'BSCS') return false;
 
   // Speech Lab: BAEL faculty only, no GE/PE/NSTP subjects
-  const isSpeechLab = roomName.includes('SPEECH');
+  const isSpeechLab = room.baelOnly || roomName.includes('SPEECH');
   if (isSpeechLab) {
     if (profDept !== 'BAEL') return false;
     if (subject) {
@@ -280,7 +280,7 @@ export function isProfessorAllowedInRoom(room, professor, subject, section, allR
   }
 
   // Room 204: BSCS faculty, or BSOA faculty for lab subjects
-  const isRoom204 = roomName === 'ROOM204' || roomName === '204';
+  const isRoom204 = room.restrictedAccess || roomName === 'ROOM204' || roomName === '204';
   if (isRoom204) {
     const isBSCS = (!sectionDept || sectionDept === 'BSCS') && (!profDept || profDept === 'BSCS');
     const isBSOALab = sectionDept === 'BSOA' && subject?.requiredLab && (!profDept || profDept === 'BSOA');
@@ -298,7 +298,7 @@ export function isProfessorAllowedInRoom(room, professor, subject, section, allR
  */
 export function isProfessorStageLocked(professor) {
   if (!professor) return false;
-  return professor.id === 'P04' || (professor.name || '').toLowerCase().includes('ballera');
+  return professor.stageLocked === true || professor.id === 'P04' || (professor.name || '').toLowerCase().includes('ballera');
 }
 
 /**
@@ -324,11 +324,11 @@ export function isRoomAllowedFor(room, subject, section) {
   const sectionDept = getSectionDepartment(section);
 
   // BSCS-exclusive rooms: reject non-BSCS sections
-  const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+  const isBscsExclusive = room.bscsExclusive || roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
   if (isBscsExclusive && sectionDept !== 'BSCS') return false;
 
   // Speech Lab: BAEL sections only, no GE/PE/NSTP subjects
-  const isSpeechLab = roomName.includes('SPEECH');
+  const isSpeechLab = room.baelOnly || roomName.includes('SPEECH');
   if (isSpeechLab) {
     if (sectionDept !== 'BAEL') return false;
     if (subject) {
@@ -338,7 +338,7 @@ export function isRoomAllowedFor(room, subject, section) {
   }
 
   // Room 204: BSCS sections, or BSOA sections for lab subjects
-  const isRoom204 = roomName === 'ROOM204' || roomName === '204';
+  const isRoom204 = room.restrictedAccess || roomName === 'ROOM204' || roomName === '204';
   if (isRoom204) {
     const isBSCS = !sectionDept || sectionDept === 'BSCS';
     const isBSOALab = sectionDept === 'BSOA' && subject?.requiredLab;

@@ -1,0 +1,28 @@
+/* Timetable */
+.timetable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  table-layout: fixed;
+}
+
+.timetable th,
+.timetable td {
+  border: 1px solid var(--border-color);
+  padding: 5px;
+  text-align: center;
+  vertical-align: top;
+  height: 60px;
+}
+
+.timetable th {
+  background: var(--table-header);
+}
+
+.time-col {
+  font-weight: bold;
+  color: var(--text-muted);
+  width: 60px;
+  vertical-align: middle !important;
+}
+
