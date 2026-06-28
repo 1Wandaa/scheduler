@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { suggestProfessorMatches, analyzeScheduleFailures } from '../../utils/scheduleAI';
 import ScheduleGAWorker from '../../utils/scheduleGA.worker.js?worker';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
-import { schedulesOverlap, getMeetingTimeLabel } from '../../utils/scheduleUtils';
+import { schedulesOverlap, getMeetingTimeLabel, getEligibleProfessors, getEligibleRoomsTiered } from '../../utils/scheduleUtils';
 import '../../styles/AutoScheduler.css';
 import Swal from 'sweetalert2';
 
@@ -194,12 +194,12 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           const sub = activeSemesterSubjects.find(s => s.id === subId || s.code === subId);
           if (!sub) continue;
           
-          const profs = validator._eligibleProfsFor(sub, sec);
+          const profs = getEligibleProfessors(professors, sub, sec);
           if (!profs || profs.length === 0) {
             missingProfsItems.push(`${sub.code || sub.name} (${sec.name})`);
           }
           
-          const roomsObj = validator._eligibleRoomsFor(sub, sec, { respectLabs });
+          const roomsObj = getEligibleRoomsTiered(rooms, sub, sec);
           if (!roomsObj || !roomsObj.flat || roomsObj.flat.length === 0) {
             missingRoomsItems.push(`${sub.code || sub.name} (${sec.name})`);
           }
