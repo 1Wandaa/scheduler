@@ -594,7 +594,11 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
           <img
             src={LOGO_SRC}
             alt="Logo"
-            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_LOGO; }}
+            onError={(e) => {
+              if (e.currentTarget.src !== FALLBACK_LOGO) {
+                e.currentTarget.src = FALLBACK_LOGO;
+              }
+            }}
           />
         </div>
         <div className="schedule-doc-title">

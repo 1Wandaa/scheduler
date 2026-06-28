@@ -208,7 +208,11 @@ const Dashboard = ({ user, onLogout }) => {
             src={LOGO_SRC}
             alt="CAPSU Logo"
             className="dashboard-logo"
-            onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_LOGO; }}
+            onError={e => {
+              if (e.currentTarget.src !== FALLBACK_LOGO) {
+                e.currentTarget.src = FALLBACK_LOGO;
+              }
+            }}
           />
           {!isSidebarCollapsed && (
             <>

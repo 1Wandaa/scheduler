@@ -105,8 +105,9 @@ function ProfessorWorkload({ professors, schedules }) {
             src={LOGO_SRC}
             alt="Logo"
             onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = FALLBACK_LOGO;
+              if (e.currentTarget.src !== FALLBACK_LOGO) {
+                e.currentTarget.src = FALLBACK_LOGO;
+              }
             }}
           />
         </div>
