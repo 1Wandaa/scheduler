@@ -102,8 +102,14 @@ function buildAssignments(subjects, sections, activeSemester, filter) {
  * @param {Function} addScheduleFn — async (schedule) => { ok: boolean, errors?: string[] }
  * @returns {{ results: Object[], unscheduled: Object[], error: string|null }}
  */
-export async function runTargetedScheduler(assignments, context, constraints, addScheduleFn) {
+export async function runTargetedScheduler(assignments, context, constraints, addScheduleFn, options = {}) {
   const { professors, rooms, activeSchedules } = context;
+  const { onProgress, signal } = options;
+
+  // Early abort check — yield so pending Cancel clicks can fire
+  await new Promise((r) => setTimeout(r, 0));
+  if (signal?.aborted) return { results: [], unscheduled: [], error: 'Cancelled by user.' };
+
   const results = [];
   const unscheduled = [];
   const fixedRoom = constraints?.fixedRoom || null;
@@ -141,6 +147,24 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     });
 
   const placedKeys = new Set();
+  const totalGroups = allGroups.length;
+  let processedCount = 0;
+
+  // Helper: report progress and yield to UI thread
+  const reportProgress = async (pass, groupIndex, passTotal) => {
+    processedCount++;
+    if (onProgress) {
+      // Weight passes: Pass 1 = 0-50%, Pass 2 = 50-80%, Pass 3 = 80-100%
+      const passWeights = [0, 0.5, 0.8, 1.0];
+      const passStart = passWeights[pass - 1];
+      const passEnd = passWeights[pass];
+      const passProgress = passTotal > 0 ? (groupIndex + 1) / passTotal : 1;
+      const pct = Math.round((passStart + (passEnd - passStart) * passProgress) * 100);
+      onProgress({ percent: Math.min(pct, 100), placed: results.length, total: totalGroups, pass });
+    }
+    // Yield to UI thread periodically
+    if (processedCount % 2 === 0) await new Promise((r) => setTimeout(r, 0));
+  };
 
   // ─── Helper: attempt to place a single group ────────────────────
   const tryPlaceGroup = async (group, roomPool, usePairsOnly) => {
@@ -149,6 +173,11 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     const hasStage = rooms.some((r) => (r.name || '').toLowerCase().includes('stage'));
 
     for (const professor of profPool) {
+      if (signal?.aborted) return false;
+      // Yield to event loop so Cancel click can be processed
+      await new Promise((r) => setTimeout(r, 0));
+      if (signal?.aborted) return false;
+
       const isStageLocked = isProfessorStageLocked(professor);
       const profSchedules = temp.filter((s) => String(s.professor?.id) === String(professor.id));
       const uniqueLoad = new Map();
@@ -171,7 +200,14 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         sortedRoomPool = [...validPrefRooms, ...nonPrefRooms];
       }
 
-      for (const room of sortedRoomPool) {
+      for (let ri = 0; ri < sortedRoomPool.length; ri++) {
+        const room = sortedRoomPool[ri];
+        // Yield every few rooms so the UI stays responsive
+        if (ri % 3 === 0) {
+          await new Promise((r) => setTimeout(r, 0));
+          if (signal?.aborted) return false;
+        }
+
         if (hasStage) {
           const isStage = (room.name || '').toLowerCase().includes('stage');
           if (isStageLocked && !isStage) continue;
@@ -179,6 +215,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         }
 
         for (const timeSlot of TIME_SLOTS) {
+          if (signal?.aborted) return false;
           const startIdx = getTimeSlotIndex(timeSlot);
           if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting) === 0) continue;
 
@@ -239,19 +276,24 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 
   // ── PASS 1 — STRICT: Department rooms, preferred pairs ────────────
   console.log(`[AutoScheduler] Pass 1 (Strict): ${allGroups.length} groups to schedule`);
-  for (const group of allGroups) {
+  for (let i = 0; i < allGroups.length; i++) {
+    if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
+    const group = allGroups[i];
     const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
     const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints);
     if (tiers.tier1.length > 0) {
       const placed = await tryPlaceGroup(group, tiers.tier1, group.count === 2);
       if (placed) placedKeys.add(groupKey);
     }
+    await reportProgress(1, i, allGroups.length);
   }
 
   // ── PASS 2 — SHARED: Department + Shared rooms, any days ──────────
   const remainingAfterPass1 = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
   console.log(`[AutoScheduler] Pass 2 (Shared): ${remainingAfterPass1.length} groups remaining`);
-  for (const group of remainingAfterPass1) {
+  for (let i = 0; i < remainingAfterPass1.length; i++) {
+    if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
+    const group = remainingAfterPass1[i];
     const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
     const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints);
     const pool = [...tiers.tier1, ...tiers.tier2];
@@ -259,12 +301,15 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       const placed = await tryPlaceGroup(group, pool, false);
       if (placed) placedKeys.add(groupKey);
     }
+    await reportProgress(2, i, remainingAfterPass1.length);
   }
 
   // ── PASS 3 — FALLBACK: ALL rooms, any days ────────────────────────
   const remainingAfterPass2 = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
   console.log(`[AutoScheduler] Pass 3 (Fallback): ${remainingAfterPass2.length} groups remaining`);
-  for (const group of remainingAfterPass2) {
+  for (let i = 0; i < remainingAfterPass2.length; i++) {
+    if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
+    const group = remainingAfterPass2[i];
     const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
     const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints);
     const pool = [...tiers.tier1, ...tiers.tier2, ...tiers.tier3];
@@ -278,6 +323,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       }
       unscheduled.push({ subject: group.subject, section: group.section, reason });
     }
+    await reportProgress(3, i, remainingAfterPass2.length);
   }
 
   console.log(`[AutoScheduler] Done: ${results.length} placed, ${unscheduled.length} unscheduled`);
@@ -288,32 +334,38 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 //  Convenience wrappers for by-section, by-room, by-faculty modes
 // ═══════════════════════════════════════════════════════════════════════
 
-export async function autoScheduleForSection(sectionId, context, constraints, addScheduleFn, activeSemester) {
+export async function autoScheduleForSection(sectionId, context, constraints, addScheduleFn, activeSemester, options) {
   const { sections, subjects } = context;
   const section = sections.find((s) => s.id === sectionId);
   if (!section) return { results: [], unscheduled: [], error: `Section "${sectionId}" not found.` };
 
   const assignments = buildAssignments(subjects, [section], activeSemester, null);
-  return runTargetedScheduler(assignments, context, constraints, addScheduleFn);
+  return runTargetedScheduler(assignments, context, constraints, addScheduleFn, options);
 }
 
-export async function autoScheduleForRoom(roomId, context, constraints, addScheduleFn, activeSemester) {
+export async function autoScheduleForRoom(roomId, context, constraints, addScheduleFn, activeSemester, options) {
   const { rooms, sections, subjects } = context;
   const room = rooms.find((r) => r.id === roomId);
   if (!room) return { results: [], unscheduled: [], error: `Room "${roomId}" not found.` };
 
   const assignments = buildAssignments(subjects, sections, activeSemester, null);
-  return runTargetedScheduler(assignments, context, { ...constraints, fixedRoom: room }, addScheduleFn);
+  return runTargetedScheduler(assignments, context, { ...constraints, fixedRoom: room }, addScheduleFn, options);
 }
 
-export async function autoScheduleForFaculty(professorId, context, constraints, addScheduleFn, activeSemester) {
+export async function autoScheduleForFaculty(professorId, context, constraints, addScheduleFn, activeSemester, options) {
   const { professors, sections, subjects } = context;
   const professor = professors.find((p) => p.id === professorId);
   if (!professor) return { results: [], unscheduled: [], error: `Faculty "${professorId}" not found.` };
 
   const filter = (subject) => professorMatchesSubject(professor, subject);
   const assignments = buildAssignments(subjects, sections, activeSemester, filter);
-  return runTargetedScheduler(assignments, context, { ...constraints, fixedProfessor: professor }, addScheduleFn);
+  return runTargetedScheduler(assignments, context, { ...constraints, fixedProfessor: professor }, addScheduleFn, options);
+}
+
+export async function autoScheduleFull(context, constraints, addScheduleFn, activeSemester, options) {
+  const { sections, subjects } = context;
+  const assignments = buildAssignments(subjects, sections, activeSemester, null);
+  return runTargetedScheduler(assignments, context, constraints, addScheduleFn, options);
 }
 
 // ═══════════════════════════════════════════════════════════════════════

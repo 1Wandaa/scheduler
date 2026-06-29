@@ -8,6 +8,16 @@ function ProfessorWorkload({ professors, schedules }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [sortBy, setSortBy] = useState('name'); // 'name' or 'utilization'
+  const [expandedProfs, setExpandedProfs] = useState(new Set());
+
+  const toggleExpanded = (profId) => {
+    setExpandedProfs(prev => {
+      const next = new Set(prev);
+      if (next.has(profId)) next.delete(profId);
+      else next.add(profId);
+      return next;
+    });
+  };
 
   const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
   const matchesProfessor = (s, professor) => professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);
@@ -192,31 +202,43 @@ function ProfessorWorkload({ professors, schedules }) {
 
               <div className="pw-assignments">
                 <h4 className="pw-assignments-title">Recent Assignments</h4>
-                {prof.profSchedules.slice(0, 3).map((schedule, idx) => {
-                  const dayShort = typeof schedule.day === 'string' ? schedule.day.slice(0, 3) : '—';
-                  const timeStr = schedule.timeSlot?.time ?? schedule.timeSlot?.label ?? '';
-                  const timeStart = typeof timeStr === 'string' && timeStr.includes(' - ')
-                    ? timeStr.split(' - ')[0]
-                    : timeStr || '—';
+                {(() => {
+                  const isExpanded = expandedProfs.has(prof.id);
+                  const displaySchedules = isExpanded ? prof.profSchedules : prof.profSchedules.slice(0, 3);
+                  
                   return (
-                    <div key={schedule.id ?? idx} className="pw-assignment-item">
-                      <span className="pw-assignment-subj">{schedule.subject?.code ?? '—'}</span>
-                      <span className="pw-assignment-time">{dayShort} • {timeStart}</span>
-                    </div>
+                    <>
+                      {displaySchedules.map((schedule, idx) => {
+                        const dayShort = typeof schedule.day === 'string' ? schedule.day.slice(0, 3) : '—';
+                        const timeStr = schedule.timeSlot?.time ?? schedule.timeSlot?.label ?? '';
+                        const timeStart = typeof timeStr === 'string' && timeStr.includes(' - ')
+                          ? timeStr.split(' - ')[0]
+                          : timeStr || '—';
+                        return (
+                          <div key={schedule.id ?? idx} className="pw-assignment-item">
+                            <span className="pw-assignment-subj">{schedule.subject?.code ?? '—'}</span>
+                            <span className="pw-assignment-time">{dayShort} • {timeStart}</span>
+                          </div>
+                        );
+                      })}
+                      
+                      {prof.profSchedules.length === 0 && (
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0, padding: '8px 0' }}>
+                          No classes assigned yet.
+                        </p>
+                      )}
+                      
+                      {prof.profSchedules.length > 3 && (
+                        <button 
+                          className="pw-more-btn" 
+                          onClick={() => toggleExpanded(prof.id)}
+                        >
+                          {isExpanded ? 'Show less classes' : `+${prof.profSchedules.length - 3} more classes`}
+                        </button>
+                      )}
+                    </>
                   );
-                })}
-                
-                {prof.profSchedules.length === 0 && (
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0, padding: '8px 0' }}>
-                    No classes assigned yet.
-                  </p>
-                )}
-                
-                {prof.profSchedules.length > 3 && (
-                  <button className="pw-more-btn">
-                    +{prof.profSchedules.length - 3} more classes
-                  </button>
-                )}
+                })()}
               </div>
 
             </div>

@@ -229,7 +229,7 @@ export function creditPerMeeting(subject) {
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  CANONICAL ROOM ELIGIBILITY — Single source of truth for all room rules.
-//  Used by: ScheduleGA, Dashboard validator, targeted heuristic engine.
+//  Used by: Dashboard validator, targeted heuristic engine.
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
@@ -402,5 +402,19 @@ export function getEligibleRoomsTiered(rooms, subject, section) {
     }
   }
 
-  return { tier1, tier2, tier3, flat: [...tier1, ...tier2, ...tier3] };
+  const sortLabRoomsLast = (roomArray) => {
+    if (subject?.requiredLab) return roomArray;
+    return [...roomArray].sort((a, b) => {
+      const aIsLab = a.hasComputers ? 1 : 0;
+      const bIsLab = b.hasComputers ? 1 : 0;
+      return aIsLab - bIsLab;
+    });
+  };
+
+  return {
+    tier1: sortLabRoomsLast(tier1),
+    tier2: sortLabRoomsLast(tier2),
+    tier3: sortLabRoomsLast(tier3),
+    flat: sortLabRoomsLast([...tier1, ...tier2, ...tier3])
+  };
 }

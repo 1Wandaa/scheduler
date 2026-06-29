@@ -125,7 +125,7 @@ export const showAutoScheduleModal = (mode, { professors, rooms, sections }, onC
             <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
           </div>
           <h2 style="margin: 0 0 12px; font-size: 1.5rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.03em;">Generate Full Timetable?</h2>
-          <p style="margin: 0; font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">This will use the powerful Genetic Algorithm engine to automatically generate conflict-free schedules for all sections.</p>
+          <p style="margin: 0; font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">This will use the scheduling engine to automatically generate conflict-free schedules for all sections.</p>
         </div>
       `,
       showCancelButton: true,

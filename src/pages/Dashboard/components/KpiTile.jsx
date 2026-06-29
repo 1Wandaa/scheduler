@@ -1,7 +1,7 @@
 import React from 'react';
 import { Icon } from './Icon';
 
-const KpiTile = ({ label, value, iconPath, color }) => {
+const KpiTile = ({ label, value, iconPath, color, onClick }) => {
   const lighten = (hex, amt) => {
     let r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
     r = Math.min(255, r + amt); g = Math.min(255, g + amt); b = Math.min(255, b + amt);
@@ -9,7 +9,7 @@ const KpiTile = ({ label, value, iconPath, color }) => {
   };
   const gradEnd = lighten(color, 60);
   return (
-    <div className="kpi-tile" style={{
+    <div className="kpi-tile" onClick={onClick} style={{
       background: 'var(--card-bg)',
       border: '1px solid var(--border-color)',
       borderRadius: '16px',
@@ -19,7 +19,7 @@ const KpiTile = ({ label, value, iconPath, color }) => {
       gap: '18px',
       boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
       transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease',
-      cursor: 'default',
+      cursor: onClick ? 'pointer' : 'default',
       animation: 'floatUp 0.5s ease-out backwards',
       position: 'relative',
       overflow: 'hidden',

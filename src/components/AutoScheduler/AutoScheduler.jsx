@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { suggestProfessorMatches, analyzeScheduleFailures } from '../../utils/scheduleAI';
-import ScheduleGAWorker from '../../utils/scheduleGA.worker.js?worker';
+import React, { useState, useRef } from 'react';
+import { suggestProfessorMatches } from '../../utils/scheduleAI';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import { schedulesOverlap, getMeetingTimeLabel, getEligibleProfessors, getEligibleRoomsTiered } from '../../utils/scheduleUtils';
 import '../../styles/AutoScheduler.css';
@@ -11,9 +10,10 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [result, setResult] = useState(null);
-  const [progress, setProgress] = useState({ gen: 0, max: 0, fitness: null });
+  const [progress, setProgress] = useState({ percent: 0, placed: 0, total: 0, pass: 0 });
+  const abortRef = useRef(null);
 
-  const [engineMode, setEngineMode] = useState('ga');
+  const [engineMode, setEngineMode] = useState('full');
   const [targetId, setTargetId] = useState('');
 
   // Constraints
@@ -33,8 +33,8 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     };
     const handleExecuteEvent = (e) => {
       if (e.detail) {
-        if (e.detail === 'ga' || e.detail.mode === 'ga') {
-          setEngineMode('ga');
+        if (e.detail === 'ga' || e.detail.mode === 'ga' || e.detail === 'full' || e.detail.mode === 'full') {
+          setEngineMode('full');
           setTargetId('');
         } else {
           setEngineMode(e.detail.mode);
@@ -90,10 +90,20 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     setClearing(false);
   };
 
+  // Cancel handler
+  const handleCancel = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+  };
+
   // Run the Targeted Heuristic Engine (Greedy)
   const runTargeted = async () => {
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setResult(null);
+    setProgress({ percent: 0, placed: 0, total: 0, pass: 0 });
     setAiInsights(null);
     setAiStatus('');
     try {
@@ -103,23 +113,49 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         try {
           setAiStatus('🧠 AI analyzing professor-subject compatibility...');
           aiProfessorMap = await suggestProfessorMatches(professors, activeSemesterSubjects, sections, schedules);
+          // Check if cancelled during AI call
+          if (controller.signal.aborted) {
+            setResult({ schedule: [], unscheduled: [], prescriptions: [], error: 'Cancelled by user.', mode: engineMode });
+            abortRef.current = null;
+            setLoading(false);
+            return;
+          }
           if (aiProfessorMap) {
             setAiStatus('✅ AI matching complete — starting targeted engine with optimized assignments');
           } else {
             setAiStatus('⚠️ AI matching returned no results — using default matching');
           }
         } catch (aiError) {
+          if (controller.signal.aborted) {
+            setResult({ schedule: [], unscheduled: [], prescriptions: [], error: 'Cancelled by user.', mode: engineMode });
+            abortRef.current = null;
+            setLoading(false);
+            return;
+          }
           console.warn('[AI] Pre-processing failed:', aiError);
           setAiStatus('⚠️ AI unavailable — using default matching');
         }
       }
 
+      // Check again before starting scheduler
+      if (controller.signal.aborted) {
+        setResult({ schedule: [], unscheduled: [], prescriptions: [], error: 'Cancelled by user.', mode: engineMode });
+        abortRef.current = null;
+        setLoading(false);
+        return;
+      }
+
       const constraints = { respectLabs, preventDoubleBooking, aiProfessorMap };
+      const schedulerOptions = {
+        onProgress: (p) => setProgress(p),
+        signal: controller.signal,
+      };
       let r = null;
 
-      if (engineMode === 'faculty') r = await validator.autoScheduleForFaculty(targetId, constraints);
-      else if (engineMode === 'room') r = await validator.autoScheduleForRoom(targetId, constraints);
-      else if (engineMode === 'section') r = await validator.autoScheduleForSection(targetId, constraints);
+      if (engineMode === 'full') r = await validator.autoScheduleFull(constraints, schedulerOptions);
+      else if (engineMode === 'faculty') r = await validator.autoScheduleForFaculty(targetId, constraints, schedulerOptions);
+      else if (engineMode === 'room') r = await validator.autoScheduleForRoom(targetId, constraints, schedulerOptions);
+      else if (engineMode === 'section') r = await validator.autoScheduleForSection(targetId, constraints, schedulerOptions);
       else throw new Error('Invalid mode selected.');
 
       const unscheduledResults = r.unscheduled || [];
@@ -132,25 +168,10 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         mode: engineMode
       });
 
-      // --- AI Post-Processing: Analyze failures ---
-      if (aiAssisted && unscheduledResults.length > 0) {
-        try {
-          setAiStatus('🔍 AI generating prescriptions for failed classes...');
-          const insights = await analyzeScheduleFailures(
-            unscheduledResults, professors, rooms, sections, r.results || []
-          );
-          if (insights) {
-            setAiInsights(insights);
-            setAiStatus('✅ AI prescriptions ready');
-          } else {
-            setAiStatus('');
-          }
-        } catch (aiError) {
-          console.warn('[AI] Post-processing failed:', aiError);
-          setAiStatus('');
-        }
-      } else if (aiAssisted && unscheduledResults.length === 0) {
-        setAiStatus('✅ All classes scheduled successfully — no prescriptions needed');
+      if (aiAssisted && unscheduledResults.length === 0) {
+        setAiStatus('✅ All classes scheduled successfully');
+      } else if (aiAssisted) {
+        setAiStatus('⚠️ Auto-scheduler completed with some conflicts. Review the results below.');
       }
 
       if (onLogHistory) {
@@ -170,267 +191,14 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     } catch (e) {
       setResult({ schedule: [], unscheduled: [], prescriptions: [], error: e.message, mode: engineMode });
     }
+    abortRef.current = null;
     setLoading(false);
   };
 
-  // Run the Genetic Algorithm Engine
-  const runGA = async () => {
-    setLoading(true);
-    setResult(null);
-    setAiInsights(null);
-    setAiStatus('');
-    setProgress({ gen: 0, max: 100, fitness: null });
 
-    try {
-      if (!sections || sections.length === 0) {
-        throw new Error("No sections defined. Please add sections in Section Management first.");
-      }
-
-      // Pre-flight feasibility check
-      const missingProfsItems = [];
-      const missingRoomsItems = [];
-      for (const sec of sections) {
-        for (const subId of (sec.subjects || [])) {
-          const sub = activeSemesterSubjects.find(s => s.id === subId || s.code === subId);
-          if (!sub) continue;
-          
-          const profs = getEligibleProfessors(professors, sub, sec);
-          if (!profs || profs.length === 0) {
-            missingProfsItems.push(`${sub.code || sub.name} (${sec.name})`);
-          }
-          
-          const roomsObj = getEligibleRoomsTiered(rooms, sub, sec);
-          if (!roomsObj || !roomsObj.flat || roomsObj.flat.length === 0) {
-            missingRoomsItems.push(`${sub.code || sub.name} (${sec.name})`);
-          }
-        }
-      }
-
-      if (missingProfsItems.length > 0 || missingRoomsItems.length > 0) {
-        setLoading(false);
-        
-        let htmlContent = '<div style="text-align: left; max-height: 250px; overflow-y: auto; font-size: 0.9rem; padding: 10px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; background: #fafafa;">';
-        if (missingProfsItems.length > 0) {
-          htmlContent += `<p style="margin-bottom: 5px; color: #b91c1c;"><strong>Missing Eligible Faculty (${missingProfsItems.length}):</strong></p>`;
-          htmlContent += `<ul style="margin-top: 0; padding-left: 20px;">${missingProfsItems.map(item => `<li>${item}</li>`).join('')}</ul>`;
-        }
-        if (missingRoomsItems.length > 0) {
-          htmlContent += `<p style="margin-bottom: 5px; color: #b91c1c;"><strong>Missing Eligible Rooms (${missingRoomsItems.length}):</strong></p>`;
-          htmlContent += `<ul style="margin-top: 0; padding-left: 20px;">${missingRoomsItems.map(item => `<li>${item}</li>`).join('')}</ul>`;
-        }
-        htmlContent += '</div><p style="font-size: 0.95rem;">These classes will be skipped. Proceed with scheduling the rest?</p>';
-
-        const proceed = await Swal.fire({
-          title: 'Data Issues Detected',
-          html: htmlContent,
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonText: 'Proceed Anyway',
-          cancelButtonText: 'Cancel'
-        });
-        if (!proceed.isConfirmed) {
-          return;
-        }
-        setLoading(true);
-      }
-
-      // 2. Pass existing schedules — always append mode
-      const existingSchedules = schedules || [];
-
-      // --- AI Pre-Processing: Smart professor-subject matching ---
-      let aiProfessorMap = null;
-      if (aiAssisted) {
-        try {
-          setAiStatus('🧠 AI analyzing professor-subject compatibility...');
-          aiProfessorMap = await suggestProfessorMatches(professors, activeSemesterSubjects, sections, existingSchedules);
-          if (aiProfessorMap) {
-            setAiStatus('✅ AI matching complete — starting GA with optimized assignments');
-          } else {
-            setAiStatus('⚠️ AI matching returned no results — using default matching');
-          }
-        } catch (aiError) {
-          console.warn('[AI] Pre-processing failed:', aiError);
-          setAiStatus('⚠️ AI unavailable — using default matching');
-        }
-      }
-
-      // --- Run GA in a Web Worker to keep UI responsive ---
-      setAiStatus(prev => prev || '⚙️ Starting GA engine in background...');
-
-      const gaResult = await new Promise((resolve, reject) => {
-        const worker = new ScheduleGAWorker();
-
-        worker.onmessage = (e) => {
-          const msg = e.data;
-          if (msg.type === 'progress') {
-            setProgress({ gen: msg.gen, max: msg.max, fitness: msg.fitness });
-          } else if (msg.type === 'done') {
-            worker.terminate();
-            resolve(msg.result);
-          } else if (msg.type === 'error') {
-            worker.terminate();
-            reject(new Error(msg.message));
-          }
-        };
-
-        worker.onerror = (err) => {
-          worker.terminate();
-          reject(new Error(err.message || 'Worker crashed'));
-        };
-
-        worker.postMessage({
-          type: 'start',
-          payload: {
-            subjects: activeSemesterSubjects, rooms, professors, sections,
-            days: DAYS, timeSlots: TIME_SLOTS,
-            existingSchedules,
-            config: { populationSize: 60, maxGenerations: 150, mutationRate: 0.15 },
-            aiProfessorMap,
-          }
-        });
-      });
-
-      const validResults = [];
-      const unscheduledResults = [];
-      const gaPrescriptions = gaResult.prescriptions || [];
-
-      // 3. Initialize saved schedules with existing ones to accurately check overlaps
-      const savedSchedules = [...existingSchedules];
-
-      // Track which professor is assigned per section+subject to prevent mixed assignments
-      const profForSecSub = {};
-      for (const s of existingSchedules) {
-        if (s.professor?.id && s.section?.id && s.subject?.id) {
-          const key = `${s.section.id}-${s.subject.id}`;
-          if (!profForSecSub[key]) profForSecSub[key] = String(s.professor.id);
-        }
-      }
-
-      const toSave = [];
-
-      // Validate the GA output before claiming success
-      for (const entry of gaResult.schedule) {
-        if (entry.failed) {
-          unscheduledResults.push(entry); // Captures overloaded faculty errors
-          continue;
-        }
-
-        if (respectLabs && entry.subject?.requiredLab && !entry.room?.hasComputers) {
-          unscheduledResults.push({ ...entry, reason: 'Subject requires a computer lab.' });
-          continue;
-        }
-
-        const isConflict = savedSchedules.some(s => schedulesOverlap(s, entry));
-
-        if (preventDoubleBooking && isConflict) {
-          unscheduledResults.push({ ...entry, reason: 'Overlap conflict detected by engine.' });
-          continue;
-        }
-
-        // Reject if a different professor was already saved for this section+subject
-        if (entry.section?.id && entry.subject?.id && entry.professor?.id) {
-          const secSubKey = `${entry.section.id}-${entry.subject.id}`;
-          const existingProfId = profForSecSub[secSubKey];
-          if (existingProfId && existingProfId !== String(entry.professor.id)) {
-            unscheduledResults.push({ ...entry, reason: `Section already has a different professor for ${entry.subject.code || entry.subject.name}.` });
-            continue;
-          }
-        }
-
-        // It passed local validation; queue for batch save
-        toSave.push(entry);
-        savedSchedules.push(entry);
-        if (entry.section?.id && entry.subject?.id && entry.professor?.id) {
-          const secSubKey = `${entry.section.id}-${entry.subject.id}`;
-          if (!profForSecSub[secSubKey]) profForSecSub[secSubKey] = String(entry.professor.id);
-        }
-      }
-
-      // Attempt to save all valid entries to database via batch
-      if (toSave.length > 0) {
-        if (onAutoScheduleBatch) {
-          try {
-            const batchResult = await onAutoScheduleBatch(toSave);
-            if (batchResult && batchResult.ok === false) {
-              // If batch failed entirely or partial failures happened, just push generic error to all toSave
-              toSave.forEach(entry => {
-                unscheduledResults.push({ ...entry, reason: batchResult.errors?.join(', ') || 'Database validation failed in batch.' });
-              });
-            } else {
-              validResults.push(...toSave);
-            }
-          } catch (e) {
-            toSave.forEach(entry => unscheduledResults.push({ ...entry, reason: 'Failed to save to database.' }));
-          }
-        } else {
-          // Fallback to one-by-one if batch function isn't provided
-          for (const entry of toSave) {
-            try {
-              const writeResult = await onAutoSchedule(entry);
-              if (writeResult && writeResult.ok === false) {
-                unscheduledResults.push({ ...entry, reason: writeResult.errors?.join(', ') || 'Database validation failed.' });
-              } else {
-                validResults.push(entry);
-              }
-            } catch (e) {
-              unscheduledResults.push({ ...entry, reason: 'Failed to save to database.' });
-            }
-          }
-        }
-      }
-
-      setResult({
-        schedule: validResults,
-        unscheduled: unscheduledResults,
-        prescriptions: gaPrescriptions,
-        error: null,
-        mode: 'ga'
-      });
-
-      // --- AI Post-Processing: Analyze failures ---
-      if (aiAssisted && unscheduledResults.length > 0) {
-        try {
-          setAiStatus('🔍 AI generating prescriptions for failed classes...');
-          const insights = await analyzeScheduleFailures(
-            unscheduledResults, professors, rooms, sections, validResults
-          );
-          if (insights) {
-            setAiInsights(insights);
-            setAiStatus('✅ AI prescriptions ready');
-          } else {
-            setAiStatus('');
-          }
-        } catch (aiError) {
-          console.warn('[AI] Post-processing failed:', aiError);
-          setAiStatus('');
-        }
-      } else if (aiAssisted && unscheduledResults.length === 0) {
-        setAiStatus('✅ All classes scheduled successfully — no prescriptions needed');
-      }
-
-      if (onLogHistory) {
-        onLogHistory({
-          engineMode: 'ga',
-          totalAttempted: validResults.length + unscheduledResults.length,
-          successCount: validResults.length,
-          errorCount: unscheduledResults.length,
-          errors: unscheduledResults.map(u => ({
-            subject: u.subject?.code || u.subject?.name || 'Unknown',
-            section: u.section?.name || 'Unknown',
-            reason: u.reason || 'Insufficient slots or conflict'
-          }))
-        });
-      }
-
-    } catch (error) {
-      setResult({ schedule: [], unscheduled: [], prescriptions: [], error: error.message, mode: 'ga' });
-    }
-    setLoading(false);
-  };
 
   const handleExecute = () => {
-    if (engineMode === 'ga') runGA();
-    else runTargeted();
+    runTargeted();
   };
 
   const targetOptions = engineMode === 'faculty' ? professors
@@ -459,14 +227,14 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
             value={engineMode}
             onChange={(e) => { setEngineMode(e.target.value); setTargetId(''); }}
           >
-            <option value="ga">Full Timetable (GA)</option>
+            <option value="full">Full Timetable</option>
             <option value="faculty">By Faculty</option>
             <option value="room">By Room</option>
             <option value="section">By Section</option>
           </select>
         </div>
 
-        {engineMode !== 'ga' && (
+        {engineMode !== 'full' && (
           <div className="form-group">
             <label className="form-label">Select Target</label>
             <select
@@ -504,17 +272,64 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
-        <button id="btn-execute-autoschedule" onClick={handleExecute} disabled={loading || clearing || (engineMode !== 'ga' && !targetId)} className="btn" style={{ flex: 1, padding: '14px', fontSize: '1rem', whiteSpace: 'nowrap', minWidth: '200px' }}>
-          {loading ? 'Processing Schedule...' : 'Generate Timetable'}
-        </button>
-        <button
-          onClick={handleClearAll}
-          disabled={loading || clearing}
-          className="btn-danger-outline"
-        >
-          {clearing ? 'Clearing...' : '🗑 Clear All Schedules'}
-        </button>
+        {!loading ? (
+          <>
+            <button id="btn-execute-autoschedule" onClick={handleExecute} disabled={clearing || (engineMode !== 'full' && !targetId)} className="btn" style={{ flex: 1, padding: '14px', fontSize: '1rem', whiteSpace: 'nowrap', minWidth: '200px' }}>
+              Generate Timetable
+            </button>
+            <button
+              onClick={handleClearAll}
+              disabled={clearing}
+              className="btn-danger-outline"
+            >
+              {clearing ? 'Clearing...' : '🗑 Clear All Schedules'}
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={handleCancel}
+            className="btn-danger-outline"
+            style={{ flex: 1, padding: '14px', fontSize: '1rem', minWidth: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="6" y="6" width="12" height="12" rx="2" />
+            </svg>
+            Cancel Scheduling
+          </button>
+        )}
       </div>
+
+      {/* Progress Bar */}
+      {loading && (
+        <div style={{ marginTop: '12px', animation: 'fadeIn 0.3s' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
+              {progress.pass > 0
+                ? `Pass ${progress.pass}/3 — ${progress.percent}%`
+                : 'Preparing...'}
+            </span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              {progress.placed > 0 ? `${progress.placed} placed of ${progress.total} groups` : ''}
+            </span>
+          </div>
+          <div style={{ height: '10px', background: 'var(--border-color)', borderRadius: '5px', overflow: 'hidden', position: 'relative' }}>
+            <div style={{
+              width: `${progress.percent}%`,
+              height: '100%',
+              background: 'linear-gradient(90deg, var(--accent-primary), #7c3aed)',
+              borderRadius: '5px',
+              transition: 'width 0.3s ease',
+              boxShadow: progress.percent > 0 ? '0 0 8px rgba(99,102,241,0.4)' : 'none',
+            }} />
+          </div>
+          <p style={{ textAlign: 'center', fontSize: '0.78rem', marginTop: '6px', color: 'var(--text-muted)' }}>
+            {progress.pass === 1 && 'Scheduling with department rooms & preferred day pairs...'}
+            {progress.pass === 2 && 'Trying shared rooms with flexible days...'}
+            {progress.pass === 3 && 'Attempting overflow placement with all rooms...'}
+            {progress.pass === 0 && 'Initializing scheduler...'}
+          </p>
+        </div>
+      )}
 
       {/* AI Status */}
       {aiStatus && (
@@ -523,15 +338,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         </div>
       )}
 
-      {/* Progress Bar */}
-      {loading && engineMode === 'ga' && (
-        <div style={{ marginTop: '15px' }}>
-          <div style={{ height: '8px', background: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ width: `${(progress.gen / progress.max) * 100}%`, height: '100%', background: 'var(--accent-primary)', transition: 'width 0.2s' }}></div>
-          </div>
-          <p style={{ textAlign: 'center', fontSize: '0.8rem', marginTop: '5px' }}>Generation {progress.gen} / {progress.max}</p>
-        </div>
-      )}
+
 
       {/* Results Section */}
       {result && !loading && (
@@ -608,111 +415,24 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
             </div>
           )}
 
-          {/* Prescriptions Required (replaces "Could Not Schedule") */}
+          {/* Unscheduled Results */}
           {result.unscheduled.length > 0 && (
             <div className="result-section prescriptions-section">
               <h3>
-                📋 Prescriptions Required ({result.unscheduled.length})
+                ⚠️ Could Not Schedule ({result.unscheduled.length})
               </h3>
               <p className="section-description">
-                These classes need manual intervention or overflow placement. Review the prescriptions below.
+                The following classes could not be scheduled due to resource constraints (e.g. professor max units reached or no available rooms).
               </p>
               <div className="card-list">
-                {result.unscheduled.map((s, idx) => {
-                  // Find matching GA prescription if available
-                  const gaPrescription = (result.prescriptions || []).find(
-                    p => p.subject?.id === s?.subject?.id && p.section?.id === s?.section?.id
-                  );
-
-                  return (
-                    <div key={idx} className="prescription-card">
-                      <div className="card-title">
-                        {s?.subject?.code || s?.subject?.name || 'Unknown Subject'}
-                        {s?.section?.name ? ` — ${s.section.name}` : ''}
-                      </div>
-                      <div className="card-reason">
-                        Reason: {s?.reason || 'Insufficient slots or conflict'}
-                      </div>
-                      
-                      {/* GA Engine Suggestions */}
-                      {gaPrescription && (
-                        <div className="engine-prescription">
-                          <div className="engine-prescription-title">
-                            Engine Prescription:
-                          </div>
-                          {gaPrescription.suggestedRooms?.length > 0 && (
-                            <div className="engine-prescription-item">
-                              <strong>Rooms:</strong> {gaPrescription.suggestedRooms.map(r => `${r.name} (${r.department})`).join(', ')}
-                            </div>
-                          )}
-                          {gaPrescription.suggestedProfessors?.length > 0 && (
-                            <div className="engine-prescription-item">
-                              <strong>Professors:</strong> {gaPrescription.suggestedProfessors.map(p => `${p.name} (${p.department})`).join(', ')}
-                            </div>
-                          )}
-                          <div className="engine-prescription-action">
-                            {gaPrescription.suggestedAction}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* AI Prescriptions Panel */}
-          {aiInsights && aiInsights.length > 0 && (
-            <div className="result-section ai-prescriptions-section">
-              <h3>
-                🧠 AI Prescriptions ({aiInsights.length})
-              </h3>
-              <div className="card-list">
-                {aiInsights.map((insight, idx) => (
-                  <div key={idx} className="ai-prescription-card">
+                {result.unscheduled.map((s, idx) => (
+                  <div key={idx} className="prescription-card">
                     <div className="card-title">
-                      {insight.subject}{insight.section ? ` — ${insight.section}` : ''}
+                      {s?.subject?.code || s?.subject?.name || 'Unknown Subject'}
+                      {s?.section?.name ? ` — ${s.section.name}` : ''}
                     </div>
-                    <div className="card-description">
-                      {insight.problem}
-                    </div>
-                    
-                    {/* Concrete suggestion from AI */}
-                    {(insight.suggestedRoom || insight.suggestedDay || insight.suggestedTime || insight.suggestedProfessor) && (
-                      <div className={`ai-suggestion-box ${insight.validated ? 'validated' : 'unverified'}`}>
-                        <div className="ai-suggestion-title">
-                          {insight.validated ? 'Validated Placement:' : 'Suggested Placement (unverified):'}
-                        </div>
-                        {insight.validationWarnings?.length > 0 && (
-                          <div className="ai-suggestion-warnings">
-                            {insight.validationWarnings.map((w, wi) => <div key={wi}>⚠️ {w}</div>)}
-                          </div>
-                        )}
-                        <div className="ai-suggestion-grid">
-                          {insight.suggestedRoom && (
-                            <div><strong>Room:</strong> <span>{insight.suggestedRoom}</span></div>
-                          )}
-                          {insight.suggestedDay && (
-                            <div><strong>Day:</strong> <span>{insight.suggestedDay}</span></div>
-                          )}
-                          {insight.suggestedTime && (
-                            <div><strong>Time:</strong> <span>{insight.suggestedTime}</span></div>
-                          )}
-                          {insight.suggestedProfessor && (
-                            <div><strong>Prof:</strong> <span>{insight.suggestedProfessor}</span></div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="ai-actions">
-                      <span className="ai-actions-title">Actions:</span>
-                      <ul>
-                        {(insight.solutions || []).map((sol, sIdx) => (
-                          <li key={sIdx}>{sol}</li>
-                        ))}
-                      </ul>
+                    <div className="card-reason">
+                      Reason: {s?.reason || 'Insufficient slots or conflict'}
                     </div>
                   </div>
                 ))}

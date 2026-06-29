@@ -325,9 +325,32 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                   ))}
                 </select>
               </div>
-              <div className="form-group" style={{ width: '120px' }}>
+              {(() => {
+                const selectedIds = formData.specialization || [];
+                const currentUnits = subjects
+                  .filter(s => selectedIds.includes(s.id) || selectedIds.includes(s.code) || selectedIds.includes(s.name))
+                  .reduce((sum, s) => sum + (Number(s.credits) || 3), 0);
+                
+                return (
+                  <div className="form-group" style={{ width: '100px' }}>
+                    <label className="form-label">Total Units</label>
+                    <div style={{
+                      padding: '11px',
+                      borderRadius: '8px',
+                      background: 'var(--bg-main)',
+                      border: '1px solid var(--border-color)',
+                      textAlign: 'center',
+                      fontWeight: 'bold',
+                      color: currentUnits > formData.maxUnits ? 'var(--danger)' : 'var(--success)'
+                    }}>
+                      {currentUnits}
+                    </div>
+                  </div>
+                );
+              })()}
+              <div className="form-group" style={{ width: '100px' }}>
                 <label className="form-label">Max Units</label>
-                <input type="number" className="form-input" value={formData.maxUnits} onChange={e => setFormData({ ...formData, maxUnits: e.target.value === '' ? '' : parseInt(e.target.value) })} />
+                <input type="number" className="form-input" value={formData.maxUnits} onChange={e => setFormData({ ...formData, maxUnits: e.target.value === '' ? '' : parseInt(e.target.value) })} style={{ textAlign: 'center' }} />
               </div>
             </div>
 

@@ -231,7 +231,7 @@ const SectionManagement = ({ sections, subjects, activeSemester, onBack }) => {
         {sections.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
             <p style={{ fontSize: '1.1rem', marginBottom: '5px' }}>No sections yet</p>
-            <p style={{ fontSize: '0.85rem' }}>Add sections to enable auto-scheduling with the Genetic Algorithm</p>
+            <p style={{ fontSize: '0.85rem' }}>Add sections to enable the Auto-Scheduler</p>
           </div>
         )}
       </div>

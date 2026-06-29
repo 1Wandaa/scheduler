@@ -16,6 +16,7 @@ import {
   autoScheduleForSection,
   autoScheduleForRoom,
   autoScheduleForFaculty,
+  autoScheduleFull,
   autoScheduleLegacy,
 } from '../../services/schedulingService';
 import Swal from 'sweetalert2';
@@ -181,12 +182,14 @@ const Dashboard = ({ user, onLogout }) => {
       schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear }
     }),
     clearAllSchedules: () => clearAllSchedules(activeSemester, activeSchoolYear),
-    autoScheduleForSection: (sectionId, constraints) =>
-      autoScheduleForSection(sectionId, schedulerContext, constraints, handleAddSchedule, activeSemester),
-    autoScheduleForRoom: (roomId, constraints) =>
-      autoScheduleForRoom(roomId, schedulerContext, constraints, handleAddSchedule, activeSemester),
-    autoScheduleForFaculty: (professorId, constraints) =>
-      autoScheduleForFaculty(professorId, schedulerContext, constraints, handleAddSchedule, activeSemester),
+    autoScheduleForSection: (sectionId, constraints, options) =>
+      autoScheduleForSection(sectionId, schedulerContext, constraints, handleAddSchedule, activeSemester, options),
+    autoScheduleForRoom: (roomId, constraints, options) =>
+      autoScheduleForRoom(roomId, schedulerContext, constraints, handleAddSchedule, activeSemester, options),
+    autoScheduleForFaculty: (professorId, constraints, options) =>
+      autoScheduleForFaculty(professorId, schedulerContext, constraints, handleAddSchedule, activeSemester, options),
+    autoScheduleFull: (constraints, options) =>
+      autoScheduleFull(schedulerContext, constraints, handleAddSchedule, activeSemester, options),
     autoSchedule: (subjList, constraints) =>
       autoScheduleLegacy(subjList, schedulerContext, constraints, handleAddSchedule),
   };
@@ -365,10 +368,34 @@ const Dashboard = ({ user, onLogout }) => {
 
           {/* KPI row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-              <KpiTile label="Faculty Members" value={professors.length} iconPath={NAV_ICONS.faculty} color="#0288d1" />
-              <KpiTile label="Rooms" value={rooms.length} iconPath={NAV_ICONS.rooms} color="#7c3aed" />
-              <KpiTile label="Sections" value={sections.length} iconPath={NAV_ICONS.sections} color="#059669" />
-              <KpiTile label="Scheduled Classes" value={displaySchedules.length} iconPath={NAV_ICONS.schedule} color="#d97706" />
+              <KpiTile 
+                label="Faculty Members" 
+                value={professors.length} 
+                iconPath={NAV_ICONS.faculty} 
+                color="#0288d1" 
+                onClick={isAdmin ? () => handleTabClick('faculty') : undefined}
+              />
+              <KpiTile 
+                label="Rooms" 
+                value={rooms.length} 
+                iconPath={NAV_ICONS.rooms} 
+                color="#7c3aed" 
+                onClick={isAdmin ? () => handleTabClick('rooms') : undefined}
+              />
+              <KpiTile 
+                label="Sections" 
+                value={sections.length} 
+                iconPath={NAV_ICONS.sections} 
+                color="#059669" 
+                onClick={isAdmin ? () => handleTabClick('sections') : undefined}
+              />
+              <KpiTile 
+                label="Scheduled Classes" 
+                value={displaySchedules.length} 
+                iconPath={NAV_ICONS.schedule} 
+                color="#d97706" 
+                onClick={() => handleTabClick('view-schedules')}
+              />
             </div>
 
             {/* Admin preview cards */}
