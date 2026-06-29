@@ -23,7 +23,7 @@ const renderRoleBadge = (role) => {
     return <span style={badgeStyle}>{role}</span>;
 };
 
-const UserTable = ({ users, onDeleteUser }) => {
+const UserTable = ({ users, onDeleteUser, onEditUser }) => {
     return (
         <div className="table-responsive">
             <table className="data-table">
@@ -46,7 +46,8 @@ const UserTable = ({ users, onDeleteUser }) => {
                                 <td style={{ color: 'var(--accent-primary)', fontWeight: '600' }}>{u.username}</td>
                                 <td style={{ fontWeight: '500' }}>{u.name}</td>
                                 <td>{renderRoleBadge(u.role)}</td>
-                                <td style={{ whiteSpace: 'nowrap' }}>
+                                <td style={{ whiteSpace: 'nowrap', display: 'flex', gap: '8px' }}>
+                                    <button className="btn-edit" onClick={() => onEditUser(u)}>Edit</button>
                                     <button className="btn-delete" onClick={() => onDeleteUser(u.id)}>Delete</button>
                                 </td>
                             </tr>
