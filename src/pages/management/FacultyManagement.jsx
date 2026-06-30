@@ -290,7 +290,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
           </div>
         </div>
 
-        <FacultyTable facultyList={filteredProfessors} schedules={schedules} onEdit={handleOpenEdit} onDelete={handleDelete} />
+        <FacultyTable facultyList={filteredProfessors} subjects={subjects} schedules={schedules} onEdit={handleOpenEdit} onDelete={handleDelete} />
       </div>
 
       {showModal && (
