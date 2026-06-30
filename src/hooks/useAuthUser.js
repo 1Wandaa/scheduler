@@ -151,6 +151,10 @@ export function useAuthUser() {
   };
 
   const handleLogout = () => {
+    const username = localStorage.getItem('smartsched_username');
+    if (username) {
+      sessionStorage.removeItem(`smartsched_login_logged_${username}`);
+    }
     localStorage.removeItem('smartsched_username');
     auth.signOut();
     setUser(null);

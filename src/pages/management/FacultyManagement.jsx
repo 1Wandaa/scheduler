@@ -5,8 +5,9 @@ import Swal from 'sweetalert2';
 import { DEPARTMENTS, getDeptColor } from '../../config/constants';
 import FacultyTable from '../../components/FacultyTable/FacultyTable';
 import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
+import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
-const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], schedules = [], activeSemester, onBack }) => {
+const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], schedules = [], activeSemester, onBack, user }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState('All');
@@ -140,9 +141,11 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
     try {
       if (editMode) {
         await updateDoc(doc(db, 'professors', currentId.toString()), dataToSave);
+        logActivity({ user, action: LOG_ACTIONS.UPDATE_FACULTY, details: `Updated faculty: ${combinedName}` });
       } else {
         const newId = formData.id || `P${Date.now().toString().slice(-4)}`;
         await addDoc(collection(db, 'professors'), { ...dataToSave, id: newId });
+        logActivity({ user, action: LOG_ACTIONS.ADD_FACULTY, details: `Added new faculty: ${combinedName} (${formData.department})` });
       }
       setShowModal(false);
     } catch (err) {
@@ -175,6 +178,8 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
     if (result.isConfirmed) {
       try {
         await deleteDoc(doc(db, 'professors', id.toString()));
+        const prof = professors.find(p => String(p.id) === String(id));
+        logActivity({ user, action: LOG_ACTIONS.DELETE_FACULTY, details: `Deleted faculty: ${prof?.name || id}` });
         Swal.fire({ title: 'Deleted', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
       } catch (error) {
         console.error("Error deleting faculty: ", error);

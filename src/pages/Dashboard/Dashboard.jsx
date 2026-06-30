@@ -35,6 +35,8 @@ import SectionManagement from '../management/SectionManagement';
 import ScheduleHistory from '../management/ScheduleHistory';
 import Profile from '../../components/Profile/Profile';
 import Chatbot from '../../components/Chatbot/Chatbot';
+import ActivityLog from '../management/ActivityLog';
+import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 import { Icon, NAV_ICONS } from './components/Icon';
 import DraggableSpeedDial from './components/DraggableSpeedDial';
@@ -74,6 +76,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isScheduleFormOpen, setIsScheduleFormOpen] = useState(false);
+  const [targetProfileUsername, setTargetProfileUsername] = useState(null);
   const [isFabHidden, setIsFabHidden] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -151,6 +154,17 @@ const Dashboard = ({ user, onLogout }) => {
   }, [isMobileMenuOpen]);
 
   // ─── CRUD wrappers (delegate to services) ─────────────────────────
+
+  // ─── Log login ONCE per browser session ────────────────────────────
+  useEffect(() => {
+    const SESSION_KEY = `smartsched_login_logged_${user?.username}`;
+    if (user && !sessionStorage.getItem(SESSION_KEY)) {
+      // Mark immediately to prevent the Strict Mode double-invocation
+      sessionStorage.setItem(SESSION_KEY, '1');
+      logActivity({ user, action: LOG_ACTIONS.LOGIN, details: `${user.name || user.username} signed in as ${user.role}` });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAddSchedule = async (newSchedule) => {
     return addSchedule(newSchedule, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin);
@@ -264,6 +278,7 @@ const Dashboard = ({ user, onLogout }) => {
                 <NavItem label="Create Schedule" iconPath={NAV_ICONS.schedule} active={activeTab === 'schedule'} onClick={() => handleTabClick('schedule')} />
                 <NavItem label="Scheduling History" iconPath={NAV_ICONS.history} active={activeTab === 'history'} onClick={() => handleTabClick('history')} />
                 <NavItem label="Faculty Workload" iconPath={NAV_ICONS.workload} active={activeTab === 'workload'} onClick={() => handleTabClick('workload')} />
+                <NavItem label="Activity Log" iconPath="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H9H8" active={activeTab === 'activity-log'} onClick={() => handleTabClick('activity-log')} />
               </>
             )}
 
@@ -273,7 +288,10 @@ const Dashboard = ({ user, onLogout }) => {
           {/* Divider + Logout */}
           <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', margin: '10px 0' }} />
           <ul style={{ margin: 0, padding: 0 }}>
-            <NavItem label="Profile" iconPath={NAV_ICONS.users} active={activeTab === 'profile'} onClick={() => handleTabClick('profile')} />
+            <NavItem label="Profile" iconPath={NAV_ICONS.users} active={activeTab === 'profile'} onClick={() => {
+              setTargetProfileUsername(null);
+              handleTabClick('profile');
+            }} />
             <NavItem label="Log Out" iconPath={NAV_ICONS.logout} danger onClick={onLogout} />
           </ul>
         </nav>
@@ -502,17 +520,38 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
         )}
         {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} availableSemesters={availableSemesters} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} user={user} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} user={user} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} availableSemesters={availableSemesters} activeSemester={activeSemester} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} />}
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} activeSemester={activeSemester} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} />}
+        {isAdmin && activeTab === 'activity-log' && (
+          <ActivityLog 
+            onBack={() => setActiveTab('dashboard')} 
+            onViewProfile={(username) => {
+              setTargetProfileUsername(username);
+              setActiveTab('profile');
+            }} 
+          />
+        )}
 
         {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
         {activeTab === 'view-schedules' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={displaySchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
 
-        {activeTab === 'profile' && <Profile user={user} onBack={() => setActiveTab(isAdmin ? 'dashboard' : 'view-schedules')} />}
+        {activeTab === 'profile' && (
+          <Profile 
+            user={{ 
+              username: targetProfileUsername || user.username, 
+              role: (targetProfileUsername && targetProfileUsername !== user.username) ? '' : user.role 
+            }} 
+            readOnly={!!targetProfileUsername && targetProfileUsername !== user.username}
+            onBack={() => {
+              setTargetProfileUsername(null);
+              setActiveTab(isAdmin ? 'dashboard' : 'view-schedules');
+            }} 
+          />
+        )}
 
       </div>
       <Chatbot schedules={displaySchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />

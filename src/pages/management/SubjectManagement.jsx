@@ -4,8 +4,9 @@ import SubjectTable, { getSubjectDepts } from '../../components/SubjectTable/Sub
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { DEPARTMENTS, getDeptColor } from '../../config/constants';
+import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
-const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, onBack }) => {
+const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, onBack, user }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -65,9 +66,11 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
     try {
       if (editMode) {
         await updateDoc(doc(db, 'subjects', currentId.toString()), formData);
+        logActivity({ user, action: LOG_ACTIONS.UPDATE_SUBJECT, details: `Updated subject: ${formData.code} - ${formData.name}` });
       } else {
         const newId = formData.id || `S${Date.now().toString().slice(-4)}`;
         await addDoc(collection(db, 'subjects'), { ...formData, id: newId });
+        logActivity({ user, action: LOG_ACTIONS.ADD_SUBJECT, details: `Added new subject: ${formData.code} - ${formData.name} (${formData.credits} units)` });
       }
       setShowModal(false);
     } catch (err) {

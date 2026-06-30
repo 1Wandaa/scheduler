@@ -4,8 +4,9 @@ import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestor
 import Swal from 'sweetalert2';
 import { ROOM_TYPES, BUILDINGS, DEPARTMENTS, getDeptColor } from '../../config/constants';
 import RoomTable from '../../components/RoomTable/RoomTable';
+import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
-const RoomManagement = ({ rooms, onBack }) => {
+const RoomManagement = ({ rooms, onBack, user }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -67,11 +68,12 @@ const RoomManagement = ({ rooms, onBack }) => {
     setIsSaving(true);
     try {
       if (editMode) {
-        // Replaced the deleteField workaround with a pure payload update
         await updateDoc(doc(db, 'rooms', currentId.toString()), payload);
+        logActivity({ user, action: LOG_ACTIONS.UPDATE_ROOM, details: `Updated room: ${formData.name}` });
       } else {
         const newId = formData.id || `R${Date.now().toString().slice(-4)}`;
         await addDoc(collection(db, 'rooms'), { ...payload, id: newId });
+        logActivity({ user, action: LOG_ACTIONS.ADD_ROOM, details: `Added new room: ${formData.name} (${formData.type})` });
       }
       setShowModal(false);
     } catch (err) {
@@ -103,6 +105,8 @@ const RoomManagement = ({ rooms, onBack }) => {
     if (result.isConfirmed) {
       try {
         await deleteDoc(doc(db, 'rooms', id.toString()));
+        const room = rooms.find(r => String(r.id) === String(id));
+        logActivity({ user, action: LOG_ACTIONS.DELETE_ROOM, details: `Deleted room: ${room?.name || id}` });
         Swal.fire({ title: 'Deleted', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
       } catch (error) {
         console.error("Error deleting room: ", error);
