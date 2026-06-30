@@ -22,6 +22,10 @@ const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], onTo
     };
   }, [subjects, subjectSearchQuery, activeSemester]);
 
+  const selectedSubjectObjects = useMemo(() => {
+    return subjects.filter(sub => selectedSubjects.includes(sub.id) || selectedSubjects.includes(sub.code) || selectedSubjects.includes(sub.name));
+  }, [subjects, selectedSubjects]);
+
   const renderSubjectGroup = (title, subjectList, color) => {
     if (subjectList.length === 0) return null;
     return (
@@ -51,6 +55,37 @@ const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], onTo
   return (
     <div className="form-group" style={{ marginBottom: '25px' }}>
       <label className="form-label">Enrolled Subjects</label>
+      
+      {/* Selected Subjects Chips */}
+      {selectedSubjectObjects.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '15px', padding: '10px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
+          {selectedSubjectObjects.map(sub => {
+            const isMinor = sub.category === 'Minor';
+            const depts = getSubjectDepts(sub);
+            const color = isMinor ? 'var(--warning)' : (depts.length > 0 ? getDeptColor(depts[0]) : 'var(--text-muted)');
+            return (
+              <div key={sub.id} style={{ 
+                display: 'flex', alignItems: 'center', gap: '6px', 
+                padding: '4px 10px', borderRadius: '16px', 
+                background: `${color}15`, border: `1px solid ${color}40`,
+                fontSize: '0.8rem', fontWeight: '600', color: color 
+              }}>
+                {sub.code}
+                <button 
+                  type="button" 
+                  onClick={() => onToggleSubject(sub.id)}
+                  style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                  onMouseLeave={e => e.currentTarget.style.opacity = 0.7}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
         {['All', 'Minor', ...DEPARTMENTS].map(dept => (
           <button
