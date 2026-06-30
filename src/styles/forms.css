@@ -158,11 +158,10 @@
 .input-group label {
   display: block;
   margin-bottom: 6px;
-  font-weight: 600;
-  font-size: 0.82rem;
+  font-weight: 500;
+  font-size: 0.9rem;
   color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: normal;
 }
 
 .input-group input,
