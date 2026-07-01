@@ -56,13 +56,13 @@ export const PROGRAM_DEPARTMENTS = {
 };
 
 export const getDeptColor = (dept) => {
-  switch(dept) {
+  switch (dept) {
     case 'BSCS': return '#109EEF'; // Blue
     case 'BAEL': return '#EAB308'; // Yellow
     case 'BSOA': return '#8B5CF6'; // Purple
     case 'BSFT': return '#16A34A'; // Green
     case 'SHARED': return '#64748B'; // Slate
-    case 'Minor': return '#F5A623'; // Orange
+    case 'Minor': return '#000000ff'; // Black (distinct from BAEL)
     default: return 'var(--accent-primary)';
   }
 };

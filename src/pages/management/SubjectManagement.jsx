@@ -219,10 +219,11 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
         {(departmentFilter === 'All' || departmentFilter === 'Minor') && (
           <SubjectTable 
             subjectList={minorSubjects} 
-            title="Minor / General Education Subjects" 
-            titleColor="var(--warning)" 
+            title="Minor Subjects" 
+            titleColor={getDeptColor('Minor')} 
             onEdit={handleOpenEdit} 
             onDelete={handleDelete} 
+            departments={departments}
           />
         )}
 
@@ -230,14 +231,17 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
         {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => {
           if (departmentFilter !== 'All' && departmentFilter !== dept) return null;
           const deptMajors = majorSubjects.filter(s => getSubjectDepts(s).includes(dept));
+          const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+          
           return (
             <SubjectTable 
               key={dept}
               subjectList={deptMajors} 
               title={`${dept} Major Subjects`} 
-              titleColor="var(--accent-primary)" 
+              titleColor={deptColor} 
               onEdit={handleOpenEdit} 
               onDelete={handleDelete} 
+              departments={departments}
             />
           );
         })}
@@ -250,6 +254,7 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
             titleColor="var(--text-muted)" 
             onEdit={handleOpenEdit} 
             onDelete={handleDelete} 
+            departments={departments}
           />
         )}
 

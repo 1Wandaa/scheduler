@@ -1,4 +1,5 @@
 import React from 'react';
+import { getDeptColor } from '../../config/constants';
 
 // Helper to display departments (handles both old string and new array format)
 export const getSubjectDepts = (subject) => {
@@ -7,21 +8,33 @@ export const getSubjectDepts = (subject) => {
   return [];
 };
 
-const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete }) => {
+const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, departments = [] }) => {
   if (!subjectList || subjectList.length === 0) return null;
 
   return (
     <div style={{ marginBottom: '30px' }}>
-      <h4 style={{
-        color: titleColor,
-        marginBottom: '12px',
-        borderBottom: `2px solid ${titleColor}`,
-        paddingBottom: '5px',
-        display: 'inline-block',
-        marginTop: '10px'
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        marginBottom: '20px',
+        marginTop: '15px'
       }}>
-        {title}
-      </h4>
+        <h4 style={{
+          color: titleColor,
+          margin: 0,
+          padding: '10px 30px',
+          textTransform: 'uppercase',
+          letterSpacing: '1.5px',
+          fontWeight: '700',
+          fontSize: '1.15rem',
+          border: `2px solid ${titleColor}`,
+          borderRadius: '30px',
+          backgroundColor: 'transparent'
+        }}>
+          {title}
+        </h4>
+      </div>
       <table className="data-table">
         <thead>
           <tr>
@@ -38,16 +51,28 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
         <tbody>
           {subjectList.map(s => (
             <tr key={s.id}>
-              <td><strong style={{ color: 'var(--accent-primary)' }}>{s.code}</strong></td>
+              <td><strong style={{ color: titleColor }}>{s.code}</strong></td>
               <td style={{ fontWeight: '500' }}>{s.name}</td>
               <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>
                 {s.semester && s.semester !== 'Both' ? s.semester.replace(' Semester', ' Sem') : 'Both'}
               </td>
               <td>
                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  {getSubjectDepts(s).length > 0 ? getSubjectDepts(s).map(dept => (
-                    <span key={dept} style={{ background: 'var(--bg-main)', padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600', color: 'var(--accent-primary)' }}>{dept}</span>
-                  )) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>None</span>}
+                  {getSubjectDepts(s).length > 0 ? getSubjectDepts(s).map(dept => {
+                    const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+                    return (
+                      <span key={dept} style={{ 
+                        background: deptColor.startsWith('#') ? `${deptColor}15` : 'var(--bg-main)', 
+                        padding: '3px 8px', 
+                        borderRadius: '12px', 
+                        fontSize: '0.75rem', 
+                        fontWeight: '600', 
+                        color: deptColor 
+                      }}>
+                        {dept}
+                      </span>
+                    );
+                  }) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>None</span>}
                 </div>
               </td>
               <td style={{ fontWeight: '500', textAlign: 'center' }}>{s.credits || 3}</td>
