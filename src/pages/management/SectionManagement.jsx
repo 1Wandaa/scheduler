@@ -205,7 +205,6 @@ const SectionManagement = ({ sections, subjects, activeSemester, departments = [
         {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => {
           if (departmentFilter !== 'All' && departmentFilter !== dept) return null;
           
-          // Helper to check if a section belongs to this department
           const isDeptSection = (sec) => {
             if (sec.program === dept) return true; // Direct match
             // Try matching course
@@ -217,12 +216,14 @@ const SectionManagement = ({ sections, subjects, activeSemester, departments = [
           };
 
           const deptSections = filteredSections.filter(isDeptSection);
+          const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+          
           return (
             <SectionTable 
               key={dept}
               sectionList={deptSections} 
               title={`${dept} Sections`} 
-              titleColor="var(--accent-primary)" 
+              titleColor={deptColor} 
               onEdit={handleOpenEdit} 
               onDelete={handleDelete}
               subjects={subjects}

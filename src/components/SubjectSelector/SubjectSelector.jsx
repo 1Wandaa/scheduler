@@ -5,11 +5,12 @@ import { getSubjectDepts } from '../SubjectTable/SubjectTable';
 const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], departments = [], onToggleSubject }) => {
   const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
   const [subjectModalFilter, setSubjectModalFilter] = useState('All');
+  const [showAllSemesters, setShowAllSemesters] = useState(false);
 
   // Memoize the filtering logic to prevent lag on every keystroke
   const { minorSubjects, majorSubjects } = useMemo(() => {
     const filtered = subjects.filter(sub => 
-      (!sub.semester || sub.semester === 'Both' || sub.semester === activeSemester) &&
+      (showAllSemesters || !sub.semester || sub.semester === 'Both' || sub.semester === activeSemester) &&
       ((sub.code || '').toLowerCase().includes(subjectSearchQuery.toLowerCase()) || 
       (sub.name || '').toLowerCase().includes(subjectSearchQuery.toLowerCase()))
     ).sort((a, b) => 
@@ -20,7 +21,7 @@ const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], depa
       minorSubjects: filtered.filter(s => s.category === 'Minor'),
       majorSubjects: filtered.filter(s => s.category !== 'Minor')
     };
-  }, [subjects, subjectSearchQuery, activeSemester]);
+  }, [subjects, subjectSearchQuery, activeSemester, showAllSemesters]);
 
   const selectedSubjectObjects = useMemo(() => {
     return subjects.filter(sub => selectedSubjects.includes(sub.id) || selectedSubjects.includes(sub.code) || selectedSubjects.includes(sub.name));
@@ -112,14 +113,27 @@ const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], depa
           </button>
         )})}
       </div>
-      <input 
-        type="text" 
-        className="form-input" 
-        placeholder="Search subject code or name..." 
-        value={subjectSearchQuery} 
-        onChange={(e) => setSubjectSearchQuery(e.target.value)}
-        style={{ marginBottom: '10px', marginTop: '5px' }}
-      />
+      
+      <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginBottom: '10px', marginTop: '5px' }}>
+        <input 
+          type="text" 
+          className="form-input" 
+          placeholder="Search subject code or name..." 
+          value={subjectSearchQuery} 
+          onChange={(e) => setSubjectSearchQuery(e.target.value)}
+          style={{ flex: 1, margin: 0 }}
+        />
+        
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: '500', userSelect: 'none' }}>
+          <input 
+            type="checkbox" 
+            checked={showAllSemesters}
+            onChange={(e) => setShowAllSemesters(e.target.checked)}
+            style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px', margin: 0 }}
+          />
+          Show Off-Semester Subjects
+        </label>
+      </div>
       <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
         {subjects.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No subjects available. Add subjects first.</p>}
         

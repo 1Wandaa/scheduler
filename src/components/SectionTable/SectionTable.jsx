@@ -11,16 +11,28 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
 
   return (
     <div style={{ marginBottom: '30px' }}>
-      <h4 style={{
-        color: titleColor,
-        marginBottom: '12px',
-        borderBottom: `2px solid ${titleColor}`,
-        paddingBottom: '5px',
-        display: 'inline-block',
-        marginTop: '10px'
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        marginBottom: '20px',
+        marginTop: '15px'
       }}>
-        {title}
-      </h4>
+        <h4 style={{
+          color: titleColor,
+          margin: 0,
+          padding: '10px 30px',
+          textTransform: 'uppercase',
+          letterSpacing: '1.5px',
+          fontWeight: '700',
+          fontSize: '1.15rem',
+          border: `2px solid ${titleColor}`,
+          borderRadius: '30px',
+          backgroundColor: 'transparent'
+        }}>
+          {title}
+        </h4>
+      </div>
       <table className="data-table">
         <thead>
           <tr>
@@ -35,9 +47,9 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
           {sectionList.map(sec => (
             <tr key={sec.id}>
               <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
-                <strong style={{ color: 'var(--accent-primary)' }}>{sec.name}</strong>
+                <strong style={{ color: titleColor }}>{sec.name}</strong>
               </td>
-              <td style={{ fontWeight: '500', textAlign: 'center', verticalAlign: 'middle' }}>
+              <td style={{ fontWeight: '600', color: titleColor, textAlign: 'center', verticalAlign: 'middle' }}>
                 {(() => {
                   const course = courses.find(c => c.code === sec.program || c.id === sec.program);
                   if (course) return `${course.code}`;
@@ -48,7 +60,8 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
               </td>
               <td style={{ whiteSpace: 'nowrap', textAlign: 'center', verticalAlign: 'middle' }}>
                 <span style={{
-                  background: '#EEF2FF', color: '#5645EE',
+                  background: titleColor.startsWith('#') ? `${titleColor}15` : 'rgba(0,0,0,0.05)', 
+                  color: titleColor,
                   padding: '3px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600',
                   display: 'inline-block', whiteSpace: 'nowrap'
                 }}>
