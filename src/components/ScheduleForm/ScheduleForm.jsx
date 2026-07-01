@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
-import { getEligibleProfessors, slotsNeededFromIndex, getMeetingTimeLabel } from '../../utils/scheduleUtils';
+import { getEligibleProfessors, slotsNeededFromIndex, getMeetingTimeLabel, findScheduleConflicts } from '../../utils/scheduleUtils';
 import '../../styles/SchedulerForm.css';
 
-function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, validator, activeSemester }) {
+function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, validator, activeSemester, activeSchedules = [] }) {
   const [formData, setFormData] = useState({
     subject: '',
     section: '',
@@ -81,6 +81,29 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, selectedSubject.hoursPerMeeting) > 0)
     : TIME_SLOTS;
 
+  const selectedProfessor = professors.find(p => p.id === formData.professor);
+  const selectedRoom = rooms.find(r => r.id === formData.room);
+  const selectedTimeSlot = TIME_SLOTS.find(t => t.id === parseInt(formData.timeSlot));
+
+  const checkConflict = (overrides) => {
+    if (!selectedSubject || !activeSchedules) return false;
+
+    const candidate = {
+      subject: selectedSubject,
+      section: selectedSection,
+      professor: selectedProfessor,
+      room: selectedRoom,
+      day: formData.day,
+      timeSlot: selectedTimeSlot,
+      ...overrides
+    };
+
+    if (!candidate.day || !candidate.timeSlot) return false;
+
+    const conflicts = findScheduleConflicts(candidate, activeSchedules);
+    return !!(conflicts.room || conflicts.professor || conflicts.section);
+  };
+
   return (
     <div className="schedule-form-container">
       <h2>Create Schedule</h2>
@@ -134,11 +157,14 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               required
             >
               <option value="">Select a professor</option>
-              {[...eligibleProfessors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(professor => (
-                <option key={professor.id} value={professor.id}>
-                  {professor.name}
-                </option>
-              ))}
+              {[...eligibleProfessors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(professor => {
+                const isConflict = checkConflict({ professor });
+                return (
+                  <option key={professor.id} value={professor.id} disabled={isConflict}>
+                    {professor.name} {isConflict ? '(Busy)' : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -161,11 +187,14 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               .sort(([bA], [bB]) => bA.localeCompare(bB))
               .map(([building, bRooms]) => (
                 <optgroup key={building} label={building}>
-                  {bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => (
-                    <option key={room.id} value={room.id}>
-                      {room.name}{room.hasComputers ? ' (Lab)' : ''}
-                    </option>
-                  ))}
+                  {bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => {
+                    const isConflict = checkConflict({ room });
+                    return (
+                      <option key={room.id} value={room.id} disabled={isConflict}>
+                        {room.name}{room.hasComputers ? ' (Lab)' : ''} {isConflict ? '(In Use)' : ''}
+                      </option>
+                    );
+                  })}
                 </optgroup>
               ))}
             </select>
@@ -179,6 +208,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               {DAYS.map(day => {
                 const shortDay = day.substring(0, 3);
                 const isActive = formData.day === day;
+                const isConflict = checkConflict({ day });
                 return (
                   <button
                     key={day}
@@ -187,7 +217,9 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                       setFormData(prev => ({ ...prev, day }));
                       setValidation(null);
                     }}
-                    className={`day-btn ${isActive ? 'active' : ''}`}
+                    className={`day-btn ${isActive ? 'active' : ''} ${isConflict ? 'conflict' : ''}`}
+                    style={isConflict && !isActive ? { opacity: 0.5, textDecoration: 'line-through' } : {}}
+                    title={isConflict ? 'Conflict on this day' : ''}
                   >
                     {shortDay}
                   </button>
@@ -213,9 +245,10 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                 const rangeLabel = selectedSubject
                   ? getMeetingTimeLabel(slot, selectedSubject.hoursPerMeeting)
                   : slot.label;
+                const isConflict = checkConflict({ timeSlot: slot });
                 return (
-                  <option key={slot.id} value={slot.id}>
-                    {rangeLabel}{idx >= 0 && slotsNeededFromIndex(idx, selectedSubject?.hoursPerMeeting) > 1 ? ` (${selectedSubject?.hoursPerMeeting || 1.5} hrs)` : ''}
+                  <option key={slot.id} value={slot.id} disabled={isConflict}>
+                    {rangeLabel}{idx >= 0 && slotsNeededFromIndex(idx, selectedSubject?.hoursPerMeeting) > 1 ? ` (${selectedSubject?.hoursPerMeeting || 1.5} hrs)` : ''} {isConflict ? '(Unavailable)' : ''}
                   </option>
                 );
               })}

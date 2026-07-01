@@ -38,6 +38,7 @@ import Chatbot from '../../components/Chatbot/Chatbot';
 import ActivityLog from '../management/ActivityLog';
 import DepartmentManagement from '../management/DepartmentManagement';
 import CourseManagement from '../management/CourseManagement';
+import RoomAvailability from '../management/RoomAvailability';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 import { Icon, NAV_ICONS } from './components/Icon';
@@ -274,6 +275,7 @@ const Dashboard = ({ user, onLogout }) => {
                     <NavItem label="Departments" iconPath={NAV_ICONS.rooms} active={activeTab === 'departments'} onClick={() => handleTabClick('departments')} indent />
                     <NavItem label="Courses / Programs" iconPath={NAV_ICONS.subjects} active={activeTab === 'courses'} onClick={() => handleTabClick('courses')} indent />
                     <NavItem label="Room List" iconPath={NAV_ICONS.rooms} active={activeTab === 'rooms'} onClick={() => handleTabClick('rooms')} indent />
+                    <NavItem label="Room Availability Matrix" iconPath={NAV_ICONS.rooms} active={activeTab === 'availability'} onClick={() => handleTabClick('availability')} indent />
                     <NavItem label="Subject Constraints" iconPath={NAV_ICONS.subjects} active={activeTab === 'subjects'} onClick={() => handleTabClick('subjects')} indent />
                     <NavItem label="Sections" iconPath={NAV_ICONS.sections} active={activeTab === 'sections'} onClick={() => handleTabClick('sections')} indent />
                     <NavItem label="Semesters & Years" iconPath={NAV_ICONS.calendar} active={activeTab === 'terms'} onClick={() => handleTabClick('terms')} indent />
@@ -519,13 +521,14 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
             {!isMobile && (
-              <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} activeSemester={activeSemester} />
+              <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} activeSemester={activeSemester} activeSchedules={activeSchedules} />
             )}
             <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onAutoScheduleBatch={handleAddSchedulesBatch} onLogHistory={handleLogHistory} />
           </div>
         )}
         {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'availability' && <RoomAvailability rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'departments' && <DepartmentManagement departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'courses' && <CourseManagement courses={courses} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
@@ -603,7 +606,7 @@ const Dashboard = ({ user, onLogout }) => {
               const res = await handleAddSchedule(sched);
               if (res && res.ok) setIsScheduleFormOpen(false);
               return res;
-            }} validator={validator} activeSemester={activeSemester} />
+            }} validator={validator} activeSemester={activeSemester} activeSchedules={activeSchedules} />
           </div>
         </div>
       )}

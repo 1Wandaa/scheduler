@@ -119,6 +119,10 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   // 1. Group assignments by Section + Subject
   const groupsMap = new Map();
   for (const a of assignments) {
+    // Skip subjects that have no eligible professors (considered "unassigned" or not enrolled)
+    const profPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, a.subject, a.section, constraints);
+    if (profPool.length === 0) continue;
+
     const key = `${a.section?.id || 'none'}_${a.subject?.id}`;
     if (!groupsMap.has(key)) {
       groupsMap.set(key, { subject: a.subject, section: a.section, count: 0 });
@@ -317,7 +321,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     if (placed) {
       placedKeys.add(groupKey);
     } else {
-      let reason = 'Insufficient slots available or missing qualified faculty.';
+      let reason = 'Lack of available rooms or time slots.';
       if (constraints?.respectLabs && group.subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
         reason = 'Requires computer lab.';
       }
@@ -380,8 +384,9 @@ export async function autoScheduleLegacy(subjList, context, constraints, addSche
   const tempSchedules = [...activeSchedules];
 
   for (const subject of subjList) {
-    let scheduled = false;
     const profPool = professors.filter((p) => professorMatchesSubject(p, subject));
+    if (profPool.length === 0) continue; // Skip unassigned subjects
+    let scheduled = false;
     searchLoop: for (const prof of profPool) {
       for (const day of DAYS) {
         for (const timeSlot of TIME_SLOTS) {
