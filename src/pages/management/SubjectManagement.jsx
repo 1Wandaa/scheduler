@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
 import { DEPARTMENTS, getDeptColor } from '../../config/constants';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
-const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, onBack, user }) => {
+const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, departments = [], onBack, user }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -176,27 +176,29 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by:</span>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {['All', 'Minor', ...DEPARTMENTS].map(dept => (
+              {['All', 'Minor', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
+                const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+                return (
                 <button
                   key={dept}
                   onClick={() => setDepartmentFilter(dept)}
                   style={{
                     padding: '6px 14px',
                     borderRadius: '20px',
-                    border: departmentFilter === dept ? `1.5px solid ${getDeptColor(dept)}` : '1px solid var(--border-color)',
-                    background: departmentFilter === dept ? getDeptColor(dept) : 'transparent',
+                    border: departmentFilter === dept ? `1.5px solid ${deptColor}` : '1px solid var(--border-color)',
+                    background: departmentFilter === dept ? deptColor : 'transparent',
                     color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
                     cursor: 'pointer',
                     fontSize: '0.82rem',
                     fontWeight: '600',
                     transition: 'all 0.2s ease',
                   }}
-                  onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = getDeptColor(dept); e.target.style.color = getDeptColor(dept); } }}
+                  onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = deptColor; e.target.style.color = deptColor; } }}
                   onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
                 >
                   {dept === 'All' ? 'All Subjects' : dept === 'Minor' ? 'Minor Subjects' : dept}
                 </button>
-              ))}
+              )})}
             </div>
           </div>
           <div style={{ display: 'flex', gap: '15px' }}>
@@ -225,7 +227,7 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
         )}
 
         {/* Render Major Subjects grouped by Department */}
-        {DEPARTMENTS.map(dept => {
+        {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => {
           if (departmentFilter !== 'All' && departmentFilter !== dept) return null;
           const deptMajors = majorSubjects.filter(s => getSubjectDepts(s).includes(dept));
           return (
@@ -297,7 +299,7 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label className="form-label">Departments</label>
               <div style={{ marginTop: '8px', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px 14px', display: 'flex', flexWrap: 'wrap', gap: '12px', background: 'var(--bg-main)' }}>
-                {DEPARTMENTS.map(dept => (
+                {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => (
                   <label key={dept} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: '500', color: 'var(--text-main)' }}>
                     <input
                       type="checkbox"

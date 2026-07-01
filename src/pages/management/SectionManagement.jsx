@@ -6,7 +6,7 @@ import { DEPARTMENTS, PROGRAM_DEPARTMENTS, getDeptColor } from '../../config/con
 import SectionTable from '../../components/SectionTable/SectionTable';
 import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
 
-const SectionManagement = ({ sections, subjects, activeSemester, onBack }) => {
+const SectionManagement = ({ sections, subjects, activeSemester, departments = [], courses = [], onBack }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -164,27 +164,29 @@ const SectionManagement = ({ sections, subjects, activeSemester, onBack }) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by Department:</span>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {['All', ...DEPARTMENTS].map(dept => (
+              {['All', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
+                const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+                return (
                 <button
                   key={dept}
                   onClick={() => setDepartmentFilter(dept)}
                   style={{
                     padding: '6px 14px',
                     borderRadius: '20px',
-                    border: departmentFilter === dept ? `1.5px solid ${getDeptColor(dept)}` : '1px solid var(--border-color)',
-                    background: departmentFilter === dept ? getDeptColor(dept) : 'transparent',
+                    border: departmentFilter === dept ? `1.5px solid ${deptColor}` : '1px solid var(--border-color)',
+                    background: departmentFilter === dept ? deptColor : 'transparent',
                     color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
                     cursor: 'pointer',
                     fontSize: '0.82rem',
                     fontWeight: '600',
                     transition: 'all 0.2s ease',
                   }}
-                  onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = getDeptColor(dept); e.target.style.color = getDeptColor(dept); } }}
+                  onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = deptColor; e.target.style.color = deptColor; } }}
                   onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
                 >
                   {dept === 'All' ? 'All Departments' : dept}
                 </button>
-              ))}
+              )})}
             </div>
           </div>
           <div style={{ display: 'flex', gap: '15px' }}>
@@ -200,9 +202,21 @@ const SectionManagement = ({ sections, subjects, activeSemester, onBack }) => {
         </div>
 
         {/* Render sections grouped by their Department */}
-        {DEPARTMENTS.map(dept => {
+        {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => {
           if (departmentFilter !== 'All' && departmentFilter !== dept) return null;
-          const deptSections = filteredSections.filter(sec => sec.program === dept || PROGRAM_DEPARTMENTS[sec.program] === dept);
+          
+          // Helper to check if a section belongs to this department
+          const isDeptSection = (sec) => {
+            if (sec.program === dept) return true; // Direct match
+            // Try matching course
+            const course = courses.find(c => c.code === sec.program || c.id === sec.program);
+            if (course && course.departmentId === dept) return true;
+            // Fallback to legacy
+            if (PROGRAM_DEPARTMENTS[sec.program] === dept) return true;
+            return false;
+          };
+
+          const deptSections = filteredSections.filter(isDeptSection);
           return (
             <SectionTable 
               key={dept}
@@ -212,6 +226,8 @@ const SectionManagement = ({ sections, subjects, activeSemester, onBack }) => {
               onEdit={handleOpenEdit} 
               onDelete={handleDelete}
               subjects={subjects}
+              departments={departments}
+              courses={courses}
             />
           );
         })}
@@ -219,12 +235,18 @@ const SectionManagement = ({ sections, subjects, activeSemester, onBack }) => {
         {/* Render any sections that do not match the standard program list */}
         {(departmentFilter === 'All') && (
           <SectionTable 
-            sectionList={filteredSections.filter(sec => !DEPARTMENTS.includes(sec.program) && !DEPARTMENTS.includes(PROGRAM_DEPARTMENTS[sec.program]))} 
+            sectionList={filteredSections.filter(sec => {
+              const allDepts = departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
+              const hasCourseMatch = courses.some(c => c.code === sec.program || c.id === sec.program);
+              return !hasCourseMatch && !allDepts.includes(sec.program) && !allDepts.includes(PROGRAM_DEPARTMENTS[sec.program]);
+            })} 
             title="Other / Unassigned Sections" 
             titleColor="var(--text-muted)" 
             onEdit={handleOpenEdit} 
             onDelete={handleDelete}
             subjects={subjects}
+            departments={departments}
+            courses={courses}
           />
         )}
 
@@ -253,8 +275,10 @@ const SectionManagement = ({ sections, subjects, activeSemester, onBack }) => {
             <div className="form-group">
               <label className="form-label">Program</label>
               <select className="form-select" value={formData.program} onChange={e => setFormData({ ...formData, program: e.target.value })}>
-                <option value="">Select Program</option>
-                {DEPARTMENTS.map(dept => (
+                <option value="">Select Program / Department</option>
+                {courses.length > 0 ? courses.map(c => (
+                  <option key={c.id} value={c.code}>{c.code} ({c.title})</option>
+                )) : (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
               </select>
@@ -272,6 +296,7 @@ const SectionManagement = ({ sections, subjects, activeSemester, onBack }) => {
               subjects={subjects}
               activeSemester={activeSemester}
               selectedSubjects={formData.subjects}
+              departments={departments}
               onToggleSubject={handleSubjectToggle}
             />
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>

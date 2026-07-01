@@ -27,6 +27,8 @@ import {
   initialProfessors,
   initialSubjects,
   initialSections,
+  initialDepartments,
+  initialCourses,
   SEED_VERSION,
 } from '../config/initialData';
 import { SEMESTERS, SCHOOL_YEARS } from '../config/constants';
@@ -59,6 +61,8 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
   const [sections, setSections] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [scheduleHistory, setScheduleHistory] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [courses, setCourses] = useState([]);
 
   // ─── Term / settings state ──────────────────────────────────────────
   const [availableSemesters, setAvailableSemesters] = useState(SEMESTERS);
@@ -112,6 +116,21 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
           console.log(`Migrated ${migrationCount} legacy schedules to 2nd Semester 2025-2026.`);
         }
 
+        // Seed departments and courses if they are empty (without wiping existing data)
+        const deptSnap = await getDocs(collection(db, 'departments'));
+        if (deptSnap.empty) {
+          const deptBatch = writeBatch(db);
+          initialDepartments.forEach((d) => deptBatch.set(doc(db, 'departments', d.id.toString()), d));
+          await deptBatch.commit();
+        }
+        
+        const courseSnap = await getDocs(collection(db, 'courses'));
+        if (courseSnap.empty) {
+          const courseBatch = writeBatch(db);
+          initialCourses.forEach((c) => courseBatch.set(doc(db, 'courses', c.id.toString()), c));
+          await courseBatch.commit();
+        }
+
         // Ensure meta/settings exists with default terms
         const settingsDoc = await getDoc(doc(db, 'meta', 'settings'));
         if (!settingsDoc.exists()) {
@@ -160,6 +179,14 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
       )
     );
 
+    const unsubDept = onSnapshot(collection(db, 'departments'), (snap) =>
+      setDepartments(snap.docs.map((d) => ({ ...d.data(), id: d.id })))
+    );
+
+    const unsubCourse = onSnapshot(collection(db, 'courses'), (snap) =>
+      setCourses(snap.docs.map((d) => ({ ...d.data(), id: d.id })))
+    );
+
     const unsubMeta = onSnapshot(doc(db, 'meta', 'settings'), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
@@ -176,6 +203,8 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
       unsubSec();
       unsubSched();
       unsubHist();
+      unsubDept();
+      unsubCourse();
       unsubMeta();
     };
   }, []);
@@ -214,6 +243,18 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
     return map;
   }, [sections]);
 
+  const departmentById = useMemo(() => {
+    const map = {};
+    for (const d of departments) map[d.id] = d;
+    return map;
+  }, [departments]);
+
+  const courseById = useMemo(() => {
+    const map = {};
+    for (const c of courses) map[c.id] = c;
+    return map;
+  }, [courses]);
+
   /** Schedules enriched with full object references via lookup maps. */
   const enrichedSchedules = useMemo(() => {
     return activeSchedules.map((s) => ({
@@ -235,6 +276,8 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
     activeSchedules,
     enrichedSchedules,
     scheduleHistory,
+    departments,
+    courses,
 
     // Term settings
     availableSemesters,
@@ -247,5 +290,7 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
     professorById,
     subjectById,
     sectionById,
+    departmentById,
+    courseById,
   };
 }

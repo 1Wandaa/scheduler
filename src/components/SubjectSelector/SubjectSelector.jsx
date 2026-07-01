@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { DEPARTMENTS, getDeptColor } from '../../config/constants';
 import { getSubjectDepts } from '../SubjectTable/SubjectTable';
 
-const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], onToggleSubject }) => {
+const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], departments = [], onToggleSubject }) => {
   const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
   const [subjectModalFilter, setSubjectModalFilter] = useState('All');
 
@@ -87,7 +87,9 @@ const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], onTo
       )}
 
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
-        {['All', 'Minor', ...DEPARTMENTS].map(dept => (
+        {['All', 'Minor', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
+          const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+          return (
           <button
             key={dept}
             onClick={() => setSubjectModalFilter(dept)}
@@ -95,20 +97,20 @@ const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], onTo
             style={{
               padding: '4px 12px',
               borderRadius: '16px',
-              border: subjectModalFilter === dept ? `1.5px solid ${getDeptColor(dept)}` : '1px solid var(--border-color)',
-              background: subjectModalFilter === dept ? getDeptColor(dept) : 'transparent',
+              border: subjectModalFilter === dept ? `1.5px solid ${deptColor}` : '1px solid var(--border-color)',
+              background: subjectModalFilter === dept ? deptColor : 'transparent',
               color: subjectModalFilter === dept ? '#fff' : 'var(--text-muted)',
               cursor: 'pointer',
               fontSize: '0.75rem',
               fontWeight: '600',
               transition: 'all 0.2s ease',
             }}
-            onMouseEnter={(e) => { if (subjectModalFilter !== dept) { e.target.style.borderColor = getDeptColor(dept); e.target.style.color = getDeptColor(dept); } }}
+            onMouseEnter={(e) => { if (subjectModalFilter !== dept) { e.target.style.borderColor = deptColor; e.target.style.color = deptColor; } }}
             onMouseLeave={(e) => { if (subjectModalFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
           >
             {dept === 'All' ? 'All Subjects' : dept === 'Minor' ? 'Minor Subjects' : dept}
           </button>
-        ))}
+        )})}
       </div>
       <input 
         type="text" 
@@ -123,10 +125,11 @@ const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], onTo
         
         {(subjectModalFilter === 'All' || subjectModalFilter === 'Minor') && renderSubjectGroup("Minor Subjects", minorSubjects, "var(--warning)")}
         
-        {DEPARTMENTS.map(dept => {
+        {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => {
           if (subjectModalFilter !== 'All' && subjectModalFilter !== dept) return null;
           const deptMajors = majorSubjects.filter(s => getSubjectDepts(s).includes(dept));
-          return renderSubjectGroup(`${dept} Major Subjects`, deptMajors, getDeptColor(dept));
+          const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+          return renderSubjectGroup(`${dept} Major Subjects`, deptMajors, deptColor);
         })}
 
         {subjectModalFilter === 'All' && renderSubjectGroup(

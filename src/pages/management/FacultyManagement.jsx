@@ -7,7 +7,7 @@ import FacultyTable from '../../components/FacultyTable/FacultyTable';
 import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
-const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], schedules = [], activeSemester, onBack, user }) => {
+const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], schedules = [], activeSemester, departments = [], onBack, user }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState('All');
@@ -255,27 +255,29 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by Department:</span>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {['All', ...DEPARTMENTS].map(dept => (
+              {['All', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
+                const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+                return (
                 <button
                   key={dept}
                   onClick={() => setDepartmentFilter(dept)}
                   style={{
                     padding: '6px 14px',
                     borderRadius: '20px',
-                    border: departmentFilter === dept ? `1.5px solid ${getDeptColor(dept)}` : '1px solid var(--border-color)',
-                    background: departmentFilter === dept ? getDeptColor(dept) : 'transparent',
+                    border: departmentFilter === dept ? `1.5px solid ${deptColor}` : '1px solid var(--border-color)',
+                    background: departmentFilter === dept ? deptColor : 'transparent',
                     color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
                     cursor: 'pointer',
                     fontSize: '0.82rem',
                     fontWeight: '600',
                     transition: 'all 0.2s ease',
                   }}
-                  onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = getDeptColor(dept); e.target.style.color = getDeptColor(dept); } }}
+                  onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = deptColor; e.target.style.color = deptColor; } }}
                   onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
                 >
                   {dept === 'All' ? 'All Departments' : dept}
                 </button>
-              ))}
+              )})}
             </div>
             {departmentFilter !== 'All' && (
               <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: '500' }}>
@@ -325,7 +327,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Department</label>
                 <select className="form-select" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
-                  {DEPARTMENTS.map(dept => (
+                  {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => (
                     <option key={dept} value={dept}>{dept}</option>
                   ))}
                 </select>

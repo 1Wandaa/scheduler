@@ -1,7 +1,7 @@
 import React from 'react';
 import { PROGRAM_DEPARTMENTS } from '../../config/constants';
 
-const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, subjects = [] }) => {
+const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, subjects = [], departments = [], courses = [] }) => {
   if (!sectionList || sectionList.length === 0) return null;
 
   const getSubjectName = (subId) => {
@@ -38,7 +38,13 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
                 <strong style={{ color: 'var(--accent-primary)' }}>{sec.name}</strong>
               </td>
               <td style={{ fontWeight: '500', textAlign: 'center', verticalAlign: 'middle' }}>
-                {PROGRAM_DEPARTMENTS[sec.program] || sec.program}
+                {(() => {
+                  const course = courses.find(c => c.code === sec.program || c.id === sec.program);
+                  if (course) return `${course.code}`;
+                  const dept = departments.find(d => d.id === sec.program);
+                  if (dept) return dept.name;
+                  return PROGRAM_DEPARTMENTS[sec.program] || sec.program;
+                })()}
               </td>
               <td style={{ whiteSpace: 'nowrap', textAlign: 'center', verticalAlign: 'middle' }}>
                 <span style={{

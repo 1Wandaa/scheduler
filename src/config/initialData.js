@@ -157,5 +157,19 @@ export const initialSections = [
   { id: 'SEC31', name: 'BSOA 4B', program: 'BS Office Administration', yearLevel: 4, studentCount: 40, subjects: ['S54'] },
   { id: 'SEC32', name: 'BSCS 4A', program: 'BS Computer Science', yearLevel: 4, studentCount: 40, subjects: ['S58', 'S63', 'S64'] },
   { id: 'SEC33', name: 'BSCS 4B', program: 'BS Computer Science', yearLevel: 4, studentCount: 40, subjects: ['S58', 'S63', 'S64'] },
-  { id: 'SEC34', name: 'BSCS 4C', program: 'BS Computer Science', yearLevel: 4, studentCount: 40, subjects: ['S58', 'S63', 'S64'] }
+];
+
+export const initialDepartments = [
+  { id: 'BSCS', name: 'BSCS', color: '#109EEF' },
+  { id: 'BAEL', name: 'BAEL', color: '#EAB308' },
+  { id: 'BSOA', name: 'BSOA', color: '#8B5CF6' },
+  { id: 'BSFT', name: 'BSFT', color: '#16A34A' }
+];
+
+export const initialCourses = [
+  { id: 'C01', code: 'BSCS', title: 'Bachelor of Science in Computer Science', departmentId: 'BSCS' },
+  { id: 'C02', code: 'BSFT', title: 'Bachelor of Science in Food Technology', departmentId: 'BSFT' },
+  { id: 'C03', code: 'BSOA', title: 'Bachelor of Science in Office Administration', departmentId: 'BSOA' },
+  { id: 'C04', code: 'BAEL', title: 'Bachelor of Arts in English Language', departmentId: 'BAEL' },
+  { id: 'C05', code: 'BSIT', title: 'Bachelor of Science in Information Technology', departmentId: 'BSCS' }
 ];

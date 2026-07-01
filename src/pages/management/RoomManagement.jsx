@@ -6,7 +6,7 @@ import { ROOM_TYPES, BUILDINGS, DEPARTMENTS, getDeptColor } from '../../config/c
 import RoomTable from '../../components/RoomTable/RoomTable';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
-const RoomManagement = ({ rooms, onBack, user }) => {
+const RoomManagement = ({ rooms, departments = [], onBack, user }) => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -161,27 +161,29 @@ const RoomManagement = ({ rooms, onBack, user }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by Department:</span>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {['All', 'SHARED', ...DEPARTMENTS].map(dept => (
+            {['All', 'SHARED', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
+              const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+              return (
               <button
                 key={dept}
                 onClick={() => setDepartmentFilter(dept)}
                 style={{
                   padding: '6px 14px',
                   borderRadius: '20px',
-                  border: departmentFilter === dept ? `1.5px solid ${getDeptColor(dept)}` : '1px solid var(--border-color)',
-                  background: departmentFilter === dept ? getDeptColor(dept) : 'transparent',
+                  border: departmentFilter === dept ? `1.5px solid ${deptColor}` : '1px solid var(--border-color)',
+                  background: departmentFilter === dept ? deptColor : 'transparent',
                   color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
                   cursor: 'pointer',
                   fontSize: '0.82rem',
                   fontWeight: '600',
                   transition: 'all 0.2s ease',
                 }}
-                onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = getDeptColor(dept); e.target.style.color = getDeptColor(dept); } }}
+                onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = deptColor; e.target.style.color = deptColor; } }}
                 onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
               >
                 {dept === 'All' ? 'All Departments' : dept}
               </button>
-            ))}
+            )})}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '15px' }}>
@@ -232,7 +234,7 @@ const RoomManagement = ({ rooms, onBack, user }) => {
             <div className="form-group"><label className="form-label">Department Owner</label>
               <select className="form-select" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
                 <option value="SHARED">SHARED (Any department)</option>
-                {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(d => <option key={d} value={d}>{d}</option>)}
               </select>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>Priority scheduling for this department's sections. SHARED = available to all.</span>
             </div>

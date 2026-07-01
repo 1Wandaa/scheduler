@@ -5,7 +5,7 @@ import { DEPARTMENTS } from '../../config/constants';
 import ExportOptions from './components/ExportOptions';
 import PreviewModal from './components/PreviewModal';
 
-function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, activeSemester = '', activeSchoolYear = '', isPublished = true }) {
+function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true }) {
     const [viewType, setViewType] = useState('department');
     const [selectedId, setSelectedId] = useState('');
     const [deptSectionId, setDeptSectionId] = useState('');
@@ -15,10 +15,11 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
 
     useEffect(() => {
         if (viewType === 'department') {
-            if (user?.department && DEPARTMENTS.includes(user.department)) {
+            const allDepts = departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
+            if (user?.department && allDepts.includes(user.department)) {
                 setSelectedId(user.department);
-            } else if (DEPARTMENTS.length > 0) {
-                setSelectedId(DEPARTMENTS[0]);
+            } else if (allDepts.length > 0) {
+                setSelectedId(allDepts[0]);
             }
         }
         else if (viewType === 'room' && rooms.length > 0) setSelectedId(rooms[0].id);
@@ -200,7 +201,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                         onChange={(e) => setSelectedId(e.target.value)}
                         style={{ width: '100%', borderColor: 'var(--accent-primary)', backgroundColor: 'var(--success-bg)' }}
                     >
-                        {viewType === 'department' && [...DEPARTMENTS].sort((a, b) => a.localeCompare(b)).map(d => <option key={d} value={d}>{d}</option>)}
+                        {viewType === 'department' && (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).sort((a, b) => a.localeCompare(b)).map(d => <option key={d} value={d}>{d}</option>)}
                         {viewType === 'room' && Object.entries(rooms.reduce((acc, r) => {
                             const b = r.building || 'Other';
                             if (!acc[b]) acc[b] = [];
