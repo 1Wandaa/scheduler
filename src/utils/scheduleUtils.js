@@ -393,7 +393,8 @@ export function getEligibleRoomsTiered(rooms, subject, section) {
 
     const roomDept = (r.department || 'SHARED').toUpperCase();
     const roomBldg = (r.building || 'Unassigned').toUpperCase();
-    if (roomDept === 'SHARED' || roomBldg === 'UNASSIGNED' || roomBldg === 'GENERAL BUILDING' || roomBldg === 'GYMNASIUM') {
+    const roomName = (r.name || '').toUpperCase();
+    if (roomDept === 'SHARED' || roomBldg === 'UNASSIGNED' || roomBldg === 'GENERAL BUILDING' || roomBldg === 'GYMNASIUM' || roomBldg === 'GS' || roomName.startsWith('GS')) {
       tier2.push(r);
     } else if (sectionDept && roomDept === sectionDept) {
       tier1.push(r);

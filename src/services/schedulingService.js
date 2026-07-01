@@ -23,6 +23,7 @@ import {
   isProfessorStageLocked,
 } from '../utils/scheduleUtils';
 import { validateScheduleEntry } from './validationService';
+import { resolveUnscheduledClasses } from '../utils/scheduleAI';
 
 const PREFERRED_PAIRS = [['Monday', 'Thursday'], ['Tuesday', 'Friday']];
 
@@ -158,10 +159,10 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   const reportProgress = async (pass, groupIndex, passTotal) => {
     processedCount++;
     if (onProgress) {
-      // Weight passes: Pass 1 = 0-50%, Pass 2 = 50-80%, Pass 3 = 80-100%
-      const passWeights = [0, 0.5, 0.8, 1.0];
-      const passStart = passWeights[pass - 1];
-      const passEnd = passWeights[pass];
+      // Weight passes: Pass 1 = 0-40%, Pass 2 = 40-70%, Pass 3 = 70-90%, Pass 4 = 90-100%
+      const passWeights = [0, 0.4, 0.7, 0.9, 1.0];
+      const passStart = passWeights[pass - 1] || 0;
+      const passEnd = passWeights[pass] || 1;
       const passProgress = passTotal > 0 ? (groupIndex + 1) / passTotal : 1;
       const pct = Math.round((passStart + (passEnd - passStart) * passProgress) * 100);
       onProgress({ percent: Math.min(pct, 100), placed: results.length, total: totalGroups, pass });
@@ -176,25 +177,31 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     const profPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, subject, section, constraints);
     const hasStage = rooms.some((r) => (r.name || '').toLowerCase().includes('stage'));
 
+    let profMaxUnitsReached = false;
+    let anyProfEligibleForRooms = false;
+
     for (const professor of profPool) {
-      if (signal?.aborted) return false;
+      if (signal?.aborted) return { success: false };
       // Yield to event loop so Cancel click can be processed
       await new Promise((r) => setTimeout(r, 0));
-      if (signal?.aborted) return false;
+      if (signal?.aborted) return { success: false };
 
       const isStageLocked = isProfessorStageLocked(professor);
       const profSchedules = temp.filter((s) => String(s.professor?.id) === String(professor.id));
       const uniqueLoad = new Map();
       for (const s of profSchedules) {
         const k = `${s.subject?.id || 'x'}__${s.section?.id || 'x'}`;
-        if (!uniqueLoad.has(k)) uniqueLoad.set(k, creditPerMeeting(s.subject));
+        if (!uniqueLoad.has(k)) uniqueLoad.set(k, Number(s.subject?.credits) || 3);
       }
       const profCurrentLoad = Array.from(uniqueLoad.values()).reduce((s, c) => s + c, 0);
-      const perMeeting = creditPerMeeting(subject);
+      const subjectCredits = Number(subject.credits) || 3;
 
-      if (profCurrentLoad + perMeeting > (Number(professor.maxUnits) || Number(professor.maxHours) || 12) + 0.01) {
+      if (profCurrentLoad + subjectCredits > (Number(professor.maxUnits) || Number(professor.maxHours) || 12) + 0.01) {
+        profMaxUnitsReached = true;
         continue;
       }
+
+      anyProfEligibleForRooms = true;
 
       const prefRoomIds = professor.preferredRooms || [];
       let sortedRoomPool = roomPool;
@@ -209,7 +216,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         // Yield every few rooms so the UI stays responsive
         if (ri % 3 === 0) {
           await new Promise((r) => setTimeout(r, 0));
-          if (signal?.aborted) return false;
+          if (signal?.aborted) return { success: false };
         }
 
         if (hasStage) {
@@ -219,7 +226,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         }
 
         for (const timeSlot of TIME_SLOTS) {
-          if (signal?.aborted) return false;
+          if (signal?.aborted) return { success: false };
           const startIdx = getTimeSlotIndex(timeSlot);
           if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting) === 0) continue;
 
@@ -242,14 +249,14 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
                 if (w1?.ok !== false && w2?.ok !== false) {
                   temp.push(s1, s2);
                   results.push(s1, s2);
-                  return true;
+                  return { success: true };
                 }
               }
             }
           }
 
-          // Any-day fallback — only for 1 or 3+ meetings
-          if (!usePairsOnly && count !== 2) {
+          // Any-day fallback
+          if (!usePairsOnly) {
             const validDays = [];
             for (const day of DAYS) {
               if (isFree(day)) validDays.push(day);
@@ -268,14 +275,21 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
               if (allOk) {
                 temp.push(...writes);
                 results.push(...writes);
-                return true;
+                return { success: true };
               }
             }
           }
         }
       }
     }
-    return false;
+    
+    if (!anyProfEligibleForRooms && profMaxUnitsReached) {
+      return { success: false, reason: 'All eligible professors have reached their max units.' };
+    }
+    if (roomPool.length === 0) {
+      return { success: false, reason: 'No eligible rooms available for this subject/section.' };
+    }
+    return { success: false, reason: 'Professors are busy during the available room times.' };
   };
 
   // ── PASS 1 — STRICT: Department rooms, preferred pairs ────────────
@@ -287,7 +301,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints);
     if (tiers.tier1.length > 0) {
       const placed = await tryPlaceGroup(group, tiers.tier1, group.count === 2);
-      if (placed) placedKeys.add(groupKey);
+      if (placed?.success) placedKeys.add(groupKey);
     }
     await reportProgress(1, i, allGroups.length);
   }
@@ -303,7 +317,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     const pool = [...tiers.tier1, ...tiers.tier2];
     if (pool.length > 0) {
       const placed = await tryPlaceGroup(group, pool, false);
-      if (placed) placedKeys.add(groupKey);
+      if (placed?.success) placedKeys.add(groupKey);
     }
     await reportProgress(2, i, remainingAfterPass1.length);
   }
@@ -318,16 +332,54 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints);
     const pool = [...tiers.tier1, ...tiers.tier2, ...tiers.tier3];
     const placed = await tryPlaceGroup(group, pool, false);
-    if (placed) {
+    if (placed?.success) {
       placedKeys.add(groupKey);
     } else {
-      let reason = 'Lack of available rooms or time slots.';
+      let reason = placed?.reason || 'Professors are busy during the available room times.';
       if (constraints?.respectLabs && group.subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
         reason = 'Requires computer lab.';
       }
       unscheduled.push({ subject: group.subject, section: group.section, reason });
     }
     await reportProgress(3, i, remainingAfterPass2.length);
+  }
+
+  // ── PASS 4 — AI CONFLICT RESOLUTION ──────────────────────────────
+  const remainingAfterPass3 = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
+  if (constraints?.aiAssisted && remainingAfterPass3.length > 0) {
+    console.log(`[AutoScheduler] Pass 4 (AI Resolution): Attempting to resolve ${remainingAfterPass3.length} unscheduled groups`);
+    await reportProgress(4, 0, remainingAfterPass3.length);
+    const aiResolutions = await resolveUnscheduledClasses(remainingAfterPass3, context, constraints);
+
+    if (aiResolutions && aiResolutions.length > 0) {
+      for (let i = 0; i < aiResolutions.length; i++) {
+        const res = aiResolutions[i];
+        if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
+        const group = remainingAfterPass3[res.groupIndex];
+        if (!group) continue;
+
+        const room = rooms.find(r => String(r.id) === String(res.roomId));
+        const professor = professors.find(p => String(p.id) === String(res.professorId));
+        const timeSlot = TIME_SLOTS.find(ts => String(ts.id) === String(res.timeSlotId));
+        const day = res.day;
+
+        if (!room || !professor || !timeSlot || !day) continue;
+
+        const sc = { room, professor, subject: group.subject, section: group.section, day, timeSlot, prescriptionNote: res.prescriptionNote };
+        const w = await addScheduleFn(sc);
+        
+        if (w?.ok !== false) {
+          temp.push(sc);
+          results.push(sc);
+
+          const uIdx = unscheduled.findIndex(u => u.subject?.id === group.subject?.id && (u.section?.id === group.section?.id || (!u.section && !group.section)));
+          if (uIdx !== -1) {
+            unscheduled.splice(uIdx, 1);
+          }
+        }
+        await reportProgress(4, i, aiResolutions.length);
+      }
+    }
   }
 
   console.log(`[AutoScheduler] Done: ${results.length} placed, ${unscheduled.length} unscheduled`);

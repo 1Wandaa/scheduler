@@ -305,7 +305,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
               {progress.pass > 0
-                ? `Pass ${progress.pass}/3 — ${progress.percent}%`
+                ? `Pass ${progress.pass}/${aiAssisted ? '4' : '3'} — ${progress.percent}%`
                 : 'Preparing...'}
             </span>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -326,6 +326,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
             {progress.pass === 1 && 'Scheduling with department rooms & preferred day pairs...'}
             {progress.pass === 2 && 'Trying shared rooms with flexible days...'}
             {progress.pass === 3 && 'Attempting overflow placement with all rooms...'}
+            {progress.pass === 4 && 'AI resolving remaining conflicts...'}
             {progress.pass === 0 && 'Initializing scheduler...'}
           </p>
         </div>

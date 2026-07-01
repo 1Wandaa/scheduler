@@ -183,3 +183,133 @@ Rank professor IDs from best fit to worst fit within each subject's eligible poo
   }
 }
 
+/**
+ * AI Pass 4: Resolve Unscheduled Classes by relaxing constraints.
+ * Allows small workload overrides (+3 max units) and restricts to Dept/Shared rooms.
+ */
+export async function resolveUnscheduledClasses(unscheduledGroups, context, constraints) {
+  if (!unscheduledGroups?.length) return [];
+  const { professors, rooms, activeSchedules, subjects, sections } = context;
+
+  const profLoad = {};
+  for (const s of (activeSchedules || [])) {
+    if (s.professor?.id) {
+      profLoad[s.professor.id] = (profLoad[s.professor.id] || 0) + creditPerMeeting(s.subject);
+    }
+  }
+
+  const roomOccupancy = {}; 
+  for (const s of (activeSchedules || [])) {
+    if (s.room?.id) {
+      if (!roomOccupancy[s.room.id]) roomOccupancy[s.room.id] = {};
+      const slots = getOccupiedSlots(s);
+      for (const slot of slots) {
+        if (!roomOccupancy[s.room.id][slot.day]) roomOccupancy[s.room.id][slot.day] = [];
+        roomOccupancy[s.room.id][slot.day].push(slot.timeSlotId);
+      }
+    }
+  }
+
+  const profOccupancy = {};
+  for (const s of (activeSchedules || [])) {
+    if (s.professor?.id) {
+      if (!profOccupancy[s.professor.id]) profOccupancy[s.professor.id] = {};
+      const slots = getOccupiedSlots(s);
+      for (const slot of slots) {
+        if (!profOccupancy[s.professor.id][slot.day]) profOccupancy[s.professor.id][slot.day] = [];
+        profOccupancy[s.professor.id][slot.day].push(slot.timeSlotId);
+      }
+    }
+  }
+
+  const groupContexts = unscheduledGroups.map((g, idx) => {
+    const { subject, section, count } = g;
+    const eligibleProfs = getEligibleProfessors(professors, subject, section);
+    const relaxedProfs = eligibleProfs.filter(p => {
+      const max = (Number(p.maxUnits) || Number(p.maxHours) || 12) + 3; 
+      const current = profLoad[p.id] || 0;
+      return current + (Number(subject.credits) || 3) <= max + 0.01;
+    });
+
+    return `- Group ${idx}: Subject "${subject.code}" (${subject.id}), Section "${section?.name || 'Any'}" (${section?.id || 'none'}), Meetings Needed: ${count}, Duration: ${subject.hoursPerMeeting || 1.5}hr. Eligible Profs (with +3 unit override allowed): [${relaxedProfs.map(p => p.id).join(', ')}]`;
+  }).join('\n');
+
+  const profSummary = professors.map(p => {
+    const max = Number(p.maxUnits) || Number(p.maxHours) || 12;
+    const used = Math.round((profLoad[p.id] || 0) * 10) / 10;
+    return `- Prof "${p.name}" [${p.id}]: Load: ${used}/${max} units. Occupied: ${JSON.stringify(profOccupancy[p.id] || {})}`;
+  }).join('\n');
+
+  const roomSummary = rooms.map(r => {
+    const dept = r.department || 'SHARED';
+    return `- Room "${r.name}" [${r.id}]: Dept: ${dept}, Lab: ${r.hasComputers?'yes':'no'}, Occupied: ${JSON.stringify(roomOccupancy[r.id] || {})}`;
+  }).join('\n');
+
+  const timeSlotsSummary = TIME_SLOTS.map((t, idx) => `- ${t.id}: ${t.label} (Index ${idx})`).join('\n');
+
+  const prompt = `You are an AI Scheduling Assistant. Your task is to resolve unscheduled classes by strategically relaxing constraints.
+
+RULES FOR RESOLVING CONFLICTS:
+1. No Double Booking: A room or professor CANNOT be booked for two classes at the same time. Check their Occupied slots carefully!
+2. Overriding Professor Max Units: You MAY assign a professor up to 3 units OVER their standard max limit if no other professor is available.
+3. Allowed Rooms: You MUST use rooms that are either "SHARED" or belong to the section's department. Do NOT use rooms from completely unrelated departments unless it's a "SHARED" room.
+4. Meeting Count: If a group needs "Meetings Needed: 2", you must return 2 schedule entries for that group on different days.
+5. Provide a 'prescriptionNote' for each entry explaining what constraint was relaxed (e.g. "Overrode max units by 3 for Professor X" or "Used SHARED room to avoid conflict").
+
+AVAILABLE TIME SLOTS:
+${timeSlotsSummary}
+
+PROFESSORS (Current State):
+${profSummary}
+
+ROOMS (Current State):
+${roomSummary}
+
+UNSCHEDULED GROUPS TO RESOLVE:
+${groupContexts}
+
+Provide your response in JSON matching this schema:
+[
+  {
+    "groupIndex": <number>,
+    "day": <"Monday"|"Tuesday"|"Wednesday"|"Thursday"|"Friday">,
+    "timeSlotId": <number>,
+    "roomId": <string>,
+    "professorId": <string>,
+    "prescriptionNote": <string>
+  }
+]
+Only provide valid, non-overlapping placements. If a group cannot be placed even with relaxed rules, omit it.`;
+
+  try {
+    const result = await generativeModel.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 2048,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              groupIndex: { type: SchemaType.NUMBER },
+              day: { type: SchemaType.STRING },
+              timeSlotId: { type: SchemaType.NUMBER },
+              roomId: { type: SchemaType.STRING },
+              professorId: { type: SchemaType.STRING },
+              prescriptionNote: { type: SchemaType.STRING },
+            },
+            required: ["groupIndex", "day", "timeSlotId", "roomId", "professorId", "prescriptionNote"]
+          }
+        }
+      },
+    });
+
+    return JSON.parse(result.response.text());
+  } catch (error) {
+    console.error('[AI Conflict Resolution] Failed:', error);
+    return [];
+  }
+}
+

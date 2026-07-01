@@ -143,52 +143,70 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
                     </div>
                   </td>
                   
-                  {TIME_SLOTS.map(t => {
-                    const sched = occupationMap[room.id]?.[t.id];
-                    if (sched) {
-                      return (
-                        <td key={t.id} style={{ 
-                          background: 'rgba(239, 68, 68, 0.1)', 
-                          border: '1px solid rgba(239, 68, 68, 0.2)', 
-                          padding: '4px', 
-                          textAlign: 'center',
-                          verticalAlign: 'middle'
-                        }}>
-                          <div style={{ 
-                            fontSize: '0.7rem', 
-                            fontWeight: '700', 
-                            color: 'var(--danger)',
-                            lineHeight: 1.2
+                  {(() => {
+                    const cells = [];
+                    for (let idx = 0; idx < TIME_SLOTS.length; idx++) {
+                      const t = TIME_SLOTS[idx];
+                      const sched = occupationMap[room.id]?.[t.id];
+
+                      if (sched) {
+                        let colSpan = 1;
+                        for (let i = idx + 1; i < TIME_SLOTS.length; i++) {
+                          const nextSlot = TIME_SLOTS[i];
+                          if (occupationMap[room.id]?.[nextSlot.id]?.id === sched.id) {
+                            colSpan++;
+                          } else {
+                            break;
+                          }
+                        }
+
+                        cells.push(
+                          <td key={t.id} colSpan={colSpan} style={{ 
+                            background: 'rgba(239, 68, 68, 0.1)', 
+                            border: '1px solid rgba(239, 68, 68, 0.2)', 
+                            padding: '4px', 
+                            textAlign: 'center',
+                            verticalAlign: 'middle'
                           }}>
-                            {sched.subject?.code}
-                          </div>
-                          {sched.section && (
-                            <div style={{ fontSize: '0.6rem', color: 'rgba(239,68,68,0.8)' }}>
-                              {sched.section.name}
+                            <div style={{ 
+                              fontSize: '0.7rem', 
+                              fontWeight: '700', 
+                              color: 'var(--danger)',
+                              lineHeight: 1.2
+                            }}>
+                              {sched.subject?.code}
                             </div>
-                          )}
-                        </td>
-                      );
-                    } else {
-                      return (
-                        <td key={t.id} style={{ 
-                          background: 'transparent', 
-                          border: '1px solid var(--border-color)', 
-                          padding: '4px',
-                          textAlign: 'center'
-                        }}>
-                          <div style={{ 
-                            width: '8px', 
-                            height: '8px', 
-                            borderRadius: '50%', 
-                            background: 'var(--success)', 
-                            margin: '0 auto',
-                            opacity: 0.3
-                          }} title="Available"></div>
-                        </td>
-                      );
+                            {sched.section && (
+                              <div style={{ fontSize: '0.6rem', color: 'rgba(239,68,68,0.8)' }}>
+                                {sched.section.name}
+                              </div>
+                            )}
+                          </td>
+                        );
+
+                        idx += (colSpan - 1);
+                      } else {
+                        cells.push(
+                          <td key={t.id} style={{ 
+                            background: 'transparent', 
+                            border: '1px solid var(--border-color)', 
+                            padding: '4px',
+                            textAlign: 'center'
+                          }}>
+                            <div style={{ 
+                              width: '8px', 
+                              height: '8px', 
+                              borderRadius: '50%', 
+                              background: 'var(--success)', 
+                              margin: '0 auto',
+                              opacity: 0.3
+                            }} title="Available"></div>
+                          </td>
+                        );
+                      }
                     }
-                  })}
+                    return cells;
+                  })()}
                 </tr>
               ))
             )}
