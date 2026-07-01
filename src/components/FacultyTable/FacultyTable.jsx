@@ -1,9 +1,10 @@
 import React from 'react';
+import { getDeptColor } from '../../config/constants';
 
 const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
 const matchesProfessor = (s, professor) => professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);
 
-const FacultyTable = ({ facultyList, subjects = [], schedules = [], onEdit, onDelete }) => {
+const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments = [], onEdit, onDelete }) => {
   if (!facultyList || facultyList.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-main)' }}>
@@ -50,7 +51,25 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], onEdit, onDe
           return (
             <tr key={p.id}>
               <td><strong style={{ color: 'var(--text-main)' }}>{p.formattedName}</strong></td>
-              <td>{p.department}</td>
+              <td>
+                {(() => {
+                  const color = departments?.find(d => d.id === p.department)?.color || getDeptColor(p.department);
+                  const isVar = color && color.startsWith('var');
+                  return (
+                    <span style={{
+                      padding: '4px 10px',
+                      borderRadius: '16px',
+                      fontSize: '0.8rem',
+                      fontWeight: '600',
+                      color: color,
+                      backgroundColor: isVar ? 'transparent' : `${color}26`,
+                      border: isVar ? `1px solid ${color}` : `1px solid ${color}66`
+                    }}>
+                      {p.department}
+                    </span>
+                  );
+                })()}
+              </td>
               <td>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '120px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
