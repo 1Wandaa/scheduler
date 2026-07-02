@@ -160,10 +160,23 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
                           }
                         }
 
+                        const sectionName = (sched.section?.name || '').toUpperCase();
+                        let theme = { bg: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.2)', text: 'var(--danger)', subtext: 'rgba(239,68,68,0.8)' };
+                        
+                        if (sectionName.includes('BSCS')) {
+                          theme = { bg: '#109EEF', border: '#109EEF', text: '#FFFFFF', subtext: 'rgba(255,255,255,0.85)' };
+                        } else if (sectionName.includes('BSFT')) {
+                          theme = { bg: '#16A34A', border: '#16A34A', text: '#FFFFFF', subtext: 'rgba(255,255,255,0.85)' };
+                        } else if (sectionName.includes('BSOA')) {
+                          theme = { bg: '#8B5CF6', border: '#8B5CF6', text: '#FFFFFF', subtext: 'rgba(255,255,255,0.85)' };
+                        } else if (sectionName.includes('BAEL')) {
+                          theme = { bg: '#EAB308', border: '#EAB308', text: '#030813', subtext: 'rgba(3,8,19,0.85)' };
+                        }
+
                         cells.push(
                           <td key={t.id} colSpan={colSpan} style={{ 
-                            background: 'rgba(239, 68, 68, 0.1)', 
-                            border: '1px solid rgba(239, 68, 68, 0.2)', 
+                            background: theme.bg, 
+                            border: '3px solid #ffffff', 
                             padding: '4px', 
                             textAlign: 'center',
                             verticalAlign: 'middle'
@@ -171,13 +184,13 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
                             <div style={{ 
                               fontSize: '0.7rem', 
                               fontWeight: '700', 
-                              color: 'var(--danger)',
+                              color: theme.text,
                               lineHeight: 1.2
                             }}>
                               {sched.subject?.code}
                             </div>
                             {sched.section && (
-                              <div style={{ fontSize: '0.6rem', color: 'rgba(239,68,68,0.8)' }}>
+                              <div style={{ fontSize: '0.6rem', color: theme.subtext, marginTop: '2px' }}>
                                 {sched.section.name}
                               </div>
                             )}
@@ -186,23 +199,56 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
 
                         idx += (colSpan - 1);
                       } else {
+                        // Do not show the green AVAILABLE indicator for the 7:00 - 7:30 slot
+                        if (idx === 0) {
+                          cells.push(
+                            <td key={t.id} style={{ 
+                              background: 'transparent', 
+                              borderTop: '1px solid var(--border-color)', 
+                              borderBottom: '1px solid var(--border-color)', 
+                              padding: '4px'
+                            }}>
+                            </td>
+                          );
+                          continue;
+                        }
+
+                        let emptySpan = 1;
+                        for (let i = idx + 1; i < TIME_SLOTS.length; i++) {
+                          if (emptySpan >= 3) break; // Limit to 1.5 hours max
+                          
+                          if (!occupationMap[room.id]?.[TIME_SLOTS[i].id]) {
+                            emptySpan++;
+                          } else {
+                            break;
+                          }
+                        }
+                        
+                        const isAvailableBlock = emptySpan >= 2;
+                        
                         cells.push(
-                          <td key={t.id} style={{ 
-                            background: 'transparent', 
-                            border: '1px solid var(--border-color)', 
+                          <td key={t.id} colSpan={emptySpan} style={{ 
+                            background: isAvailableBlock ? 'rgba(34, 197, 94, 0.05)' : 'transparent', 
+                            borderTop: '1px solid var(--border-color)', 
+                            borderBottom: '1px solid var(--border-color)', 
                             padding: '4px',
-                            textAlign: 'center'
+                            textAlign: 'center',
+                            verticalAlign: 'middle'
                           }}>
-                            <div style={{ 
-                              width: '8px', 
-                              height: '8px', 
-                              borderRadius: '50%', 
-                              background: 'var(--success)', 
-                              margin: '0 auto',
-                              opacity: 0.3
-                            }} title="Available"></div>
+                            {isAvailableBlock && (
+                              <div style={{
+                                color: 'var(--success)',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                letterSpacing: '1px'
+                              }}>
+                                AVAILABLE
+                              </div>
+                            )}
                           </td>
                         );
+                        
+                        idx += (emptySpan - 1);
                       }
                     }
                     return cells;
