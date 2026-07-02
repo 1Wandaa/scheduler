@@ -255,6 +255,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     schedules={filteredSchedules}
                     title={`${titlePrefix} SCHEDULE: ${titleName}`}
                     onUpdateSchedule={isAdmin ? onUpdateSchedule : undefined}
+                    departments={departments}
                 />
             </div>
 

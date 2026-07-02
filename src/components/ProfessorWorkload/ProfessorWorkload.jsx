@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import '../../styles/ProfessorWorkload.css';
 
-function ProfessorWorkload({ professors, schedules }) {
+function ProfessorWorkload({ professors, schedules, departments = [] }) {
   const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
@@ -24,6 +24,12 @@ function ProfessorWorkload({ professors, schedules }) {
 
   const getDeptColor = (dept) => {
     if (!dept) return '#64748b'; // default slate
+
+    if (departments && departments.length > 0) {
+      const dynDept = departments.find(d => String(d.id).toUpperCase() === String(dept).toUpperCase());
+      if (dynDept && dynDept.color) return dynDept.color;
+    }
+
     const d = dept.toUpperCase();
     if (d.includes('BSCS')) return '#10b981'; // green
     if (d.includes('BSFT')) return '#f59e0b'; // amber

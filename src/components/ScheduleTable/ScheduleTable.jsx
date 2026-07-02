@@ -4,7 +4,7 @@ import { TIME_SLOTS, DAYS } from '../../config/constants';
 import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap } from '../../utils/scheduleUtils';
 import '../../styles/ScheduleTable.css';
 
-function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID" }) {
+function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID", departments = [] }) {
   const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
@@ -341,6 +341,16 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   const getDeptColor = (schedule) => {
     // 1. Try to find a known department in the section name (e.g. "BSCS 1A", "BSOA-1B")
     const sectionName = (schedule?.section?.name || '').toUpperCase();
+    
+    // Check dynamic departments first
+    if (departments && departments.length > 0) {
+      for (const d of departments) {
+        if (sectionName.includes((d.id || '').toUpperCase())) {
+          return { bg: d.color, text: '#FFFFFF' };
+        }
+      }
+    }
+
     for (const dept of Object.keys(DEPT_COLORS)) {
       if (sectionName.includes(dept)) {
         return DEPT_COLORS[dept];
@@ -353,6 +363,15 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       const depts = Array.isArray(subj.departments) ? subj.departments : (subj.department ? [subj.department] : []);
       for (const d of depts) {
         const upperD = String(d).toUpperCase();
+        
+        if (departments && departments.length > 0) {
+          for (const dynDept of departments) {
+            if (upperD.includes((dynDept.id || '').toUpperCase())) {
+              return { bg: dynDept.color, text: '#FFFFFF' };
+            }
+          }
+        }
+
         for (const dept of Object.keys(DEPT_COLORS)) {
           if (upperD.includes(dept)) {
             return DEPT_COLORS[dept];
