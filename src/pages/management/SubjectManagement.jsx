@@ -335,6 +335,10 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
                   <option value={1}>1.0 Hours</option>
                   <option value={1.5}>1.5 Hours</option>
                   <option value={2}>2.0 Hours</option>
+                  <option value={2.5}>2.5 Hours</option>
+                  <option value={3}>3.0 Hours</option>
+                  <option value={4}>4.0 Hours</option>
+                  <option value={5}>5.0 Hours</option>
                 </select>
               </div>
             </div>

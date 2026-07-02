@@ -70,7 +70,8 @@ function getEligibleProfs(professors, subject, section, constraints) {
 function buildAssignments(subjects, sections, activeSemester, filter) {
   const assignments = [];
   for (const section of sections) {
-    for (const subId of section.subjects || []) {
+    const uniqueSubjects = [...new Set(section.subjects || [])];
+    for (const subId of uniqueSubjects) {
       const subject = subjects.find((su) => su.id === subId || su.code === subId);
       if (!subject) continue;
       if (subject.semester && subject.semester !== 'Both' && subject.semester !== activeSemester) continue;
@@ -251,6 +252,25 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
                   results.push(s1, s2);
                   return { success: true };
                 }
+              }
+            }
+          }
+
+          // Try preferred pattern for 3-meeting classes (MWF)
+          if (count === 3) {
+            const mwf = ['Monday', 'Wednesday', 'Friday'];
+            if (isFree(mwf[0]) && isFree(mwf[1]) && isFree(mwf[2])) {
+              const s1 = { room, professor, subject, section, day: mwf[0], timeSlot };
+              const s2 = { room, professor, subject, section, day: mwf[1], timeSlot };
+              const s3 = { room, professor, subject, section, day: mwf[2], timeSlot };
+              const w1 = await addScheduleFn(s1);
+              const w2 = await addScheduleFn(s2);
+              const w3 = await addScheduleFn(s3);
+
+              if (w1?.ok !== false && w2?.ok !== false && w3?.ok !== false) {
+                temp.push(s1, s2, s3);
+                results.push(s1, s2, s3);
+                return { success: true };
               }
             }
           }

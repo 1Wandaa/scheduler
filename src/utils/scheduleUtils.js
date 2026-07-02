@@ -387,6 +387,8 @@ export function getEligibleRoomsTiered(rooms, subject, section) {
   const tier2 = []; // SHARED rooms
   const tier3 = []; // Other department rooms (overflow)
 
+  const isGEOrMinor = subject && ((subject.code || '').toUpperCase().startsWith('GE') || subject.category === 'Minor');
+
   for (const r of pool) {
     // Apply section-level room restrictions
     if (!isRoomAllowedFor(r, subject, section)) continue;
@@ -394,12 +396,24 @@ export function getEligibleRoomsTiered(rooms, subject, section) {
     const roomDept = (r.department || 'SHARED').toUpperCase();
     const roomBldg = (r.building || 'Unassigned').toUpperCase();
     const roomName = (r.name || '').toUpperCase();
-    if (roomDept === 'SHARED' || roomBldg === 'UNASSIGNED' || roomBldg === 'GENERAL BUILDING' || roomBldg === 'GYMNASIUM' || roomBldg === 'GS' || roomName.startsWith('GS')) {
-      tier2.push(r);
-    } else if (sectionDept && roomDept === sectionDept) {
-      tier1.push(r);
+    const isShared = roomDept === 'SHARED' || roomBldg === 'UNASSIGNED' || roomBldg === 'GENERAL BUILDING' || roomBldg === 'GYMNASIUM' || roomBldg === 'GS' || roomName.startsWith('GS');
+
+    if (isGEOrMinor) {
+      if (isShared) {
+        tier1.push(r);
+      } else if (sectionDept && roomDept === sectionDept) {
+        tier2.push(r);
+      } else {
+        tier3.push(r);
+      }
     } else {
-      tier3.push(r);
+      if (isShared) {
+        tier2.push(r);
+      } else if (sectionDept && roomDept === sectionDept) {
+        tier1.push(r);
+      } else {
+        tier3.push(r);
+      }
     }
   }
 

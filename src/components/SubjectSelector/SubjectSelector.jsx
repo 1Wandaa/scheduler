@@ -141,7 +141,13 @@ const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], depa
         
         {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => {
           if (subjectModalFilter !== 'All' && subjectModalFilter !== dept) return null;
-          const deptMajors = majorSubjects.filter(s => getSubjectDepts(s).includes(dept));
+          const deptMajors = majorSubjects.filter(s => {
+            const depts = getSubjectDepts(s);
+            if (subjectModalFilter === 'All') {
+              return depts.length > 0 && depts[0] === dept;
+            }
+            return depts.includes(dept);
+          });
           const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
           return renderSubjectGroup(`${dept} Major Subjects`, deptMajors, deptColor);
         })}

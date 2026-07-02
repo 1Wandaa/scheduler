@@ -31,9 +31,8 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments 
         {facultyList.map(p => {
           // Calculate units based on assigned subjects (specialization)
           const assignedSubjectIds = p.specialization || [];
-          const currentUnits = subjects
-            .filter(sub => assignedSubjectIds.includes(sub.id) || assignedSubjectIds.includes(sub.code) || assignedSubjectIds.includes(sub.name))
-            .reduce((sum, sub) => sum + (Number(sub.credits) || 3), 0);
+          const currentSubjects = subjects.filter(sub => assignedSubjectIds.includes(sub.id) || assignedSubjectIds.includes(sub.code) || assignedSubjectIds.includes(sub.name));
+          const currentUnits = currentSubjects.reduce((sum, sub) => sum + (Number(sub.credits) || 3), 0);
           
           const maxUnits = p.maxUnits || p.maxHours || 12;
           const utilization = (currentUnits / maxUnits) * 100;
@@ -97,7 +96,7 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments 
                 </div>
               </td>
               <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                {(p.specialization || []).length} subject{(p.specialization || []).length !== 1 ? 's' : ''}
+                {currentSubjects.length} subject{currentSubjects.length !== 1 ? 's' : ''}
               </td>
               <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 {(p.assignedSections || []).length} section{(p.assignedSections || []).length !== 1 ? 's' : ''}
