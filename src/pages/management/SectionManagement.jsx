@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import Swal from 'sweetalert2';
+import { toast } from 'sonner';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, PROGRAM_DEPARTMENTS, getDeptColor } from '../../config/constants';
 import SectionTable from '../../components/SectionTable/SectionTable';
 import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
 
 const SectionManagement = ({ sections, subjects, activeSemester, departments = [], courses = [], onBack }) => {
+  const { confirm } = useGlobalDialog();
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -49,15 +51,13 @@ const SectionManagement = ({ sections, subjects, activeSemester, departments = [
     }
 
     if (!formData.subjects || formData.subjects.length === 0) {
-      const result = await Swal.fire({
+      const isConfirmed = await confirm({
         title: 'No Subjects Enrolled',
         text: 'Are you sure you want to create a section with no subjects?',
         icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, save it',
-        cancelButtonText: 'Cancel'
+        confirmButtonText: 'Yes, save it'
       });
-      if (!result.isConfirmed) return;
+      if (!isConfirmed) return;
     }
 
     setIsSaving(true);
@@ -78,31 +78,21 @@ const SectionManagement = ({ sections, subjects, activeSemester, departments = [
   };
 
   const handleDelete = async (id) => {
-    const result = await Swal.fire({
+    const isConfirmed = await confirm({
       title: 'Delete Section?',
       text: "This action cannot be undone. Proceed?",
-      showCancelButton: true,
+      icon: 'warning',
       confirmButtonText: 'Delete',
-      cancelButtonText: 'Cancel',
-      customClass: {
-        popup: 'minimal-swal',
-        title: 'minimal-title',
-        htmlContainer: 'minimal-text',
-        actions: 'minimal-actions',
-        confirmButton: 'btn-delete',
-        cancelButton: 'back-btn'
-      },
-      buttonsStyling: false,
-      focusCancel: true
+      isDestructive: true
     });
 
-    if (result.isConfirmed) {
+    if (isConfirmed) {
       try {
         await deleteDoc(doc(db, 'sections', id.toString()));
-        Swal.fire({ title: 'Deleted', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
-      } catch (error) {
-        console.error("Error deleting section: ", error);
-        Swal.fire({ title: 'Error', text: 'Failed to delete.', icon: 'error', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+        toast.success('Section deleted successfully');
+      } catch (err) {
+        console.error("Error deleting section:", err);
+        toast.error('Failed to delete section');
       }
     }
   };

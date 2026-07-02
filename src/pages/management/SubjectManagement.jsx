@@ -2,11 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
 import SubjectTable, { getSubjectDepts } from '../../components/SubjectTable/SubjectTable';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import Swal from 'sweetalert2';
+import { toast } from 'sonner';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, getDeptColor } from '../../config/constants';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, departments = [], onBack, user }) => {
+  const { confirm } = useGlobalDialog();
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -82,31 +84,23 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
   };
 
   const handleDelete = async (id) => {
-    const result = await Swal.fire({
+    const isConfirmed = await confirm({
       title: 'Delete Subject?',
       text: "This action cannot be undone. Proceed?",
-      showCancelButton: true,
+      icon: 'warning',
       confirmButtonText: 'Delete',
-      cancelButtonText: 'Cancel',
-      customClass: {
-        popup: 'minimal-swal',
-        title: 'minimal-title',
-        htmlContainer: 'minimal-text',
-        actions: 'minimal-actions',
-        confirmButton: 'btn-delete',
-        cancelButton: 'back-btn'
-      },
-      buttonsStyling: false,
-      focusCancel: true
+      isDestructive: true
     });
 
-    if (result.isConfirmed) {
+    if (isConfirmed) {
+      const subjectToDelete = subjects.find(s => s.id === id);
       try {
         await deleteDoc(doc(db, 'subjects', id.toString()));
-        Swal.fire({ title: 'Deleted', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
-      } catch (error) {
-        console.error("Error deleting subject: ", error);
-        Swal.fire({ title: 'Error', text: 'Failed to delete.', icon: 'error', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+        logActivity({ user, action: LOG_ACTIONS.DELETE_SUBJECT, details: `Deleted subject: ${subjectToDelete?.code || id}` });
+        toast.success('Subject deleted successfully');
+      } catch (err) {
+        console.error("Error deleting subject:", err);
+        toast.error('Failed to delete subject');
       }
     }
   };

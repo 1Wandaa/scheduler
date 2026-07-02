@@ -19,8 +19,6 @@ import {
   autoScheduleFull,
   autoScheduleLegacy,
 } from '../../services/schedulingService';
-import Swal from 'sweetalert2';
-
 import UserManagement from '../management/UserManagement';
 import ProfessorWorkload from '../../components/ProfessorWorkload/ProfessorWorkload';
 import ScheduleTable from '../../components/ScheduleTable/ScheduleTable';
@@ -50,6 +48,7 @@ import BottomNav from './components/BottomNav';
 import SystemReminders from './components/SystemReminders';
 import RecentActivity from './components/RecentActivity';
 import { showAutoScheduleModal } from './utils/autoScheduleModals';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard = ({ user, onLogout }) => {
@@ -65,6 +64,7 @@ const Dashboard = ({ user, onLogout }) => {
   const location = useLocation();
   const pathParts = location.pathname.split('/');
   const activeTab = pathParts[2] || (isStudent ? 'view-schedules' : 'dashboard');
+  const { confirm, prompt } = useGlobalDialog();
 
   const setActiveTab = (tab) => {
     if (tab === 'dashboard') {
@@ -105,17 +105,16 @@ const Dashboard = ({ user, onLogout }) => {
 
   const handleTabClick = (tab) => { setActiveTab(tab); setIsMobileMenuOpen(false); };
 
-  const handleAutoScheduleAction = (mode) => {
+  const handleAutoScheduleAction = async (mode) => {
     setIsFabHidden(true);
-    showAutoScheduleModal(mode, { professors, rooms, sections }, (result) => {
-      setIsFabHidden(false);
-      if (result) {
-        setActiveTab('schedule');
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('execute-autoscheduler', { detail: result }));
-        }, 100);
-      }
-    });
+    const result = await showAutoScheduleModal(mode, { professors, rooms, sections }, { confirm, prompt });
+    setIsFabHidden(false);
+    if (result) {
+      setActiveTab('schedule');
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('execute-autoscheduler', { detail: result }));
+      }, 100);
+    }
   };
 
   // --- Mobile Swipe Gesture for Sidebar ---

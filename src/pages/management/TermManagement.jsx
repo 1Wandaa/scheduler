@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { db } from '../../config/firebase';
 import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
-import Swal from 'sweetalert2';
+import { toast } from 'sonner';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
 function TermManagement({ availableSemesters, availableSchoolYears, onBack, publishedTerms = {}, setPublishedTerms }) {
+    const { confirm, prompt } = useGlobalDialog();
     const [isSaving, setIsSaving] = useState(false);
 
     const [publishSemester, setPublishSemester] = useState(availableSemesters.length > 0 ? availableSemesters[availableSemesters.length - 1] : '');
@@ -15,28 +17,26 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
         const isCurrentlyPublished = publishedTerms[termKey] === true;
         const action = isCurrentlyPublished ? 'Unpublish' : 'Publish';
 
-        const result = await Swal.fire({
+        const isConfirmed = await confirm({
             title: `${action} Schedule?`,
             text: isCurrentlyPublished 
                 ? "Students will no longer be able to see the schedules for this term."
                 : "This will make the schedules for this term visible to students.",
-            icon: 'warning',
-            showCancelButton: true,
+            icon: 'info',
             confirmButtonText: `Yes, ${action}`,
-            cancelButtonText: 'Cancel',
-            customClass: { popup: 'minimal-swal', confirmButton: isCurrentlyPublished ? 'btn-delete' : 'btn-primary', cancelButton: 'back-btn' },
-            buttonsStyling: false
+            isDestructive: isCurrentlyPublished
         });
 
-        if (result.isConfirmed) {
+        if (isConfirmed) {
             setIsSaving(true);
             try {
                 const newPublishedTerms = { ...publishedTerms, [termKey]: !isCurrentlyPublished };
                 await handleUpdateSettings({ publishedTerms: newPublishedTerms });
                 if (setPublishedTerms) setPublishedTerms(newPublishedTerms);
-                Swal.fire({ title: 'Success', text: `Schedule has been ${action.toLowerCase()}ed.`, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, customClass: { popup: 'minimal-toast' } });
+                toast.success(`Schedule has been ${action.toLowerCase()}ed.`);
             } catch (e) {
                 console.error(e);
+                toast.error('Failed to change publish status');
             } finally {
                 setIsSaving(false);
             }
@@ -54,16 +54,7 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
             }
         } catch (error) {
             console.error("Error updating terms: ", error);
-            Swal.fire({
-                title: 'Error',
-                text: 'Could not update terms.',
-                icon: 'error',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000,
-                customClass: { popup: 'minimal-toast' }
-            });
+            toast.error('Could not update terms.');
         }
     };
 
@@ -73,14 +64,10 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
         const typeName = isSem ? 'Semester' : 'School Year';
         const fieldName = isSem ? 'semesters' : 'schoolYears';
 
-        const { value: term } = await Swal.fire({
+        const term = await prompt({
             title: `Add New ${typeName}`,
-            input: 'text',
             inputPlaceholder: isSem ? 'e.g. 1st Semester' : 'e.g. 2028-2029',
-            showCancelButton: true,
-            confirmButtonText: 'Add',
-            customClass: { popup: 'minimal-swal', title: 'minimal-title', confirmButton: 'btn-primary', cancelButton: 'back-btn' },
-            buttonsStyling: false
+            confirmButtonText: 'Add'
         });
 
         if (!term) return;
@@ -89,15 +76,15 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
 
         const isDuplicate = list.some(item => item.toLowerCase() === trimmed.toLowerCase());
         if (isDuplicate) {
-            Swal.fire({ title: 'Duplicate', text: `This ${typeName.toLowerCase()} already exists.`, icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+            toast.warning(`This ${typeName.toLowerCase()} already exists.`);
             return;
         }
 
-        Swal.showLoading();
+        const toastId = toast.loading(`Adding ${typeName.toLowerCase()}...`);
         const updated = [...list, trimmed];
         await handleUpdateSettings({ [fieldName]: updated });
         
-        Swal.fire({ title: 'Added', text: `${typeName} "${trimmed}" added.`, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+        toast.success(`${typeName} "${trimmed}" added.`, { id: toastId });
     };
 
     const handleEditTerm = async (type, oldTerm) => {
@@ -106,14 +93,10 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
         const typeName = isSem ? 'Semester' : 'School Year';
         const fieldName = isSem ? 'semesters' : 'schoolYears';
 
-        const { value: term } = await Swal.fire({
+        const term = await prompt({
             title: `Edit ${typeName}`,
-            input: 'text',
             inputValue: oldTerm,
-            showCancelButton: true,
-            confirmButtonText: 'Save',
-            customClass: { popup: 'minimal-swal', title: 'minimal-title', confirmButton: 'btn-primary', cancelButton: 'back-btn' },
-            buttonsStyling: false
+            confirmButtonText: 'Save'
         });
 
         if (!term) return;
@@ -122,15 +105,15 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
 
         const isDuplicate = list.some(item => item !== oldTerm && item.toLowerCase() === trimmed.toLowerCase());
         if (isDuplicate) {
-            Swal.fire({ title: 'Duplicate', text: `This ${typeName.toLowerCase()} already exists.`, icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+            toast.warning(`This ${typeName.toLowerCase()} already exists.`);
             return;
         }
 
-        Swal.showLoading();
+        const toastId = toast.loading(`Updating ${typeName.toLowerCase()}...`);
         const updated = list.map(item => item === oldTerm ? trimmed : item);
         await handleUpdateSettings({ [fieldName]: updated });
         
-        Swal.fire({ title: 'Updated', text: `${typeName} updated to "${trimmed}".`, icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+        toast.success(`${typeName} updated to "${trimmed}".`, { id: toastId });
     };
 
     const handleDeleteTerm = async (type, term) => {
@@ -139,29 +122,19 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
         const typeName = isSem ? 'Semester' : 'School Year';
         const fieldName = isSem ? 'semesters' : 'schoolYears';
 
-        const result = await Swal.fire({
+        const isConfirmed = await confirm({
             title: `Delete ${typeName}?`,
             text: `Remove "${term}" from predefined options?`,
-            showCancelButton: true,
+            icon: 'warning',
             confirmButtonText: 'Delete',
-            cancelButtonText: 'Cancel',
-            customClass: {
-                popup: 'minimal-swal',
-                title: 'minimal-title',
-                htmlContainer: 'minimal-text',
-                actions: 'minimal-actions',
-                confirmButton: 'btn-delete',
-                cancelButton: 'back-btn'
-            },
-            buttonsStyling: false,
-            focusCancel: true
+            isDestructive: true
         });
         
-        if (result.isConfirmed) {
-            Swal.showLoading();
+        if (isConfirmed) {
+            const toastId = toast.loading(`Deleting ${typeName.toLowerCase()}...`);
             const updated = list.filter(item => item !== term);
             await handleUpdateSettings({ [fieldName]: updated });
-            Swal.fire({ title: 'Deleted', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, customClass: { popup: 'minimal-toast' } });
+            toast.success(`${typeName} deleted`, { id: toastId });
         }
     };
 

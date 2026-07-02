@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../config/firebase';
 import { collection, onSnapshot, deleteDoc, doc, getDocs, writeBatch, setDoc } from 'firebase/firestore';
-import Swal from 'sweetalert2';
+import { toast } from 'sonner';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import UserTable from '../../components/UserTable/UserTable';
 import { Icon, NAV_ICONS } from '../Dashboard/components/Icon';
 
@@ -13,6 +14,7 @@ const initialUsers = [
 ];
 
 const UserManagement = ({ onBack }) => {
+  const { confirm } = useGlobalDialog();
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -55,41 +57,22 @@ const UserManagement = ({ onBack }) => {
   }, [users, searchQuery, activeTab]);
 
   const handleDeleteUser = async (id) => {
-    const result = await Swal.fire({
+    const isConfirmed = await confirm({
       title: 'Delete User?',
       text: "This action cannot be undone. Proceed?",
-      showCancelButton: true,
+      icon: 'warning',
       confirmButtonText: 'Delete',
-      cancelButtonText: 'Cancel',
-      customClass: {
-        popup: 'minimal-swal',
-        title: 'minimal-title',
-        htmlContainer: 'minimal-text',
-        actions: 'minimal-actions',
-        confirmButton: 'btn-delete',
-        cancelButton: 'back-btn'
-      },
-      buttonsStyling: false,
-      focusCancel: true
+      isDestructive: true
     });
 
-    if (result.isConfirmed) {
-      Swal.showLoading();
+    if (isConfirmed) {
+      const toastId = toast.loading('Deleting user...');
       try {
         await deleteDoc(doc(db, 'users', id.toString()));
-        Swal.fire({ 
-          title: 'Profile Deleted', 
-          text: 'Remember to also delete their account in the Firebase Authentication Console!', 
-          icon: 'success', 
-          toast: true, 
-          position: 'top-end', 
-          showConfirmButton: false, 
-          timer: 5000, 
-          customClass: { popup: 'minimal-toast' } 
-        });
+        toast.success('Profile Deleted. Remember to also delete their account in the Firebase Authentication Console!', { id: toastId, duration: 5000 });
       } catch (error) {
         console.error("Error deleting user: ", error);
-        Swal.fire({ title: 'Error', text: error.message, icon: 'error', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+        toast.error(error.message, { id: toastId });
       }
     }
   };
@@ -118,12 +101,12 @@ const UserManagement = ({ onBack }) => {
 
   const handleSaveUser = async () => {
     if (!formData.name || !formData.username || !formData.role || !formData.password) {
-      Swal.fire({ title: 'Missing fields', text: 'Please fill in all fields.', icon: 'warning', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
+      toast.warning('Please fill in all fields.');
       return;
     }
     const id = editingUser ? editingUser.id : Date.now().toString();
     try {
-      Swal.showLoading();
+      const toastId = toast.loading('Saving user...');
       await setDoc(doc(db, 'users', id), {
         id,
         name: formData.name,
@@ -131,10 +114,10 @@ const UserManagement = ({ onBack }) => {
         role: formData.role,
         password: formData.password
       });
-      Swal.fire({ title: 'Saved!', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+      toast.success('Saved!', { id: toastId });
       resetForm();
     } catch (err) {
-      Swal.fire({ title: 'Error', text: err.message, icon: 'error', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+      toast.error(err.message);
     }
   };
 

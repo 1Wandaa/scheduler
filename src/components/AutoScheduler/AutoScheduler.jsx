@@ -3,10 +3,12 @@ import { suggestProfessorMatches } from '../../utils/scheduleAI';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import { schedulesOverlap, getMeetingTimeLabel, getEligibleProfessors, getEligibleRoomsTiered } from '../../utils/scheduleUtils';
 import '../../styles/AutoScheduler.css';
-import Swal from 'sweetalert2';
+import { toast } from 'sonner';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
 // 1. ADDED 'schedules', 'onLogHistory', and 'onAutoScheduleBatch' to the props list
 function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, activeSemester, onAutoSchedule, onAutoScheduleBatch, onLogHistory }) {
+  const { confirm } = useGlobalDialog();
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [result, setResult] = useState(null);
@@ -56,25 +58,15 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
   // ─── CLEAR ALL SCHEDULES (Independent action) ───
   const handleClearAll = async () => {
-    const result = await Swal.fire({
+    const isConfirmed = await confirm({
       title: 'Clear All Schedules?',
       text: "⚠️ This will permanently delete ALL scheduled classes. Are you sure you want to proceed?",
-      showCancelButton: true,
+      icon: 'warning',
       confirmButtonText: 'Yes, Clear All',
-      cancelButtonText: 'Cancel',
-      customClass: {
-        popup: 'minimal-swal',
-        title: 'minimal-title',
-        htmlContainer: 'minimal-text',
-        actions: 'minimal-actions',
-        confirmButton: 'btn-delete',
-        cancelButton: 'back-btn'
-      },
-      buttonsStyling: false,
-      focusCancel: true
+      isDestructive: true
     });
 
-    if (!result.isConfirmed) return;
+    if (!isConfirmed) return;
 
     setClearing(true);
     try {
@@ -82,10 +74,10 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       setResult(null);
       setAiInsights(null);
       setAiStatus('');
-      Swal.fire({ title: 'Cleared', text: 'All schedules have been removed.', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+      toast.success('All schedules have been removed.');
     } catch (e) {
       console.error('Failed to clear schedules:', e);
-      Swal.fire({ title: 'Error', text: 'Failed to clear schedules.', icon: 'error', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+      toast.error('Failed to clear schedules.');
     }
     setClearing(false);
   };

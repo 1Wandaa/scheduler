@@ -6,7 +6,7 @@ import {
   ACTION_COLORS,
   ACTION_ICONS,
 } from '../../utils/activityLogger';
-import Swal from 'sweetalert2';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -66,6 +66,7 @@ const CATEGORY_FILTERS = [
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 const ActivityLog = ({ onBack, onViewProfile }) => {
+  const { confirm } = useGlobalDialog();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -129,15 +130,13 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
 
   // ─── Handlers ───────────────────────────────────────────────────────
   const handleDeleteEntry = async (logId) => {
-    const result = await Swal.fire({
+    const isConfirmed = await confirm({
       title: 'Delete this log entry?',
-      showCancelButton: true,
+      icon: 'warning',
       confirmButtonText: 'Delete',
-      cancelButtonText: 'Cancel',
-      customClass: { popup: 'minimal-swal', title: 'minimal-title', actions: 'minimal-actions', confirmButton: 'btn-delete', cancelButton: 'back-btn' },
-      buttonsStyling: false,
+      isDestructive: true
     });
-    if (result.isConfirmed) {
+    if (isConfirmed) {
       try {
         await deleteDoc(doc(db, 'activityLogs', logId));
       } catch (err) {
@@ -147,16 +146,14 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
   };
 
   const handleClearAll = async () => {
-    const result = await Swal.fire({
+    const isConfirmed = await confirm({
       title: 'Clear All Logs?',
       text: 'This will permanently delete all visible activity log entries.',
-      showCancelButton: true,
+      icon: 'warning',
       confirmButtonText: 'Clear All',
-      cancelButtonText: 'Cancel',
-      customClass: { popup: 'minimal-swal', title: 'minimal-title', actions: 'minimal-actions', confirmButton: 'btn-delete', cancelButton: 'back-btn' },
-      buttonsStyling: false,
+      isDestructive: true
     });
-    if (!result.isConfirmed) return;
+    if (!isConfirmed) return;
     setIsDeletingAll(true);
     try {
       await Promise.all(filteredLogs.map(l => deleteDoc(doc(db, 'activityLogs', l.id))));

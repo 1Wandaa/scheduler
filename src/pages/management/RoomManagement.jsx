@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import Swal from 'sweetalert2';
+import { toast } from 'sonner';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { ROOM_TYPES, BUILDINGS, DEPARTMENTS, getDeptColor } from '../../config/constants';
 import RoomTable from '../../components/RoomTable/RoomTable';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 const RoomManagement = ({ rooms, departments = [], onBack, user }) => {
+  const { confirm } = useGlobalDialog();
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -84,33 +86,23 @@ const RoomManagement = ({ rooms, departments = [], onBack, user }) => {
     }
   };
   const handleDelete = async (id) => {
-    const result = await Swal.fire({
+    const isConfirmed = await confirm({
       title: 'Delete Room?',
       text: "This action cannot be undone. Proceed?",
-      showCancelButton: true,
+      icon: 'warning',
       confirmButtonText: 'Delete',
-      cancelButtonText: 'Cancel',
-      customClass: {
-        popup: 'minimal-swal',
-        title: 'minimal-title',
-        htmlContainer: 'minimal-text',
-        actions: 'minimal-actions',
-        confirmButton: 'btn-delete',
-        cancelButton: 'back-btn'
-      },
-      buttonsStyling: false,
-      focusCancel: true
+      isDestructive: true
     });
 
-    if (result.isConfirmed) {
+    if (isConfirmed) {
       try {
         await deleteDoc(doc(db, 'rooms', id.toString()));
         const room = rooms.find(r => String(r.id) === String(id));
         logActivity({ user, action: LOG_ACTIONS.DELETE_ROOM, details: `Deleted room: ${room?.name || id}` });
-        Swal.fire({ title: 'Deleted', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
-      } catch (error) {
-        console.error("Error deleting room: ", error);
-        Swal.fire({ title: 'Error', text: 'Failed to delete.', icon: 'error', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, customClass: { popup: 'minimal-toast' } });
+        toast.success('Room deleted successfully');
+      } catch (err) {
+        console.error("Error deleting room:", err);
+        toast.error('Failed to delete room');
       }
     }
   };

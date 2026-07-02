@@ -1,139 +1,33 @@
 import React, { useState } from 'react';
-import Swal from 'sweetalert2';
 import { db } from '../../config/firebase';
 import { writeBatch, getDocs, collection } from 'firebase/firestore';
+import { toast } from 'sonner';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
 const ScheduleHistory = ({ history, onBack }) => {
+  const { confirm } = useGlobalDialog();
   const [expandedId, setExpandedId] = useState(null);
 
   const handleClearHistory = async () => {
-    // Inject modern swal styles if not present
-    if (!document.getElementById('modern-swal-styles')) {
-      const style = document.createElement('style');
-      style.id = 'modern-swal-styles';
-      style.innerHTML = `
-        .modern-glass-popup {
-          border-radius: 24px !important;
-          border: 1px solid var(--border-color) !important;
-          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.2) inset !important;
-          padding: 32px 24px 24px !important;
-          background: var(--card-bg) !important;
-          color: var(--text-main) !important;
-          backdrop-filter: blur(20px) !important;
-          font-family: inherit !important;
-        }
-        .modern-swal-confirm-danger-btn {
-          background: linear-gradient(135deg, #ef4444, #dc2626) !important;
-          color: white !important;
-          border: none !important;
-          border-radius: 14px !important;
-          padding: 14px 28px !important;
-          font-weight: 700 !important;
-          font-size: 0.95rem !important;
-          cursor: pointer !important;
-          box-shadow: 0 6px 16px rgba(239, 68, 68, 0.25) !important;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-          margin: 0 8px !important;
-          letter-spacing: 0.02em !important;
-        }
-        .modern-swal-confirm-danger-btn:hover {
-          transform: translateY(-2px) !important;
-          box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35) !important;
-        }
-        .modern-swal-cancel-btn {
-          background: transparent !important;
-          color: var(--text-muted) !important;
-          border: 2px solid var(--border-color) !important;
-          border-radius: 14px !important;
-          padding: 12px 28px !important;
-          font-weight: 700 !important;
-          font-size: 0.95rem !important;
-          cursor: pointer !important;
-          transition: all 0.2s ease !important;
-          margin: 0 8px !important;
-        }
-        .modern-swal-cancel-btn:hover {
-          background: rgba(0, 0, 0, 0.03) !important;
-          color: var(--text-main) !important;
-          border-color: rgba(0,0,0,0.15) !important;
-        }
-        .modern-swal-actions {
-          display: flex !important;
-          gap: 12px !important;
-          width: 100% !important;
-          margin-top: 1.5em !important;
-          justify-content: center !important;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
-    const swalConfig = {
-      background: 'transparent',
-      backdrop: 'rgba(15, 20, 35, 0.5)',
-      customClass: {
-        popup: 'modern-glass-popup',
-        confirmButton: 'modern-swal-confirm-danger-btn',
-        cancelButton: 'modern-swal-cancel-btn',
-        actions: 'modern-swal-actions'
-      },
-      buttonsStyling: false,
-      showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
-      hideClass: { popup: 'animate__animated animate__zoomOut animate__faster' }
-    };
-
-    const result = await Swal.fire({
-      ...swalConfig,
-      html: `
-        <div style="text-align: center;">
-          <div style="width: 72px; height: 72px; background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(220,38,38,0.12)); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; border: 1px solid rgba(239,68,68,0.25); box-shadow: 0 8px 20px rgba(239,68,68,0.15);">
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-          </div>
-          <h2 style="margin: 0 0 12px; font-size: 1.5rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.03em;">Clear History?</h2>
-          <p style="margin: 0; font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">This will permanently delete all scheduling history records. This action cannot be undone.</p>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Yes, delete it!'
+    const isConfirmed = await confirm({
+      title: 'Clear History?',
+      text: 'This will permanently delete all scheduling history records. This action cannot be undone.',
+      icon: 'warning',
+      confirmButtonText: 'Yes, delete it!',
+      isDestructive: true
     });
 
-    if (result.isConfirmed) {
+    if (isConfirmed) {
+      const toastId = toast.loading('Clearing history...');
       try {
         const snap = await getDocs(collection(db, 'scheduleHistory'));
         const batch = writeBatch(db);
         snap.docs.forEach(d => batch.delete(d.ref));
         await batch.commit();
-        Swal.fire({
-          ...swalConfig,
-          customClass: {
-            ...swalConfig.customClass,
-            confirmButton: 'modern-swal-confirm-btn'
-          },
-          html: `
-            <div style="text-align: center;">
-              <div style="width: 72px; height: 72px; background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(5,150,105,0.12)); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; border: 1px solid rgba(16,185,129,0.25); box-shadow: 0 8px 20px rgba(16,185,129,0.15);">
-                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-              </div>
-              <h2 style="margin: 0 0 12px; font-size: 1.5rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.03em;">Deleted!</h2>
-              <p style="margin: 0; font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">Schedule history has been successfully cleared.</p>
-            </div>
-          `,
-          showConfirmButton: false,
-          timer: 2000
-        });
+        toast.success('Schedule history has been successfully cleared.', { id: toastId });
       } catch (error) {
         console.error("Error clearing history:", error);
-        Swal.fire({
-          ...swalConfig,
-          html: `
-            <div style="text-align: center;">
-              <h2 style="margin: 0 0 12px; font-size: 1.5rem; font-weight: 800; color: var(--danger); letter-spacing: -0.03em;">Error</h2>
-              <p style="margin: 0; font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">Failed to clear history. Please try again later.</p>
-            </div>
-          `,
-          showConfirmButton: true,
-          confirmButtonText: 'Close'
-        });
+        toast.error('Failed to clear history. Please try again later.', { id: toastId });
       }
     }
   };
