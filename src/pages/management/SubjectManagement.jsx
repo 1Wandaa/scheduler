@@ -124,11 +124,17 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
 
   // Split subjects into categories using useMemo for performance
   const { minorSubjects, majorSubjects } = useMemo(() => {
-    const filteredSubjects = subjects.filter(s => 
-      (!s.semester || s.semester === 'Both' || s.semester === activeSemester) &&
-      ((s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (s.code || '').toLowerCase().includes(searchQuery.toLowerCase()))
-    ).sort((a, b) => {
+    const filteredSubjects = subjects.filter(s => {
+      const matchesSemester = !s.semester || s.semester === 'Both' || s.semester === activeSemester;
+      const searchLowerCode = searchQuery.toLowerCase().replace(/\s+/g, '');
+      const codeMatch = (s.code || '').toLowerCase().replace(/\s+/g, '').includes(searchLowerCode);
+      const nameMatch = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+      
+      if (searchQuery.trim() !== '') {
+        return codeMatch || nameMatch;
+      }
+      return matchesSemester;
+    }).sort((a, b) => {
       const codeA = (a.code || '').replace(/\s+/g, '').toUpperCase();
       const codeB = (b.code || '').replace(/\s+/g, '').toUpperCase();
       return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
