@@ -326,9 +326,14 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
               </div>
               {(() => {
                 const selectedIds = formData.specialization || [];
-                const currentUnits = subjects
+                const assignedSectionsCount = (formData.assignedSections || []).length;
+                
+                const baseUnits = subjects
                   .filter(s => selectedIds.includes(s.id) || selectedIds.includes(s.code) || selectedIds.includes(s.name))
                   .reduce((sum, s) => sum + (Number(s.credits) || 3), 0);
+                  
+                // Multiply base units by the number of assigned sections (minimum of 1 to show base units if no sections are assigned yet)
+                const currentUnits = baseUnits * Math.max(1, assignedSectionsCount);
                 
                 return (
                   <div className="form-group" style={{ width: '100px' }}>

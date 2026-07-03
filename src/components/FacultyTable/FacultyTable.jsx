@@ -29,10 +29,13 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments 
       </thead>
       <tbody>
         {facultyList.map(p => {
-          // Calculate units based on assigned subjects (specialization)
+          // Calculate units based on assigned subjects (specialization) and assigned sections
           const assignedSubjectIds = p.specialization || [];
+          const assignedSectionsCount = (p.assignedSections || []).length;
           const currentSubjects = subjects.filter(sub => assignedSubjectIds.includes(sub.id) || assignedSubjectIds.includes(sub.code) || assignedSubjectIds.includes(sub.name));
-          const currentUnits = currentSubjects.reduce((sum, sub) => sum + (Number(sub.credits) || 3), 0);
+          
+          const baseUnits = currentSubjects.reduce((sum, sub) => sum + (Number(sub.credits) || 3), 0);
+          const currentUnits = baseUnits * Math.max(1, assignedSectionsCount);
           
           const maxUnits = p.maxUnits || p.maxHours || 12;
           const utilization = (currentUnits / maxUnits) * 100;
