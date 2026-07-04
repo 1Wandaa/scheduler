@@ -1,0 +1,117 @@
+.autocomplete-container {
+  position: relative;
+  width: 100%;
+  z-index: 10;
+}
+
+.autocomplete-container.is-open {
+  z-index: 1000;
+}
+
+.autocomplete-chips-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.autocomplete-chip-wrapper {
+  display: flex;
+}
+
+.autocomplete-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 0 12px;
+  height: 48px;
+  cursor: text;
+  transition: all 0.2s ease;
+}
+
+.autocomplete-input-wrapper.focused {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.autocomplete-search-icon {
+  color: var(--text-muted);
+  margin-right: 8px;
+}
+
+.autocomplete-chevron {
+  color: var(--text-muted);
+  margin-left: 8px;
+  transition: transform 0.2s ease;
+}
+
+.autocomplete-chevron.open {
+  transform: rotate(180deg);
+}
+
+.autocomplete-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-size: 0.95rem;
+  outline: none;
+  min-width: 0;
+  padding: 0;
+}
+
+.autocomplete-input::placeholder {
+  color: var(--text-muted);
+}
+
+.autocomplete-dropdown {
+  position: relative;
+  margin-top: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.autocomplete-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.autocomplete-options-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.autocomplete-option {
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.autocomplete-option:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-option:hover {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.default-option {
+  color: var(--text-main);
+  font-weight: 500;
+  font-size: 0.9rem;
+}

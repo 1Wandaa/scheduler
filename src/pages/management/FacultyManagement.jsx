@@ -7,6 +7,7 @@ import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, getDeptColor } from '../../config/constants';
 import FacultyTable from '../../components/FacultyTable/FacultyTable';
 import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
+import AutocompleteMultiSelect from '../../components/AutocompleteMultiSelect/AutocompleteMultiSelect';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], schedules = [], activeSemester, departments = [], onBack, user }) => {
@@ -16,6 +17,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [currentId, setCurrentId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [roomSearchQuery, setRoomSearchQuery] = useState('');
   const [sectionSearchQuery, setSectionSearchQuery] = useState('');
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -371,106 +373,78 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
 
             <div className="form-group" style={{ marginBottom: '25px' }}>
               <label className="form-label">Preferred Rooms</label>
-              
-              {/* Selected Rooms Chips */}
-              {(() => {
-                const selectedRooms = sortedRooms.filter(room => (formData.preferredRooms || []).includes(room.id) || (formData.preferredRooms || []).includes(room.name));
-                if (selectedRooms.length === 0) return null;
-                return (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px', padding: '10px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
-                    {selectedRooms.map(room => (
-                      <div key={room.id} style={{ 
-                        display: 'flex', alignItems: 'center', gap: '6px', 
-                        padding: '4px 10px', borderRadius: '16px', 
-                        background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)',
-                        fontSize: '0.8rem', fontWeight: '600', color: '#3b82f6' 
-                      }}>
-                        {room.name}
-                        <button 
-                          type="button" 
-                          onClick={() => handleRoomToggle(room)}
-                          style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
-                          onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                          onMouseLeave={e => e.currentTarget.style.opacity = 0.7}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </button>
-                      </div>
-                    ))}
+              <AutocompleteMultiSelect
+                allOptions={rooms}
+                options={sortedRooms}
+                selectedIds={formData.preferredRooms || []}
+                onToggle={handleRoomToggle}
+                placeholder="Search room name..."
+                searchQuery={roomSearchQuery}
+                setSearchQuery={setRoomSearchQuery}
+                noOptionsMessage={sortedRooms.length === 0 ? "No rooms available." : "No rooms match your search."}
+                renderChip={(room, onRemove) => (
+                  <div style={{ 
+                    display: 'flex', alignItems: 'center', gap: '6px', 
+                    padding: '4px 10px', borderRadius: '16px', 
+                    background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)',
+                    fontSize: '0.8rem', fontWeight: '600', color: '#3b82f6' 
+                  }}>
+                    {room.name}
+                    <button 
+                      type="button" 
+                      onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                      style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                      onMouseLeave={e => e.currentTarget.style.opacity = 0.7}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
                   </div>
-                );
-              })()}
-
-              <div style={{ marginTop: '8px', maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
-                {sortedRooms.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No rooms available.</p>}
-                {sortedRooms.map(room => (
-                  <label key={room.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
-                    <input
-                      type="checkbox"
-                      checked={(formData.preferredRooms || []).includes(room.id) || (formData.preferredRooms || []).includes(room.name)}
-                      onChange={() => handleRoomToggle(room)}
-                      style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
-                    />
+                )}
+                renderOption={(room) => (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{room.name}</span>
-                  </label>
-                ))}
-              </div>
+                  </div>
+                )}
+              />
             </div>
 
             <div className="form-group" style={{ marginBottom: '25px' }}>
               <label className="form-label">Assigned Sections</label>
-
-              {/* Selected Sections Chips */}
-              {(() => {
-                const selectedSections = sections.filter(sec => (formData.assignedSections || []).includes(sec.id) || (formData.assignedSections || []).includes(sec.name));
-                if (selectedSections.length === 0) return null;
-                return (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px', padding: '10px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
-                    {selectedSections.map(sec => (
-                      <div key={sec.id} style={{ 
-                        display: 'flex', alignItems: 'center', gap: '6px', 
-                        padding: '4px 10px', borderRadius: '16px', 
-                        background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)',
-                        fontSize: '0.8rem', fontWeight: '600', color: '#10b981' 
-                      }}>
-                        {sec.name}
-                        <button 
-                          type="button" 
-                          onClick={() => handleSectionToggle(sec)}
-                          style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
-                          onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                          onMouseLeave={e => e.currentTarget.style.opacity = 0.7}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </button>
-                      </div>
-                    ))}
+              <AutocompleteMultiSelect
+                allOptions={sections}
+                options={filteredSections}
+                selectedIds={formData.assignedSections || []}
+                onToggle={handleSectionToggle}
+                placeholder="Search section name..."
+                searchQuery={sectionSearchQuery}
+                setSearchQuery={setSectionSearchQuery}
+                noOptionsMessage={filteredSections.length === 0 ? "No sections available." : "No sections match your search."}
+                renderChip={(sec, onRemove) => (
+                  <div style={{ 
+                    display: 'flex', alignItems: 'center', gap: '6px', 
+                    padding: '4px 10px', borderRadius: '16px', 
+                    background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)',
+                    fontSize: '0.8rem', fontWeight: '600', color: '#10b981' 
+                  }}>
+                    {sec.name}
+                    <button 
+                      type="button" 
+                      onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                      style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                      onMouseLeave={e => e.currentTarget.style.opacity = 0.7}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
                   </div>
-                );
-              })()}
-
-              <input 
-                type="text" 
-                className="form-input" 
-                placeholder="Search section name..." 
-                value={sectionSearchQuery} 
-                onChange={(e) => setSectionSearchQuery(e.target.value)}
-                style={{ marginBottom: '10px', marginTop: '5px' }}
-              />
-              <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-main)' }}>
-                {filteredSections.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>No sections available.</p>}
-                {filteredSections.map(sec => (
-                  <label key={sec.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer', fontSize: '0.9rem', borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'var(--text-main)' }}>
-                    <input
-                      type="checkbox"
-                      checked={(formData.assignedSections || []).includes(sec.id) || (formData.assignedSections || []).includes(sec.name)}
-                      onChange={() => handleSectionToggle(sec)}
-                      style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
-                    />
+                )}
+                renderOption={(sec) => (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{sec.name}</span>
-                  </label>
-                ))}
-              </div>
+                  </div>
+                )}
+              />
             </div>
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
