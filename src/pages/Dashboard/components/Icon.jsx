@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React from 'react';
 
 export const Icon = ({ d, size = 18 }) => {

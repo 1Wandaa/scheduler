@@ -1,10 +1,7 @@
 import React from 'react';
 import { getDeptColor } from '../../config/constants';
 
-const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
-const matchesProfessor = (s, professor) => professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);
-
-const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments = [], onEdit, onDelete }) => {
+const FacultyTable = ({ facultyList, subjects = [], departments = [], onEdit, onDelete }) => {
   if (!facultyList || facultyList.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-main)' }}>

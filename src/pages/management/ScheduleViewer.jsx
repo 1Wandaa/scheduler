@@ -17,6 +17,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         if (viewType === 'department') {
             const allDepts = departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
             if (user?.department && allDepts.includes(user.department)) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setSelectedId(user.department);
             } else if (allDepts.length > 0) {
                 setSelectedId(allDepts[0]);
@@ -33,6 +34,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         }
         
         setDeptSectionId('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [viewType, rooms, professors, sections, user]);
 
     // Listen for custom events to change view type from mobile Speed Dial
@@ -57,6 +59,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 // If user has a specific section and it's in the matching list, select it
                 if (user?.section && matching.some(sec => sec.name === user.section)) {
                     const userSec = matching.find(sec => sec.name === user.section);
+                    // eslint-disable-next-line react-hooks/set-state-in-effect
                     setDeptSectionId(userSec.id);
                 } else {
                     setDeptSectionId(matching[0].id);

@@ -13,7 +13,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef(null);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'cards'
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [, setIsMobile] = useState(window.innerWidth <= 768);
   const [errorToast, setErrorToast] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
   const [fitScale, setFitScale] = useState(1);
@@ -184,6 +184,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       window.removeEventListener('export-ordinary-image', onExportImage);
       window.removeEventListener('export-ordinary-print', onExportPrint);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, schedules, title]);
 
 

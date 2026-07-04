@@ -17,10 +17,6 @@ import {
   setDoc,
   writeBatch,
   doc,
-  query,
-  where,
-  orderBy,
-  limit,
 } from 'firebase/firestore';
 import {
   initialRooms,

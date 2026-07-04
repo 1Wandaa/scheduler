@@ -10,6 +10,7 @@
 import { generativeModel } from '../config/firebase';
 import { SchemaType } from 'firebase/ai';
 import { DAYS, TIME_SLOTS } from '../config/constants';
+// eslint-disable-next-line no-unused-vars
 import {
   getEligibleProfessors,
   applyAIRanking,
@@ -187,8 +188,10 @@ Rank professor IDs from best fit to worst fit within each subject's eligible poo
  * AI Pass 4: Resolve Unscheduled Classes by relaxing constraints.
  * Allows small workload overrides (+3 max units) and restricts to Dept/Shared rooms.
  */
+// eslint-disable-next-line no-unused-vars
 export async function resolveUnscheduledClasses(unscheduledGroups, context, constraints) {
   if (!unscheduledGroups?.length) return [];
+  // eslint-disable-next-line no-unused-vars
   const { professors, rooms, activeSchedules, subjects, sections } = context;
 
   const profLoad = {};

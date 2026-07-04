@@ -1,4 +1,4 @@
-export const buildSystemPrompt = (schedules, professors, rooms, sections) => {
+export const buildSystemPrompt = (schedules, professors, rooms) => {
     // Build a rich text representation of the current state
     const scheduleContext = schedules.map(s => {
       const subject = s.subject?.code || s.subject?.name || 'Unknown Subject';

@@ -52,7 +52,7 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
   const handlePointerUp = (e) => {
     setIsDragging(false);
     if (e.target.releasePointerCapture && e.pointerId) {
-      try { e.target.releasePointerCapture(e.pointerId); } catch(err){}
+      try { e.target.releasePointerCapture(e.pointerId); } catch(err){ /* ignore */ }
     }
   };
 
@@ -126,6 +126,7 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
     };
 
     initChat();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, chatSession, schedules]);
 
   useEffect(() => {

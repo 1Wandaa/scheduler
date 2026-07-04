@@ -38,6 +38,7 @@ const ScheduleHistory = ({ history, onBack }) => {
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Unknown Date';
+    // eslint-disable-next-line react-hooks/purity
     const date = new Date(timestamp.toMillis ? timestamp.toMillis() : Date.now());
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',

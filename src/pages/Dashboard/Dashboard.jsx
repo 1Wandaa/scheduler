@@ -178,9 +178,6 @@ const Dashboard = ({ user, onLogout }) => {
     return updateSchedule(scheduleId, newDay, newTimeSlotId, schedules, activeSchedules, rooms, isAdmin);
   };
 
-  const handleRemoveSchedule = async (id) => {
-    return removeSchedule(id, isAdmin);
-  };
 
   const handleAddSchedulesBatch = async (newSchedules) => {
     return addSchedulesBatch(newSchedules, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin);

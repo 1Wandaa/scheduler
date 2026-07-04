@@ -83,8 +83,6 @@ const QuickStartGuide = ({
 
   const completedStepsCount = steps.filter(step => step.isComplete).length;
   const progressPercentage = Math.round((completedStepsCount / steps.length) * 100);
-  const isFullySetup = progressPercentage === 100;
-
   return (
     <div className="card" style={{ padding: '22px', animation: 'fadeIn 0.5s' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: isCollapsed ? '0' : '16px' }}>

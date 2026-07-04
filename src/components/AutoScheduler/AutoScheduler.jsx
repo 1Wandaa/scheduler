@@ -1,13 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { suggestProfessorMatches } from '../../utils/scheduleAI';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
-import { schedulesOverlap, getMeetingTimeLabel, getEligibleProfessors, getEligibleRoomsTiered } from '../../utils/scheduleUtils';
+import { getMeetingTimeLabel } from '../../utils/scheduleUtils';
 import '../../styles/AutoScheduler.css';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
 // 1. ADDED 'schedules', 'onLogHistory', and 'onAutoScheduleBatch' to the props list
-function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, activeSemester, onAutoSchedule, onAutoScheduleBatch, onLogHistory }) {
+function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, activeSemester, onLogHistory }) {
   const { confirm } = useGlobalDialog();
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -23,7 +23,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   const [preventDoubleBooking, setPreventDoubleBooking] = useState(true);
   const [aiAssisted, setAiAssisted] = useState(true);
   const [aiStatus, setAiStatus] = useState('');
-  const [aiInsights, setAiInsights] = useState(null);
+  const [, setAiInsights] = useState(null);
 
   // Listen for custom events to change engine mode from mobile Speed Dial
   React.useEffect(() => {

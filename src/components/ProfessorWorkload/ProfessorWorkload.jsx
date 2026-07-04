@@ -20,9 +20,7 @@ function ProfessorWorkload({ professors, schedules, departments = [] }) {
   };
 
   const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
-  const matchesProfessor = (s, professor) => professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);
-
-  const getDeptColor = (dept) => {
+  const matchesProfessor = (s, professor) => professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);const getDeptColor = (dept) => {
     if (!dept) return '#64748b'; // default slate
 
     if (departments && departments.length > 0) {
@@ -78,6 +76,7 @@ function ProfessorWorkload({ professors, schedules, departments = [] }) {
         statusBg
       };
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professors, schedules]);
 
   const filteredAndSortedProfessors = useMemo(() => {

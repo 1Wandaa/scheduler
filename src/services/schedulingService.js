@@ -14,7 +14,6 @@ import {
   professorMatchesSubject,
   getEligibleProfessors,
   applyAIRanking,
-  creditPerMeeting,
   slotsNeededFromIndex,
   getTimeSlotIndex,
   schedulesOverlap,
