@@ -123,8 +123,8 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
   return (
     <>
       <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
+          <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
             {onBack && (
               <button className="back-btn" onClick={onBack}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -156,7 +156,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
         </div>
 
         <div style={{ overflowX: 'auto' }}>
-          <table className="data-table">
+          <table className="data-table" style={{ minWidth: '600px' }}>
             <thead>
               <tr>
                 <th>ID / Code</th>
@@ -203,7 +203,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
 
       {showModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ width: '450px' }} onKeyDown={handleKeyDown}>
+          <div className="modal-content" style={{ width: '100%', maxWidth: '450px' }} onKeyDown={handleKeyDown}>
             <h3>{editMode ? 'Edit Department' : 'Add New Department'}</h3>
             
             {error && (

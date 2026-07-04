@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { DAYS, TIME_SLOTS } from '../../config/constants';
 import { getOccupiedSlots } from '../../utils/scheduleUtils';
 
@@ -18,6 +18,26 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
     }
     return result.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
   }, [rooms, selectedBuilding]);
+
+  const [fitScale, setFitScale] = useState(1);
+
+  useEffect(() => {
+    const updateFitScale = () => {
+      const padding = 32; 
+      const availableWidth = window.innerWidth - padding;
+      const minTableWidth = 700; 
+      
+      if (availableWidth < minTableWidth) {
+        setFitScale(availableWidth / minTableWidth);
+      } else {
+        setFitScale(1);
+      }
+    };
+    
+    updateFitScale();
+    window.addEventListener('resize', updateFitScale);
+    return () => window.removeEventListener('resize', updateFitScale);
+  }, []);
 
   // Precompute occupation map for O(1) lookups during render
   const occupationMap = useMemo(() => {
@@ -39,7 +59,7 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
   return (
     <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
           {onBack && (
             <button className="back-btn" onClick={onBack} style={{ background: 'transparent', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
@@ -89,10 +109,11 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
           </div>
         </div>
         
-        <div style={{ minWidth: '200px' }}>
+        <div style={{ minWidth: '200px', flex: 1 }}>
           <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' }}>Filter Building</label>
           <select 
             className="form-select" 
+            style={{ width: '100%' }}
             value={selectedBuilding} 
             onChange={(e) => setSelectedBuilding(e.target.value)}
           >
@@ -104,14 +125,14 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
       </div>
 
       <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }} className="custom-scrollbar">
-        <table className="data-table" style={{ width: '100%', minWidth: '1400px', borderCollapse: 'collapse', margin: 0 }}>
+        <table className="data-table" style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', margin: 0, zoom: fitScale < 1 ? fitScale : 1 }}>
           <thead>
             <tr>
-              <th style={{ position: 'sticky', left: 0, zIndex: 10, background: 'var(--bg-card)', borderRight: '2px solid var(--border-color)', minWidth: '140px', boxShadow: '2px 0 5px rgba(0,0,0,0.05)' }}>
+              <th style={{ position: 'sticky', left: 0, zIndex: 10, background: 'var(--bg-card)', borderRight: '2px solid var(--border-color)', minWidth: '90px', boxShadow: '2px 0 5px rgba(0,0,0,0.05)', fontSize: '0.75rem' }}>
                 Room
               </th>
               {TIME_SLOTS.map(t => (
-                <th key={t.id} style={{ minWidth: '70px', fontSize: '0.7rem', textAlign: 'center', padding: '8px 4px', background: 'var(--bg-main)' }}>
+                <th key={t.id} style={{ minWidth: '40px', fontSize: '0.6rem', textAlign: 'center', padding: '6px 2px', background: 'var(--bg-main)' }}>
                   {t.label.split(' - ')[0]}<br/>-<br/>{t.label.split(' - ')[1]}
                 </th>
               ))}
@@ -182,15 +203,18 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
                             verticalAlign: 'middle'
                           }}>
                             <div style={{ 
-                              fontSize: '0.7rem', 
+                              fontSize: '0.65rem', 
                               fontWeight: '700', 
                               color: theme.text,
-                              lineHeight: 1.2
+                              lineHeight: 1.1,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
                             }}>
                               {sched.subject?.code}
                             </div>
                             {sched.section && (
-                              <div style={{ fontSize: '0.6rem', color: theme.subtext, marginTop: '2px' }}>
+                              <div style={{ fontSize: '0.55rem', color: theme.subtext, marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {sched.section.name}
                               </div>
                             )}

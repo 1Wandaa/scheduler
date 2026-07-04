@@ -274,14 +274,14 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
           </div>
 
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', flex: '1 1 auto', maxWidth: '100%' }}>
               <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <input
                 type="text"
                 placeholder="Search logs…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                style={{ padding: '7px 12px 7px 30px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.85rem', width: 200 }}
+                style={{ padding: '7px 12px 7px 30px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.85rem', width: '100%', maxWidth: '200px' }}
               />
             </div>
             <select
@@ -314,9 +314,10 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
             <p style={{ margin: '4px 0 0', fontSize: '0.85rem' }}>Try adjusting your filters or performing some actions.</p>
           </div>
         ) : (
-          <div>
-            {/* Table Header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 3fr 1.2fr 40px', gap: 0, padding: '10px 20px', background: 'var(--bg-main)', borderBottom: '1px solid var(--border-color)' }}>
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <div style={{ minWidth: '800px' }}>
+              {/* Table Header */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 3fr 1.2fr 40px', gap: 0, padding: '10px 20px', background: 'var(--bg-main)', borderBottom: '1px solid var(--border-color)' }}>
               {['Action', 'User', 'Details', 'Time', ''].map((h, i) => (
                 <div key={i} style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</div>
               ))}
@@ -425,9 +426,10 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
                 );
               })}
             </div>
+            </div>
 
             {/* Footer */}
-            <div style={{ padding: '10px 20px', borderTop: '1px solid var(--border-color)', background: 'var(--bg-main)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '10px 20px', borderTop: '1px solid var(--border-color)', background: 'var(--bg-main)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                 Showing <strong>{filteredLogs.length}</strong> of <strong>{logs.length}</strong> logs
               </span>
