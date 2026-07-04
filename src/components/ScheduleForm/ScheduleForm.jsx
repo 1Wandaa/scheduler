@@ -18,10 +18,16 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      // Clear dependent fields when subject changes
+      if (name === 'subject') {
+        newData.section = '';
+        newData.professor = '';
+        newData.room = '';
+      }
+      return newData;
+    });
     setValidation(null);
   };
 
@@ -73,6 +79,12 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
   const selectedSubject = subjects.find(s => s.id === formData.subject);
   const selectedSection = sections ? sections.find(s => s.id === formData.section) : null;
+  const eligibleSections = selectedSubject && sections
+    ? sections.filter(sec => {
+        const sectionSubjects = sec.subjects || [];
+        return sectionSubjects.includes(selectedSubject.id) || sectionSubjects.includes(selectedSubject.code);
+      })
+    : sections;
   const eligibleProfessors = selectedSubject
     ? getEligibleProfessors(professors, selectedSubject, selectedSection)
     : professors;
@@ -137,7 +149,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               required
             >
               <option value="">Select a section</option>
-              {sections && [...sections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(sec => (
+              {eligibleSections && [...eligibleSections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(sec => (
                 <option key={sec.id} value={sec.id}>
                   {sec.name}
                 </option>
@@ -189,9 +201,11 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                 <optgroup key={building} label={building}>
                   {bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => {
                     const isConflict = checkConflict({ room });
+                    const isNonLabForLabSubject = selectedSubject?.requiredLab && !room.hasComputers;
+                    const isDisabled = isConflict || isNonLabForLabSubject;
                     return (
-                      <option key={room.id} value={room.id} disabled={isConflict}>
-                        {room.name}{room.hasComputers ? ' (Lab)' : ''} {isConflict ? '(In Use)' : ''}
+                      <option key={room.id} value={room.id} disabled={isDisabled}>
+                        {room.name}{room.hasComputers ? ' (Lab)' : ''} {isConflict ? '(In Use)' : isNonLabForLabSubject ? '(Not a Lab)' : ''}
                       </option>
                     );
                   })}
@@ -217,8 +231,9 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                       setFormData(prev => ({ ...prev, day }));
                       setValidation(null);
                     }}
+                    disabled={isConflict}
                     className={`day-btn ${isActive ? 'active' : ''} ${isConflict ? 'conflict' : ''}`}
-                    style={isConflict && !isActive ? { opacity: 0.5, textDecoration: 'line-through' } : {}}
+                    style={isConflict && !isActive ? { opacity: 0.5, textDecoration: 'line-through', cursor: 'not-allowed' } : {}}
                     title={isConflict ? 'Conflict on this day' : ''}
                   >
                     {shortDay}
