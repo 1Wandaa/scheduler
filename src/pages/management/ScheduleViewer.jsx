@@ -47,7 +47,14 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         return () => window.removeEventListener('change-viewer-type', handleViewChange);
     }, []);
 
-    // When selectedId or yearLevel changes, reset section filter and auto-select first matching section
+    // Reset stale year level when the department changes
+    useEffect(() => {
+        if (viewType === 'department') {
+            setSelectedYearLevel('');
+        }
+    }, [selectedId, viewType]);
+
+    // Update section filter based on user or leave empty for aggregate view
     useEffect(() => {
         if (viewType === 'department' && selectedId) {
             let matching = sections.filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()));
@@ -60,7 +67,8 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     const userSec = matching.find(sec => sec.name === user.section);
                     setDeptSectionId(userSec.id);
                 } else {
-                    setDeptSectionId(matching[0].id);
+                    // Do not force auto-select matching[0].id so the aggregate view works!
+                    setDeptSectionId('');
                 }
             } else {
                 setDeptSectionId('');
@@ -245,6 +253,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                             onChange={(e) => setDeptSectionId(e.target.value)}
                             style={{ width: '100%', borderColor: deptSectionId ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: deptSectionId ? 'var(--warning-bg)' : 'white' }}
                         >
+                            <option value="">All Sections</option>
                             {[...deptSections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
