@@ -328,15 +328,33 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                 </select>
               </div>
               {(() => {
-                const selectedIds = formData.specialization || [];
-                const assignedSectionsCount = (formData.assignedSections || []).length;
+                let currentUnits = 0;
                 
-                const baseUnits = subjects
-                  .filter(s => selectedIds.includes(s.id) || selectedIds.includes(s.code) || selectedIds.includes(s.name))
-                  .reduce((sum, s) => sum + (Number(s.credits) || 3), 0);
+                if (editMode && currentId) {
+                  const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
+                  const matchesProfessor = (s, id) => professorIdOf(s) != null && String(professorIdOf(s)) === String(id);
+                  const profSchedules = (schedules || []).filter(s => matchesProfessor(s, currentId));
                   
-                // Multiply base units by the number of assigned sections (minimum of 1 to show base units if no sections are assigned yet)
-                const currentUnits = baseUnits * Math.max(1, assignedSectionsCount);
+                  const uniqueSubjectSections = new Map();
+                  for (const s of profSchedules) {
+                    const subjectId = s.subject?.id || s.subject?.code || 'unknown';
+                    const sectionId = s.section?.id || 'no-section';
+                    const key = `${subjectId}__${sectionId}`;
+                    if (!uniqueSubjectSections.has(key)) {
+                      uniqueSubjectSections.set(key, Number(s.subject?.credits) || 3);
+                    }
+                  }
+                  currentUnits = Array.from(uniqueSubjectSections.values()).reduce((sum, c) => sum + c, 0);
+                } else {
+                  const selectedIds = formData.specialization || [];
+                  const assignedSectionsCount = (formData.assignedSections || []).length;
+                  
+                  const baseUnits = subjects
+                    .filter(s => selectedIds.includes(s.id) || selectedIds.includes(s.code) || selectedIds.includes(s.name))
+                    .reduce((sum, s) => sum + (Number(s.credits) || 3), 0);
+                    
+                  currentUnits = baseUnits * Math.max(1, assignedSectionsCount);
+                }
                 
                 return (
                   <div className="form-group" style={{ width: '100px' }}>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { getDeptColor } from '../../config/constants';
 
-const FacultyTable = ({ facultyList, subjects = [], departments = [], onEdit, onDelete }) => {
+const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments = [], onEdit, onDelete }) => {
   if (!facultyList || facultyList.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-main)' }}>
@@ -26,16 +26,29 @@ const FacultyTable = ({ facultyList, subjects = [], departments = [], onEdit, on
       </thead>
       <tbody>
         {facultyList.map(p => {
-          // Calculate units based on assigned subjects (specialization) and assigned sections
+          // Calculate units based on actual scheduled subject sections
+          const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
+          const matchesProfessor = (s, professor) => professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);
+          const profSchedules = (schedules || []).filter(s => matchesProfessor(s, p));
+          
+          const uniqueSubjectSections = new Map();
+          for (const s of profSchedules) {
+            const subjectId = s.subject?.id || s.subject?.code || 'unknown';
+            const sectionId = s.section?.id || 'no-section';
+            const key = `${subjectId}__${sectionId}`;
+            if (!uniqueSubjectSections.has(key)) {
+              uniqueSubjectSections.set(key, Number(s.subject?.credits) || 3);
+            }
+          }
+          
+          const currentUnits = Array.from(uniqueSubjectSections.values()).reduce((sum, c) => sum + c, 0);
+          
+          // For displaying assigned subjects count
           const assignedSubjectIds = p.specialization || [];
-          const assignedSectionsCount = (p.assignedSections || []).length;
           const currentSubjects = subjects.filter(sub => assignedSubjectIds.includes(sub.id) || assignedSubjectIds.includes(sub.code) || assignedSubjectIds.includes(sub.name));
           
-          const baseUnits = currentSubjects.reduce((sum, sub) => sum + (Number(sub.credits) || 3), 0);
-          const currentUnits = baseUnits * Math.max(1, assignedSectionsCount);
-          
           const maxUnits = p.maxUnits || p.maxHours || 12;
-          const utilization = (currentUnits / maxUnits) * 100;
+          const utilization = maxUnits > 0 ? (currentUnits / maxUnits) * 100 : 0;
           
           let statusColor = 'var(--success)';
           let statusBg = 'var(--success-bg)';
