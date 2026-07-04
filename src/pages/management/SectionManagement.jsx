@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
-import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { deleteSectionCascade } from '../../services/cascadeDeleteService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, PROGRAM_DEPARTMENTS, getDeptColor } from '../../config/constants';
 import SectionTable from '../../components/SectionTable/SectionTable';
 import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
 
-const SectionManagement = ({ sections, subjects, activeSemester, departments = [], courses = [], onBack }) => {
+const SectionManagement = ({ sections, professors, schedules, subjects, activeSemester, departments = [], courses = [], onBack }) => {
   const { confirm } = useGlobalDialog();
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -88,7 +89,8 @@ const SectionManagement = ({ sections, subjects, activeSemester, departments = [
 
     if (isConfirmed) {
       try {
-        await deleteDoc(doc(db, 'sections', id.toString()));
+        const sectionToDelete = sections.find(s => String(s.id) === String(id));
+        await deleteSectionCascade(sectionToDelete, professors, schedules);
         toast.success('Section deleted successfully');
       } catch (err) {
         console.error("Error deleting section:", err);

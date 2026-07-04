@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
-import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { deleteRoomCascade } from '../../services/cascadeDeleteService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { ROOM_TYPES, BUILDINGS, DEPARTMENTS, getDeptColor } from '../../config/constants';
 import RoomTable from '../../components/RoomTable/RoomTable';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
-const RoomManagement = ({ rooms, departments = [], onBack, user }) => {
+const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack, user }) => {
   const { confirm } = useGlobalDialog();
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -96,9 +97,9 @@ const RoomManagement = ({ rooms, departments = [], onBack, user }) => {
 
     if (isConfirmed) {
       try {
-        await deleteDoc(doc(db, 'rooms', id.toString()));
-        const room = rooms.find(r => String(r.id) === String(id));
-        logActivity({ user, action: LOG_ACTIONS.DELETE_ROOM, details: `Deleted room: ${room?.name || id}` });
+        const roomToDelete = rooms.find(r => String(r.id) === String(id));
+        await deleteRoomCascade(roomToDelete, professors, schedules);
+        logActivity({ user, action: LOG_ACTIONS.DELETE_ROOM, details: `Deleted room: ${roomToDelete?.name || id}` });
         toast.success('Room deleted successfully');
       } catch (err) {
         console.error("Error deleting room:", err);

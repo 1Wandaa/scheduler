@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
-import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { deleteFacultyCascade } from '../../services/cascadeDeleteService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, getDeptColor } from '../../config/constants';
@@ -169,8 +170,8 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
 
     if (isConfirmed) {
       try {
-        await deleteDoc(doc(db, 'professors', id.toString()));
         const prof = professors.find(p => String(p.id) === String(id));
+        await deleteFacultyCascade(prof, schedules);
         logActivity({ user, action: LOG_ACTIONS.DELETE_FACULTY, details: `Deleted faculty: ${prof?.name || id}` });
         toast.success('Faculty deleted successfully');
       } catch (err) {

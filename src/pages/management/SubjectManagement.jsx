@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
 import SubjectTable, { getSubjectDepts } from '../../components/SubjectTable/SubjectTable';
-import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { deleteSubjectCascade } from '../../services/cascadeDeleteService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, getDeptColor } from '../../config/constants';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
-const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, departments = [], onBack, user }) => {
+const SubjectManagement = ({ subjects, professors, sections, schedules, availableSemesters = [], activeSemester, departments = [], onBack, user }) => {
   const { confirm } = useGlobalDialog();
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -95,7 +96,7 @@ const SubjectManagement = ({ subjects, availableSemesters = [], activeSemester, 
     if (isConfirmed) {
       const subjectToDelete = subjects.find(s => s.id === id);
       try {
-        await deleteDoc(doc(db, 'subjects', id.toString()));
+        await deleteSubjectCascade(subjectToDelete, professors, sections, schedules);
         logActivity({ user, action: LOG_ACTIONS.DELETE_SUBJECT, details: `Deleted subject: ${subjectToDelete?.code || id}` });
         toast.success('Subject deleted successfully');
       } catch (err) {

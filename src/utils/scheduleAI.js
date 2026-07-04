@@ -10,13 +10,11 @@
 import { generativeModel } from '../config/firebase';
 import { SchemaType } from 'firebase/ai';
 import { DAYS, TIME_SLOTS } from '../config/constants';
-// eslint-disable-next-line no-unused-vars
 import {
   getEligibleProfessors,
   applyAIRanking,
   creditPerMeeting,
   getOccupiedSlots,
-  schedulesOverlap,
 } from './scheduleUtils';
 
 /**

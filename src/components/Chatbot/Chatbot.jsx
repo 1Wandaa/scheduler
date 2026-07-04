@@ -52,7 +52,7 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
   const handlePointerUp = (e) => {
     setIsDragging(false);
     if (e.target.releasePointerCapture && e.pointerId) {
-      try { e.target.releasePointerCapture(e.pointerId); } catch(err){ /* ignore */ }
+      try { e.target.releasePointerCapture(e.pointerId); } catch(_err){ /* ignore */ }
     }
   };
 

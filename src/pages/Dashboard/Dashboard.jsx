@@ -7,7 +7,6 @@ import {
   validateScheduleEntry,
   addSchedule,
   updateSchedule,
-  removeSchedule,
   addSchedulesBatch,
   clearAllSchedules,
   logScheduleHistory,
@@ -538,14 +537,14 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
         )}
         {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} professors={professors} schedules={displaySchedules} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'availability' && <RoomAvailability rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'departments' && <DepartmentManagement departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'courses' && <CourseManagement courses={courses} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} availableSemesters={availableSemesters} activeSemester={activeSemester} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} professors={professors} sections={sections} schedules={displaySchedules} availableSemesters={availableSemesters} activeSemester={activeSemester} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} />}
-        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} />}
         {isAdmin && activeTab === 'activity-log' && (
           <ActivityLog 
