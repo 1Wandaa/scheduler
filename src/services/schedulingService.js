@@ -229,12 +229,19 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       const uniqueLoad = new Map();
       for (const s of profSchedules) {
         const k = `${s.subject?.id || 'x'}__${s.section?.id || 'x'}`;
-        if (!uniqueLoad.has(k)) uniqueLoad.set(k, Number(s.subject?.credits) || 3);
+        if (!uniqueLoad.has(k)) {
+          const creds = Number(s.subject?.credits);
+          uniqueLoad.set(k, isNaN(creds) || s.subject?.credits === '' ? 3 : creds);
+        }
       }
       const profCurrentLoad = Array.from(uniqueLoad.values()).reduce((s, c) => s + c, 0);
       const groupKey = `${subject?.id || 'x'}__${section?.id || 'x'}`;
-      const subjectCredits = uniqueLoad.has(groupKey) ? 0 : (Number(subject.credits) || 3);
-      const maxUnits = Number(professor.maxUnits) || Number(professor.maxHours) || 12;
+      let subjectCredits = 0;
+      if (!uniqueLoad.has(groupKey)) {
+        const creds = Number(subject.credits);
+        subjectCredits = isNaN(creds) || subject.credits === '' ? 3 : creds;
+      }
+      const maxUnits = Number(professor.maxUnits) || Number(professor.maxHours) || 24;
 
       if (profCurrentLoad + subjectCredits > maxUnits + 0.01) {
         profMaxUnitsReached = true;
