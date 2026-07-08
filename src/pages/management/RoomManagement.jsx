@@ -20,11 +20,11 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
   const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState({
-    id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, building: '', department: 'SHARED'
+    id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, isFoodLab: false, building: '', department: 'SHARED'
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, building: '', department: 'SHARED' });
+    setFormData({ id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, isFoodLab: false, building: '', department: 'SHARED' });
     setEditMode(false);
     setError(null);
     setShowModal(true);
@@ -36,6 +36,7 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
       name: room.name || '',
       type: room.type || ROOM_TYPES.LECTURE,
       hasComputers: !!room.hasComputers,
+      isFoodLab: !!room.isFoodLab,
       building: room.building || '',
       department: room.department || 'SHARED',
     });
@@ -64,6 +65,7 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
       name: formData.name,
       type: formData.type,
       hasComputers: isCSBuilding ? true : formData.hasComputers,
+      isFoodLab: formData.isFoodLab,
       building: formData.building || 'Unassigned',
       department: formData.department || 'SHARED',
     };
@@ -239,16 +241,25 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
               </select>
             </div>
 
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '25px', padding: '12px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '25px', padding: '12px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
                 <input 
                   type="checkbox" 
                   checked={(formData.building === 'BSCS Building' || formData.department === 'BSCS') ? true : formData.hasComputers} 
                   disabled={formData.building === 'BSCS Building' || formData.department === 'BSCS'} 
-                  onChange={e => setFormData({ ...formData, hasComputers: e.target.checked })} 
+                  onChange={e => setFormData({ ...formData, hasComputers: e.target.checked, isFoodLab: e.target.checked ? false : formData.isFoodLab })} 
                   style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} 
                 /> 
                 Has Computers
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                <input 
+                  type="checkbox" 
+                  checked={formData.isFoodLab} 
+                  onChange={e => setFormData({ ...formData, isFoodLab: e.target.checked, hasComputers: e.target.checked ? false : formData.hasComputers })} 
+                  style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} 
+                /> 
+                Is Food Laboratory
               </label>
             </div>
 

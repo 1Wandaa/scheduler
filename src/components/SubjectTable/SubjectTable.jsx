@@ -80,11 +80,12 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
               <td style={{ fontWeight: '500', color: 'var(--text-muted)' }}>{s.hoursPerMeeting || 1.5} hrs</td>
               <td>
                 <span style={{
-                  background: s.requiredLab ? 'var(--danger-bg)' : 'var(--success-bg)',
-                  color: s.requiredLab ? 'var(--danger)' : 'var(--success)',
-                  padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600'
+                  background: s.requiredLab ? 'var(--danger-bg)' : s.isFoodLab ? '#fff3cd' : 'var(--success-bg)',
+                  color: s.requiredLab ? 'var(--danger)' : s.isFoodLab ? '#856404' : 'var(--success)',
+                  padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600',
+                  border: s.isFoodLab ? '1px solid #ffeeba' : 'none'
                 }}>
-                  {s.requiredLab ? 'Yes' : 'No'}
+                  {s.requiredLab ? 'Computer' : s.isFoodLab ? 'Food' : 'No'}
                 </span>
               </td>
               <td style={{ whiteSpace: 'nowrap' }}>

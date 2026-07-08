@@ -12,6 +12,7 @@ const RoomTable = ({ roomList, onEdit, onDelete }) => {
 
     const facilities = [];
     if (room.hasComputers) facilities.push('Computers');
+    if (room.isFoodLab) facilities.push('Food Lab');
 
     return (
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>

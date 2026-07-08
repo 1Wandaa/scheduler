@@ -35,7 +35,11 @@ const PREFERRED_PAIRS = [['Monday', 'Thursday'], ['Tuesday', 'Friday']];
  * by a fixed professor's room restrictions.
  */
 function getEligibleRooms(rooms, subject, section, constraints) {
-  const tiers = getEligibleRoomsTiered(rooms, subject, section);
+  let activeSubject = subject;
+  if (constraints && constraints.respectLabs === false) {
+    activeSubject = { ...subject, requiredLab: false, isFoodLab: false };
+  }
+  const tiers = getEligibleRoomsTiered(rooms, activeSubject, section);
   const fixedProf = constraints?.fixedProfessor;
   if (fixedProf) {
     const filterProf = (arr) => arr.filter((r) => isProfessorAllowedInRoom(r, fixedProf, subject, section, rooms));
@@ -139,16 +143,29 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     }
   }
 
-  // Sort: PE first, then Lab subjects
+  // Sort by constraint tightness: PE → Lab/FoodLab → fewest eligible rooms → fewest eligible profs
   const allGroups = Array.from(groupsMap.values())
     .filter((g) => g.count > 0)
+    .map((g) => {
+      // Pre-compute constraint tightness for sorting
+      const eligibleRoomCount = fixedRoom ? 1 : getEligibleRooms(rooms, g.subject, g.section, constraints).flat.length;
+      const eligibleProfCount = fixedProfessor ? 1 : getEligibleProfs(professors, g.subject, g.section, constraints).length;
+      return { ...g, _eligibleRooms: eligibleRoomCount, _eligibleProfs: eligibleProfCount };
+    })
     .sort((a, b) => {
+      // 1. PE subjects first (very constrained — gym/stage only)
       const aPE = (a.subject?.code || '').toUpperCase().startsWith('PE') ? 1 : 0;
       const bPE = (b.subject?.code || '').toUpperCase().startsWith('PE') ? 1 : 0;
       if (aPE !== bPE) return bPE - aPE;
-      const aLab = a.subject?.requiredLab ? 1 : 0;
-      const bLab = b.subject?.requiredLab ? 1 : 0;
-      return bLab - aLab;
+      // 2. Lab/FoodLab subjects next (limited room pool)
+      const aLab = (a.subject?.requiredLab || a.subject?.isFoodLab) ? 1 : 0;
+      const bLab = (b.subject?.requiredLab || b.subject?.isFoodLab) ? 1 : 0;
+      if (aLab !== bLab) return bLab - aLab;
+      // 3. Fewest eligible rooms first (most room-constrained)
+      if (a._eligibleRooms !== b._eligibleRooms) return a._eligibleRooms - b._eligibleRooms;
+      // 4. Fewest eligible professors first
+      if (a._eligibleProfs !== b._eligibleProfs) return a._eligibleProfs - b._eligibleProfs;
+      return 0;
     });
 
   const placedKeys = new Set();
@@ -171,18 +188,39 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     if (processedCount % 2 === 0) await new Promise((r) => setTimeout(r, 0));
   };
 
+  // ─── Helper: check if a single slot is free for a given combo ───
+  // NOTE: We intentionally do NOT call validateScheduleEntry here.
+  // Lab requirements (computer/food) are already enforced by the room pool
+  // filter (getEligibleRooms → getEligibleRoomsTiered). Calling validateScheduleEntry
+  // would re-enforce lab checks without the respectLabs constraint context,
+  // causing false rejections (e.g. FT subjects blocked from all rooms).
+  // Conflict checks (room/prof/section overlap) are handled by schedulesOverlap.
+  const isSlotFree = (room, professor, subject, section, day, timeSlot) => {
+    const candidate = { room, professor, subject, section, day, timeSlot };
+    // Check for time conflicts with already-scheduled classes
+    if (temp.some((s) => schedulesOverlap(candidate, s))) return false;
+    // Verify the time slot fits the meeting duration (already checked by caller,
+    // but needed for the flexible fallback where timeSlot varies)
+    const startIdx = getTimeSlotIndex(timeSlot);
+    if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting) === 0) return false;
+    return true;
+  };
+
   // ─── Helper: attempt to place a single group ────────────────────
   const tryPlaceGroup = async (group, roomPool, usePairsOnly) => {
     const { subject, section, count } = group;
     const profPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, subject, section, constraints);
     const hasStage = rooms.some((r) => (r.name || '').toLowerCase().includes('stage'));
 
+    // ── Diagnostic counters ──
     let profMaxUnitsReached = false;
     let anyProfEligibleForRooms = false;
+    let profMaxUnitsCount = 0;
+    let totalProfsChecked = profPool.length;
+    let allSlotsBusyCount = 0;
 
     for (const professor of profPool) {
       if (signal?.aborted) return { success: false };
-      // Yield to event loop so Cancel click can be processed
       await new Promise((r) => setTimeout(r, 0));
       if (signal?.aborted) return { success: false };
 
@@ -194,10 +232,13 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         if (!uniqueLoad.has(k)) uniqueLoad.set(k, Number(s.subject?.credits) || 3);
       }
       const profCurrentLoad = Array.from(uniqueLoad.values()).reduce((s, c) => s + c, 0);
-      const subjectCredits = Number(subject.credits) || 3;
+      const groupKey = `${subject?.id || 'x'}__${section?.id || 'x'}`;
+      const subjectCredits = uniqueLoad.has(groupKey) ? 0 : (Number(subject.credits) || 3);
+      const maxUnits = Number(professor.maxUnits) || Number(professor.maxHours) || 12;
 
-      if (profCurrentLoad + subjectCredits > (Number(professor.maxUnits) || Number(professor.maxHours) || 12) + 0.01) {
+      if (profCurrentLoad + subjectCredits > maxUnits + 0.01) {
         profMaxUnitsReached = true;
+        profMaxUnitsCount++;
         continue;
       }
 
@@ -213,7 +254,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 
       for (let ri = 0; ri < sortedRoomPool.length; ri++) {
         const room = sortedRoomPool[ri];
-        // Yield every few rooms so the UI stays responsive
         if (ri % 3 === 0) {
           await new Promise((r) => setTimeout(r, 0));
           if (signal?.aborted) return { success: false };
@@ -230,12 +270,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
           const startIdx = getTimeSlotIndex(timeSlot);
           if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting) === 0) continue;
 
-          const isFree = (d) => {
-            const candidate = { room, professor, subject, section, day: d, timeSlot };
-            if (temp.some((s) => schedulesOverlap(candidate, s))) return false;
-            const chk = validateScheduleEntry({ room, professor, subject, section, day: d, timeSlot }, temp, rooms);
-            return chk.valid;
-          };
+          const isFree = (d) => isSlotFree(room, professor, subject, section, d, timeSlot);
 
           // Try preferred day pairs for 2-meeting classes
           if (count === 2) {
@@ -245,7 +280,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
                 const s2 = { room, professor, subject, section, day: pair[1], timeSlot };
                 const w1 = await addScheduleFn(s1);
                 const w2 = await addScheduleFn(s2);
-
                 if (w1?.ok !== false && w2?.ok !== false) {
                   temp.push(s1, s2);
                   results.push(s1, s2);
@@ -265,7 +299,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
               const w1 = await addScheduleFn(s1);
               const w2 = await addScheduleFn(s2);
               const w3 = await addScheduleFn(s3);
-
               if (w1?.ok !== false && w2?.ok !== false && w3?.ok !== false) {
                 temp.push(s1, s2, s3);
                 results.push(s1, s2, s3);
@@ -274,14 +307,13 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
             }
           }
 
-          // Any-day fallback
+          // Any-day same-timeslot fallback
           if (!usePairsOnly) {
             const validDays = [];
             for (const day of DAYS) {
               if (isFree(day)) validDays.push(day);
               if (validDays.length === count) break;
             }
-
             if (validDays.length === count) {
               let allOk = true;
               const writes = [];
@@ -300,15 +332,79 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
           }
         }
       }
+
+      // ── FLEXIBLE TIME SLOT FALLBACK ──
+      // Each meeting can use a DIFFERENT time slot on different days.
+      // Only try this in non-pairs mode (Pass 2/3) to avoid slowing Pass 1.
+      if (!usePairsOnly && count >= 2) {
+        const placedMeetings = [];
+        const usedDays = new Set();
+
+        for (let mi = 0; mi < count; mi++) {
+          let placed = false;
+          for (let ri = 0; ri < sortedRoomPool.length && !placed; ri++) {
+            const room = sortedRoomPool[ri];
+            if (hasStage) {
+              const isStage = (room.name || '').toLowerCase().includes('stage');
+              if (isStageLocked && !isStage) continue;
+              if (!isStageLocked && isStage) continue;
+            }
+            for (const ts of TIME_SLOTS) {
+              if (signal?.aborted) return { success: false };
+              const si = getTimeSlotIndex(ts);
+              if (si < 0 || slotsNeededFromIndex(si, subject?.hoursPerMeeting) === 0) continue;
+              for (const day of DAYS) {
+                if (usedDays.has(day)) continue;
+                if (isSlotFree(room, professor, subject, section, day, ts)) {
+                  placedMeetings.push({ room, professor, subject, section, day, timeSlot: ts });
+                  // Temporarily add to temp so next meetings see this as occupied
+                  temp.push(placedMeetings[placedMeetings.length - 1]);
+                  usedDays.add(day);
+                  placed = true;
+                  break;
+                }
+              }
+              if (placed) break;
+            }
+          }
+          if (!placed) break;
+        }
+
+        if (placedMeetings.length === count) {
+          // Write all meetings to Firestore
+          let allOk = true;
+          const writes = [];
+          for (const sc of placedMeetings) {
+            const w = await addScheduleFn(sc);
+            if (w?.ok === false) { allOk = false; break; }
+            writes.push(sc);
+          }
+          if (allOk) {
+            // temp already has them pushed above
+            results.push(...writes);
+            return { success: true };
+          }
+        }
+        // Rollback temp if flexible placement failed
+        for (const pm of placedMeetings) {
+          const idx = temp.indexOf(pm);
+          if (idx !== -1) temp.splice(idx, 1);
+        }
+      }
     }
     
+    // ── Detailed failure diagnostics ──
     if (!anyProfEligibleForRooms && profMaxUnitsReached) {
-      return { success: false, reason: 'All eligible professors have reached their max units.' };
+      return { success: false, reason: `All ${profMaxUnitsCount} eligible professor(s) reached their max units.` };
     }
     if (roomPool.length === 0) {
       return { success: false, reason: 'No eligible rooms available for this subject/section.' };
     }
-    return { success: false, reason: 'Professors are busy during the available room times.' };
+    if (profMaxUnitsCount > 0 && profMaxUnitsCount < totalProfsChecked) {
+      const availableProfs = totalProfsChecked - profMaxUnitsCount;
+      return { success: false, reason: `${profMaxUnitsCount} of ${totalProfsChecked} professors at max units; remaining ${availableProfs} professor(s) have no free slots across ${roomPool.length} room(s).` };
+    }
+    return { success: false, reason: `No free time slots found across ${totalProfsChecked} professor(s) and ${roomPool.length} room(s).` };
   };
 
   // ── PASS 1 — STRICT: Department rooms, preferred pairs ────────────
@@ -354,13 +450,100 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     if (placed?.success) {
       placedKeys.add(groupKey);
     } else {
-      let reason = placed?.reason || 'Professors are busy during the available room times.';
+      let reason = placed?.reason || 'No matching room and professor availability found.';
       if (constraints?.respectLabs && group.subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
         reason = 'Requires computer lab.';
+      } else if (constraints?.respectLabs && group.subject?.isFoodLab && fixedRoom && !fixedRoom.isFoodLab) {
+        reason = 'Requires food lab.';
       }
       unscheduled.push({ subject: group.subject, section: group.section, reason });
     }
     await reportProgress(3, i, remainingAfterPass2.length);
+  }
+
+  // ── PASS 3.5 — BUMP-AND-RETRY ────────────────────────────────────
+  // For each unscheduled group, try to displace a less-constrained
+  // already-placed class and re-schedule it elsewhere.
+  const stillUnscheduled = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
+  if (stillUnscheduled.length > 0 && stillUnscheduled.length < allGroups.length) {
+    console.log(`[AutoScheduler] Pass 3.5 (Bump-Retry): ${stillUnscheduled.length} groups to retry`);
+    for (let ui = 0; ui < stillUnscheduled.length; ui++) {
+      if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
+      const unschedGroup = stillUnscheduled[ui];
+      const unschedKey = `${unschedGroup.section?.id || 'none'}_${unschedGroup.subject?.id}`;
+      if (placedKeys.has(unschedKey)) continue; // Already resolved by a prior bump
+
+      const unschedRoomPool = fixedRoom ? [fixedRoom] : getEligibleRooms(rooms, unschedGroup.subject, unschedGroup.section, constraints).flat;
+      if (unschedRoomPool.length === 0) continue;
+
+      // Find placed classes that occupy slots this group might need
+      // Try bumping one at a time — bump the one with the MOST alternative slots (easiest to re-place)
+      const candidateBumps = [];
+      for (const placed of results) {
+        // Only consider bumping classes that share eligible rooms
+        if (!unschedRoomPool.some((r) => String(r.id) === String(placed.room?.id))) continue;
+        // Don't bump PE or Lab subjects — they're heavily constrained
+        const placedCode = (placed.subject?.code || '').toUpperCase();
+        if (placedCode.startsWith('PE')) continue;
+        if (placed.subject?.requiredLab || placed.subject?.isFoodLab) continue;
+
+        candidateBumps.push(placed);
+      }
+
+      let bumpSucceeded = false;
+      // Try bumping each candidate (limit to 10 to avoid excessive computation)
+      for (let bi = 0; bi < Math.min(candidateBumps.length, 10); bi++) {
+        if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
+        const bumpTarget = candidateBumps[bi];
+
+        // Temporarily remove the bump target from temp and results
+        const bumpIdx = temp.findIndex((s) => s === bumpTarget);
+        if (bumpIdx === -1) continue;
+        temp.splice(bumpIdx, 1);
+        const resultIdx = results.findIndex((s) => s === bumpTarget);
+        if (resultIdx !== -1) results.splice(resultIdx, 1);
+
+        // Try to place the unscheduled group now
+        const retryPlaced = await tryPlaceGroup(unschedGroup, unschedRoomPool, false);
+        if (retryPlaced?.success) {
+          // Now try to re-place the bumped class
+          const bumpedGroup = { subject: bumpTarget.subject, section: bumpTarget.section, count: 1 };
+          const bumpedTiers = getEligibleRooms(rooms, bumpTarget.subject, bumpTarget.section, constraints);
+          const bumpedPool = [...bumpedTiers.tier1, ...bumpedTiers.tier2, ...bumpedTiers.tier3];
+          const rePlaced = await tryPlaceGroup(bumpedGroup, bumpedPool, false);
+
+          if (rePlaced?.success) {
+            // Both placed! Remove from unscheduled list
+            placedKeys.add(unschedKey);
+            const uIdx = unscheduled.findIndex((u) => u.subject?.id === unschedGroup.subject?.id && u.section?.id === unschedGroup.section?.id);
+            if (uIdx !== -1) unscheduled.splice(uIdx, 1);
+            bumpSucceeded = true;
+            console.log(`[AutoScheduler] Bump success: displaced ${bumpTarget.subject?.code} to make room for ${unschedGroup.subject?.code}`);
+            break;
+          } else {
+            // Re-placing bumped class failed — rollback everything
+            // Remove what tryPlaceGroup added for unschedGroup
+            const addedForUnsched = results.filter((s) =>
+              String(s.subject?.id) === String(unschedGroup.subject?.id) &&
+              String(s.section?.id) === String(unschedGroup.section?.id)
+            );
+            for (const added of addedForUnsched) {
+              const ti = temp.indexOf(added);
+              if (ti !== -1) temp.splice(ti, 1);
+              const ri2 = results.indexOf(added);
+              if (ri2 !== -1) results.splice(ri2, 1);
+            }
+            // Restore the bump target
+            temp.push(bumpTarget);
+            results.push(bumpTarget);
+          }
+        } else {
+          // Couldn't place even after bump — restore bump target
+          temp.push(bumpTarget);
+          results.push(bumpTarget);
+        }
+      }
+    }
   }
 
   // ── PASS 4 — AI CONFLICT RESOLUTION ──────────────────────────────

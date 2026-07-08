@@ -18,11 +18,11 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
-    id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || (availableSemesters[0] || '')
+    id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, isFoodLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || (availableSemesters[0] || '')
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || (availableSemesters[0] || '') });
+    setFormData({ id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, isFoodLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || (availableSemesters[0] || '') });
     setEditMode(false);
     setError(null);
     setShowModal(true);
@@ -337,9 +337,12 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                 </select>
               </div>
             </div>
-            <div style={{ marginBottom: '25px', padding: '14px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+            <div style={{ marginBottom: '25px', padding: '14px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input type="checkbox" checked={formData.requiredLab} onChange={e => setFormData({ ...formData, requiredLab: e.target.checked })} style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} /> Requires Computer Laboratory
+                <input type="checkbox" checked={formData.requiredLab} onChange={e => setFormData({ ...formData, requiredLab: e.target.checked, isFoodLab: e.target.checked ? false : formData.isFoodLab })} style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} /> Requires Computer Laboratory
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                <input type="checkbox" checked={formData.isFoodLab} onChange={e => setFormData({ ...formData, isFoodLab: e.target.checked, requiredLab: e.target.checked ? false : formData.requiredLab })} style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} /> Requires Food Laboratory
               </label>
             </div>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>

@@ -114,6 +114,7 @@ export function validateScheduleEntry(
   if (conflicts.professor) errors.push(`Faculty "${professor?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
   if (section?.id && conflicts.section) errors.push(`Section "${section?.name}" already has a class for ${day} (${timeSlot?.label}).`);
   if (subject?.requiredLab && !room?.hasComputers) errors.push(`Subject "${subject?.code || 'selected'}" requires a computer laboratory, but room "${room?.name || 'selected'}" does not have computers.`);
+  if (subject?.isFoodLab && !room?.isFoodLab) errors.push(`Subject "${subject?.code || 'selected'}" requires a food laboratory, but room "${room?.name || 'selected'}" is not a food laboratory.`);
 
   return { valid: errors.length === 0, errors, warnings };
 }

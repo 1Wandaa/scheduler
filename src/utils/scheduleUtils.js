@@ -381,6 +381,9 @@ export function getEligibleRoomsTiered(rooms, subject, section) {
   if (subject?.requiredLab) {
     const labs = rooms.filter(r => r.hasComputers);
     if (labs.length > 0) pool = labs;
+  } else if (subject?.isFoodLab) {
+    const foodLabs = rooms.filter(r => r.isFoodLab);
+    if (foodLabs.length > 0) pool = foodLabs;
   }
 
   const tier1 = []; // Department-owned rooms matching this section
@@ -418,10 +421,10 @@ export function getEligibleRoomsTiered(rooms, subject, section) {
   }
 
   const sortLabRoomsLast = (roomArray) => {
-    if (subject?.requiredLab) return roomArray;
+    if (subject?.requiredLab || subject?.isFoodLab) return roomArray;
     return [...roomArray].sort((a, b) => {
-      const aIsLab = a.hasComputers ? 1 : 0;
-      const bIsLab = b.hasComputers ? 1 : 0;
+      const aIsLab = (a.hasComputers || a.isFoodLab) ? 1 : 0;
+      const bIsLab = (b.hasComputers || b.isFoodLab) ? 1 : 0;
       return aIsLab - bIsLab;
     });
   };

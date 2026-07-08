@@ -248,7 +248,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', cursor: 'pointer' }}>
           <input type="checkbox" checked={respectLabs} onChange={(e) => setRespectLabs(e.target.checked)} />
-          Enforce Computer Lab Requirements
+          Enforce Lab Requirements (Computer & Food)
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', color: 'var(--accent-primary)' }}>
           <input type="checkbox" checked={aiAssisted} onChange={(e) => setAiAssisted(e.target.checked)} />
