@@ -67,8 +67,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     const userSec = matching.find(sec => sec.name === user.section);
                     setDeptSectionId(userSec.id);
                 } else {
-                    // Do not force auto-select matching[0].id so the aggregate view works!
-                    setDeptSectionId('');
+                    setDeptSectionId(matching[0].id);
                 }
             } else {
                 setDeptSectionId('');
@@ -253,7 +252,6 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                             onChange={(e) => setDeptSectionId(e.target.value)}
                             style={{ width: '100%', borderColor: deptSectionId ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: deptSectionId ? 'var(--warning-bg)' : 'white' }}
                         >
-                            <option value="">All Sections</option>
                             {[...deptSections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
