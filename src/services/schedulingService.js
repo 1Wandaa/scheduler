@@ -21,7 +21,6 @@ import {
   isProfessorAllowedInRoom,
   isProfessorStageLocked,
 } from '../utils/scheduleUtils';
-import { validateScheduleEntry } from './validationService';
 import { resolveUnscheduledClasses } from '../utils/scheduleAI';
 
 const PREFERRED_PAIRS = [['Monday', 'Thursday'], ['Tuesday', 'Friday']];
@@ -143,14 +142,33 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     }
   }
 
-  // Sort by constraint tightness: PE → Lab/FoodLab → fewest eligible rooms → fewest eligible profs
+  // ─── Helper: compute a professor's remaining unit capacity from temp ───
+  const getProfRemainingCapacity = (professor) => {
+    const profSchedules = temp.filter((s) => String(s.professor?.id) === String(professor.id));
+    const uniqueLoad = new Map();
+    for (const s of profSchedules) {
+      const k = `${s.subject?.id || 'x'}__${s.section?.id || 'x'}`;
+      if (!uniqueLoad.has(k)) {
+        const creds = Number(s.subject?.credits);
+        uniqueLoad.set(k, isNaN(creds) || s.subject?.credits === '' ? 3 : creds);
+      }
+    }
+    const currentLoad = Array.from(uniqueLoad.values()).reduce((s, c) => s + c, 0);
+    const maxUnits = Number(professor.maxUnits) || Number(professor.maxHours) || 24;
+    return maxUnits - currentLoad;
+  };
+
+  // Sort by constraint tightness: PE → Lab/FoodLab → fewest eligible rooms → fewest eligible profs → tightest capacity
   const allGroups = Array.from(groupsMap.values())
     .filter((g) => g.count > 0)
     .map((g) => {
       // Pre-compute constraint tightness for sorting
       const eligibleRoomCount = fixedRoom ? 1 : getEligibleRooms(rooms, g.subject, g.section, constraints).flat.length;
-      const eligibleProfCount = fixedProfessor ? 1 : getEligibleProfs(professors, g.subject, g.section, constraints).length;
-      return { ...g, _eligibleRooms: eligibleRoomCount, _eligibleProfs: eligibleProfCount };
+      const profPoolForSort = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, g.subject, g.section, constraints);
+      const eligibleProfCount = profPoolForSort.length;
+      // Total remaining capacity across all eligible professors — lower = more constrained
+      const totalCapacity = profPoolForSort.reduce((sum, p) => sum + Math.max(0, getProfRemainingCapacity(p)), 0);
+      return { ...g, _eligibleRooms: eligibleRoomCount, _eligibleProfs: eligibleProfCount, _totalCapacity: totalCapacity };
     })
     .sort((a, b) => {
       // 1. PE subjects first (very constrained — gym/stage only)
@@ -165,6 +183,8 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       if (a._eligibleRooms !== b._eligibleRooms) return a._eligibleRooms - b._eligibleRooms;
       // 4. Fewest eligible professors first
       if (a._eligibleProfs !== b._eligibleProfs) return a._eligibleProfs - b._eligibleProfs;
+      // 5. Tightest total professor capacity first (most capacity-constrained)
+      if (a._totalCapacity !== b._totalCapacity) return a._totalCapacity - b._totalCapacity;
       return 0;
     });
 
@@ -209,15 +229,23 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   // ─── Helper: attempt to place a single group ────────────────────
   const tryPlaceGroup = async (group, roomPool, usePairsOnly) => {
     const { subject, section, count } = group;
-    const profPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, subject, section, constraints);
+    const rawProfPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, subject, section, constraints);
     const hasStage = rooms.some((r) => (r.name || '').toLowerCase().includes('stage'));
+
+    // ── Sort professors by remaining capacity (most headroom first) ──
+    // This prevents near-maxed professors from "claiming" slots when a
+    // higher-capacity professor could take the subject instead.
+    const profPool = [...rawProfPool].sort((a, b) => {
+      const capA = getProfRemainingCapacity(a);
+      const capB = getProfRemainingCapacity(b);
+      return capB - capA; // descending: most remaining capacity first
+    });
 
     // ── Diagnostic counters ──
     let profMaxUnitsReached = false;
     let anyProfEligibleForRooms = false;
     let profMaxUnitsCount = 0;
     let totalProfsChecked = profPool.length;
-    let allSlotsBusyCount = 0;
 
     for (const professor of profPool) {
       if (signal?.aborted) return { success: false };
@@ -468,6 +496,36 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     await reportProgress(3, i, remainingAfterPass2.length);
   }
 
+  // ── PASS 3.25 — UNIT-BLOCKED RETRY ───────────────────────────────
+  // Re-attempt groups that failed due to "max units reached". Other
+  // placements may have gone to different professors, freeing capacity
+  // for professors who were previously at-max.
+  const unitBlockedRetry = allGroups.filter((g) => {
+    const gk = `${g.section?.id || 'none'}_${g.subject?.id}`;
+    if (placedKeys.has(gk)) return false;
+    const failed = unscheduled.find((u) => u.subject?.id === g.subject?.id && u.section?.id === g.section?.id);
+    return failed && failed.reason && failed.reason.toLowerCase().includes('max units');
+  });
+  if (unitBlockedRetry.length > 0) {
+    console.log(`[AutoScheduler] Pass 3.25 (Unit-Blocked Retry): ${unitBlockedRetry.length} groups to retry`);
+    for (let i = 0; i < unitBlockedRetry.length; i++) {
+      if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
+      const group = unitBlockedRetry[i];
+      const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
+      if (placedKeys.has(groupKey)) continue;
+      const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints);
+      const pool = [...tiers.tier1, ...tiers.tier2, ...tiers.tier3];
+      const placed = await tryPlaceGroup(group, pool, false);
+      if (placed?.success) {
+        placedKeys.add(groupKey);
+        // Remove from unscheduled list since it's now placed
+        const uIdx = unscheduled.findIndex((u) => u.subject?.id === group.subject?.id && u.section?.id === group.section?.id);
+        if (uIdx !== -1) unscheduled.splice(uIdx, 1);
+        console.log(`[AutoScheduler] Unit-blocked retry success: ${group.subject?.code} (${group.section?.name})`);
+      }
+    }
+  }
+
   // ── PASS 3.5 — BUMP-AND-RETRY ────────────────────────────────────
   // For each unscheduled group, try to displace a less-constrained
   // already-placed class and re-schedule it elsewhere.
@@ -633,42 +691,4 @@ export async function autoScheduleFull(context, constraints, addScheduleFn, acti
   return runTargetedScheduler(assignments, context, constraints, addScheduleFn, options);
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-//  Legacy brute-force auto-scheduler (subject list mode)
-// ═══════════════════════════════════════════════════════════════════════
 
-export async function autoScheduleLegacy(subjList, context, constraints, addScheduleFn) {
-  const { professors, rooms } = context;
-  const activeSchedules = context.activeSchedules;
-  const results = [];
-  const unscheduledItems = [];
-  const tempSchedules = [...activeSchedules];
-
-  for (const subject of subjList) {
-    const profPool = professors.filter((p) => professorMatchesSubject(p, subject));
-    if (profPool.length === 0) continue; // Skip unassigned subjects
-    let scheduled = false;
-    searchLoop: for (const prof of profPool) {
-      for (const day of DAYS) {
-        for (const timeSlot of TIME_SLOTS) {
-          for (const room of rooms) {
-            if (constraints.respectLabs && subject.requiredLab && !room.hasComputers) continue;
-            const isRoomBusy = tempSchedules.some((s) => String(s.room?.id) === String(room.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
-            const isProfBusy = tempSchedules.some((s) => String(s.professor?.id) === String(prof.id) && s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
-            if (!isRoomBusy && !isProfBusy) {
-              const newSchedule = { room, professor: prof, subject, day, timeSlot };
-              tempSchedules.push(newSchedule);
-              const writeResult = await addScheduleFn(newSchedule);
-              if (writeResult?.ok === false) continue;
-              results.push(newSchedule);
-              scheduled = true;
-              break searchLoop;
-            }
-          }
-        }
-      }
-    }
-    if (!scheduled) unscheduledItems.push(subject);
-  }
-  return { results, unscheduled: unscheduledItems, error: null };
-}

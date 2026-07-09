@@ -16,7 +16,6 @@ import {
   autoScheduleForRoom,
   autoScheduleForFaculty,
   autoScheduleFull,
-  autoScheduleLegacy,
 } from '../../services/schedulingService';
 import UserManagement from '../management/UserManagement';
 import ProfessorWorkload from '../../components/ProfessorWorkload/ProfessorWorkload';
@@ -204,8 +203,6 @@ const Dashboard = ({ user, onLogout }) => {
       autoScheduleForFaculty(professorId, schedulerContext, constraints, handleAddSchedule, activeSemester, options),
     autoScheduleFull: (constraints, options) =>
       autoScheduleFull(schedulerContext, constraints, handleAddSchedule, activeSemester, options),
-    autoSchedule: (subjList, constraints) =>
-      autoScheduleLegacy(subjList, schedulerContext, constraints, handleAddSchedule),
   };
 
   const firstName = user?.name?.split?.(/\s+/)?.[0] ?? 'there';
