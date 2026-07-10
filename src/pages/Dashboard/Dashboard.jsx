@@ -35,6 +35,7 @@ import ActivityLog from '../management/ActivityLog';
 import DepartmentManagement from '../management/DepartmentManagement';
 import CourseManagement from '../management/CourseManagement';
 import RoomAvailability from '../management/RoomAvailability';
+import RecycleBin from '../management/RecycleBin';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 import { Icon, NAV_ICONS } from './components/Icon';
@@ -273,6 +274,7 @@ const Dashboard = ({ user, onLogout }) => {
                     <NavItem label="Sections" iconPath={NAV_ICONS.sections} active={activeTab === 'sections'} onClick={() => handleTabClick('sections')} indent />
                     <NavItem label="Semesters & Years" iconPath={NAV_ICONS.calendar} active={activeTab === 'terms'} onClick={() => handleTabClick('terms')} indent />
                     <NavItem label="User Management" iconPath={NAV_ICONS.users} active={activeTab === 'users'} onClick={() => handleTabClick('users')} indent />
+                    <NavItem label="Recycle Bin" iconPath="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" active={activeTab === 'recycle-bin'} onClick={() => handleTabClick('recycle-bin')} indent />
                   </>
                 )}
                 <NavItem label="Create Schedule" iconPath={NAV_ICONS.schedule} active={activeTab === 'schedule'} onClick={() => handleTabClick('schedule')} />
@@ -543,6 +545,7 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} />}
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} />}
+        {isAdmin && activeTab === 'recycle-bin' && <RecycleBin user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'activity-log' && (
           <ActivityLog 
             onBack={() => setActiveTab('dashboard')} 
