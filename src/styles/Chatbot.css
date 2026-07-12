@@ -158,6 +158,12 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
+/* Error message styling */
+.chat-message.error .chat-bubble {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
 .chatbot-input-area {
   display: flex;
   padding: 14px 16px;
@@ -236,6 +242,154 @@
 @keyframes typingBounce {
   0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
   40% { transform: scale(1); opacity: 1; }
+}
+
+/* =========================================
+   SUGGESTION CHIPS (persistent + contextual)
+   ========================================= */
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 4px;
+  justify-content: center;
+  animation: chatMsgSlide 0.3s ease-out;
+}
+
+.chat-suggestion-chip {
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 6px 13px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: var(--accent-primary);
+  font-family: inherit;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  line-height: 1.4;
+}
+
+.chat-suggestion-chip:hover {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(86, 69, 238, 0.25);
+}
+
+/* =========================================
+   RETRY BUTTON
+   ========================================= */
+.chat-retry-container {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+  animation: chatMsgSlide 0.3s ease-out;
+}
+
+.chat-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1.5px solid #f87171;
+  background: #fff5f5;
+  color: #dc2626;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chat-retry-btn:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+/* =========================================
+   MARKDOWN RENDERING IN CHAT BUBBLES
+   ========================================= */
+.chat-bubble-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-bubble-content .chat-line {
+  display: block;
+  min-height: 1.3em;
+}
+
+.chat-bubble-content .chat-spacer {
+  height: 6px;
+}
+
+.chat-bubble-content .chat-hr {
+  border: none;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  margin: 6px 0;
+  opacity: 0.5;
+}
+
+/* Headers inside chat bubbles */
+.chat-bubble-content .chat-header {
+  font-weight: 700;
+  margin: 4px 0 2px 0;
+  line-height: 1.4;
+}
+
+.chat-bubble-content h3.chat-header {
+  font-size: 1em;
+}
+
+.chat-bubble-content h4.chat-header {
+  font-size: 0.95em;
+}
+
+.chat-bubble-content h5.chat-header {
+  font-size: 0.9em;
+  opacity: 0.85;
+}
+
+/* Lists inside chat bubbles */
+.chat-bubble-content .chat-list {
+  margin: 4px 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.chat-bubble-content .chat-list li {
+  font-size: inherit;
+  line-height: 1.5;
+}
+
+.chat-bubble-content .chat-list-ordered {
+  padding-left: 22px;
+}
+
+/* Inline code */
+.chat-inline-code {
+  background: rgba(86, 69, 238, 0.08);
+  color: var(--accent-primary, #5645ee);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+/* Override inline code colors for user bubble (white text on gradient) */
+.chat-message.user .chat-inline-code {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
 @media (max-width: 480px) {

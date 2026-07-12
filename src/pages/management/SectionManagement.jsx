@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { deleteSectionCascade } from '../../services/cascadeDeleteService';
@@ -18,18 +18,27 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
-    id: '', name: '', program: '', yearLevel: 1, subjects: []
+    id: '', name: '', program: '', yearLevel: 1, subjects: [], adviser: ''
   });
 
+  // Memoize sorted professors for the adviser dropdown
+  const sortedProfessors = useMemo(() => {
+    return [...professors].sort((a, b) => {
+      const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
+      const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
+      return nameA.localeCompare(nameB);
+    });
+  }, [professors]);
+
   const handleOpenAdd = () => {
-    setFormData({ id: '', name: '', program: '', yearLevel: 1, subjects: [] });
+    setFormData({ id: '', name: '', program: '', yearLevel: 1, subjects: [], adviser: '' });
     setEditMode(false);
     setError(null);
     setShowModal(true);
   };
 
   const handleOpenEdit = (section) => {
-    setFormData({ ...section });
+    setFormData({ ...section, adviser: section.adviser || '' });
     setCurrentId(section.id);
     setEditMode(true);
     setError(null);
@@ -219,6 +228,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
               onEdit={handleOpenEdit} 
               onDelete={handleDelete}
               subjects={subjects}
+              professors={professors}
               departments={departments}
               courses={courses}
             />
@@ -238,6 +248,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
             onEdit={handleOpenEdit} 
             onDelete={handleDelete}
             subjects={subjects}
+            professors={professors}
             departments={departments}
             courses={courses}
           />
@@ -283,6 +294,17 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
                 <option value={2}>2nd Year</option>
                 <option value={3}>3rd Year</option>
                 <option value={4}>4th Year</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Adviser</label>
+              <select className="form-select" value={formData.adviser} onChange={e => setFormData({ ...formData, adviser: e.target.value })}>
+                <option value="">No Adviser</option>
+                {sortedProfessors.map(prof => (
+                  <option key={prof.id} value={prof.id}>
+                    {prof.name || `${prof.lastName || ''}, ${prof.firstName || ''}`}
+                  </option>
+                ))}
               </select>
             </div>
             <SubjectSelector

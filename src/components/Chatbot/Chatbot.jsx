@@ -1,8 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { generativeModel } from '../../config/firebase';
 import '../../styles/Chatbot.css';
 import { buildSystemPrompt } from './chatPromptBuilder';
 import ChatBubble from './ChatBubble';
+
+// Unique message ID generator
+let msgIdCounter = 0;
+const nextMsgId = () => `msg_${++msgIdCounter}_${Date.now()}`;
+
+// Errors that are fatal and require session reset
+const FATAL_ERROR_CODES = new Set(['api-not-enabled', 'permission-denied', 'not-found']);
+
+// Determine if an error is transient (retry-able) vs fatal
+const isTransientError = (error) => {
+  if (!error) return false;
+  if (FATAL_ERROR_CODES.has(error?.code)) return false;
+  if (error?.code === 'fetch-error') return true;
+  if (error?.message?.includes('network')) return true;
+  if (error?.message?.includes('timeout')) return true;
+  if (error?.message?.includes('500')) return true;
+  if (error?.message?.includes('503')) return true;
+  // Default: treat unknown errors as transient to preserve session
+  return true;
+};
 
 const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], rooms = [] }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,6 +30,7 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [chatSession, setChatSession] = useState(null);
+  const [failedMessage, setFailedMessage] = useState(null); // Track last failed user message for retry
   const messagesEndRef = useRef(null);
   const dataRef = useRef({ schedules, professors, subjects, sections, rooms });
   const containerRef = useRef(null);
@@ -110,7 +131,7 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
     if (!isOpen || chatSession) return;
 
     const initChat = () => {
-      const systemPrompt = buildSystemPrompt(schedules, professors, rooms, sections);
+      const systemPrompt = buildSystemPrompt(schedules, professors, rooms, sections, subjects);
 
       try {
         const chat = generativeModel.startChat({
@@ -118,10 +139,27 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
           history: []
         });
         setChatSession(chat);
-        setMessages([{ role: 'model', text: "Hello! I'm your SMARTSCHED assistant. Ask me anything about the schedule!" }]);
+
+        // Build a contextual greeting based on current data
+        const conflictCount = countConflicts(schedules);
+        let greeting = "Hello! I'm your **SMARTSCHED Assistant**. I have access to your complete scheduling data.";
+        if (schedules.length === 0) {
+          greeting += "\n\nIt looks like there are no classes scheduled yet. I can help you once schedules are added!";
+        } else {
+          greeting += `\n\nI can see **${schedules.length}** scheduled classes across **${sections.length}** sections.`;
+          if (conflictCount > 0) {
+            greeting += ` ⚠️ I've detected **${conflictCount} conflict${conflictCount > 1 ? 's' : ''}** — ask me about them!`;
+          } else {
+            greeting += " ✅ No conflicts detected!";
+          }
+        }
+        greeting += "\n\nWhat would you like to know?";
+
+        setMessages([{ id: nextMsgId(), role: 'model', text: greeting, timestamp: Date.now() }]);
+        setFailedMessage(null);
       } catch (error) {
         console.error("Failed to initialize chat:", error);
-        setMessages([{ role: 'model', text: "Sorry, I couldn't connect to the AI service. Please try again later." }]);
+        setMessages([{ id: nextMsgId(), role: 'model', text: "Sorry, I couldn't connect to the AI service. Please try again later.", timestamp: Date.now() }]);
       }
     };
 
@@ -133,49 +171,132 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  const SUGGESTIONS = [
-    "Are there any conflicts? How can I fix them?",
-    "Who teaches what?",
-    "Show me the schedule for BSCS 1A",
-    "Which rooms are available on Monday?"
-  ];
+  // ── Dynamic suggestion generation ──
+  const getFollowUpSuggestions = useCallback(() => {
+    const lastBotMsg = [...messages].reverse().find(m => m.role === 'model');
+    const lastBotText = (lastBotMsg?.text || '').toLowerCase();
+    const hasConflicts = countConflicts(schedules) > 0;
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || !chatSession) return;
+    // If this is the initial greeting (only 1 message)
+    if (messages.length <= 1) {
+      const initial = [];
+      if (hasConflicts) initial.push("Are there any conflicts? How can I fix them?");
+      initial.push("Show me a summary of the current schedule");
+      if (sections.length > 0) initial.push(`Show schedule for ${sections[0]?.name || 'a section'}`);
+      initial.push("Which rooms are available on Monday?");
+      return initial;
+    }
 
-    const userMsg = input.trim();
+    // Context-aware follow-ups based on what the AI just talked about
+    const suggestions = [];
+
+    if (lastBotText.includes('conflict')) {
+      suggestions.push("How do I fix these conflicts?");
+      suggestions.push("Which rooms are available as alternatives?");
+    } else if (lastBotText.includes('schedule for') || lastBotText.includes('assigned to')) {
+      if (hasConflicts) suggestions.push("Are there any conflicts here?");
+      suggestions.push("What about the next section?");
+      suggestions.push("Show faculty workload summary");
+    } else if (lastBotText.includes('available') || lastBotText.includes('free')) {
+      suggestions.push("Show me the busiest day");
+      suggestions.push("Which professors are underloaded?");
+    } else if (lastBotText.includes('professor') || lastBotText.includes('faculty') || lastBotText.includes('workload')) {
+      suggestions.push("Who is the most loaded professor?");
+      suggestions.push("Are any professors overloaded?");
+    }
+
+    // Always offer a general option
+    if (suggestions.length === 0) {
+      if (hasConflicts) suggestions.push("Show all conflicts");
+      suggestions.push("Give me a schedule summary");
+      suggestions.push("Which rooms are busiest?");
+    }
+
+    return suggestions.slice(0, 4); // Max 4 suggestions
+  }, [messages, schedules, sections]);
+
+  // ── Send message handler ──
+  const sendMessage = useCallback(async (messageText) => {
+    if (!messageText.trim() || !chatSession) return;
+
+    const userMsg = messageText.trim();
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setFailedMessage(null);
+    setMessages(prev => [...prev, { id: nextMsgId(), role: 'user', text: userMsg, timestamp: Date.now() }]);
     setIsTyping(true);
 
     try {
-      // Use non-streaming sendMessage for reliability
       const result = await chatSession.sendMessage(userMsg);
       const responseText = result.response.text();
-      setMessages(prev => [...prev, { role: 'model', text: responseText }]);
+      setMessages(prev => [...prev, { id: nextMsgId(), role: 'model', text: responseText, timestamp: Date.now() }]);
+      setFailedMessage(null);
     } catch (error) {
       console.error("Chat error:", error);
       console.error("Error code:", error?.code);
       console.error("Error details:", error?.customErrorData);
 
-      let errorMsg = 'Sorry, I encountered an error while trying to process your request.';
+      let errorMsg;
+      const transient = isTransientError(error);
+
       if (error?.code === 'api-not-enabled') {
         errorMsg = 'The AI service is not yet enabled for this project. Please enable the Firebase AI API in the Firebase console.';
       } else if (error?.code === 'fetch-error') {
-        errorMsg = 'Could not reach the AI service. Please check your internet connection and try again.';
+        errorMsg = 'Could not reach the AI service. Please check your internet connection.';
       } else if (error?.message) {
-        errorMsg = `Error: ${error.message}`;
+        errorMsg = `Something went wrong: ${error.message}`;
+      } else {
+        errorMsg = 'Sorry, I encountered an error while processing your request.';
       }
 
-      setMessages(prev => [...prev, { role: 'model', text: errorMsg }]);
+      if (transient) {
+        // Keep the session alive — just show error with retry option
+        errorMsg += '\n\nYou can **retry** your last message using the button below.';
+        setFailedMessage(userMsg);
+      } else {
+        // Fatal error — reset session
+        setChatSession(null);
+        setFailedMessage(null);
+      }
 
-      // Reset session on error so next attempt re-initializes
-      setChatSession(null);
+      setMessages(prev => [...prev, { id: nextMsgId(), role: 'model', text: errorMsg, isError: true, timestamp: Date.now() }]);
     } finally {
       setIsTyping(false);
     }
+  }, [chatSession]);
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    await sendMessage(input);
   };
+
+  const handleRetry = () => {
+    if (failedMessage) {
+      // Remove the error message before retrying
+      setMessages(prev => {
+        const msgs = [...prev];
+        // Remove last error message
+        if (msgs.length > 0 && msgs[msgs.length - 1].isError) {
+          msgs.pop();
+        }
+        // Remove the failed user message
+        if (msgs.length > 0 && msgs[msgs.length - 1].role === 'user') {
+          msgs.pop();
+        }
+        return msgs;
+      });
+      sendMessage(failedMessage);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setInput(suggestion);
+    // Auto-send if chat session is ready
+    if (chatSession && !isTyping) {
+      sendMessage(suggestion);
+    }
+  };
+
+  const suggestions = getFollowUpSuggestions();
 
   return (
     <div 
@@ -223,27 +344,42 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
           </div>
 
           <div className="chatbot-messages">
-            {messages.map((msg, idx) => (
-              <div key={idx} className={`chat-message ${msg.role}`}>
+            {messages.map((msg) => (
+              <div key={msg.id} className={`chat-message ${msg.role}${msg.isError ? ' error' : ''}`}>
                 <div className="chat-bubble">
                   <ChatBubble text={msg.text} />
                 </div>
               </div>
             ))}
+
+            {/* Retry button for failed messages */}
+            {failedMessage && !isTyping && (
+              <div className="chat-retry-container">
+                <button className="chat-retry-btn" onClick={handleRetry}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                  </svg>
+                  Retry last message
+                </button>
+              </div>
+            )}
             
-            {messages.length === 1 && !isTyping && (
-              <div className="chat-suggestions" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '10px 15px', justifyContent: 'center' }}>
-                {SUGGESTIONS.map((sug, idx) => (
+            {/* Dynamic suggestion chips — shown after any bot response when not typing */}
+            {!isTyping && !failedMessage && suggestions.length > 0 && messages.length > 0 && (
+              <div className="chat-suggestions">
+                {suggestions.map((sug, idx) => (
                   <button 
                     key={idx} 
-                    onClick={() => { setInput(sug); }} 
-                    style={{ background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '6px 12px', fontSize: '0.8rem', cursor: 'pointer', color: 'var(--accent-primary)', transition: 'all 0.2s' }}
+                    className="chat-suggestion-chip"
+                    onClick={() => handleSuggestionClick(sug)} 
                   >
                     {sug}
                   </button>
                 ))}
               </div>
             )}
+
             {isTyping && (
               <div className="chat-message model">
                 <div className="chat-bubble typing">
@@ -277,5 +413,32 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
   );
 };
 
-export default Chatbot;
+// ── Utility: count conflicts from schedule data ──
+function countConflicts(schedules) {
+  const timeMap = {};
+  let count = 0;
 
+  schedules.forEach(s => {
+    if (!s.day || !s.timeSlot?.id) return;
+    const key = `${s.day}_${s.timeSlot.id}`;
+    if (!timeMap[key]) timeMap[key] = [];
+    timeMap[key].push(s);
+  });
+
+  Object.values(timeMap).forEach(slotSchedules => {
+    if (slotSchedules.length < 2) return;
+    for (let i = 0; i < slotSchedules.length; i++) {
+      for (let j = i + 1; j < slotSchedules.length; j++) {
+        const s1 = slotSchedules[i];
+        const s2 = slotSchedules[j];
+        if (s1.room?.id && s1.room.id === s2.room?.id) count++;
+        if (s1.professor?.id && s1.professor.id === s2.professor?.id) count++;
+        if (s1.section?.id && s1.section.id === s2.section?.id) count++;
+      }
+    }
+  });
+
+  return count;
+}
+
+export default Chatbot;

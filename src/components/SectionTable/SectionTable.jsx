@@ -1,12 +1,19 @@
 import React from 'react';
 import { PROGRAM_DEPARTMENTS } from '../../config/constants';
 
-const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, subjects = [], departments = [], courses = [] }) => {
+const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, subjects = [], professors = [], departments = [], courses = [] }) => {
   if (!sectionList || sectionList.length === 0) return null;
 
   const getSubjectName = (subId) => {
     const s = subjects.find(sub => sub.id === subId || sub.code === subId);
     return s ? `${s.code} - ${s.name}` : subId;
+  };
+
+  const getAdviserName = (adviserId) => {
+    if (!adviserId) return null;
+    const prof = professors.find(p => p.id === adviserId);
+    if (!prof) return null;
+    return prof.name || `${prof.lastName || ''}, ${prof.firstName || ''}`;
   };
 
   return (
@@ -39,6 +46,7 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
             <th style={{ textAlign: 'center' }}>Section Name</th>
             <th style={{ textAlign: 'center' }}>Program</th>
             <th style={{ textAlign: 'center' }}>Year</th>
+            <th style={{ textAlign: 'center' }}>Adviser</th>
             <th style={{ textAlign: 'center' }}>Subjects</th>
             <th style={{ textAlign: 'center' }}>Actions</th>
           </tr>
@@ -67,6 +75,16 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
                 }}>
                   Year {sec.yearLevel}
                 </span>
+              </td>
+              <td style={{ textAlign: 'center', verticalAlign: 'middle', fontSize: '0.85rem' }}>
+                {(() => {
+                  const adviserName = getAdviserName(sec.adviser);
+                  return adviserName ? (
+                    <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{adviserName}</span>
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>—</span>
+                  );
+                })()}
               </td>
               <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '280px', textAlign: 'center', verticalAlign: 'middle' }}>
                 {(sec.subjects || []).length === 0 ? (
