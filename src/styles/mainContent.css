@@ -5,6 +5,8 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   display: block;
+  position: relative;
+  z-index: 1;
   /* Custom scrollbar */
   scrollbar-width: thin;
   scrollbar-color: rgba(86, 69, 238, 0.2) transparent;

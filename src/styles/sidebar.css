@@ -4,7 +4,9 @@
   min-width: 260px;
   height: 100dvh;
   min-height: 100dvh;
-  background-color: #110e2d;
+  background-color: rgba(17, 14, 45, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   background-image: 
     radial-gradient(circle at 80% 5%, rgba(86, 69, 238, 0.25) 0%, transparent 40%),
     radial-gradient(circle at 20% 95%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),

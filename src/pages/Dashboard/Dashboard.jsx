@@ -121,19 +121,19 @@ const Dashboard = ({ user, onLogout }) => {
   useEffect(() => {
     let touchStartX = 0;
     let touchStartY = 0;
-    
+
     const handleTouchStart = (e) => {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
     };
-    
+
     const handleTouchEnd = (e) => {
       const touchEndX = e.changedTouches[0].clientX;
       const touchEndY = e.changedTouches[0].clientY;
-      
+
       const diffX = touchEndX - touchStartX;
       const diffY = touchEndY - touchStartY;
-      
+
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
         if (!isMobileMenuOpen && touchStartX < 60 && diffX > 40) {
           setIsMobileMenuOpen(true);
@@ -146,10 +146,10 @@ const Dashboard = ({ user, onLogout }) => {
         }
       }
     };
-    
+
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
-    
+
     return () => {
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchend', handleTouchEnd);
@@ -214,6 +214,9 @@ const Dashboard = ({ user, onLogout }) => {
   return (
     <div className={`smartsched-container ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
 
+      {/* ═══════════════ ANIMATED BACKGROUND ═══════════════ */}
+      <div className="mesh-bg"></div>
+
       {/* ═══════════════ SIDEBAR ═══════════════ */}
       <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
 
@@ -231,10 +234,10 @@ const Dashboard = ({ user, onLogout }) => {
           />
           {!isSidebarCollapsed && (
             <>
-              <div style={{ 
-                fontWeight: 900, 
-                fontSize: '1.25rem', 
-                letterSpacing: '0.12em', 
+              <div style={{
+                fontWeight: 900,
+                fontSize: '1.25rem',
+                letterSpacing: '0.12em',
                 color: '#ffffff',
                 textShadow: '0 2px 12px rgba(255,255,255,0.3)'
               }}>
@@ -333,32 +336,32 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ 
-              display: 'flex', gap: '8px', alignItems: 'center', 
-              background: 'rgba(255, 255, 255, 0.08)', 
+            <div style={{
+              display: 'flex', gap: '8px', alignItems: 'center',
+              background: 'rgba(255, 255, 255, 0.08)',
               backdropFilter: 'blur(12px)',
-              padding: '8px 16px', 
-              borderRadius: '10px', 
+              padding: '8px 16px',
+              borderRadius: '10px',
               border: '1px solid rgba(255, 255, 255, 0.12)',
               transition: 'background 0.2s ease',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
             >
-              <CustomDropdown 
-                options={availableSemesters} 
-                value={activeSemester} 
-                onChange={setActiveSemester} 
+              <CustomDropdown
+                options={availableSemesters}
+                value={activeSemester}
+                onChange={setActiveSemester}
                 title="Select Semester"
                 alignRight={false}
               />
-              
+
               <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.9rem', margin: '0 2px' }}>|</span>
-              
-              <CustomDropdown 
-                options={availableSchoolYears} 
-                value={activeSchoolYear} 
-                onChange={setActiveSchoolYear} 
+
+              <CustomDropdown
+                options={availableSchoolYears}
+                value={activeSchoolYear}
+                onChange={setActiveSchoolYear}
                 title="Select School Year"
                 alignRight={true}
               />
@@ -386,34 +389,34 @@ const Dashboard = ({ user, onLogout }) => {
         {!isStudent && activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.4s' }}>
 
-          {/* KPI row */}
+            {/* KPI row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-              <KpiTile 
-                label="Faculty Members" 
-                value={professors.length} 
-                iconPath={NAV_ICONS.faculty} 
-                color="#0288d1" 
+              <KpiTile
+                label="Faculty Members"
+                value={professors.length}
+                iconPath={NAV_ICONS.faculty}
+                color="#0288d1"
                 onClick={isAdmin ? () => handleTabClick('faculty') : undefined}
               />
-              <KpiTile 
-                label="Rooms" 
-                value={rooms.length} 
-                iconPath={NAV_ICONS.rooms} 
-                color="#7c3aed" 
+              <KpiTile
+                label="Rooms"
+                value={rooms.length}
+                iconPath={NAV_ICONS.rooms}
+                color="#7c3aed"
                 onClick={isAdmin ? () => handleTabClick('rooms') : undefined}
               />
-              <KpiTile 
-                label="Sections" 
-                value={sections.length} 
-                iconPath={NAV_ICONS.sections} 
-                color="#059669" 
+              <KpiTile
+                label="Sections"
+                value={sections.length}
+                iconPath={NAV_ICONS.sections}
+                color="#059669"
                 onClick={isAdmin ? () => handleTabClick('sections') : undefined}
               />
-              <KpiTile 
-                label="Scheduled Classes" 
-                value={displaySchedules.length} 
-                iconPath={NAV_ICONS.schedule} 
-                color="#d97706" 
+              <KpiTile
+                label="Scheduled Classes"
+                value={displaySchedules.length}
+                iconPath={NAV_ICONS.schedule}
+                color="#d97706"
                 onClick={() => handleTabClick('view-schedules')}
               />
             </div>
@@ -502,7 +505,7 @@ const Dashboard = ({ user, onLogout }) => {
             )}
 
             {isAdmin && (
-              <QuickStartGuide 
+              <QuickStartGuide
                 availableSemesters={availableSemesters}
                 departments={departments}
                 courses={courses}
@@ -547,12 +550,12 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} />}
         {isAdmin && activeTab === 'recycle-bin' && <RecycleBin user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'activity-log' && (
-          <ActivityLog 
-            onBack={() => setActiveTab('dashboard')} 
+          <ActivityLog
+            onBack={() => setActiveTab('dashboard')}
             onViewProfile={(username) => {
               setTargetProfileUsername(username);
               setActiveTab('profile');
-            }} 
+            }}
           />
         )}
 
@@ -560,16 +563,16 @@ const Dashboard = ({ user, onLogout }) => {
         {activeTab === 'view-schedules' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={displaySchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} departments={departments} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
 
         {activeTab === 'profile' && (
-          <Profile 
-            user={{ 
-              username: targetProfileUsername || user.username, 
-              role: (targetProfileUsername && targetProfileUsername !== user.username) ? '' : user.role 
-            }} 
+          <Profile
+            user={{
+              username: targetProfileUsername || user.username,
+              role: (targetProfileUsername && targetProfileUsername !== user.username) ? '' : user.role
+            }}
             readOnly={!!targetProfileUsername && targetProfileUsername !== user.username}
             onBack={() => {
               setTargetProfileUsername(null);
               setActiveTab(isAdmin ? 'dashboard' : 'view-schedules');
-            }} 
+            }}
           />
         )}
 
@@ -579,8 +582,8 @@ const Dashboard = ({ user, onLogout }) => {
 
       {/* --- Mobile Floating Action Button (FAB) --- */}
       {isAdmin && isMobile && (activeTab === 'view-schedules' || activeTab === 'schedule') && (
-        <DraggableSpeedDial 
-          onAddSchedule={() => setIsScheduleFormOpen(true)} 
+        <DraggableSpeedDial
+          onAddSchedule={() => setIsScheduleFormOpen(true)}
           onAutoScheduleAction={handleAutoScheduleAction}
           isHidden={isFabHidden}
         />
