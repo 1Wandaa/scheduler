@@ -52,12 +52,12 @@ const ScheduleHistory = ({ history, onBack }) => {
 
   return (
     <div className="card" style={{ animation: 'fadeIn 0.4s', display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(100vh - 120px)' }}>
-      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
-        <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
+      <div className="card-header" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
+        <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0, flexWrap: 'wrap' }}>
           <button className="btn btn-sm" onClick={onBack} style={{ padding: '6px 10px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
           </button>
-          <span style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-main)' }}>Scheduling History</span>
+          <span style={{ fontSize: 'clamp(1.1rem, 4vw, 1.4rem)', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-main)' }}>Scheduling History</span>
         </h2>
         <button 
           onClick={handleClearHistory} 
@@ -123,6 +123,8 @@ const ScheduleHistory = ({ history, onBack }) => {
                     style={{
                       padding: '20px',
                       display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '16px',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       cursor: 'pointer',
@@ -171,7 +173,7 @@ const ScheduleHistory = ({ history, onBack }) => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                       <div style={{ textAlign: 'center', minWidth: '60px' }}>
                         <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#10b981', lineHeight: 1 }}>{record.successCount}</div>
                         <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginTop: '4px', letterSpacing: '0.02em' }}>Success</div>
@@ -216,7 +218,7 @@ const ScheduleHistory = ({ history, onBack }) => {
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                             Unscheduled / Conflicts
                           </h4>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '12px' }}>
                             {(record.errors || []).map((err, idx) => (
                               <div key={idx} style={{
                                 padding: '16px',
