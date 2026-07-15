@@ -49,7 +49,7 @@
 
 @media (max-width: 480px) {
   .login-center-wrapper {
-    padding: 16px;
+    padding: 20px 24px; /* Ensure it never hits the sides */
   }
   .login-card {
     padding: 24px 20px;
