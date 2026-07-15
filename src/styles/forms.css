@@ -49,13 +49,23 @@
 
 @media (max-width: 480px) {
   .login-center-wrapper {
-    padding: 16px 28px; /* Even more breathing room on the sides */
+    padding: 16px;
   }
   .login-card {
-    padding: 20px 16px; /* Even smaller inner padding */
-    border-radius: 14px;
+    padding: 24px 20px;
+    border-radius: 16px;
     width: 100%;
-    max-width: 300px; /* Even narrower maximum width */
+    max-width: 360px;
+  }
+  .login-card.login-card-wide {
+    max-width: 360px;
+  }
+  .signup-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  .signup-row .input-group {
+    margin-bottom: 14px !important;
   }
   .login-logo {
     width: 42px;

@@ -392,8 +392,8 @@ const Login = ({ onLogin }) => {
         />
       </div>
 
-      <div className="signup-row" style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-        <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+      <div className="signup-row">
+        <div className="input-group" style={{ flex: 1 }}>
           <label>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
             Age
@@ -408,7 +408,7 @@ const Login = ({ onLogin }) => {
           />
         </div>
 
-        <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+        <div className="input-group" style={{ flex: 1 }}>
           <label>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
             Gender
