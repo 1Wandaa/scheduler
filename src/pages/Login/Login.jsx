@@ -6,9 +6,9 @@ import { collection, query, where, getDocs, addDoc, onSnapshot } from 'firebase/
 // Department → Program mapping (must match the 'program' field stored in Firestore sections)
 const DEPARTMENT_PROGRAM = {
   'BSCS': 'BS Computer Science',
-  'BAEL': 'Bachelor of Arts in English Language',
-  'BSOA': 'Bachelor of Science in Office Administration',
-  'BSFT': 'Bachelor of Science in Food Technology',
+  'BAEL': 'BA English Language',
+  'BSOA': 'BS Office Administration',
+  'BSFT': 'BS Food Technology',
 };
 
 // Human-readable department labels
@@ -109,9 +109,9 @@ const Login = ({ onLogin }) => {
 
   // Filter sections based on derived program and year level
   const availableSections = firestoreSections.filter(sec => {
-    if (!derivedProgram) return false;
-    const matchesProgram = sec.program === derivedProgram;
-    const matchesYear = yearLevel ? sec.yearLevel === parseInt(yearLevel) : true;
+    if (!derivedProgram && !department) return false;
+    const matchesProgram = sec.program === derivedProgram || sec.program === department;
+    const matchesYear = yearLevel ? String(sec.yearLevel) === String(yearLevel) : true;
     return matchesProgram && matchesYear;
   });
 
