@@ -92,6 +92,23 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     if (tableWrapper) {
       tableWrapper.style.display = 'block';
       tableWrapper.style.overflow = 'visible';
+      tableWrapper.scrollLeft = 0; // Reset any horizontal scroll offset
+    }
+
+    // Remove position:sticky from time-label cells and header — sticky
+    // positioning in an off-screen clone causes the time column to render
+    // on the wrong side (right instead of left) on mobile devices
+    clone.querySelectorAll('.time-label').forEach(cell => {
+      cell.style.position = 'static';
+      cell.style.left = 'auto';
+      cell.style.zIndex = 'auto';
+    });
+    // Also fix the first <th> (Time Slot header) which has inline sticky styles
+    const firstTh = clone.querySelector('.schedule-table th');
+    if (firstTh) {
+      firstTh.style.position = 'static';
+      firstTh.style.left = 'auto';
+      firstTh.style.zIndex = 'auto';
     }
 
     // Hide fullscreen-related elements
