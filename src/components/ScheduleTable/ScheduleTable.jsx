@@ -39,6 +39,68 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     showToast('Image saved successfully!', false);
   };
 
+  // Helper: prepare a clean, desktop-like clone of the schedule for export
+  const prepareExportClone = (clone) => {
+    // Hide toolbar and remove buttons in the clone
+    const clonedToolbar = clone.querySelector('.schedule-toolbar');
+    if (clonedToolbar) clonedToolbar.style.display = 'none';
+
+    // Force the doc-meta section visible (hidden by mobile media query)
+    const docMeta = clone.querySelector('.schedule-doc-meta');
+    if (docMeta) {
+      docMeta.style.display = 'flex';
+      docMeta.style.flex = '0 0 160px';
+    }
+
+    // Force doc-logo to desktop size
+    const docLogo = clone.querySelector('.schedule-doc-logo');
+    if (docLogo) {
+      docLogo.style.flex = '0 0 90px';
+      const logoImg = docLogo.querySelector('img');
+      if (logoImg) { logoImg.style.width = '58px'; logoImg.style.height = '58px'; }
+    }
+
+    // Force doc-title to desktop size
+    const docTitle = clone.querySelector('.schedule-doc-title');
+    if (docTitle) {
+      const h2 = docTitle.querySelector('h2');
+      const h3 = docTitle.querySelector('h3');
+      if (h2) h2.style.fontSize = '1.05rem';
+      if (h3) h3.style.fontSize = '0.82rem';
+    }
+
+    // Remove zoom / transform from the table (set by fitScale on mobile)
+    const table = clone.querySelector('.schedule-table');
+    if (table) {
+      table.style.zoom = '1';
+      table.style.transform = 'none';
+      table.style.transformOrigin = 'unset';
+      table.style.minWidth = '680px';
+      table.style.width = '100%';
+    }
+
+    // Force container padding to desktop style
+    clone.style.padding = '1rem';
+
+    // Hide all remove buttons (the X to delete schedules)
+    clone.querySelectorAll('.remove-btn').forEach(btn => btn.style.display = 'none');
+
+    // Hide card view if it leaked through, force table-wrapper visible
+    const cardView = clone.querySelector('.schedule-card-view');
+    if (cardView) cardView.style.display = 'none';
+    const tableWrapper = clone.querySelector('.table-wrapper');
+    if (tableWrapper) {
+      tableWrapper.style.display = 'block';
+      tableWrapper.style.overflow = 'visible';
+    }
+
+    // Hide fullscreen-related elements
+    const floatingBtn = clone.querySelector('.floating-exit-btn');
+    if (floatingBtn) floatingBtn.style.display = 'none';
+    const rotateHint = clone.querySelector('.rotate-device-hint');
+    if (rotateHint) rotateHint.style.display = 'none';
+  };
+
   const handleExportImage = async () => {
     if (!containerRef.current) return;
     try {
@@ -48,7 +110,8 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       const oldViewMode = viewMode;
       setViewMode('grid');
       
-      await new Promise(r => setTimeout(r, 300));
+      // Wait for React to re-render to grid mode
+      await new Promise(r => setTimeout(r, 500));
 
       const toolbar = containerRef.current.querySelector('.schedule-toolbar');
       if (toolbar) toolbar.style.display = 'none';
@@ -65,9 +128,8 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
-      // Copy computed styles for the cloned table
-      const clonedToolbar = clone.querySelector('.schedule-toolbar');
-      if (clonedToolbar) clonedToolbar.style.display = 'none';
+      // Apply desktop-like overrides to the clone
+      prepareExportClone(clone);
 
       const canvas = await html2canvas(wrapper, { 
           scale: 2, 
@@ -99,7 +161,8 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       const oldViewMode = viewMode;
       setViewMode('grid');
       
-      await new Promise(r => setTimeout(r, 300));
+      // Wait for React to re-render to grid mode
+      await new Promise(r => setTimeout(r, 500));
 
       const toolbar = containerRef.current.querySelector('.schedule-toolbar');
       if (toolbar) toolbar.style.display = 'none';
@@ -115,8 +178,8 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
-      const clonedToolbar = clone.querySelector('.schedule-toolbar');
-      if (clonedToolbar) clonedToolbar.style.display = 'none';
+      // Apply desktop-like overrides to the clone
+      prepareExportClone(clone);
 
       const canvas = await html2canvas(wrapper, { 
           scale: 2, 
@@ -149,9 +212,9 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
               <style>
                   @page { size: landscape; margin: 0.3in; }
                   * { margin: 0; padding: 0; box-sizing: border-box; }
-                  html, body { width: 100%; height: 100%; background: #fff; }
-                  body { display: flex; align-items: center; justify-content: center; }
-                  img { display: block; max-width: 100%; max-height: 100vh; width: auto; height: auto; object-fit: contain; }
+                  html, body { width: 100%; height: 100%; background: #fff; overflow: hidden; }
+                  body { display: flex; align-items: center; justify-content: center; page-break-inside: avoid; }
+                  img { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; page-break-inside: avoid; }
               </style>
           </head>
           <body>

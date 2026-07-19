@@ -106,27 +106,29 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage }) => {
                             <head>
                                 <style>
                                     @page { size: letter landscape; margin: 0; }
-                                    body { font-family: "Times New Roman", Times, serif; color: #000; margin: 0; padding: 0.5in; }
-                                    .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
+                                    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+                                    body { font-family: "Times New Roman", Times, serif; color: #000; padding: 0.4in; box-sizing: border-box; display: flex; flex-direction: column; page-break-inside: avoid; }
+                                    .print-wrapper { width: 100%; max-height: 100%; overflow: hidden; page-break-inside: avoid; }
+                                    .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 9pt; }
                                     .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
                                     .iso-header-table .bold { font-weight: bold; }
                                     .iso-header-table .center { text-align: center; }
-                                    .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
+                                    .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; }
                                     .meta-value { font-weight: normal; text-decoration: underline; }
                                     .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
-                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 52px; overflow: hidden; box-sizing: border-box; }
-                                    .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 6px 4px; height: 32px; font-size: 9pt; }
-                                    .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8pt; padding: 2px 4px; }
-                                    .iso-schedule-table .schedule-cell { padding: 0; height: 52px; overflow: hidden; }
-                                    .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; }
-                                    .cell-subject { font-weight: bold; font-size: 9pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-                                    .cell-professor { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                    .cell-room { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                    .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; padding: 4px; height: 30px; overflow: hidden; font-size: 9pt; }
-                                    .lunch-break-time { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; height: 30px; font-size: 8pt; }
+                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 48px; overflow: hidden; box-sizing: border-box; }
+                                    .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 4px 4px; height: 28px; font-size: 8pt; }
+                                    .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 7pt; padding: 2px 3px; }
+                                    .iso-schedule-table .schedule-cell { padding: 0; height: 48px; overflow: hidden; }
+                                    .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1px 2px; height: 100%; overflow: hidden; box-sizing: border-box; }
+                                    .cell-subject { font-weight: bold; font-size: 8pt; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+                                    .cell-professor { font-size: 7pt; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                    .cell-room { font-size: 7pt; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                    .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; padding: 2px; height: 26px; overflow: hidden; font-size: 8pt; }
+                                    .lunch-break-time { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; height: 26px; font-size: 7pt; }
                                 </style>
                             </head>
-                            <body>${printContent.innerHTML}</body>
+                            <body><div class="print-wrapper">${printContent.innerHTML}</div></body>
                             </html>
                         `);
                         doc.close();
