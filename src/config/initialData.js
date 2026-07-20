@@ -7,7 +7,7 @@ export const initialProfessors = [
   { id: 'P01', name: 'Aguilos, Ma. Relie', department: 'BSCS', specialization: ['GEM 101', 'GE 107'], maxUnits: 15 },
   { id: 'P02', name: 'Aller, Regine', department: 'BSOA', specialization: ['OAC 121', 'GEE 109'], maxUnits: 15 },
   { id: 'P03', name: 'Azarcon, Kimberly', department: 'BSCS', specialization: ['PE 110', 'GEE 103'], maxUnits: 17 },
-  { id: 'P04', name: 'Ballera, Janice', department: 'BSCS', specialization: ['PE 112'], maxUnits: 16 },
+  { id: 'P04', name: 'Ballera, Janice', department: 'BSCS', specialization: ['PE 112'], maxUnits: 16, stageLocked: true },
   { id: 'P05', name: 'Baje, Sherra', department: 'BSCS', specialization: ['CS 108', 'CS 107'], maxUnits: 10 },
   { id: 'P06', name: 'Baranda, Herman', department: 'BSCS', specialization: ['NSTP 102'], maxUnits: 18 },
   { id: 'P07', name: 'Barrientos, Lenie', department: 'BSFT', specialization: ['FT 110', 'FT 107', 'FT 122'], maxUnits: 23 },

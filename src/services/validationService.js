@@ -189,8 +189,9 @@ export async function updateSchedule(scheduleId, newDay, newTimeSlotId, schedule
  * Remove a single schedule entry from Firestore.
  */
 export async function removeSchedule(id, isAdmin) {
-  if (!isAdmin) return;
+  if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
   await deleteDoc(doc(db, 'schedules', id.toString()));
+  return { ok: true };
 }
 
 /**
@@ -202,10 +203,11 @@ export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, ac
   const validSchedules = [];
   const errors = [];
 
+  // Validate each schedule against both existing schedules AND already-accepted batch entries
   for (const s of newSchedules) {
     const check = validateScheduleEntry(
       { room: s.room, professor: s.professor, subject: s.subject, section: s.section || null, day: s.day, timeSlot: s.timeSlot, excludeScheduleId: null },
-      activeSchedules,
+      [...activeSchedules, ...validSchedules],
       rooms
     );
     if (check.valid) {
@@ -220,13 +222,18 @@ export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, ac
   }
 
   try {
-    const batch = writeBatch(db);
+    // Chunk into batches of 499 to respect Firestore's 500-operation limit
+    const BATCH_LIMIT = 499;
     const schedulesRef = collection(db, 'schedules');
-    for (const s of validSchedules) {
-      const newDocRef = doc(schedulesRef);
-      batch.set(newDocRef, { ...s, semester: activeSemester, schoolYear: activeSchoolYear });
+    for (let i = 0; i < validSchedules.length; i += BATCH_LIMIT) {
+      const chunk = validSchedules.slice(i, i + BATCH_LIMIT);
+      const batch = writeBatch(db);
+      for (const s of chunk) {
+        const newDocRef = doc(schedulesRef);
+        batch.set(newDocRef, { ...s, semester: activeSemester, schoolYear: activeSchoolYear });
+      }
+      await batch.commit();
     }
-    await batch.commit();
     return { ok: true, errors: errors.length > 0 ? errors : null, writtenCount: validSchedules.length };
   } catch (e) {
     return { ok: false, errors: [e.message] };
@@ -239,14 +246,18 @@ export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, ac
 export async function clearAllSchedules(activeSemester, activeSchoolYear) {
   const snap = await getDocs(collection(db, 'schedules'));
   if (snap.empty) return;
-  const batch = writeBatch(db);
-  snap.docs.forEach((d) => {
+  // Filter to matching term and chunk into batches of 499
+  const docsToDelete = snap.docs.filter((d) => {
     const data = d.data();
-    if ((data.semester === activeSemester || !data.semester) && (data.schoolYear === activeSchoolYear || !data.schoolYear)) {
-      batch.delete(d.ref);
-    }
+    return (data.semester === activeSemester || !data.semester) && (data.schoolYear === activeSchoolYear || !data.schoolYear);
   });
-  await batch.commit();
+  const BATCH_LIMIT = 499;
+  for (let i = 0; i < docsToDelete.length; i += BATCH_LIMIT) {
+    const chunk = docsToDelete.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    chunk.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
 }
 
 /**

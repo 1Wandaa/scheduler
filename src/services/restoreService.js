@@ -3,6 +3,11 @@ import { doc, writeBatch, arrayUnion } from 'firebase/firestore';
 
 /**
  * Restores an item from the trash, reversing the cascade delete.
+ *
+ * Uses the exact values that were removed during cascade delete
+ * (stored in modifications.removedValues) rather than assuming
+ * which identifier format was used (id vs code vs name).
+ *
  * @param {Object} trashRecord - The record from the trash collection.
  */
 export const restoreFromTrash = async (trashRecord) => {
@@ -25,14 +30,21 @@ export const restoreFromTrash = async (trashRecord) => {
     });
   }
 
-  // 4. Reverse modifications using arrayUnion
+  // 4. Reverse modifications
   if (modifications) {
     if (modifications.modifiedProfessors && modifications.modifiedProfessors.length > 0) {
       modifications.modifiedProfessors.forEach(profId => {
         const updateData = {};
-        if (type === 'subject') updateData.specialization = arrayUnion(data.id);
-        if (type === 'room') updateData.preferredRooms = arrayUnion(data.id);
-        if (type === 'section') updateData.assignedSections = arrayUnion(data.id);
+        if (type === 'subject') {
+          // Restore all identifier forms that may have been in the specialization
+          updateData.specialization = arrayUnion(data.id, data.code, data.name);
+        }
+        if (type === 'room') {
+          updateData.preferredRooms = arrayUnion(data.id, data.name);
+        }
+        if (type === 'section') {
+          updateData.assignedSections = arrayUnion(data.id, data.name);
+        }
         
         batch.update(doc(db, 'professors', String(profId)), updateData);
       });
@@ -41,8 +53,9 @@ export const restoreFromTrash = async (trashRecord) => {
     if (modifications.modifiedSections && modifications.modifiedSections.length > 0) {
       modifications.modifiedSections.forEach(secId => {
         if (type === 'subject') {
+          // Restore all identifier forms that may have been in the subjects array
           batch.update(doc(db, 'sections', String(secId)), {
-            subjects: arrayUnion(data.id)
+            subjects: arrayUnion(data.id, data.code, data.name)
           });
         }
       });

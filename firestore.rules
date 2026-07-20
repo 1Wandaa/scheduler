@@ -13,17 +13,12 @@ service cloud.firestore {
     }
 
     // Get the user's profile document from the 'users' collection.
-    // Returns the user document data if it exists.
+    // User docs are stored with auth UID as the document ID.
     function getUserProfile() {
-      let emailPrefix = request.auth.token.email.split('@')[0];
-      // Note: Firestore rules cannot do complex queries like 'in'.
-      // This checks if a document exists with the auth UID as the doc ID,
-      // or falls back to checking by email prefix.
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     // Check if the user has an Admin or Department Head role.
-    // Falls back to checking user documents where username matches the email prefix.
     function isAdmin() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
@@ -37,10 +32,11 @@ service cloud.firestore {
     // --- META (settings, seed version) ---
     match /meta/{docId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-      // Note: Ideally only admins should write to meta, but the
-      // data seeding logic runs for any authenticated user on first load.
-      // A future improvement would be to move seeding to a Cloud Function.
+      // seedVersion must be writable by any authenticated user for
+      // the client-side data seeding to work on first load.
+      // All other meta docs (settings, etc.) are admin-only.
+      allow write: if isAuthenticated() && docId == 'seedVersion';
+      allow write: if isAdmin();
     }
 
     // --- USERS ---
@@ -48,11 +44,14 @@ service cloud.firestore {
       // Any authenticated user can read user profiles (needed for login flow)
       allow read: if isAuthenticated();
 
-      // Users can create their own profile (sign-up flow)
-      allow create: if isAuthenticated();
+      // Users can create their own profile (sign-up flow) — doc ID must match auth UID
+      allow create: if isAuthenticated() && userId == request.auth.uid;
 
-      // Only admins can update/delete user profiles
-      allow update, delete: if isAdmin();
+      // Users can update their own profile
+      allow update: if isAuthenticated() && userId == request.auth.uid;
+
+      // Admins can create, update, and delete any user profile
+      allow create, update, delete: if isAdmin();
     }
 
     // --- ROOMS ---
@@ -93,6 +92,33 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAdmin();
       // History entries should not be modified or deleted
+      allow update, delete: if false;
+    }
+
+    // --- DEPARTMENTS ---
+    match /departments/{deptId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- COURSES ---
+    match /courses/{courseId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- TRASH (Recycle Bin) ---
+    match /trash/{trashId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // --- ACTIVITY LOGS ---
+    match /activityLogs/{logId} {
+      allow read: if isAdmin();
+      // Any authenticated user can create log entries (login/view events)
+      allow create: if isAuthenticated();
+      // Logs should not be modified or deleted
       allow update, delete: if false;
     }
 

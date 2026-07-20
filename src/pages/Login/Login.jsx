@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../../config/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, setDoc, doc, onSnapshot } from 'firebase/firestore';
 
 // Department → Program mapping (must match the 'program' field stored in Firestore sections)
 const DEPARTMENT_PROGRAM = {
@@ -30,7 +30,7 @@ const findUserDocument = async (rawUsername) => {
   if (!rawUsername) return undefined;
   const cleanU = rawUsername.replace('@', '').toLowerCase().trim();
   
-  // 1. Try common variations first (fast)
+  // Try common variations via indexed query (max 10 'in' values)
   const variations = Array.from(new Set([
     rawUsername,
     rawUsername.trim(),
@@ -45,21 +45,12 @@ const findUserDocument = async (rawUsername) => {
   const q = query(collection(db, 'users'), where('username', 'in', variations));
   const snap = await getDocs(q);
   
-  let match = snap.docs.find(doc => {
-    const docU = doc.data().username || '';
+  const match = snap.docs.find(d => {
+    const docU = d.data().username || '';
     return docU.replace('@', '').toLowerCase().trim() === cleanU;
   });
 
-  if (match) return match;
-
-  // 2. Fallback: Full collection scan (slow but robust)
-  const allUsersSnap = await getDocs(collection(db, 'users'));
-  match = allUsersSnap.docs.find(doc => {
-    const docU = doc.data().username || '';
-    return docU.replace('@', '').toLowerCase().trim() === cleanU;
-  });
-
-  return match;
+  return match || undefined;
 };
 
 const Login = ({ onLogin }) => {
@@ -186,10 +177,10 @@ const Login = ({ onLogin }) => {
         }
 
         // 1. Create user identity in Firebase Auth
-        await createUserWithEmailAndPassword(auth, dummyEmail, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, dummyEmail, password);
 
-        // 2. Save user to Firestore with all student info
-        await addDoc(collection(db, 'users'), {
+        // 2. Save user to Firestore using auth UID as doc ID (enables secure Firestore rules)
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
           username: cleanUsername,
           name: fullName,
           age: parseInt(age) || null,
@@ -220,42 +211,8 @@ const Login = ({ onLogin }) => {
         // LOGIN FLOW (Existing)
         let firestoreUserDoc = null;
 
-        try {
-          await signInWithEmailAndPassword(auth, dummyEmail, password);
-        } catch (signInErr) {
-          // Fallback: If auth fails, check if there's a user manually created in Firestore with a plain-text password
-          if (signInErr.code === 'auth/invalid-credential' || signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/wrong-password') {
-            
-            firestoreUserDoc = await findUserDocument(username);
-            
-            if (firestoreUserDoc) {
-              const firestoreUserData = firestoreUserDoc.data();
-              
-              // Verify if the password matches the one set in Firestore manually
-              if (firestoreUserData.password && firestoreUserData.password.trim() === password.trim()) {
-                if (password.length < 6) {
-                   throw new Error('Firebase requires passwords to be at least 6 characters long. Please change it in Firestore.');
-                }
-                try {
-                  // Create the Auth account behind the scenes so future logins are fully secure
-                  await createUserWithEmailAndPassword(auth, dummyEmail, password);
-                } catch (createErr) {
-                  if (createErr.code === 'auth/email-already-in-use') {
-                    // Account already existed, meaning they just typed the wrong password for their actual Auth account
-                    throw new Error('Invalid password. Please try again.');
-                  }
-                  throw createErr;
-                }
-              } else {
-                throw new Error('The password does not match what is in Firestore.');
-              }
-            } else {
-              throw new Error(`Username "${username}" not found in Firestore Database. Check your spelling.`);
-            }
-          } else {
-            throw signInErr;
-          }
-        }
+        // Authenticate via Firebase Auth only — no plaintext password fallback
+        await signInWithEmailAndPassword(auth, dummyEmail, password);
 
         // After successful auth, fetch the user doc if not already fetched from fallback
         if (!firestoreUserDoc) {
@@ -264,13 +221,13 @@ const Login = ({ onLogin }) => {
 
         if (!firestoreUserDoc) {
           // Edge case: They have an Auth account but no Firestore doc.
-          // Create the profile to avoid breaking their login.
+          // Create the profile with Student role (admin must be granted manually).
           const newProfile = {
-            username: username,
+            username: cleanUsername,
             name: cleanUsername,
-            role: username.toLowerCase().includes('admin') ? 'Admin' : 'Student'
+            role: 'Student'
           };
-          await addDoc(collection(db, 'users'), newProfile);
+          await setDoc(doc(db, 'users', auth.currentUser.uid), newProfile);
           onLogin(newProfile);
           setLoading(false);
           return;

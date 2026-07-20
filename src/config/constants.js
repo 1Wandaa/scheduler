@@ -37,7 +37,7 @@ export function getSlotDurationHours(timeSlotOrIndex) {
 }
 
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-export const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
+export const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT', 'BSIT'];
 export const BUILDINGS = ['BSOA Building', 'BAEL Building', 'BSFT Building', 'BSCS Building', 'General Building', 'Gymnasium'];
 export const SEMESTERS = ['1st Semester', '2nd Semester', 'Summer'];
 export const SCHOOL_YEARS = ['2024-2025', '2025-2026', '2026-2027', '2027-2028'];

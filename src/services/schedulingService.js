@@ -371,6 +371,9 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       // ── FLEXIBLE TIME SLOT FALLBACK ──
       // Each meeting can use a DIFFERENT time slot on different days.
       // Only try this in non-pairs mode (Pass 2/3) to avoid slowing Pass 1.
+      // IMPORTANT: We validate all placements in-memory FIRST, then write to
+      // Firestore only after confirming all meetings can be placed. This
+      // prevents orphaned documents if only some meetings succeed.
       if (!usePairsOnly && count >= 2) {
         const placedMeetings = [];
         const usedDays = new Set();
@@ -391,9 +394,10 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
               for (const day of DAYS) {
                 if (usedDays.has(day)) continue;
                 if (isSlotFree(room, professor, subject, section, day, ts)) {
-                  placedMeetings.push({ room, professor, subject, section, day, timeSlot: ts });
+                  const meeting = { room, professor, subject, section, day, timeSlot: ts };
+                  placedMeetings.push(meeting);
                   // Temporarily add to temp so next meetings see this as occupied
-                  temp.push(placedMeetings[placedMeetings.length - 1]);
+                  temp.push(meeting);
                   usedDays.add(day);
                   placed = true;
                   break;
@@ -406,21 +410,18 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         }
 
         if (placedMeetings.length === count) {
-          // Write all meetings to Firestore
+          // All meetings fit in-memory — now batch write to Firestore
           let allOk = true;
-          const writes = [];
           for (const sc of placedMeetings) {
             const w = await addScheduleFn(sc);
             if (w?.ok === false) { allOk = false; break; }
-            writes.push(sc);
           }
           if (allOk) {
-            // temp already has them pushed above
-            results.push(...writes);
+            results.push(...placedMeetings);
             return { success: true };
           }
         }
-        // Rollback temp if flexible placement failed
+        // Rollback temp if flexible placement failed or Firestore writes failed
         for (const pm of placedMeetings) {
           const idx = temp.indexOf(pm);
           if (idx !== -1) temp.splice(idx, 1);

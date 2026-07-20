@@ -27,15 +27,23 @@ import {
   initialCourses,
   SEED_VERSION,
 } from '../config/initialData';
-import { SEMESTERS, SCHOOL_YEARS } from '../config/constants';
+import { SEMESTERS, SCHOOL_YEARS, PROGRAM_DEPARTMENTS } from '../config/constants';
 
 /**
  * Normalize a section's program name into a short department code
- * so that getSectionDepartment() works correctly downstream.
+ * using the canonical PROGRAM_DEPARTMENTS map from constants.js.
  */
 function normalizeProgram(prog) {
-  const pUp = (prog || '').toUpperCase();
+  if (!prog) return prog;
+  // Check exact match first
+  if (PROGRAM_DEPARTMENTS[prog]) return PROGRAM_DEPARTMENTS[prog];
+  // Check if the program is already a short code (e.g. 'BSCS')
+  const upper = prog.toUpperCase();
+  if (Object.values(PROGRAM_DEPARTMENTS).includes(upper)) return upper;
+  // Fallback: substring matching for flexibility
+  const pUp = upper;
   if (pUp.includes('COMPUTER SCIENCE')) return 'BSCS';
+  if (pUp.includes('INFORMATION TECHNOLOGY')) return 'BSIT';
   if (pUp.includes('ENGLISH LANGUAGE')) return 'BAEL';
   if (pUp.includes('OFFICE ADMINISTRATION')) return 'BSOA';
   if (pUp.includes('FOOD TECHNOLOGY')) return 'BSFT';
@@ -78,38 +86,50 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
         const storedVersion = versionDoc.exists() ? versionDoc.data().version : null;
 
         if (storedVersion !== SEED_VERSION) {
+          const BATCH_LIMIT = 499;
           const collectionsToWipe = ['rooms', 'professors', 'subjects', 'sections', 'schedules'];
           for (const colName of collectionsToWipe) {
             const snap = await getDocs(collection(db, colName));
             if (!snap.empty) {
-              const batch = writeBatch(db);
-              snap.docs.forEach((d) => batch.delete(d.ref));
-              await batch.commit();
+              for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
+                const chunk = snap.docs.slice(i, i + BATCH_LIMIT);
+                const batch = writeBatch(db);
+                chunk.forEach((d) => batch.delete(d.ref));
+                await batch.commit();
+              }
             }
           }
-          const seedBatch = writeBatch(db);
-          initialRooms.forEach((r) => seedBatch.set(doc(db, 'rooms', r.id.toString()), r));
-          initialProfessors.forEach((p) => seedBatch.set(doc(db, 'professors', p.id.toString()), p));
-          initialSubjects.forEach((s) => seedBatch.set(doc(db, 'subjects', s.id.toString()), s));
-          initialSections.forEach((sec) => seedBatch.set(doc(db, 'sections', sec.id.toString()), sec));
-          await seedBatch.commit();
+          // Seed data in chunked batches
+          const allSeeds = [
+            ...initialRooms.map((r) => ({ col: 'rooms', id: r.id.toString(), data: r })),
+            ...initialProfessors.map((p) => ({ col: 'professors', id: p.id.toString(), data: p })),
+            ...initialSubjects.map((s) => ({ col: 'subjects', id: s.id.toString(), data: s })),
+            ...initialSections.map((sec) => ({ col: 'sections', id: sec.id.toString(), data: sec })),
+          ];
+          for (let i = 0; i < allSeeds.length; i += BATCH_LIMIT) {
+            const chunk = allSeeds.slice(i, i + BATCH_LIMIT);
+            const seedBatch = writeBatch(db);
+            chunk.forEach(({ col, id, data }) => seedBatch.set(doc(db, col, id), data));
+            await seedBatch.commit();
+          }
           await setDoc(doc(db, 'meta', 'seedVersion'), { version: SEED_VERSION });
         }
 
         // One-time migration for old schedules missing semester/year tags
         const schedSnap = await getDocs(collection(db, 'schedules'));
-        const migrateBatch = writeBatch(db);
-        let migrationCount = 0;
-        schedSnap.docs.forEach((d) => {
+        const docsToMigrate = schedSnap.docs.filter((d) => {
           const data = d.data();
-          if (!data.semester || !data.schoolYear) {
-            migrateBatch.update(d.ref, { semester: '2nd Semester', schoolYear: '2025-2026' });
-            migrationCount++;
-          }
+          return !data.semester || !data.schoolYear;
         });
-        if (migrationCount > 0) {
-          await migrateBatch.commit();
-          console.log(`Migrated ${migrationCount} legacy schedules to 2nd Semester 2025-2026.`);
+        if (docsToMigrate.length > 0) {
+          const BATCH_LIMIT = 499;
+          for (let i = 0; i < docsToMigrate.length; i += BATCH_LIMIT) {
+            const chunk = docsToMigrate.slice(i, i + BATCH_LIMIT);
+            const migrateBatch = writeBatch(db);
+            chunk.forEach((d) => migrateBatch.update(d.ref, { semester: '2nd Semester', schoolYear: '2025-2026' }));
+            await migrateBatch.commit();
+          }
+          console.log(`Migrated ${docsToMigrate.length} legacy schedules to 2nd Semester 2025-2026.`);
         }
 
         // Seed departments and courses if they are empty (without wiping existing data)

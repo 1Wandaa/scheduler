@@ -12,9 +12,7 @@ const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
  * Returns 0 if the meeting does not fit from that start index.
  */
 export function slotsNeededFromIndex(startIdx, hoursPerMeeting) {
-  if (startIdx === 0) {
-    return 0; // Prevent classes from starting at 7:00 AM
-  }
+  if (startIdx < 0 || startIdx >= TIME_SLOTS.length) return 0;
 
   const target = Number(hoursPerMeeting) || 1.5;
   let accumulated = 0;
@@ -40,10 +38,10 @@ export function slotsNeededFromIndex(startIdx, hoursPerMeeting) {
   return Math.max(1, count);
 }
 
-/** Number of consecutive timetable rows a meeting occupies (default start: enough for 1.5hr). */
+/** @deprecated Use slotsNeededFromIndex() instead — this function assumes 1hr slots but the timetable uses 30-min slots. */
 export function slotsNeeded(hoursPerMeeting) {
+  console.warn('[DEPRECATED] slotsNeeded() assumes 1hr slots. Use slotsNeededFromIndex() for accurate 30-min slot counting.');
   const target = Number(hoursPerMeeting) || 1.5;
-  // Typical case: ceil hours when all slots are 1hr (1.5→2, 2→2, 2.5→3, 3→3)
   return Math.max(1, Math.ceil(target));
 }
 
@@ -292,13 +290,13 @@ export function isProfessorAllowedInRoom(room, professor, subject, section, allR
 
 /**
  * Determine if a professor is "Stage-locked" (must always use the Stage room).
- * Currently checks professor ID 'P04' or name containing 'ballera'.
+ * Uses the `stageLocked` flag from the professor's data.
  *
- * Centralised here so the hardcoded identity lives in exactly one place.
+ * To mark a professor as stage-locked, set `stageLocked: true` in their Firestore document.
  */
 export function isProfessorStageLocked(professor) {
   if (!professor) return false;
-  return professor.stageLocked === true || professor.id === 'P04' || (professor.name || '').toLowerCase().includes('ballera');
+  return professor.stageLocked === true;
 }
 
 /**

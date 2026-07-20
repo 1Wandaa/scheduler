@@ -6,14 +6,14 @@ import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
 
 // ─── Firebase Configuration (from environment variables) ────────────
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyA8-k0LhdhGBkG4KcZiTz9dsCiMRDf_SAE",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "scheduler-app2503.firebaseapp.com",
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || "https://scheduler-app2503-default-rtdb.firebaseio.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "scheduler-app2503",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "scheduler-app2503.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "125166548137",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:125166548137:web:9af20b6a36bcadbb2e65b8",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-2L97MG6SJW",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Validate required config at startup
@@ -25,7 +25,7 @@ for (const key of requiredKeys) {
 }
 
 const app = initializeApp(firebaseConfig);
-getAnalytics(app);
+try { getAnalytics(app); } catch (e) { console.warn('Firebase Analytics unavailable:', e.message); }
 
 export const db = getFirestore(app);
 export const auth = getAuth(app);

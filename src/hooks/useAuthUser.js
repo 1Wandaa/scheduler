@@ -150,13 +150,17 @@ export function useAuthUser() {
     setUser(userProfile);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     const username = localStorage.getItem('smartsched_username');
     if (username) {
       sessionStorage.removeItem(`smartsched_login_logged_${username}`);
     }
     localStorage.removeItem('smartsched_username');
-    auth.signOut();
+    try {
+      await auth.signOut();
+    } catch (e) {
+      console.warn('Sign out error:', e.message);
+    }
     setUser(null);
   };
 
