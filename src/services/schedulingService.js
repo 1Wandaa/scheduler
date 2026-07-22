@@ -241,7 +241,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   };
 
   // ─── Helper: attempt to place a single group ────────────────────
-  const tryPlaceGroup = async (group, roomPool, usePairsOnly) => {
+  const tryPlaceGroup = async (group, roomPool, usePairsOnly, relaxMaxUnits = false) => {
     const { subject, section, count } = group;
     const rawProfPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, subject, section, constraints);
     const hasStage = rooms.some((r) => (r.name || '').toLowerCase().includes('stage'));
@@ -285,7 +285,8 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       }
       const maxUnits = Number(professor.maxUnits) || Number(professor.maxHours) || 24;
 
-      if (profCurrentLoad + subjectCredits > maxUnits + 0.01) {
+      const effectiveMax = relaxMaxUnits ? maxUnits + 3 : maxUnits;
+      if (profCurrentLoad + subjectCredits > effectiveMax + 0.01) {
         profMaxUnitsReached = true;
         profMaxUnitsCount++;
         continue;
@@ -313,6 +314,12 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
           if (isStageLocked && !isStage) continue;
           if (!isStageLocked && isStage) continue;
         }
+
+        // ── Professor-room compatibility check ──
+        // Skip rooms that this professor is not allowed to use (BSCS-exclusive,
+        // Speech Lab, Room 204 restrictions). Without this, the scheduler wastes
+        // attempts on combos that will always fail Firestore validation.
+        if (!isProfessorAllowedInRoom(room, professor, subject, section, rooms)) continue;
 
         for (const timeSlot of TIME_SLOTS) {
           if (signal?.aborted) return { success: false };
@@ -401,6 +408,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
               if (isStageLocked && !isStage) continue;
               if (!isStageLocked && isStage) continue;
             }
+            if (!isProfessorAllowedInRoom(room, professor, subject, section, rooms)) continue;
             for (const ts of TIME_SLOTS) {
               if (signal?.aborted) return { success: false };
               const si = getTimeSlotIndex(ts);
@@ -507,6 +515,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         reason = 'Requires food lab.';
       }
       unscheduled.push({ subject: group.subject, section: group.section, reason });
+      console.warn(`[AutoScheduler] ❌ Unscheduled: ${group.subject?.code || group.subject?.name} (${group.section?.name}) — ${reason}`);
     }
     await reportProgress(3, i, remainingAfterPass2.length);
   }
@@ -558,6 +567,8 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 
       // Find placed classes that occupy slots this group might need
       // Try bumping one at a time — bump the one with the MOST alternative slots (easiest to re-place)
+      // Deduplicate by subject+section so we bump entire groups, not individual meetings
+      const seenBumpKeys = new Set();
       const candidateBumps = [];
       for (const placed of results) {
         // Only consider bumping classes that share eligible rooms
@@ -567,27 +578,50 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         if (placedCode.startsWith('PE')) continue;
         if (placed.subject?.requiredLab || placed.subject?.isFoodLab) continue;
 
+        // Deduplicate: only add one candidate per subject+section group
+        const bumpGroupKey = `${placed.section?.id || 'none'}_${placed.subject?.id}`;
+        if (seenBumpKeys.has(bumpGroupKey)) continue;
+        seenBumpKeys.add(bumpGroupKey);
+
         candidateBumps.push(placed);
       }
 
       let bumpSucceeded = false;
-      // Try bumping each candidate (limit to 10 to avoid excessive computation)
-      for (let bi = 0; bi < Math.min(candidateBumps.length, 10); bi++) {
+      // Try bumping each candidate (limit to 20 to avoid excessive computation)
+      for (let bi = 0; bi < Math.min(candidateBumps.length, 20); bi++) {
         if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
         const bumpTarget = candidateBumps[bi];
+        const bumpSubjectId = String(bumpTarget.subject?.id);
+        const bumpSectionId = String(bumpTarget.section?.id);
 
-        // Temporarily remove the bump target from temp and results
-        const bumpIdx = temp.findIndex((s) => s === bumpTarget);
-        if (bumpIdx === -1) continue;
-        temp.splice(bumpIdx, 1);
-        const resultIdx = results.findIndex((s) => s === bumpTarget);
-        if (resultIdx !== -1) results.splice(resultIdx, 1);
+        // Find ALL meetings for this bumped subject+section group
+        const bumpedMeetings = results.filter((s) =>
+          String(s.subject?.id) === bumpSubjectId &&
+          String(s.section?.id) === bumpSectionId
+        );
+        if (bumpedMeetings.length === 0) continue;
+
+        // Temporarily remove ALL bumped meetings from temp and results
+        for (const bm of bumpedMeetings) {
+          const tIdx = temp.indexOf(bm);
+          if (tIdx !== -1) temp.splice(tIdx, 1);
+          const rIdx = results.indexOf(bm);
+          if (rIdx !== -1) results.splice(rIdx, 1);
+        }
+
+        // Snapshot results length to track what tryPlaceGroup adds for unschedGroup
+        const resultsLenBefore = results.length;
 
         // Try to place the unscheduled group now
         const retryPlaced = await tryPlaceGroup(unschedGroup, unschedRoomPool, false);
         if (retryPlaced?.success) {
-          // Now try to re-place the bumped class
-          const bumpedGroup = { subject: bumpTarget.subject, section: bumpTarget.section, count: 1 };
+          // Now try to re-place the bumped class with its ACTUAL meeting count
+          const bumpedOrigGroup = allGroups.find((g) =>
+            String(g.subject?.id) === bumpSubjectId &&
+            String(g.section?.id) === bumpSectionId
+          );
+          const bumpedCount = bumpedOrigGroup?.count || bumpedMeetings.length;
+          const bumpedGroup = { subject: bumpTarget.subject, section: bumpTarget.section, count: bumpedCount };
           const bumpedTiers = getEligibleRooms(rooms, bumpTarget.subject, bumpTarget.section, constraints);
           const bumpedPool = [...bumpedTiers.tier1, ...bumpedTiers.tier2, ...bumpedTiers.tier3];
           const rePlaced = await tryPlaceGroup(bumpedGroup, bumpedPool, false);
@@ -601,27 +635,68 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
             console.log(`[AutoScheduler] Bump success: displaced ${bumpTarget.subject?.code} to make room for ${unschedGroup.subject?.code}`);
             break;
           } else {
-            // Re-placing bumped class failed — rollback everything
-            // Remove what tryPlaceGroup added for unschedGroup
-            const addedForUnsched = results.filter((s) =>
-              String(s.subject?.id) === String(unschedGroup.subject?.id) &&
-              String(s.section?.id) === String(unschedGroup.section?.id)
-            );
+            // Re-placing bumped class failed — rollback: remove entries added for unschedGroup
+            const addedForUnsched = results.splice(resultsLenBefore);
             for (const added of addedForUnsched) {
               const ti = temp.indexOf(added);
               if (ti !== -1) temp.splice(ti, 1);
-              const ri2 = results.indexOf(added);
-              if (ri2 !== -1) results.splice(ri2, 1);
             }
-            // Restore the bump target
-            temp.push(bumpTarget);
-            results.push(bumpTarget);
+            // Restore the bump target meetings
+            temp.push(...bumpedMeetings);
+            results.push(...bumpedMeetings);
           }
         } else {
-          // Couldn't place even after bump — restore bump target
-          temp.push(bumpTarget);
-          results.push(bumpTarget);
+          // Couldn't place even after bump — restore bump target meetings
+          temp.push(...bumpedMeetings);
+          results.push(...bumpedMeetings);
         }
+      }
+    }
+  }
+
+  // ── PASS 3.75 — POST-BUMP RETRY ──────────────────────────────────
+  // After bumps may have rearranged classes, re-attempt unscheduled groups
+  // with all rooms. Previously-full slot combos may now be free.
+  const postBumpRemaining = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
+  if (postBumpRemaining.length > 0) {
+    console.log(`[AutoScheduler] Pass 3.75 (Post-Bump Retry): ${postBumpRemaining.length} groups to retry`);
+    for (let i = 0; i < postBumpRemaining.length; i++) {
+      if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
+      const group = postBumpRemaining[i];
+      const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
+      if (placedKeys.has(groupKey)) continue;
+      const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints);
+      const pool = [...tiers.tier1, ...tiers.tier2, ...tiers.tier3];
+      const placed = await tryPlaceGroup(group, pool, false);
+      if (placed?.success) {
+        placedKeys.add(groupKey);
+        const uIdx = unscheduled.findIndex((u) => u.subject?.id === group.subject?.id && u.section?.id === group.section?.id);
+        if (uIdx !== -1) unscheduled.splice(uIdx, 1);
+        console.log(`[AutoScheduler] Post-bump retry success: ${group.subject?.code} (${group.section?.name})`);
+      }
+    }
+  }
+
+  // ── PASS 3.9 — CAPACITY-OVERFLOW RETRY ────────────────────────────
+  // Last algorithmic resort: allow professors to exceed max units by up to
+  // 3 credits. Better to slightly overload a professor than leave classes
+  // completely unscheduled.
+  const overflowRemaining = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
+  if (overflowRemaining.length > 0) {
+    console.log(`[AutoScheduler] Pass 3.9 (Capacity-Overflow): ${overflowRemaining.length} groups to retry with relaxed max units`);
+    for (let i = 0; i < overflowRemaining.length; i++) {
+      if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
+      const group = overflowRemaining[i];
+      const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
+      if (placedKeys.has(groupKey)) continue;
+      const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints);
+      const pool = [...tiers.tier1, ...tiers.tier2, ...tiers.tier3];
+      const placed = await tryPlaceGroup(group, pool, false, true);
+      if (placed?.success) {
+        placedKeys.add(groupKey);
+        const uIdx = unscheduled.findIndex((u) => u.subject?.id === group.subject?.id && u.section?.id === group.section?.id);
+        if (uIdx !== -1) unscheduled.splice(uIdx, 1);
+        console.log(`[AutoScheduler] ✅ Capacity-overflow success: ${group.subject?.code} (${group.section?.name}) — professor slightly over max units`);
       }
     }
   }
