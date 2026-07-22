@@ -25,6 +25,20 @@ import { resolveUnscheduledClasses } from '../utils/scheduleAI';
 
 const PREFERRED_PAIRS = [['Monday', 'Thursday'], ['Tuesday', 'Friday']];
 
+/**
+ * Yield to the main thread without using setTimeout.
+ * MessageChannel.postMessage is NOT throttled when the tab is hidden,
+ * unlike setTimeout which browsers clamp to >=1000ms in background tabs.
+ * This prevents the scheduler from stalling when the user alt-tabs.
+ */
+function yieldToMain() {
+  return new Promise((resolve) => {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = () => resolve();
+    ch.port2.postMessage(null);
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 //  Helper: Eligible resource pools
 // ═══════════════════════════════════════════════════════════════════════
@@ -111,7 +125,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   const { onProgress, signal } = options;
 
   // Early abort check — yield so pending Cancel clicks can fire
-  await new Promise((r) => setTimeout(r, 0));
+  await yieldToMain();
   if (signal?.aborted) return { results: [], unscheduled: [], error: 'Cancelled by user.' };
 
   const results = [];
@@ -205,7 +219,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       onProgress({ percent: Math.min(pct, 100), placed: results.length, total: totalGroups, pass });
     }
     // Yield to UI thread periodically
-    if (processedCount % 2 === 0) await new Promise((r) => setTimeout(r, 0));
+    if (processedCount % 2 === 0) await yieldToMain();
   };
 
   // ─── Helper: check if a single slot is free for a given combo ───
@@ -249,7 +263,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 
     for (const professor of profPool) {
       if (signal?.aborted) return { success: false };
-      await new Promise((r) => setTimeout(r, 0));
+      await yieldToMain();
       if (signal?.aborted) return { success: false };
 
       const isStageLocked = isProfessorStageLocked(professor);
@@ -290,7 +304,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       for (let ri = 0; ri < sortedRoomPool.length; ri++) {
         const room = sortedRoomPool[ri];
         if (ri % 3 === 0) {
-          await new Promise((r) => setTimeout(r, 0));
+          await yieldToMain();
           if (signal?.aborted) return { success: false };
         }
 
