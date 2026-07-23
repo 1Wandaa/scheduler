@@ -241,7 +241,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   };
 
   // ─── Helper: attempt to place a single group ────────────────────
-  const tryPlaceGroup = async (group, roomPool, usePairsOnly, relaxMaxUnits = false) => {
+  const tryPlaceGroup = async (group, roomPool, usePairsOnly) => {
     const { subject, section, count } = group;
     const rawProfPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, subject, section, constraints);
     const hasStage = rooms.some((r) => (r.name || '').toLowerCase().includes('stage'));
@@ -285,8 +285,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       }
       const maxUnits = Number(professor.maxUnits) || Number(professor.maxHours) || 24;
 
-      const effectiveMax = relaxMaxUnits ? maxUnits + 3 : maxUnits;
-      if (profCurrentLoad + subjectCredits > effectiveMax + 0.01) {
+      if (profCurrentLoad + subjectCredits > maxUnits + 0.01) {
         profMaxUnitsReached = true;
         profMaxUnitsCount++;
         continue;
@@ -314,6 +313,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
           if (isStageLocked && !isStage) continue;
           if (!isStageLocked && isStage) continue;
         }
+
 
         // ── Professor-room compatibility check ──
         // Skip rooms that this professor is not allowed to use (BSCS-exclusive,
@@ -450,7 +450,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         }
       }
     }
-    
+
     // ── Detailed failure diagnostics ──
     if (!anyProfEligibleForRooms && profMaxUnitsReached) {
       return { success: false, reason: `All ${profMaxUnitsCount} eligible professor(s) reached their max units.` };
@@ -515,7 +515,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         reason = 'Requires food lab.';
       }
       unscheduled.push({ subject: group.subject, section: group.section, reason });
-      console.warn(`[AutoScheduler] ❌ Unscheduled: ${group.subject?.code || group.subject?.name} (${group.section?.name}) — ${reason}`);
     }
     await reportProgress(3, i, remainingAfterPass2.length);
   }
@@ -658,7 +657,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   // After bumps may have rearranged classes, re-attempt unscheduled groups
   // with all rooms. Previously-full slot combos may now be free.
   const postBumpRemaining = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
-  if (postBumpRemaining.length > 0) {
+  if (postBumpRemaining.length > 0 && postBumpRemaining.length < stillUnscheduled.length) {
     console.log(`[AutoScheduler] Pass 3.75 (Post-Bump Retry): ${postBumpRemaining.length} groups to retry`);
     for (let i = 0; i < postBumpRemaining.length; i++) {
       if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
@@ -673,30 +672,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         const uIdx = unscheduled.findIndex((u) => u.subject?.id === group.subject?.id && u.section?.id === group.section?.id);
         if (uIdx !== -1) unscheduled.splice(uIdx, 1);
         console.log(`[AutoScheduler] Post-bump retry success: ${group.subject?.code} (${group.section?.name})`);
-      }
-    }
-  }
-
-  // ── PASS 3.9 — CAPACITY-OVERFLOW RETRY ────────────────────────────
-  // Last algorithmic resort: allow professors to exceed max units by up to
-  // 3 credits. Better to slightly overload a professor than leave classes
-  // completely unscheduled.
-  const overflowRemaining = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
-  if (overflowRemaining.length > 0) {
-    console.log(`[AutoScheduler] Pass 3.9 (Capacity-Overflow): ${overflowRemaining.length} groups to retry with relaxed max units`);
-    for (let i = 0; i < overflowRemaining.length; i++) {
-      if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
-      const group = overflowRemaining[i];
-      const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
-      if (placedKeys.has(groupKey)) continue;
-      const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints);
-      const pool = [...tiers.tier1, ...tiers.tier2, ...tiers.tier3];
-      const placed = await tryPlaceGroup(group, pool, false, true);
-      if (placed?.success) {
-        placedKeys.add(groupKey);
-        const uIdx = unscheduled.findIndex((u) => u.subject?.id === group.subject?.id && u.section?.id === group.section?.id);
-        if (uIdx !== -1) unscheduled.splice(uIdx, 1);
-        console.log(`[AutoScheduler] ✅ Capacity-overflow success: ${group.subject?.code} (${group.section?.name}) — professor slightly over max units`);
       }
     }
   }
@@ -724,7 +699,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 
         const sc = { room, professor, subject: group.subject, section: group.section, day, timeSlot, prescriptionNote: res.prescriptionNote };
         const w = await addScheduleFn(sc);
-        
+
         if (w?.ok !== false) {
           temp.push(sc);
           results.push(sc);

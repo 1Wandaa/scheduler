@@ -160,6 +160,17 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         mode: engineMode
       });
 
+      if (r.results && r.results.length > 0) {
+        setAiStatus('💾 Saving schedules to database...');
+        const batchResult = await validator.addSchedulesBatch(r.results);
+        if (!batchResult.ok) {
+           toast.error('Failed to save some schedules to the database.');
+           console.error('Batch save error:', batchResult.errors);
+        } else {
+           toast.success(`Successfully saved ${batchResult.writtenCount} schedules.`);
+        }
+      }
+
       if (aiAssisted && unscheduledResults.length === 0) {
         setAiStatus('✅ All classes scheduled successfully');
       } else if (aiAssisted) {

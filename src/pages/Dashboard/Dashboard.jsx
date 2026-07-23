@@ -196,14 +196,15 @@ const Dashboard = ({ user, onLogout }) => {
       schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear }
     }),
     clearAllSchedules: () => clearAllSchedules(activeSemester, activeSchoolYear),
+    addSchedulesBatch: handleAddSchedulesBatch,
     autoScheduleForSection: (sectionId, constraints, options) =>
-      autoScheduleForSection(sectionId, schedulerContext, constraints, handleAddSchedule, activeSemester, options),
+      autoScheduleForSection(sectionId, schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
     autoScheduleForRoom: (roomId, constraints, options) =>
-      autoScheduleForRoom(roomId, schedulerContext, constraints, handleAddSchedule, activeSemester, options),
+      autoScheduleForRoom(roomId, schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
     autoScheduleForFaculty: (professorId, constraints, options) =>
-      autoScheduleForFaculty(professorId, schedulerContext, constraints, handleAddSchedule, activeSemester, options),
+      autoScheduleForFaculty(professorId, schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
     autoScheduleFull: (constraints, options) =>
-      autoScheduleFull(schedulerContext, constraints, handleAddSchedule, activeSemester, options),
+      autoScheduleFull(schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
   };
 
   const firstName = user?.name?.split?.(/\s+/)?.[0] ?? 'there';
