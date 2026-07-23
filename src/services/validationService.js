@@ -103,6 +103,10 @@ export function validateScheduleEntry(
     errors.push(`Time slot does not fit the ${subject?.hoursPerMeeting || 1.5}hr meeting duration.`);
     return { valid: false, errors, warnings };
   }
+  
+  if (subject?.code?.toUpperCase().startsWith('PE') && String(timeSlot?.id) === '2') {
+    errors.push('Physical Education (PE) subjects cannot be scheduled in the first period (7:30 AM).');
+  }
 
   // ─── Conflict detection ───────────────────────────────────────────
   const conflicts = findScheduleConflicts(

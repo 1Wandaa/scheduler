@@ -237,6 +237,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     // but needed for the flexible fallback where timeSlot varies)
     const startIdx = getTimeSlotIndex(timeSlot);
     if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting) === 0) return false;
+    if (subject?.code?.toUpperCase().startsWith('PE') && String(timeSlot.id) === '2') return false;
     return true;
   };
 
@@ -696,6 +697,13 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         const day = res.day;
 
         if (!room || !professor || !timeSlot || !day) continue;
+
+        // Hard check: reject AI suggestions that cross the lunch break
+        const aiStartIdx = getTimeSlotIndex(timeSlot);
+        if (aiStartIdx < 0 || slotsNeededFromIndex(aiStartIdx, group.subject?.hoursPerMeeting) === 0) {
+          console.warn(`[AutoScheduler] AI suggestion rejected: slot ${timeSlot.label} does not fit ${group.subject?.hoursPerMeeting || 1.5}hr meeting (likely crosses lunch break).`);
+          continue;
+        }
 
         const sc = { room, professor, subject: group.subject, section: group.section, day, timeSlot, prescriptionNote: res.prescriptionNote };
         const w = await addScheduleFn(sc);

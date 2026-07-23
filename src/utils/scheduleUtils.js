@@ -8,11 +8,14 @@ const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
 
 /**
  * How many consecutive TIME_SLOTS rows a meeting occupies from a start index.
- * Accounts for the 30-minute slot before lunch (id 5).
+ * Blocks any meeting that would cross the lunch break (12:00 PM – 1:00 PM).
  * Returns 0 if the meeting does not fit from that start index.
  */
 export function slotsNeededFromIndex(startIdx, hoursPerMeeting) {
   if (startIdx < 0 || startIdx >= TIME_SLOTS.length) return 0;
+  
+  // Prevent classes from starting at 7:00 AM (id: 1)
+  if (TIME_SLOTS[startIdx].id === 1) return 0;
 
   const target = Number(hoursPerMeeting) || 1.5;
   let accumulated = 0;
@@ -23,7 +26,12 @@ export function slotsNeededFromIndex(startIdx, hoursPerMeeting) {
     if (count > 0) {
       const prevSlot = TIME_SLOTS[startIdx + count - 1];
       const currSlot = TIME_SLOTS[startIdx + count];
-      if (prevSlot.label === '11:30 - 12:00' && currSlot.label === '1:00 - 1:30') {
+      // Detect the lunch gap: last morning slot (id 10, 11:30-12:00) →
+      // first afternoon slot (id 11, 1:00-1:30). Use IDs for robustness.
+      if (
+        (prevSlot.id === 10 && currSlot.id === 11) ||
+        (prevSlot.label === '11:30 - 12:00' && currSlot.label === '1:00 - 1:30')
+      ) {
         crossesLunch = true;
         break;
       }

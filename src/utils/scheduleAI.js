@@ -256,6 +256,9 @@ RULES FOR RESOLVING CONFLICTS:
 3. Allowed Rooms: You MUST use rooms that are either "SHARED" or belong to the section's department. Do NOT use rooms from completely unrelated departments unless it's a "SHARED" room.
 4. Meeting Count: If a group needs "Meetings Needed: 2", you must return 2 schedule entries for that group on different days.
 5. Provide a 'prescriptionNote' for each entry explaining what constraint was relaxed (e.g. "Overrode max units by 3 for Professor X" or "Used SHARED room to avoid conflict").
+6. LUNCH BREAK (12:00 PM - 1:00 PM): No class may be scheduled during 12:00 PM to 1:00 PM. A class MUST NOT start at a time slot where its duration would extend past 12:00 PM. The last morning slot is time slot id 10 (11:30-12:00) and the first afternoon slot is time slot id 11 (1:00-1:30). Classes must end by 12:00 PM or start at 1:00 PM or later. Do NOT use any time slot that would cause the class to span across the lunch break.
+7. EARLIEST START (7:30 AM): Classes are NOT allowed to start at 7:00 AM. You MUST NOT use time slot id 1 (7:00 - 7:30). The earliest allowed start time is 7:30 AM (time slot id 2).
+8. PE SUBJECTS: Physical Education (PE) subjects (subject code starting with "PE") MUST NOT be scheduled in the first period (7:30 AM, time slot id 2).
 
 AVAILABLE TIME SLOTS:
 ${timeSlotsSummary}
