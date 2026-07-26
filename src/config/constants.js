@@ -37,7 +37,7 @@ export function getSlotDurationHours(timeSlotOrIndex) {
 }
 
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-export const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT', 'BSIT'];
+export const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
 export const BUILDINGS = ['BSOA Building', 'BAEL Building', 'BSFT Building', 'BSCS Building', 'General Building', 'Gymnasium'];
 export const SEMESTERS = ['1st Semester', '2nd Semester', 'Summer'];
 export const SCHOOL_YEARS = ['2024-2025', '2025-2026', '2026-2027', '2027-2028'];
@@ -51,8 +51,7 @@ export const PROGRAM_DEPARTMENTS = {
   'Bachelor of Science in Office Administration': 'BSOA',
   'BS Office Administration': 'BSOA',
   'Bachelor of Arts in English Language': 'BAEL',
-  'BA English Language': 'BAEL',
-  'BS Information Technology': 'BSIT',
+  'BA English Language': 'BAEL'
 };
 
 export const getDeptColor = (dept) => {

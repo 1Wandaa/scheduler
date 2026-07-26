@@ -71,7 +71,9 @@ export function validateScheduleEntry(
           errors.push(`Room "${room.name}" can only be used for BAEL major subjects (no GE, PE, or NSTP).`);
         }
       } else if (isBscsExclusive) {
-        errors.push(`Room "${room.name}" is reserved for BSCS students and faculty only.`);
+        if (!subject?.requiredLab) {
+          errors.push(`Room "${room.name}" is reserved for BSCS students and faculty only (unless taking a Lab subject).`);
+        }
       } else if (isRoom204) {
         if (sectionDept === 'BSOA' && !subject?.requiredLab) {
           errors.push(`Room "${room.name}" can only be used by BSOA for Laboratory subjects.`);
@@ -89,7 +91,9 @@ export function validateScheduleEntry(
       if (isSpeechLab) {
         errors.push(`Room "${room.name}" can only be used by BAEL faculty.`);
       } else if (isBscsExclusive) {
-        errors.push(`Room "${room.name}" cannot be used by non-BSCS faculty (${professor.name}).`);
+        if (!subject?.requiredLab) {
+          errors.push(`Room "${room.name}" cannot be used by non-BSCS faculty (${professor.name}) for non-lab subjects.`);
+        }
       }
     }
   }

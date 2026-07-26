@@ -23,7 +23,12 @@ import {
 } from '../utils/scheduleUtils';
 import { resolveUnscheduledClasses } from '../utils/scheduleAI';
 
-const PREFERRED_PAIRS = [['Monday', 'Thursday'], ['Tuesday', 'Friday']];
+const PREFERRED_PAIRS = [
+  ['Monday', 'Thursday'], 
+  ['Tuesday', 'Friday'],
+  ['Monday', 'Wednesday'],
+  ['Wednesday', 'Friday']
+];
 
 /**
  * Yield to the main thread without using setTimeout.
@@ -133,6 +138,16 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   const fixedRoom = constraints?.fixedRoom || null;
   const fixedProfessor = constraints?.fixedProfessor || null;
   const temp = [...activeSchedules];
+  
+  let lastValidationError = null;
+
+  const wrappedAddSchedule = async (s) => {
+    const res = await addScheduleFn(s);
+    if (res?.ok === false) {
+      lastValidationError = res.error || 'Unknown scheduling error';
+    }
+    return res;
+  };
 
   // 1. Group assignments by Section + Subject
   const groupsMap = new Map();
@@ -335,8 +350,8 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
               if (isFree(pair[0]) && isFree(pair[1])) {
                 const s1 = { room, professor, subject, section, day: pair[0], timeSlot };
                 const s2 = { room, professor, subject, section, day: pair[1], timeSlot };
-                const w1 = await addScheduleFn(s1);
-                const w2 = await addScheduleFn(s2);
+                const w1 = await wrappedAddSchedule(s1);
+                const w2 = await wrappedAddSchedule(s2);
                 if (w1?.ok !== false && w2?.ok !== false) {
                   temp.push(s1, s2);
                   results.push(s1, s2);
@@ -353,9 +368,9 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
               const s1 = { room, professor, subject, section, day: mwf[0], timeSlot };
               const s2 = { room, professor, subject, section, day: mwf[1], timeSlot };
               const s3 = { room, professor, subject, section, day: mwf[2], timeSlot };
-              const w1 = await addScheduleFn(s1);
-              const w2 = await addScheduleFn(s2);
-              const w3 = await addScheduleFn(s3);
+              const w1 = await wrappedAddSchedule(s1);
+              const w2 = await wrappedAddSchedule(s2);
+              const w3 = await wrappedAddSchedule(s3);
               if (w1?.ok !== false && w2?.ok !== false && w3?.ok !== false) {
                 temp.push(s1, s2, s3);
                 results.push(s1, s2, s3);
@@ -376,7 +391,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
               const writes = [];
               for (const d of validDays) {
                 const sc = { room, professor, subject, section, day: d, timeSlot };
-                const w = await addScheduleFn(sc);
+                const w = await wrappedAddSchedule(sc);
                 if (w?.ok === false) { allOk = false; break; }
                 writes.push(sc);
               }
@@ -433,11 +448,20 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         }
 
         if (placedMeetings.length === count) {
-          // All meetings fit in-memory — now batch write to Firestore
+          // All meetings fit in-memory
+          
+          // FIX: Remove them from temp first so they don't conflict with themselves during validation
+          for (const pm of placedMeetings) {
+            const idx = temp.indexOf(pm);
+            if (idx !== -1) temp.splice(idx, 1);
+          }
+
           let allOk = true;
           for (const sc of placedMeetings) {
-            const w = await addScheduleFn(sc);
+            const w = await wrappedAddSchedule(sc);
             if (w?.ok === false) { allOk = false; break; }
+            // Push back to temp so the next meeting in this batch sees it
+            temp.push(sc);
           }
           if (allOk) {
             results.push(...placedMeetings);
@@ -463,7 +487,17 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       const availableProfs = totalProfsChecked - profMaxUnitsCount;
       return { success: false, reason: `${profMaxUnitsCount} of ${totalProfsChecked} professors at max units; remaining ${availableProfs} professor(s) have no free slots across ${roomPool.length} room(s).` };
     }
-    return { success: false, reason: `No free time slots found across ${totalProfsChecked} professor(s) and ${roomPool.length} room(s).` };
+    
+    if (!anyProfEligibleForRooms) {
+      return { success: false, reason: `No eligible rooms available for the ${totalProfsChecked} assigned professor(s).` };
+    }
+
+    return { 
+      success: false, 
+      reason: lastValidationError 
+        ? `Validation Error: ${lastValidationError}`
+        : `No free time slots found across ${totalProfsChecked} professor(s) and ${roomPool.length} room(s).` 
+    };
   };
 
   // ── PASS 1 — STRICT: Department rooms, preferred pairs ────────────
