@@ -133,27 +133,53 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       const toolbar = containerRef.current.querySelector('.schedule-toolbar');
       if (toolbar) toolbar.style.display = 'none';
 
-      // Clone the container into a fixed-width off-screen element to avoid distortion
+      // Clone the container into a fixed-width off-screen element
       const clone = containerRef.current.cloneNode(true);
       const wrapper = document.createElement('div');
       wrapper.style.position = 'absolute';
       wrapper.style.top = '-10000px';
       wrapper.style.left = '-10000px';
+      
+      // Fixed width, and calculate height for exact Portrait aspect ratio (8.5 x 11)
       wrapper.style.width = '1100px';
+      wrapper.style.height = `${1100 * (11 / 8.5)}px`;
       wrapper.style.backgroundColor = '#ffffff';
       wrapper.style.padding = '16px';
+      wrapper.style.display = 'flex';
+      wrapper.style.flexDirection = 'column';
+      
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
       // Apply desktop-like overrides to the clone
       prepareExportClone(clone);
+      clone.style.height = '100%';
+      clone.style.display = 'flex';
+      clone.style.flexDirection = 'column';
+      const tableWrapper = clone.querySelector('.table-wrapper');
+      if (tableWrapper) {
+          tableWrapper.style.flex = '1';
+          tableWrapper.style.display = 'flex';
+          tableWrapper.style.flexDirection = 'column';
+      }
+      const table = clone.querySelector('.schedule-table');
+      if (table) table.style.height = '100%';
+
+      // Wait a tiny bit for the browser to apply the new layout
+      await new Promise(r => setTimeout(r, 50));
+
+      const finalRect = wrapper.getBoundingClientRect();
+      const finalWidth = finalRect.width;
+      const finalHeight = finalRect.height;
 
       const canvas = await html2canvas(wrapper, { 
-          scale: 2, 
+          scale: 3, // HD quality
           useCORS: true,
           backgroundColor: '#ffffff',
-          width: 1100,
-          windowWidth: 1100
+          width: finalWidth,
+          height: finalHeight,
+          windowWidth: finalWidth,
+          windowHeight: finalHeight
       });
 
       document.body.removeChild(wrapper);
@@ -189,21 +215,47 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.style.position = 'absolute';
       wrapper.style.top = '-10000px';
       wrapper.style.left = '-10000px';
+      
+      // Fixed width, and calculate height for exact Portrait aspect ratio (8.5 x 11)
       wrapper.style.width = '1100px';
+      wrapper.style.height = `${1100 * (11 / 8.5)}px`;
       wrapper.style.backgroundColor = '#ffffff';
       wrapper.style.padding = '16px';
+      wrapper.style.display = 'flex';
+      wrapper.style.flexDirection = 'column';
+      
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
       // Apply desktop-like overrides to the clone
       prepareExportClone(clone);
+      clone.style.height = '100%';
+      clone.style.display = 'flex';
+      clone.style.flexDirection = 'column';
+      const tableWrapper = clone.querySelector('.table-wrapper');
+      if (tableWrapper) {
+          tableWrapper.style.flex = '1';
+          tableWrapper.style.display = 'flex';
+          tableWrapper.style.flexDirection = 'column';
+      }
+      const table = clone.querySelector('.schedule-table');
+      if (table) table.style.height = '100%';
+
+      // Wait a tiny bit for the browser to apply the new layout
+      await new Promise(r => setTimeout(r, 50));
+
+      const finalRect = wrapper.getBoundingClientRect();
+      const finalWidth = finalRect.width;
+      const finalHeight = finalRect.height;
 
       const canvas = await html2canvas(wrapper, { 
-          scale: 2, 
+          scale: 3, // HD quality
           useCORS: true,
           backgroundColor: '#ffffff',
-          width: 1100,
-          windowWidth: 1100
+          width: finalWidth,
+          height: finalHeight,
+          windowWidth: finalWidth,
+          windowHeight: finalHeight
       });
 
       document.body.removeChild(wrapper);
@@ -211,8 +263,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       setViewMode(oldViewMode);
 
       const imgData = canvas.toDataURL('image/png');
-      const imgW = canvas.width;
-      const imgH = canvas.height;
       
       const iframe = document.createElement('iframe');
       iframe.style.position = 'fixed';
@@ -227,15 +277,16 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
           <head>
               <title>Print Schedule</title>
               <style>
-                  @page { size: landscape; margin: 0.3in; }
+                  @page { size: portrait; margin: 0; }
                   * { margin: 0; padding: 0; box-sizing: border-box; }
                   html, body { width: 100%; height: 100%; background: #fff; overflow: hidden; }
-                  body { display: flex; align-items: center; justify-content: center; page-break-inside: avoid; }
-                  img { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; page-break-inside: avoid; }
+                  body { display: flex; align-items: center; justify-content: center; }
+                  /* The image slightly stretches to perfectly fill any remaining micro margins */
+                  img { display: block; width: 100vw; height: 100vh; object-fit: fill; }
               </style>
           </head>
           <body>
-              <img src="${imgData}" width="${imgW}" height="${imgH}" />
+              <img src="${imgData}" />
           </body>
           </html>
       `);
