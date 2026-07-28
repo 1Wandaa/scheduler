@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { db } from '../../config/firebase';
+import { db, firebaseConfig } from '../../config/firebase';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, onSnapshot, deleteDoc, doc, getDocs, writeBatch, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
@@ -123,9 +125,29 @@ const UserManagement = ({ onBack }) => {
       toast.warning('Please fill in all fields.');
       return;
     }
-    const id = editingUser ? editingUser.id : Date.now().toString();
+    let id = editingUser ? editingUser.id : null;
     try {
       const toastId = toast.loading('Saving user...');
+
+      if (!editingUser) {
+        // Adding a new user
+        const cleanUsername = formData.username.replace('@', '').toLowerCase();
+        const dummyEmail = `${cleanUsername}@gmail.com`;
+        
+        // We use a secondary app so we don't accidentally log out the admin
+        const secondaryApp = initializeApp(firebaseConfig, `SecondaryApp_${Date.now()}`);
+        const secondaryAuth = getAuth(secondaryApp);
+        
+        try {
+          const userCredential = await createUserWithEmailAndPassword(secondaryAuth, dummyEmail, formData.password);
+          id = userCredential.user.uid;
+        } catch (authErr) {
+          await deleteApp(secondaryApp);
+          throw new Error("Failed to create auth account: " + authErr.message);
+        }
+        await deleteApp(secondaryApp);
+      }
+
       await setDoc(doc(db, 'users', id), {
         id,
         name: formData.name,
