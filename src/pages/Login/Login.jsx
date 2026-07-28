@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../../config/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, setDoc, doc, onSnapshot } from 'firebase/firestore';
 
 // Department → Program mapping (must match the 'program' field stored in Firestore sections)
@@ -79,6 +79,7 @@ const Login = ({ onLogin }) => {
 
   // UI state
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [signUpStep, setSignUpStep] = useState(1); // 1 = personal, 2 = academic
@@ -120,6 +121,7 @@ const Login = ({ onLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
     setLoading(true);
 
     try {
@@ -193,19 +195,23 @@ const Login = ({ onLogin }) => {
           section: section,
         });
 
-        // 3. Log them in directly after sign up
-        onLogin({
-          username: cleanUsername,
-          name: fullName,
-          role: 'Student',
-          age: parseInt(age) || null,
-          gender: gender,
-          studentId: studentId.trim(),
-          department: department,
-          program: derivedProgram,
-          yearLevel: parseInt(yearLevel),
-          section: section
-        });
+        // 3. Prevent auto-login by signing out immediately
+        await signOut(auth);
+        
+        // 4. Switch to login view and show success message
+        setIsSignUp(false);
+        setSignUpStep(1);
+        setUsername('');
+        setPassword('');
+        setFullName('');
+        setAge('');
+        setGender('');
+        setStudentId('');
+        setDepartment('');
+        setYearLevel('');
+        setSection('');
+        setSuccessMsg('Account created successfully! You can now log in.');
+        setLoading(false);
 
       } else {
         // LOGIN FLOW (Existing)
@@ -611,6 +617,14 @@ const Login = ({ onLogin }) => {
             <div className="login-error-box">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
               {error}
+            </div>
+          )}
+
+          {/* Success */}
+          {successMsg && (
+            <div className="login-error-box" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#10b981' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              {successMsg}
             </div>
           )}
 
