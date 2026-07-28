@@ -68,7 +68,26 @@ const UserManagement = ({ onBack }) => {
     if (isConfirmed) {
       const toastId = toast.loading('Deleting user...');
       try {
-        await deleteDoc(doc(db, 'users', id.toString()));
+        const userToDelete = users.find(u => u.id === id);
+        
+        const batch = writeBatch(db);
+        
+        // 1. Delete user
+        batch.delete(doc(db, 'users', id.toString()));
+        
+        // 2. Add to trash
+        const trashRef = doc(collection(db, 'trash'));
+        batch.set(trashRef, {
+          id: trashRef.id,
+          type: 'user',
+          originalId: id.toString(),
+          data: userToDelete,
+          cascadedSchedules: [],
+          modifications: {},
+          deletedAt: Date.now()
+        });
+        
+        await batch.commit();
         toast.success('Profile Deleted. Remember to also delete their account in the Firebase Authentication Console!', { id: toastId, duration: 5000 });
       } catch (error) {
         console.error("Error deleting user: ", error);
@@ -243,30 +262,7 @@ const UserManagement = ({ onBack }) => {
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                     style={{
-                      width: '100%', padding: '10px 12px 10px 36px',
-                      background: 'var(--bg-main)', border: '1px solid var(--border-color)',
-                      borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.95rem',
-                      outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s'
-                    }}
-                    onFocus={e => { e.target.style.borderColor = 'var(--accent-primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(86, 69, 238, 0.1)'; }}
-                    onBlur={e => { e.target.style.borderColor = 'var(--border-color)'; e.target.style.boxShadow = 'none'; }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>Username</label>
-                <div style={{ position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>
-                  </div>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. @johndoe"
-                    value={formData.username}
-                    onChange={e => setFormData({ ...formData, username: e.target.value })}
-                    style={{
-                      width: '100%', padding: '10px 12px 10px 36px',
+                      width: '100%', padding: '10px 12px 10px 36px', boxSizing: 'border-box',
                       background: 'var(--bg-main)', border: '1px solid var(--border-color)',
                       borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.95rem',
                       outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s'
@@ -279,12 +275,35 @@ const UserManagement = ({ onBack }) => {
 
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>Username</label>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. @johndoe"
+                      value={formData.username}
+                      onChange={e => setFormData({ ...formData, username: e.target.value })}
+                      style={{
+                        width: '100%', padding: '10px 12px 10px 36px', boxSizing: 'border-box',
+                        background: 'var(--bg-main)', border: '1px solid var(--border-color)',
+                        borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.95rem',
+                        outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s'
+                      }}
+                      onFocus={e => { e.target.style.borderColor = 'var(--accent-primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(86, 69, 238, 0.1)'; }}
+                      onBlur={e => { e.target.style.borderColor = 'var(--border-color)'; e.target.style.boxShadow = 'none'; }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>Role</label>
                   <select 
                     value={formData.role}
                     onChange={e => setFormData({ ...formData, role: e.target.value })}
                     style={{
-                      width: '100%', padding: '10px 12px',
+                      width: '100%', padding: '10px 12px', boxSizing: 'border-box',
                       background: 'var(--bg-main)', border: '1px solid var(--border-color)',
                       borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.95rem',
                       outline: 'none', cursor: 'pointer', transition: 'border-color 0.2s, box-shadow 0.2s'
@@ -312,7 +331,7 @@ const UserManagement = ({ onBack }) => {
                     value={formData.password}
                     onChange={e => setFormData({ ...formData, password: e.target.value })}
                     style={{
-                      width: '100%', padding: '10px 12px 10px 36px',
+                      width: '100%', padding: '10px 12px 10px 36px', boxSizing: 'border-box',
                       background: 'var(--bg-main)', border: '1px solid var(--border-color)',
                       borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.95rem',
                       outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s'

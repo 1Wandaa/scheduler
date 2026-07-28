@@ -71,6 +71,7 @@ const RecycleBin = ({ onBack, user }) => {
       case 'subject': return '#10b981';
       case 'room': return '#f59e0b';
       case 'section': return '#8b5cf6';
+      case 'user': return '#ec4899';
       default: return '#6b7280';
     }
   };
@@ -137,11 +138,13 @@ const RecycleBin = ({ onBack, user }) => {
                       <div style={{ fontWeight: '600', color: 'var(--text-main)' }}>
                         {item.data.name || item.data.code || item.originalId}
                       </div>
-                      {(item.data.department || item.data.capacity || item.data.credits) && (
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                          {item.data.department && `Dept: ${item.data.department}`}
-                          {item.data.capacity && `Cap: ${item.data.capacity}`}
-                          {item.data.credits && `Units: ${item.data.credits}`}
+                      {(item.data.department || item.data.capacity || item.data.credits || item.data.username || item.data.role) && (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {item.data.department && <span>Dept: {item.data.department}</span>}
+                          {item.data.capacity && <span>Cap: {item.data.capacity}</span>}
+                          {item.data.credits && <span>Units: {item.data.credits}</span>}
+                          {item.data.username && <span>Username: {item.data.username}</span>}
+                          {item.data.role && <span>Role: {item.data.role}</span>}
                         </div>
                       )}
                     </td>
