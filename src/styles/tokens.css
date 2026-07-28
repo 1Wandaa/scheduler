@@ -1,5 +1,5 @@
 :root {
-  /* --- NEW LINEAR/STRIPE INSPIRED PALETTE --- */
+  /* Color Palette */
   --accent-dark: #2A265F;
   --accent-primary: #5645EE;
   --success: #02B974;
@@ -17,13 +17,9 @@
   --table-header: #F8FAFC;
   --border-color: #E2E8F0;
 
-  /* --- NEW DARK SIDEBAR COLORS --- */
+  /* Sidebar Colors */
   --sidebar-bg: #15133C;
-  /* Deep, premium Navy Blue */
   --sidebar-hover: #282463;
-  /* Slightly lighter Navy for hover states */
   --sidebar-text-muted: #8E8CB0;
-  /* Muted lavender/grey for unselected text */
   --sidebar-text-active: #FFFFFF;
-  /* Crisp white for active items */
 }

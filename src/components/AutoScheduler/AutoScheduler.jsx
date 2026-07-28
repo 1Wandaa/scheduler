@@ -56,7 +56,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   // Only consider subjects that match the currently selected active semester
   const activeSemesterSubjects = subjects.filter(sub => !sub.semester || sub.semester === 'Both' || sub.semester === activeSemester);
 
-  // ─── CLEAR ALL SCHEDULES (Independent action) ───
+ // CLEAR ALL SCHEDULES (Independent action)
   const handleClearAll = async () => {
     const isConfirmed = await confirm({
       title: 'Clear All Schedules?',
@@ -99,7 +99,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     setAiInsights(null);
     setAiStatus('');
     try {
-      // --- AI Pre-Processing: Smart professor-subject matching ---
+      // AI pre-processing: build professor-subject match map
       let aiProfessorMap = null;
       if (aiAssisted) {
         try {

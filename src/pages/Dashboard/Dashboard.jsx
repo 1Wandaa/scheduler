@@ -50,7 +50,7 @@ import QuickStartGuide from './components/QuickStartGuide';
 import { showAutoScheduleModal } from './utils/autoScheduleModals';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
-// ─── Dashboard ────────────────────────────────────────────────────────────────
+// Dashboard
 const Dashboard = ({ user, onLogout }) => {
   const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
@@ -74,7 +74,7 @@ const Dashboard = ({ user, onLogout }) => {
     }
   };
 
-  // ─── UI state ─────────────────────────────────────────────────────
+  // UI state
   const [isManageDataOpen, setIsManageDataOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -83,11 +83,11 @@ const Dashboard = ({ user, onLogout }) => {
   const [isFabHidden, setIsFabHidden] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  // ─── Term selection ───────────────────────────────────────────────
+  // Term selection
   const [activeSemester, setActiveSemester] = useState(SEMESTERS[1]);
   const [activeSchoolYear, setActiveSchoolYear] = useState(SCHOOL_YEARS[1]);
 
-  // ─── Centralized data from Firestore ──────────────────────────────
+  // Centralized data from Firestore
   const data = useFirestoreData(activeSemester, activeSchoolYear);
   const {
     rooms, professors, subjects, sections,
@@ -96,7 +96,7 @@ const Dashboard = ({ user, onLogout }) => {
     availableSemesters, availableSchoolYears, publishedTerms, setPublishedTerms,
   } = data;
 
-  // ─── Responsive handler ──────────────────────────────────────────
+  // Responsive handler
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', handleResize);
@@ -156,9 +156,9 @@ const Dashboard = ({ user, onLogout }) => {
     };
   }, [isMobileMenuOpen]);
 
-  // ─── CRUD wrappers (delegate to services) ─────────────────────────
+  // CRUD wrappers (delegate to services)
 
-  // ─── Log login ONCE per browser session ────────────────────────────
+  // Log login once per browser session
   useEffect(() => {
     const SESSION_KEY = `smartsched_login_logged_${user?.username}`;
     if (user && !sessionStorage.getItem(SESSION_KEY)) {
@@ -186,7 +186,7 @@ const Dashboard = ({ user, onLogout }) => {
     return logScheduleHistory(historyData, isAdmin);
   };
 
-  // ─── Validator object (passed to child components) ────────────────
+  // Validator object (passed to child components)
   const schedulerContext = { professors, rooms, subjects, sections, activeSchedules };
 
   const validator = {
@@ -211,14 +211,14 @@ const Dashboard = ({ user, onLogout }) => {
 
   const displaySchedules = (!isAdmin && publishedTerms[`${activeSemester}_${activeSchoolYear}`] !== true) ? [] : enrichedSchedules;
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+ // Render
   return (
     <div className={`smartsched-container ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
 
-      {/* ═══════════════ ANIMATED BACKGROUND ═══════════════ */}
+      {/* Animated background */}
       <div className="mesh-bg"></div>
 
-      {/* ═══════════════ SIDEBAR ═══════════════ */}
+      {/* Sidebar */}
       <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
 
         {/* Logo block */}
@@ -305,10 +305,10 @@ const Dashboard = ({ user, onLogout }) => {
 
       </aside>
 
-      {/* ═══════════════ MAIN CONTENT ═══════════════ */}
+      {/* Main content */}
       <div className="main-content">
 
-        {/* ── Top Bar ── */}
+        {/* Top Bar */}
         <header style={{
           position: 'relative',
           zIndex: 100,
@@ -386,7 +386,7 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
         </header>
 
-        {/* ── Dashboard Tab ── */}
+        {/* Dashboard Tab */}
         {!isStudent && activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.4s' }}>
 
@@ -529,7 +529,7 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
         )}
 
-        {/* ── Other Tabs ── */}
+        {/* Other Tabs */}
         {isAdmin && activeTab === 'users' && <UserManagement onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>

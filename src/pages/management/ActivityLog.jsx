@@ -8,7 +8,7 @@ import {
 } from '../../utils/activityLogger';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// Helpers
 
 const formatTimestamp = (ts) => {
   if (!ts) return '—';
@@ -50,7 +50,7 @@ const IconSvg = ({ path, size = 16, color = 'currentColor' }) => (
   </svg>
 );
 
-// ─── Category Groups ─────────────────────────────────────────────────────────
+// Category Groups
 
 const CATEGORY_FILTERS = [
   { label: 'All', value: 'all' },
@@ -63,7 +63,7 @@ const CATEGORY_FILTERS = [
   { label: 'Users', value: 'users', actions: ['ADD_USER', 'UPDATE_USER', 'DELETE_USER'] },
 ];
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// Main Component
 
 const ActivityLog = ({ onBack, onViewProfile }) => {
   const { confirm } = useGlobalDialog();
@@ -75,14 +75,14 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
   const [expandedId, setExpandedId] = useState(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
 
-  // ─── Fetch user profile by username ────────────────────────────────
+ // Fetch user profile by username
   const handleUsernameClick = useCallback((e, username) => {
     e.stopPropagation(); // prevent row expand toggle
     if (!username || username === '—') return;
     if (onViewProfile) onViewProfile(username);
   }, [onViewProfile]);
 
-  // ─── Real-time listener ─────────────────────────────────────────────
+ // Real-time listener
   useEffect(() => {
     const q = query(
       collection(db, 'activityLogs'),
@@ -105,7 +105,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
     return () => unsubscribe();
   }, [logLimit]);
 
-  // ─── Filtered list ──────────────────────────────────────────────────
+ // Filtered list
   const filteredLogs = useMemo(() => {
     let result = logs;
 
@@ -128,7 +128,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
     return result;
   }, [logs, categoryFilter, searchQuery]);
 
-  // ─── Handlers ───────────────────────────────────────────────────────
+ // Handlers
   const handleDeleteEntry = async (logId) => {
     const isConfirmed = await confirm({
       title: 'Delete this log entry?',
@@ -163,7 +163,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
     setIsDeletingAll(false);
   };
 
-  // ─── Stats ──────────────────────────────────────────────────────────
+ // Stats
   const stats = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -181,11 +181,11 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
     return { todayCount: todayLogs.length, uniqueUsers, topAction };
   }, [logs]);
 
-  // ─── Render ──────────────────────────────────────────────────────────
+ // Render
   return (
     <div style={{ animation: 'fadeIn 0.4s' }}>
 
-      {/* ── Header ── */}
+ {/* Header */}
       <div className="card" style={{ marginBottom: '20px', padding: '24px 28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
@@ -231,7 +231,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
           </button>
         </div>
 
-        {/* ── Stats row ── */}
+ {/* Stats row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginTop: 20 }}>
           {[
             { label: "Today's Actions", value: stats.todayCount, color: '#6366f1', icon: 'M12 2v10l4 2' },
@@ -252,7 +252,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
         </div>
       </div>
 
-      {/* ── Filters ── */}
+ {/* Filters */}
       <div className="card" style={{ marginBottom: '16px', padding: '16px 20px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -298,7 +298,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
         </div>
       </div>
 
-      {/* ── Log List ── */}
+ {/* Log List */}
       <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -358,7 +358,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
                         </span>
                       </div>
 
-                      {/* User — clickable to show profile */}
+                      {/* User - clickable to show profile */}
                       <div>
                         <button
                           onClick={(e) => handleUsernameClick(e, log.username)}

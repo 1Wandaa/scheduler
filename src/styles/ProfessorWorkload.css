@@ -1,5 +1,5 @@
 /* =========================================
-   PROFESSOR WORKLOAD — PREMIUM REDESIGN
+   PROFESSOR WORKLOAD
    ========================================= */
 
 /* --- Container & Animations --- */
@@ -21,7 +21,7 @@
   animation: pwFadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* --- Premium Header --- */
+/* --- Header --- */
 .pw-header {
   display: flex;
   background: var(--card-bg, #ffffff);
@@ -172,7 +172,7 @@
   gap: 20px;
 }
 
-/* --- Premium Card --- */
+/* --- Card --- */
 .pw-card {
   border-radius: 16px;
   padding: 24px;

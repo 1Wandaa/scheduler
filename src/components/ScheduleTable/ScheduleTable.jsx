@@ -95,7 +95,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       tableWrapper.scrollLeft = 0; // Reset any horizontal scroll offset
     }
 
-    // Remove position:sticky from time-label cells and header — sticky
+    // Remove position:sticky from time-label cells and header - sticky
     // positioning in an off-screen clone causes the time column to render
     // on the wrong side (right instead of left) on mobile devices
     clone.querySelectorAll('.time-label').forEach(cell => {

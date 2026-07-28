@@ -1,5 +1,5 @@
 /**
- * useFirestoreData.js — Centralized Firestore data layer.
+ * useFirestoreData.js - Centralized Firestore data layer.
  *
  * Owns ALL real-time listeners for the application's core collections.
  * Handles initial data seeding and one-time migrations.
@@ -54,11 +54,11 @@ function normalizeProgram(prog) {
  * Custom hook that manages ALL Firestore real-time listeners and
  * provides memoized lookup maps for efficient access.
  *
- * @param {string} activeSemester  — currently selected semester
- * @param {string} activeSchoolYear — currently selected school year
+ * @param {string} activeSemester  - currently selected semester
+ * @param {string} activeSchoolYear - currently selected school year
  */
 export function useFirestoreData(activeSemester, activeSchoolYear) {
-  // ─── Core collection state ──────────────────────────────────────────
+ // Core collection state
   const [rooms, setRooms] = useState([]);
   const [professors, setProfessors] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -68,14 +68,14 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
   const [departments, setDepartments] = useState([]);
   const [courses, setCourses] = useState([]);
 
-  // ─── Term / settings state ──────────────────────────────────────────
+ // Term / settings state
   const [availableSemesters, setAvailableSemesters] = useState(SEMESTERS);
   const [availableSchoolYears, setAvailableSchoolYears] = useState(SCHOOL_YEARS);
   const [publishedTerms, setPublishedTerms] = useState({});
 
   const seedDone = useRef(false);
 
-  // ─── One-time data seeding & migration ──────────────────────────────
+ // One-time data seeding & migration
   useEffect(() => {
     if (seedDone.current) return;
     seedDone.current = true;
@@ -160,7 +160,7 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
     initializeData();
   }, []);
 
-  // ─── Real-time listeners ────────────────────────────────────────────
+ // Real-time listeners
   useEffect(() => {
     const unsubRooms = onSnapshot(collection(db, 'rooms'), (snap) =>
       setRooms(snap.docs.map((d) => ({ ...d.data(), id: d.id })))
@@ -225,7 +225,7 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
     };
   }, []);
 
-  // ─── Derived data ───────────────────────────────────────────────────
+ // Derived data
 
   /** Schedules filtered to the active semester + school year. */
   const activeSchedules = useMemo(
@@ -233,7 +233,7 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
     [schedules, activeSemester, activeSchoolYear]
   );
 
-  // ─── Lookup maps (O(1) access instead of .find()) ──────────────────
+ // Lookup maps (O(1) access instead of .find())
 
   const roomById = useMemo(() => {
     const map = {};

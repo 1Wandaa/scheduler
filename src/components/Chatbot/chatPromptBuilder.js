@@ -1,5 +1,5 @@
 export const buildSystemPrompt = (schedules, professors, rooms, sections, subjects) => {
-    // ── Schedule entries ──
+ // Schedule entries
     const scheduleContext = schedules.map(s => {
       const subject = s.subject?.code || s.subject?.name || 'Unknown Subject';
       const section = s.section?.name || 'Unknown Section';
@@ -10,7 +10,7 @@ export const buildSystemPrompt = (schedules, professors, rooms, sections, subjec
       return `- ${subject} | Section: ${section} | Prof: ${prof} | Room: ${room} | ${day} ${time}`;
     }).join('\n');
 
-    // ── Faculty overview ──
+ // Faculty overview
     const profContext = professors.map(p => {
       const specs = (p.specialization || []).join(', ') || 'None listed';
       const maxUnits = p.maxUnits || p.maxHours || '24';
@@ -29,7 +29,7 @@ export const buildSystemPrompt = (schedules, professors, rooms, sections, subjec
       return `- **${p.name}** (${dept}) | Load: ${currentLoad}/${maxUnits} units | Specializations: ${specs}`;
     }).join('\n');
 
-    // ── Rooms overview ──
+ // Rooms overview
     const roomContext = rooms.map(r => {
       const dept = r.department || 'SHARED';
       const cap = r.capacity || '?';
@@ -43,7 +43,7 @@ export const buildSystemPrompt = (schedules, professors, rooms, sections, subjec
       return `- **${r.name}** (${dept}) | Capacity: ${cap} | Scheduled: ${roomSchedules.length} classes${featureStr}`;
     }).join('\n');
 
-    // ── Sections overview ──
+ // Sections overview
     const sectionContext = (sections || []).map(sec => {
       const enrolledSubjects = (sec.subjects || []).map(subId => {
         const sub = (subjects || []).find(s => s.id === subId || s.code === subId);
@@ -54,7 +54,7 @@ export const buildSystemPrompt = (schedules, professors, rooms, sections, subjec
       return `- **${sec.name}** (${dept}, Year ${yearLevel}) | Subjects: ${enrolledSubjects || 'None enrolled'}`;
     }).join('\n');
 
-    // ── Subjects catalog ──
+ // Subjects catalog
     const subjectContext = (subjects || []).map(sub => {
       const code = sub.code || 'NO_CODE';
       const name = sub.name || 'Unnamed';
@@ -68,7 +68,7 @@ export const buildSystemPrompt = (schedules, professors, rooms, sections, subjec
       return `- **${code}** — ${name} | Credits: ${credits} | Hours/Meeting: ${hoursPerMeeting} | Semester: ${sem}${featureStr}`;
     }).join('\n');
 
-    // ── Conflict detection ──
+ // Conflict detection
     const conflicts = [];
     const timeMap = {};
 
@@ -109,7 +109,7 @@ export const buildSystemPrompt = (schedules, professors, rooms, sections, subjec
       ? uniqueConflicts.join('\n')
       : '✅ No conflicts detected in the current schedule.';
 
-    // ── Build available time slots per room (for conflict resolution) ──
+ // Build available time slots per room (for conflict resolution)
     const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const roomAvailability = rooms.slice(0, 10).map(r => {
       const bookedSlots = schedules

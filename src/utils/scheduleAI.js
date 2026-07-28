@@ -1,9 +1,9 @@
 /**
- * scheduleAI.js — Gemini AI helpers for scheduling optimization
+ * scheduleAI.js - Gemini AI helpers for scheduling optimization
  *
  * Uses Firebase AI Logic (Gemini 2.5 Flash) already configured in the project
  * to improve scheduling accuracy through:
- *   1. Smart professor-subject matching (pre-processing) — ranks within GA-feasible pool
+ *   1. Smart professor-subject matching (pre-processing) - ranks within GA-feasible pool
  *   2. Intelligent failure analysis with concrete prescriptions (post-processing)
  */
 

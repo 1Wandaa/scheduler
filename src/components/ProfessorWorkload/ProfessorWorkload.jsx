@@ -113,7 +113,7 @@ function ProfessorWorkload({ professors, schedules, departments = [] }) {
   return (
     <div className="professor-workload-container pw-animate">
 
-      {/* --- Premium Header --- */}
+      {/* Header */}
       <div className="pw-header">
         <div className="pw-header-logo">
           <img

@@ -1,5 +1,5 @@
 /**
- * useAuthUser.js — Firebase Authentication state management.
+ * useAuthUser.js - Firebase Authentication state management.
  *
  * Extracts auth observer, user profile resolution, and favicon
  * generation from App.jsx into a focused custom hook.
@@ -25,7 +25,7 @@ export function useAuthUser() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const faviconSet = useRef(false);
 
-  // ─── Online/offline detection ─────────────────────────────────────
+ // Online/offline detection
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -37,7 +37,7 @@ export function useAuthUser() {
     };
   }, []);
 
-  // ─── One-time favicon generation ──────────────────────────────────
+ // One-time favicon generation
   useEffect(() => {
     if (faviconSet.current) return;
     faviconSet.current = true;
@@ -71,7 +71,7 @@ export function useAuthUser() {
     };
   }, []);
 
-  // ─── Auth state observer & profile resolution ─────────────────────
+ // Auth state observer & profile resolution
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -116,7 +116,7 @@ export function useAuthUser() {
               username: userData.username || emailPrefix,
             });
           } else {
-            // Auth exists but no Firestore profile — create one
+            // Auth exists but no Firestore profile - create one
             const newProfile = { username: emailPrefix, name: emailPrefix, role: 'Student' };
             await addDoc(collection(db, 'users'), newProfile);
             setUser(newProfile);
@@ -141,7 +141,7 @@ export function useAuthUser() {
     return () => unsubscribe();
   }, []);
 
-  // ─── Public actions ───────────────────────────────────────────────
+ // Public actions
 
   const handleLogin = (userProfile) => {
     if (userProfile && userProfile.username) {

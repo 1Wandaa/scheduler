@@ -211,7 +211,7 @@ const Login = ({ onLogin }) => {
         // LOGIN FLOW (Existing)
         let firestoreUserDoc = null;
 
-        // Authenticate via Firebase Auth only — no plaintext password fallback
+        // Authenticate via Firebase Auth only - no plaintext password fallback
         await signInWithEmailAndPassword(auth, dummyEmail, password);
 
         // After successful auth, fetch the user doc if not already fetched from fallback
@@ -685,7 +685,7 @@ const Login = ({ onLogin }) => {
             )}
           </form>
 
-          {/* Divider — only show on login or step 1 */}
+          {/* Divider - only show on login or step 1 */}
           {(!isSignUp || signUpStep === 1) && (
             <>
               <div className="login-divider">

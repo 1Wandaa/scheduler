@@ -9,7 +9,7 @@
   grid-template-columns: 2fr 1fr;
 }
 
-/* --- Cards & Card Hover with animations --- */
+/* --- Card Styles --- */
 .card {
   background: rgba(255, 255, 255, 0.97);
   border-radius: 16px;

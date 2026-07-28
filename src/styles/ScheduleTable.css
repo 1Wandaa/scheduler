@@ -1,4 +1,4 @@
-/* ── Schedule Table Container ─────────────────────────────────────────────── */
+/* Schedule Table Container */
 /* =========================
    Print Styles for Colored Mode 
    ========================= */
@@ -193,7 +193,7 @@
 
 
 
-/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+/* Toolbar */
 .schedule-toolbar {
   display: flex;
   align-items: center;
@@ -260,7 +260,7 @@
   box-shadow: 0 4px 12px rgba(86, 69, 238, 0.12);
 }
 
-/* ── Document Header ─────────────────────────────────────────────────────── */
+/* Document Header */
 .schedule-doc-header {
   display: flex;
   border: 1px solid var(--border-color);
@@ -337,7 +337,7 @@
   border-bottom: none;
 }
 
-/* ── Department Color Legend ─────────────────────────────────────────────── */
+/* Department Color Legend */
 .dept-legend {
   display: flex;
   align-items: center;
@@ -372,7 +372,7 @@
   letter-spacing: 0.03em;
 }
 
-/* ── Grid Table ──────────────────────────────────────────────────────────── */
+/* Grid Table */
 .table-wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -531,7 +531,7 @@
   transform: scale(1.1);
 }
 
-/* ── Card View (Mobile-first list) ──────────────────────────────────────── */
+/* Card View (Mobile-first list) */
 .schedule-card-view {
   display: flex;
   flex-direction: column;
@@ -636,7 +636,7 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ── Responsive Adjustments ──────────────────────────────────────────────── */
+/* Responsive Adjustments */
 @media (max-width: 768px) {
   .schedule-table-container {
     padding: 0.5rem;

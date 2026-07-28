@@ -1,5 +1,5 @@
 /**
- * validationService.js — Schedule entry validation and CRUD operations.
+ * validationService.js - Schedule entry validation and CRUD operations.
  *
  * Extracted from Dashboard.jsx to make validation logic testable,
  * reusable across components, and independent of React state.
@@ -21,9 +21,9 @@ import {
 /**
  * Validate a schedule entry against all business rules.
  *
- * @param {Object} entry — { room, professor, subject, section, day, timeSlot, excludeScheduleId }
- * @param {Object[]} activeSchedules — currently active schedules to check conflicts against
- * @param {Object[]} rooms — all rooms (needed for professor-room checks)
+ * @param {Object} entry - { room, professor, subject, section, day, timeSlot, excludeScheduleId }
+ * @param {Object[]} activeSchedules - currently active schedules to check conflicts against
+ * @param {Object[]} rooms - all rooms (needed for professor-room checks)
  * @returns {{ valid: boolean, errors: string[], warnings: string[] }}
  */
 export function validateScheduleEntry(
@@ -34,19 +34,19 @@ export function validateScheduleEntry(
   const errors = [];
   const warnings = [];
 
-  // ─── Required field checks ────────────────────────────────────────
+ // Required field checks
   if (!room?.id) errors.push('Room is required.');
   if (!professor?.id) errors.push('Faculty is required.');
   if (!subject?.id) errors.push('Subject is required.');
   if (!day) errors.push('Day is required.');
   if (!timeSlot?.id) errors.push('Time slot is required.');
 
-  // ─── Specialization check ─────────────────────────────────────────
+ // Specialization check
   if (professor && subject && !professorMatchesSubject(professor, subject)) {
     errors.push(`Faculty "${professor.name}" is not authorized to teach "${subject.code}".`);
   }
 
-  // ─── Section enrollment check ─────────────────────────────────────
+ // Section enrollment check
   if (section && subject) {
     const sectionSubjects = section.subjects || [];
     if (!sectionSubjects.includes(subject.id) && !sectionSubjects.includes(subject.code)) {
@@ -54,7 +54,7 @@ export function validateScheduleEntry(
     }
   }
 
-  // ─── Room eligibility (section-level) ─────────────────────────────
+ // Room eligibility (section-level)
   if (room?.id && subject) {
     if (!isRoomAllowedFor(room, subject, section)) {
       const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
@@ -83,7 +83,7 @@ export function validateScheduleEntry(
       }
     }
 
-    // ─── Room eligibility (professor-level) ───────────────────────────
+ // Room eligibility (professor-level)
     if (professor?.id && !isProfessorAllowedInRoom(room, professor, subject, section, rooms)) {
       const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
       const isSpeechLab = roomName.includes('SPEECH');
@@ -100,7 +100,7 @@ export function validateScheduleEntry(
 
   if (errors.length > 0) return { valid: false, errors, warnings };
 
-  // ─── Time slot fit check ──────────────────────────────────────────
+ // Time slot fit check
   const startIdx = getTimeSlotIndex(timeSlot);
   const needed = slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting);
   if (startIdx < 0 || needed === 0) {
@@ -112,7 +112,7 @@ export function validateScheduleEntry(
     errors.push('Physical Education (PE) subjects cannot be scheduled in the first period (7:30 AM).');
   }
 
-  // ─── Conflict detection ───────────────────────────────────────────
+ // Conflict detection
   const conflicts = findScheduleConflicts(
     { room, professor, subject, section, day, timeSlot },
     activeSchedules,
@@ -127,16 +127,16 @@ export function validateScheduleEntry(
   return { valid: errors.length === 0, errors, warnings };
 }
 
-// ═══════════════════════════════════════════════════════════════════════
+// --------------------------------------------------------------------------
 //  Firestore CRUD operations
-// ═══════════════════════════════════════════════════════════════════════
+// --------------------------------------------------------------------------
 
 /**
  * Add a single schedule entry to Firestore.
  *
- * @param {Object} newSchedule — the schedule to add
- * @param {Object[]} activeSchedules — for validation
- * @param {Object[]} rooms — for validation
+ * @param {Object} newSchedule - the schedule to add
+ * @param {Object[]} activeSchedules - for validation
+ * @param {Object[]} rooms - for validation
  * @param {string} activeSemester
  * @param {string} activeSchoolYear
  * @param {boolean} isAdmin

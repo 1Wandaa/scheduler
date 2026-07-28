@@ -171,7 +171,7 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  // ── Dynamic suggestion generation ──
+ // Dynamic suggestion generation
   const getFollowUpSuggestions = useCallback(() => {
     const lastBotMsg = [...messages].reverse().find(m => m.role === 'model');
     const lastBotText = (lastBotMsg?.text || '').toLowerCase();
@@ -215,7 +215,7 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
     return suggestions.slice(0, 4); // Max 4 suggestions
   }, [messages, schedules, sections]);
 
-  // ── Send message handler ──
+ // Send message handler
   const sendMessage = useCallback(async (messageText) => {
     if (!messageText.trim() || !chatSession) return;
 
@@ -249,11 +249,11 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
       }
 
       if (transient) {
-        // Keep the session alive — just show error with retry option
+        // Keep the session alive - just show error with retry option
         errorMsg += '\n\nYou can **retry** your last message using the button below.';
         setFailedMessage(userMsg);
       } else {
-        // Fatal error — reset session
+        // Fatal error - reset session
         setChatSession(null);
         setFailedMessage(null);
       }
@@ -365,7 +365,7 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
               </div>
             )}
             
-            {/* Dynamic suggestion chips — shown after any bot response when not typing */}
+            {/* Dynamic suggestion chips - shown after any bot response when not typing */}
             {!isTyping && !failedMessage && suggestions.length > 0 && messages.length > 0 && (
               <div className="chat-suggestions">
                 {suggestions.map((sug, idx) => (
@@ -413,7 +413,7 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
   );
 };
 
-// ── Utility: count conflicts from schedule data ──
+// Utility: count conflicts from schedule data
 function countConflicts(schedules) {
   const timeMap = {};
   let count = 0;

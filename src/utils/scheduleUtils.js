@@ -46,7 +46,7 @@ export function slotsNeededFromIndex(startIdx, hoursPerMeeting) {
   return Math.max(1, count);
 }
 
-/** @deprecated Use slotsNeededFromIndex() instead — this function assumes 1hr slots but the timetable uses 30-min slots. */
+/** @deprecated Use slotsNeededFromIndex() instead - this function assumes 1hr slots but the timetable uses 30-min slots. */
 export function slotsNeeded(hoursPerMeeting) {
   console.warn('[DEPRECATED] slotsNeeded() assumes 1hr slots. Use slotsNeededFromIndex() for accurate 30-min slot counting.');
   const target = Number(hoursPerMeeting) || 1.5;
@@ -233,10 +233,9 @@ export function creditPerMeeting(subject) {
   return credits / meetings;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  CANONICAL ROOM ELIGIBILITY — Single source of truth for all room rules.
-//  Used by: Dashboard validator, targeted heuristic engine.
-// ═══════════════════════════════════════════════════════════════════════════
+// --------------------------------------------------------------------------
+//  Room eligibility rules (used by validator and scheduling engine)
+// --------------------------------------------------------------------------
 
 /**
  * Check whether a specific professor is allowed to use a specific room,

@@ -4,7 +4,7 @@ import React from 'react';
  * Lightweight markdown renderer for chat bubbles.
  * Supports: **bold**, *italic*, `inline code`, headers (###),
  * bullet lists (- / •), numbered lists (1.), and horizontal rules (---).
- * No external dependencies — pure regex-based parsing.
+ * No external dependencies - pure regex-based parsing.
  */
 
 // Parse inline formatting: bold, italic, inline code
@@ -76,21 +76,21 @@ const ChatBubble = ({ text }) => {
     const line = lines[i];
     const trimmed = line.trim();
 
-    // ── Empty line → spacer ──
+ // Empty line → spacer
     if (trimmed === '') {
       elements.push(<div key={`sp${i}`} className="chat-spacer" />);
       i++;
       continue;
     }
 
-    // ── Horizontal rule: --- or *** or ___ ──
+ // Horizontal rule: --- or *** or ___
     if (/^[-*_]{3,}$/.test(trimmed)) {
       elements.push(<hr key={`hr${i}`} className="chat-hr" />);
       i++;
       continue;
     }
 
-    // ── Headers: # ## ### ──
+ // Headers: # ## ###
     const headerMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
     if (headerMatch) {
       const level = headerMatch[1].length;
@@ -104,7 +104,7 @@ const ChatBubble = ({ text }) => {
       continue;
     }
 
-    // ── Bullet list: - item or • item or * item (not bold) ──
+ // Bullet list: - item or • item or * item (not bold)
     const bulletMatch = trimmed.match(/^[-•*]\s+(.+)$/);
     if (bulletMatch && !trimmed.startsWith('**')) {
       // Collect consecutive bullet items
@@ -129,7 +129,7 @@ const ChatBubble = ({ text }) => {
       continue;
     }
 
-    // ── Numbered list: 1. item ──
+ // Numbered list: 1. item
     const numMatch = trimmed.match(/^\d+\.\s+(.+)$/);
     if (numMatch) {
       const items = [];
@@ -153,7 +153,7 @@ const ChatBubble = ({ text }) => {
       continue;
     }
 
-    // ── Regular paragraph line ──
+ // Regular paragraph line
     elements.push(
       <span key={`p${i}`} className="chat-line">
         {renderInline(trimmed, `p${i}`)}

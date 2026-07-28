@@ -112,7 +112,7 @@
   filter: drop-shadow(0 0 6px rgba(86, 69, 238, 0.6));
 }
 
-/* Hover & Active State — rounded pill style */
+/* Hover & Active State */
 .nav-item:hover {
   background: rgba(86, 69, 238, 0.08);
   color: var(--sidebar-text-active);

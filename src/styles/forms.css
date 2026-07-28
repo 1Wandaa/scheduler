@@ -1065,7 +1065,7 @@
     white-space: nowrap !important;
   }
 
-  /* schedule-table keeps its table display — it has min-width + wrapper overflow-x */
+  /* schedule-table keeps its table display - it has min-width + wrapper overflow-x */
 }
 
 /* SweetAlert2 Minimal Override */
