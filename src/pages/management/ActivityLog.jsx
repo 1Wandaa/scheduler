@@ -217,16 +217,19 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
             onClick={handleClearAll}
             disabled={isDeletingAll || filteredLogs.length === 0}
             style={{
-              padding: '8px 16px', borderRadius: 8,
-              background: 'transparent',
-              border: '1.5px solid var(--danger)',
+              padding: '10px 20px', borderRadius: '24px',
+              background: 'var(--danger-bg)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
               color: 'var(--danger)',
               cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem',
-              display: 'flex', alignItems: 'center', gap: 6,
+              display: 'flex', alignItems: 'center', gap: 8,
               opacity: isDeletingAll || filteredLogs.length === 0 ? 0.5 : 1,
+              transition: 'all 0.2s',
             }}
+            onMouseEnter={e => { if(!e.currentTarget.disabled) { e.currentTarget.style.background = 'var(--danger)'; e.currentTarget.style.color = '#fff'; } }}
+            onMouseLeave={e => { if(!e.currentTarget.disabled) { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)'; } }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             {isDeletingAll ? 'Clearing…' : 'Clear Logs'}
           </button>
         </div>
@@ -239,7 +242,35 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
             { label: 'Active Users', value: stats.uniqueUsers, color: '#f59e0b', icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' },
             { label: 'Most Common', value: stats.topAction ? (ACTION_LABELS[stats.topAction[0]] || stats.topAction[0]) : '—', color: '#8b5cf6', icon: 'M18 20V10M12 20V4M6 20v-6' },
           ].map((s, i) => (
-            <div key={i} style={{ background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div 
+              key={i} 
+              style={{ 
+                background: 'var(--bg-main)', border: '1px solid var(--border-color)', 
+                borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, 
+                alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s ease' 
+              }}
+              onMouseEnter={e => { 
+                e.currentTarget.style.transform = 'translateY(-3px)'; 
+                e.currentTarget.style.boxShadow = `0 6px 16px ${s.color}20`; 
+                e.currentTarget.style.borderColor = `${s.color}60`; 
+              }}
+              onMouseLeave={e => { 
+                e.currentTarget.style.transform = 'translateY(0)'; 
+                e.currentTarget.style.boxShadow = 'none'; 
+                e.currentTarget.style.borderColor = 'var(--border-color)'; 
+              }}
+              onClick={() => {
+                if (i === 3 && stats.topAction) {
+                  setSearchQuery(ACTION_LABELS[stats.topAction[0]] || stats.topAction[0]);
+                } else if (i === 1) {
+                  setSearchQuery('');
+                  setCategoryFilter('all');
+                } else {
+                  // Focus the search input for easy filtering
+                  document.querySelector('input[placeholder="Search logs..."]')?.focus();
+                }
+              }}
+            >
               <div style={{ width: 36, height: 36, borderRadius: 8, background: `${s.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <IconSvg path={s.icon} color={s.color} size={16} />
               </div>
@@ -261,11 +292,12 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
                 key={cat.value}
                 onClick={() => setCategoryFilter(cat.value)}
                 style={{
-                  padding: '5px 13px', borderRadius: 20, fontSize: '0.8rem', fontWeight: 600,
-                  cursor: 'pointer', transition: 'all 0.2s',
-                  background: categoryFilter === cat.value ? 'var(--accent-primary)' : 'transparent',
+                  padding: '5px 15px', borderRadius: '24px', fontSize: '0.8rem', fontWeight: 600,
+                  cursor: 'pointer', transition: 'all 0.3s ease',
+                  background: categoryFilter === cat.value ? 'var(--accent-primary)' : 'var(--bg-main)',
                   color: categoryFilter === cat.value ? '#fff' : 'var(--text-muted)',
-                  border: categoryFilter === cat.value ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                  border: categoryFilter === cat.value ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                  boxShadow: categoryFilter === cat.value ? '0 4px 12px rgba(86, 69, 238, 0.25)' : 'none'
                 }}
               >
                 {cat.label}
@@ -273,21 +305,25 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', flex: '1 1 auto', maxWidth: '100%' }}>
-              <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end' }}>
+            <div style={{ position: 'relative', flex: '1 1 auto', maxWidth: '300px' }}>
+              <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
               <input
                 type="text"
-                placeholder="Search logs…"
+                className="form-input"
+                placeholder="Search logs..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                style={{ padding: '7px 12px 7px 30px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.85rem', width: '100%', maxWidth: '200px' }}
+                style={{ width: '100%', paddingLeft: '40px', borderRadius: '24px', backgroundColor: '#fff', border: '1px solid var(--border-color)', fontSize: '0.85rem', paddingRight: '16px' }}
               />
             </div>
             <select
+              className="form-select"
               value={logLimit}
               onChange={e => setLogLimit(Number(e.target.value))}
-              style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.82rem', cursor: 'pointer' }}
+              style={{ borderRadius: '24px', padding: '8px 32px 8px 16px', border: '1px solid var(--border-color)', backgroundColor: '#fff', color: 'var(--text-main)', fontSize: '0.85rem', cursor: 'pointer', maxWidth: '140px' }}
             >
               <option value={50}>Last 50</option>
               <option value={100}>Last 100</option>
