@@ -723,7 +723,14 @@
 }
 
 .modal-content {
-  background: rgba(255, 255, 255, 0.98);
+  background-color: rgba(255, 255, 255, 0.98);
+  background-image: 
+    linear-gradient(rgba(86, 69, 238, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(86, 69, 238, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(86, 69, 238, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(86, 69, 238, 0.015) 1px, transparent 1px);
+  background-size: 60px 60px, 60px 60px, 15px 15px, 15px 15px;
+  background-position: -1px -1px, -1px -1px, -1px -1px, -1px -1px;
   padding: 32px;
   border-radius: 20px;
   width: 500px;
