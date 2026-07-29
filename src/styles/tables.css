@@ -61,5 +61,8 @@
   font-weight: 450;
 }
 
-
-
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
