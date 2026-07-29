@@ -55,9 +55,17 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
           {sectionList.map(sec => (
             <tr key={sec.id}>
               <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
-                <strong style={{ color: titleColor }}>{sec.name}</strong>
+                <strong style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{sec.name}</strong>
               </td>
-              <td style={{ fontWeight: '600', color: titleColor, textAlign: 'center', verticalAlign: 'middle' }}>
+              <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  fontSize: '0.75rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
+                  background: titleColor.startsWith('#') ? `${titleColor}15` : 'rgba(0,0,0,0.05)',
+                  color: titleColor,
+                  border: `1px solid ${titleColor.startsWith('#') ? titleColor + '40' : 'rgba(0,0,0,0.1)'}`,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                }}>
                 {(() => {
                   const course = courses.find(c => c.code === sec.program || c.id === sec.program);
                   if (course) return `${course.code}`;
@@ -65,13 +73,16 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
                   if (dept) return dept.name;
                   return PROGRAM_DEPARTMENTS[sec.program] || sec.program;
                 })()}
+                </span>
               </td>
               <td style={{ whiteSpace: 'nowrap', textAlign: 'center', verticalAlign: 'middle' }}>
                 <span style={{
-                  background: titleColor.startsWith('#') ? `${titleColor}15` : 'rgba(0,0,0,0.05)', 
-                  color: titleColor,
-                  padding: '3px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600',
-                  display: 'inline-block', whiteSpace: 'nowrap'
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  fontSize: '0.75rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
+                  background: 'var(--bg-main)',
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
                 }}>
                   Year {sec.yearLevel}
                 </span>

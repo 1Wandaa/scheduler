@@ -196,15 +196,20 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
               ))}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '15px' }}>
-            <input 
-              type="text" 
-              className="form-input" 
-              placeholder="Search course code or title..." 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-              style={{ flex: 1, maxWidth: '300px' }}
-            />
+          <div style={{ display: 'flex' }}>
+            <div style={{ position: 'relative', flex: 1, maxWidth: '300px' }}>
+              <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="Search course code or title..." 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+                style={{ width: '100%', paddingLeft: '42px', borderRadius: '24px', backgroundColor: '#fff', border: '1px solid var(--border-color)' }}
+              />
+            </div>
           </div>
         </div>
 
@@ -228,15 +233,30 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
               ) : (
                 filteredCourses.map(course => (
                   <tr key={course.id}>
-                    <td style={{ fontWeight: 600 }}>{course.code}</td>
-                    <td>{course.title}</td>
+                    <td>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        fontSize: '0.75rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
+                        background: 'linear-gradient(135deg, #EEF2FF, #E0E7FF)',
+                        color: '#4338ca',
+                        border: '1px solid #c7d2fe',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                      }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                        {course.code}
+                      </span>
+                    </td>
+                    <td><strong style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{course.title}</strong></td>
                     <td>
                       <span style={{ 
-                        fontSize: '0.78rem', padding: '2px 8px', borderRadius: '6px', 
-                        background: `${getDeptColor(course.departmentId)}20`, // 20 for slight transparency
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        fontSize: '0.75rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
+                        background: `${getDeptColor(course.departmentId)}15`,
                         color: getDeptColor(course.departmentId), 
-                        fontWeight: 600 
+                        border: `1px solid ${getDeptColor(course.departmentId)}40`,
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
                       }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: getDeptColor(course.departmentId) }}></div>
                         {getDeptName(course.departmentId)}
                       </span>
                     </td>

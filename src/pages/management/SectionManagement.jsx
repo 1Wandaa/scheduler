@@ -168,44 +168,50 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
               {['All', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
                 const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
                 return (
-                <button
-                  key={dept}
-                  onClick={() => setDepartmentFilter(dept)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    border: departmentFilter === dept ? `1.5px solid ${deptColor}` : '1px solid var(--border-color)',
-                    background: departmentFilter === dept ? deptColor : 'transparent',
-                    color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
-                    cursor: 'pointer',
-                    fontSize: '0.82rem',
-                    fontWeight: '600',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = deptColor; e.target.style.color = deptColor; } }}
-                  onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
-                >
-                  {dept === 'All' ? 'All Departments' : dept}
-                </button>
-              )})}
+                  <button
+                    key={dept}
+                    onClick={() => setDepartmentFilter(dept)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      border: departmentFilter === dept ? `1.5px solid ${deptColor}` : '1px solid var(--border-color)',
+                      background: departmentFilter === dept ? deptColor : 'transparent',
+                      color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      fontSize: '0.82rem',
+                      fontWeight: '600',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = deptColor; e.target.style.color = deptColor; } }}
+                    onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
+                  >
+                    {dept === 'All' ? 'All Departments' : dept}
+                  </button>
+                )
+              })}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '15px' }}>
-            <input 
-              type="text" 
-              className="form-input" 
-              placeholder="Search section name or program..." 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-              style={{ flex: 1, maxWidth: '300px' }}
-            />
+          <div style={{ display: 'flex' }}>
+            <div style={{ position: 'relative', flex: 1, maxWidth: '300px' }}>
+              <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Search section name or program..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ width: '100%', paddingLeft: '42px', borderRadius: '24px', backgroundColor: '#fff', border: '1px solid var(--border-color)' }}
+              />
+            </div>
           </div>
         </div>
 
         {/* Render sections grouped by their Department */}
         {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => {
           if (departmentFilter !== 'All' && departmentFilter !== dept) return null;
-          
+
           const isDeptSection = (sec) => {
             if (sec.program === dept) return true; // Direct match
             // Try matching course
@@ -218,14 +224,14 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
 
           const deptSections = filteredSections.filter(isDeptSection);
           const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
-          
+
           return (
-            <SectionTable 
+            <SectionTable
               key={dept}
-              sectionList={deptSections} 
-              title={`${dept} Sections`} 
-              titleColor={deptColor} 
-              onEdit={handleOpenEdit} 
+              sectionList={deptSections}
+              title={`${dept} Sections`}
+              titleColor={deptColor}
+              onEdit={handleOpenEdit}
               onDelete={handleDelete}
               subjects={subjects}
               professors={professors}
@@ -237,15 +243,15 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
 
         {/* Render any sections that do not match the standard program list */}
         {(departmentFilter === 'All') && (
-          <SectionTable 
+          <SectionTable
             sectionList={filteredSections.filter(sec => {
               const allDepts = departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
               const hasCourseMatch = courses.some(c => c.code === sec.program || c.id === sec.program);
               return !hasCourseMatch && !allDepts.includes(sec.program) && !allDepts.includes(PROGRAM_DEPARTMENTS[sec.program]);
-            })} 
-            title="Other / Unassigned Sections" 
-            titleColor="var(--text-muted)" 
-            onEdit={handleOpenEdit} 
+            })}
+            title="Other / Unassigned Sections"
+            titleColor="var(--text-muted)"
+            onEdit={handleOpenEdit}
             onDelete={handleDelete}
             subjects={subjects}
             professors={professors}
@@ -273,11 +279,17 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
               </div>
             )}
             <div className="form-group">
-              <label className="form-label">Section Name</label>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                Section Name
+              </label>
               <input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. BSCS 1A" />
             </div>
             <div className="form-group">
-              <label className="form-label">Program</label>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+                Program
+              </label>
               <select className="form-select" value={formData.program} onChange={e => setFormData({ ...formData, program: e.target.value })}>
                 <option value="">Select Program / Department</option>
                 {courses.length > 0 ? courses.map(c => (
@@ -288,7 +300,10 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">Year Level</label>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Year Level
+              </label>
               <select className="form-select" value={formData.yearLevel} onChange={e => setFormData({ ...formData, yearLevel: parseInt(e.target.value) })}>
                 <option value={1}>1st Year</option>
                 <option value={2}>2nd Year</option>
@@ -297,7 +312,10 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">Adviser</label>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                Adviser
+              </label>
               <select className="form-select" value={formData.adviser} onChange={e => setFormData({ ...formData, adviser: e.target.value })}>
                 <option value="">No Adviser</option>
                 {sortedProfessors.map(prof => (

@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, XCircle, CalendarDays, CalendarRange } from 'lucide-react';
 import '../styles/dialogs.css';
 
 const GlobalDialogContext = createContext(null);
@@ -81,6 +81,8 @@ export const GlobalDialogProvider = ({ children }) => {
       case 'warning': return <AlertTriangle size={24} />;
       case 'success': return <CheckCircle2 size={24} />;
       case 'error': return <XCircle size={24} />;
+      case 'calendar': return <CalendarDays size={24} />;
+      case 'calendar-range': return <CalendarRange size={24} />;
       case 'info':
       default: return <Info size={24} />;
     }

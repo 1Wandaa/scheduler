@@ -143,15 +143,20 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', gap: '15px' }}>
-            <input 
-              type="text" 
-              className="form-input" 
-              placeholder="Search department..." 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-              style={{ flex: 1, maxWidth: '300px' }}
-            />
+          <div style={{ display: 'flex' }}>
+            <div style={{ position: 'relative', flex: 1, maxWidth: '300px' }}>
+              <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="Search department..." 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+                style={{ width: '100%', paddingLeft: '42px', borderRadius: '24px', backgroundColor: '#fff', border: '1px solid var(--border-color)' }}
+              />
+            </div>
           </div>
         </div>
 
@@ -175,12 +180,29 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
               ) : (
                 filteredDepartments.map(dept => (
                   <tr key={dept.id}>
-                    <td style={{ fontWeight: 600 }}>{dept.id}</td>
-                    <td>{dept.name}</td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: dept.color }}></div>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{dept.color}</span>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        fontSize: '0.75rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
+                        background: `${dept.color}15`,
+                        color: dept.color,
+                        border: `1px solid ${dept.color}40`,
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                      }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                        {dept.id}
+                      </span>
+                    </td>
+                    <td><strong style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{dept.name}</strong></td>
+                    <td>
+                      <div style={{ 
+                        display: 'inline-flex', alignItems: 'center', gap: '8px',
+                        padding: '4px 12px', borderRadius: '16px', 
+                        background: 'var(--bg-main)', border: '1px solid var(--border-color)',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                      }}>
+                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: dept.color, border: '1px solid rgba(0,0,0,0.1)' }}></div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.5px' }}>{dept.color.toUpperCase()}</span>
                       </div>
                     </td>
                     <td style={{ textAlign: 'right' }}>
