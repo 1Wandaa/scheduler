@@ -1038,12 +1038,17 @@
 
 
 
+  .modal-overlay {
+    padding-bottom: 85px !important; /* Space for the bottom nav bar */
+  }
+
   .modal-content {
     width: calc(100% - 32px) !important;
     box-sizing: border-box !important;
     max-width: none !important;
     padding: 20px !important;
     margin: 16px auto;
+    max-height: calc(100dvh - 120px) !important;
   }
 
   .card-header {
