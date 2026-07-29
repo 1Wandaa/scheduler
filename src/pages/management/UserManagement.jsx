@@ -187,7 +187,22 @@ const UserManagement = ({ onBack }) => {
               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Manage system users and permissions</p>
             </div>
           </div>
-          <button className="btn-primary" onClick={handleOpenAdd} style={{ padding: '8px 16px' }}>+ Add User</button>
+          <button 
+            onClick={handleOpenAdd} 
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '8px', 
+              padding: '10px 20px', borderRadius: '24px', 
+              background: 'linear-gradient(135deg, var(--accent-primary), #4338ca)', 
+              color: '#fff', border: 'none', fontWeight: '600', 
+              boxShadow: '0 4px 12px rgba(86, 69, 238, 0.25)', 
+              cursor: 'pointer', transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(86, 69, 238, 0.35)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(86, 69, 238, 0.25)'; }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
+            Add User
+          </button>
         </div>
 
         {/* Tabs */}
@@ -237,106 +252,58 @@ const UserManagement = ({ onBack }) => {
         <UserTable users={filteredUsers} onDeleteUser={handleDeleteUser} onEditUser={handleOpenEdit} />
       </div>
 
-      {/* --- ADD / EDIT MODAL --- */}
       {isModalOpen && (
-        <div className="modal-overlay" style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(30, 41, 59, 0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000,
-          animation: 'fadeIn 0.2s ease-out'
-        }}>
-          <div className="modal-content" style={{
-            background: 'var(--card-bg)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '16px',
-            width: '100%',
-            maxWidth: '420px',
-            padding: '28px',
-            boxShadow: '0 24px 48px rgba(0,0,0,0.1)',
-            animation: 'floatUp 0.3s ease-out',
-            position: 'relative'
-          }}>
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ width: '100%', maxWidth: '500px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Icon d={NAV_ICONS.users} size={20} />
                 {editingUser ? 'Edit User' : 'Add New User'}
               </h2>
-              <button onClick={resetForm} style={{
-                background: 'transparent', border: 'none', color: 'var(--text-muted)',
-                cursor: 'pointer', padding: '6px', borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'background 0.2s, color 0.2s'
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = 'var(--text-main)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              <button onClick={resetForm} className="btn-icon" style={{ background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '50%', padding: '6px', color: 'var(--text-muted)' }} title="Close">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
               </button>
             </div>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>Full Name</label>
-                <div style={{ position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  </div>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. John Doe"
-                    value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    style={{
-                      width: '100%', padding: '10px 12px 10px 36px', boxSizing: 'border-box',
-                      background: 'var(--bg-main)', border: '1px solid var(--border-color)',
-                      borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.95rem',
-                      outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s'
-                    }}
-                    onFocus={e => { e.target.style.borderColor = 'var(--accent-primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(86, 69, 238, 0.1)'; }}
-                    onBlur={e => { e.target.style.borderColor = 'var(--border-color)'; e.target.style.boxShadow = 'none'; }}
-                  />
-                </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div className="form-group">
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  Full Name
+                </label>
+                <input 
+                  type="text" 
+                  className="form-input"
+                  placeholder="Enter full name"
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                />
               </div>
 
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>Username</label>
-                  <div style={{ position: 'relative' }}>
-                    <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>
-                    </div>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. @johndoe"
-                      value={formData.username}
-                      onChange={e => setFormData({ ...formData, username: e.target.value })}
-                      style={{
-                        width: '100%', padding: '10px 12px 10px 36px', boxSizing: 'border-box',
-                        background: 'var(--bg-main)', border: '1px solid var(--border-color)',
-                        borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.95rem',
-                        outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s'
-                      }}
-                      onFocus={e => { e.target.style.borderColor = 'var(--accent-primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(86, 69, 238, 0.1)'; }}
-                      onBlur={e => { e.target.style.borderColor = 'var(--border-color)'; e.target.style.boxShadow = 'none'; }}
-                    />
-                  </div>
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>
+                    Username
+                  </label>
+                  <input 
+                    type="text" 
+                    className="form-input"
+                    placeholder="Enter username"
+                    value={formData.username}
+                    onChange={e => setFormData({ ...formData, username: e.target.value })}
+                  />
                 </div>
 
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>Role</label>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+                    Role
+                  </label>
                   <select 
+                    className="form-select"
                     value={formData.role}
                     onChange={e => setFormData({ ...formData, role: e.target.value })}
-                    style={{
-                      width: '100%', padding: '10px 12px', boxSizing: 'border-box',
-                      background: 'var(--bg-main)', border: '1px solid var(--border-color)',
-                      borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.95rem',
-                      outline: 'none', cursor: 'pointer', transition: 'border-color 0.2s, box-shadow 0.2s'
-                    }}
-                    onFocus={e => { e.target.style.borderColor = 'var(--accent-primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(86, 69, 238, 0.1)'; }}
-                    onBlur={e => { e.target.style.borderColor = 'var(--border-color)'; e.target.style.boxShadow = 'none'; }}
                   >
                     <option value="Admin">Admin</option>
                     <option value="Department Head">Department Head</option>
@@ -346,58 +313,27 @@ const UserManagement = ({ onBack }) => {
                 </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>Password</label>
-                <div style={{ position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  </div>
-                  <input 
-                    type="text" 
-                    placeholder="Min 6 characters"
-                    value={formData.password}
-                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                    style={{
-                      width: '100%', padding: '10px 12px 10px 36px', boxSizing: 'border-box',
-                      background: 'var(--bg-main)', border: '1px solid var(--border-color)',
-                      borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.95rem',
-                      outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s'
-                    }}
-                    onFocus={e => { e.target.style.borderColor = 'var(--accent-primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(86, 69, 238, 0.1)'; }}
-                    onBlur={e => { e.target.style.borderColor = 'var(--border-color)'; e.target.style.boxShadow = 'none'; }}
-                  />
-                </div>
-                <div style={{ marginTop: '8px', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4, display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-                  Firebase requires minimum 6 characters. The secure Auth account is auto-created on their first login.
-                </div>
+              <div className="form-group">
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  Password
+                </label>
+                <input 
+                  type="text" 
+                  className="form-input"
+                  placeholder="Enter password (min. 6 chars)"
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                />
+
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
-              <button onClick={resetForm} style={{
-                padding: '10px 16px', borderRadius: '8px',
-                background: 'transparent', border: '1px solid var(--border-color)',
-                color: 'var(--text-main)', fontSize: '0.9rem', fontWeight: 600,
-                cursor: 'pointer', transition: 'background 0.2s, border-color 0.2s'
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.03)'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
-              >
+              <button onClick={resetForm} className="back-btn">
                 Cancel
               </button>
-              <button onClick={handleSaveUser} style={{
-                padding: '10px 20px', borderRadius: '8px',
-                background: 'var(--accent-primary)', border: 'none',
-                color: '#fff', fontSize: '0.9rem', fontWeight: 600,
-                cursor: 'pointer', transition: 'opacity 0.2s, transform 0.1s, box-shadow 0.2s',
-                boxShadow: '0 4px 12px rgba(86, 69, 238, 0.2)'
-              }}
-              onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(86, 69, 238, 0.3)'; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(86, 69, 238, 0.2)'; }}
-              onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
-              onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-              >
+              <button onClick={handleSaveUser} className="btn">
                 {editingUser ? 'Update User' : 'Save User'}
               </button>
             </div>
