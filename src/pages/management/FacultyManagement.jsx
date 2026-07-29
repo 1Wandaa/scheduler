@@ -309,12 +309,12 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
             
             <div style={{ display: 'flex', gap: '15px' }}>
               <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">First Name</label>
-                <input className="form-input" value={formData.firstName || ''} onChange={e => setFormData({ ...formData, firstName: e.target.value })} placeholder="e.g. Dr. John" />
+                <label className="form-label">Last Name (Surname)</label>
+                <input className="form-input" value={formData.lastName || ''} onChange={e => setFormData({ ...formData, lastName: e.target.value })} placeholder="e.g. Dela Cruz" />
               </div>
               <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Last Name (Surname)</label>
-                <input className="form-input" value={formData.lastName || ''} onChange={e => setFormData({ ...formData, lastName: e.target.value })} placeholder="e.g. Smith" />
+                <label className="form-label">First Name</label>
+                <input className="form-input" value={formData.firstName || ''} onChange={e => setFormData({ ...formData, firstName: e.target.value })} placeholder="e.g. Juan" />
               </div>
             </div>
 
@@ -379,15 +379,13 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Assigned Subjects</label>
-              <SubjectSelector
-                subjects={subjects}
-                activeSemester={activeSemester}
-                selectedSubjects={formData.specialization || []}
-                onToggleSubject={handleSubjectToggle}
-              />
-            </div>
+            <SubjectSelector
+              label="Assigned Subjects"
+              subjects={subjects}
+              activeSemester={activeSemester}
+              selectedSubjects={formData.specialization || []}
+              onToggleSubject={handleSubjectToggle}
+            />
 
             <div className="form-group" style={{ marginBottom: '25px' }}>
               <label className="form-label">Preferred Rooms</label>

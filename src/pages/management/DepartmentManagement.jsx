@@ -222,7 +222,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
                 disabled={editMode} 
                 placeholder="e.g. BSCS" 
               />
-              {!editMode && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>Used as unique identifier. Best to use the abbreviation.</span>}
+              {!editMode && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px', display: 'block' }}>Used as unique identifier. Best to use the abbreviation.</span>}
             </div>
 
             <div className="form-group">
@@ -231,26 +231,38 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
                 className="form-input" 
                 value={formData.name} 
                 onChange={e => setFormData({ ...formData, name: e.target.value })} 
-                placeholder="e.g. BSCS or Computer Science" 
+                placeholder="e.g. Computer Science" 
               />
             </div>
 
             <div className="form-group">
               <label className="form-label">Color Theme</label>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <input 
-                  type="color" 
-                  value={formData.color} 
-                  onChange={e => setFormData({ ...formData, color: e.target.value })} 
-                  style={{ width: '40px', height: '40px', padding: '0', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer' }}
-                />
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  value={formData.color} 
-                  onChange={e => setFormData({ ...formData, color: e.target.value })} 
-                  style={{ flex: 1 }}
-                />
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--bg-main)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ position: 'relative', width: '38px', height: '38px', borderRadius: '6px', overflow: 'hidden', border: '2px solid rgba(0,0,0,0.05)', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                  <input 
+                    type="color" 
+                    value={formData.color} 
+                    onChange={e => setFormData({ ...formData, color: e.target.value })} 
+                    style={{ position: 'absolute', top: '-10px', left: '-10px', width: '60px', height: '60px', padding: '0', border: 'none', cursor: 'pointer' }}
+                  />
+                </div>
+                <div style={{ position: 'relative', flex: 1, maxWidth: '140px' }}>
+                  <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontWeight: 'bold' }}>#</span>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    value={(formData.color || '').replace('#', '')} 
+                    onChange={e => {
+                      const hex = e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
+                      setFormData({ ...formData, color: '#' + hex });
+                    }} 
+                    style={{ width: '100%', paddingLeft: '22px', fontFamily: 'monospace', fontSize: '0.95rem', letterSpacing: '0.5px' }}
+                    placeholder="FFFFFF"
+                  />
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '500', marginLeft: 'auto' }}>
+                  Used for tags and charts
+                </div>
               </div>
             </div>
 

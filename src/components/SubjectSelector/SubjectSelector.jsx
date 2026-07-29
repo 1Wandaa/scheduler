@@ -3,7 +3,7 @@ import { DEPARTMENTS, getDeptColor } from '../../config/constants';
 import { getSubjectDepts } from '../SubjectTable/SubjectTable';
 import AutocompleteMultiSelect from '../AutocompleteMultiSelect/AutocompleteMultiSelect';
 
-const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], departments = [], onToggleSubject }) => {
+const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], departments = [], onToggleSubject, label = "Enrolled Subjects" }) => {
   const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
   const [subjectModalFilter, setSubjectModalFilter] = useState('All');
   const [showAllSemesters, setShowAllSemesters] = useState(false);
@@ -84,7 +84,7 @@ const SubjectSelector = ({ subjects, activeSemester, selectedSubjects = [], depa
 
   return (
     <div className="form-group" style={{ marginBottom: '25px' }}>
-      <label className="form-label">Enrolled Subjects</label>
+      <label className="form-label">{label}</label>
       
       {/* Filters */}
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '15px' }}>
