@@ -181,24 +181,35 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
             )})}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '15px' }}>
-          <input 
-            type="text" 
-            className="form-input" 
-            placeholder="Search room name..." 
-            value={searchQuery} 
-            onChange={(e) => setSearchQuery(e.target.value)} 
-            style={{ flex: 1, maxWidth: '300px' }}
-          />
-          <select 
-            className="form-select" 
-            value={filterBuilding} 
-            onChange={(e) => setFilterBuilding(e.target.value)}
-            style={{ flex: 1, maxWidth: '250px' }}
-          >
-            <option value="">All Buildings</option>
-            {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1, maxWidth: '300px' }}>
+            <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </span>
+            <input 
+              type="text" 
+              className="form-input" 
+              placeholder="Search room name or ID..." 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              style={{ width: '100%', paddingLeft: '42px', borderRadius: '24px', backgroundColor: '#fff', border: '1px solid var(--border-color)' }}
+            />
+          </div>
+          
+          <div style={{ position: 'relative', flex: 1, maxWidth: '250px' }}>
+            <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+            </span>
+            <select 
+              className="form-select" 
+              value={filterBuilding} 
+              onChange={(e) => setFilterBuilding(e.target.value)}
+              style={{ width: '100%', paddingLeft: '42px', borderRadius: '24px', backgroundColor: '#fff', border: '1px solid var(--border-color)' }}
+            >
+              <option value="">All Buildings</option>
+              {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -215,30 +226,58 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
                 {error}
               </div>
             )}
-            <div className="form-group"><label className="form-label">Room ID</label><input className="form-input" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. R001" /></div>
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-primary)' }}><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M2 15h10"></path><path d="M5 12l-3 3 3 3"></path></svg>
+                  Room ID
+                </label>
+                <input className="form-input" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. R001" style={{ backgroundColor: editMode ? 'var(--bg-main)' : '#fff' }} />
+              </div>
 
-            <div className="form-group"><label className="form-label">Room Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Room 101" /></div>
-
-            <div className="form-group"><label className="form-label">Building</label>
-              <select className="form-select" value={formData.building} onChange={e => setFormData({ ...formData, building: e.target.value })}>
-                <option value="">Select a Building</option>
-                {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
-              </select>
+              <div className="form-group" style={{ flex: 2 }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-primary)' }}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                  Room Name
+                </label>
+                <input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Computer Lab 1" />
+              </div>
             </div>
 
-            <div className="form-group"><label className="form-label">Department Owner</label>
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-primary)' }}><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                  Building
+                </label>
+                <select className="form-select" value={formData.building} onChange={e => setFormData({ ...formData, building: e.target.value })}>
+                  <option value="">Select a Building</option>
+                  {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-primary)' }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                  Room Type
+                </label>
+                <select className="form-select" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
+                  <option value={ROOM_TYPES.LECTURE}>Lecture</option>
+                  <option value={ROOM_TYPES.LAB}>Laboratory</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-primary)' }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Department Owner
+              </label>
               <select className="form-select" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
                 <option value="SHARED">SHARED (Any department)</option>
                 {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(d => <option key={d} value={d}>{d}</option>)}
               </select>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>Priority scheduling for this department's sections. SHARED = available to all.</span>
-            </div>
-
-            <div className="form-group"><label className="form-label">Room Type</label>
-              <select className="form-select" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
-                <option value={ROOM_TYPES.LECTURE}>Lecture</option>
-                <option value={ROOM_TYPES.LAB}>Laboratory</option>
-              </select>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '25px', padding: '12px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
