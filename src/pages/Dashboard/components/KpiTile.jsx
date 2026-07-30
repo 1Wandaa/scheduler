@@ -10,7 +10,15 @@ const KpiTile = ({ label, value, iconPath, color, onClick }) => {
   const gradEnd = lighten(color, 60);
   return (
     <div className="kpi-tile" onClick={onClick} style={{
-      background: 'var(--card-bg)',
+      backgroundColor: 'var(--card-bg)',
+      backgroundImage: `
+        linear-gradient(rgba(86, 69, 238, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(86, 69, 238, 0.03) 1px, transparent 1px),
+        linear-gradient(rgba(86, 69, 238, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(86, 69, 238, 0.015) 1px, transparent 1px)
+      `,
+      backgroundSize: '60px 60px, 60px 60px, 15px 15px, 15px 15px',
+      backgroundPosition: '-1px -1px, -1px -1px, -1px -1px, -1px -1px',
       border: '1px solid var(--border-color)',
       borderRadius: '16px',
       padding: '22px 24px',
