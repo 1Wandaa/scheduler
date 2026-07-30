@@ -168,13 +168,15 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
 
             {/* Header Row: Title & Print Button separated from filters */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingBottom: '15px', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '15px' }}>
-                <div className="no-print">
-                    <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
-                        Schedule Viewer
-                    </h3>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Filter schedules by department{isAdmin ? ', faculty, or room' : ' or room'}</p>
+            <div className="mgmt-header no-print">
+                <div className="mgmt-header-left">
+                    <div className="mgmt-header-info">
+                        <h3 className="card-title">
+                            <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                            Schedule Viewer
+                        </h3>
+                        <p>Filter schedules by department{isAdmin ? ', faculty, or room' : ' or room'}</p>
+                    </div>
                 </div>
 
                 <ExportOptions 
@@ -185,7 +187,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
             </div>
 
             {/* Filters Row: Dedicated block with responsive grid */}
-            <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <div className="mgmt-toolbar no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter By</label>

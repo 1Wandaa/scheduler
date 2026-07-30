@@ -166,17 +166,17 @@ const UserManagement = ({ onBack }) => {
     <>
       <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
         {/* --- HEADER SECTION --- */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+        <div className="mgmt-header">
+          <div className="mgmt-header-left">
             {onBack && (
               <button className="back-btn" onClick={onBack}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 Back
               </button>
             )}
-            <div>
-              <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="mgmt-header-info">
+              <h3 className="card-title">
+                <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                   <circle cx="9" cy="7" r="4"></circle>
                   <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -184,22 +184,10 @@ const UserManagement = ({ onBack }) => {
                 </svg>
                 User Management
               </h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Manage system users and permissions</p>
+              <p>Manage system users and permissions</p>
             </div>
           </div>
-          <button 
-            onClick={handleOpenAdd} 
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '8px', 
-              padding: '10px 20px', borderRadius: '24px', 
-              background: 'linear-gradient(135deg, var(--accent-primary), #4338ca)', 
-              color: '#fff', border: 'none', fontWeight: '600', 
-              boxShadow: '0 4px 12px rgba(86, 69, 238, 0.25)', 
-              cursor: 'pointer', transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(86, 69, 238, 0.35)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(86, 69, 238, 0.25)'; }}
-          >
+          <button className="btn" onClick={handleOpenAdd}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
             Add User
           </button>
@@ -232,22 +220,20 @@ const UserManagement = ({ onBack }) => {
         </div>
 
         {/* Search Bar */}
-        <div style={{ display: 'flex', marginBottom: '20px' }}>
-          <div style={{ position: 'relative', flex: 1, maxWidth: '300px' }}>
-            <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+        <div className="mgmt-toolbar">
+          <div className="mgmt-search-wrapper" style={{ maxWidth: '300px' }}>
+            <span className="mgmt-search-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </span>
             <input 
               type="text" 
-              className="form-input" 
+              className="mgmt-search-input" 
               placeholder="Search user by name, username or role..." 
               value={searchQuery} 
               onChange={(e) => setSearchQuery(e.target.value)} 
-              style={{ width: '100%', paddingLeft: '42px', borderRadius: '24px', backgroundColor: '#fff', border: '1px solid var(--border-color)' }}
             />
           </div>
         </div>
-
         {/* --- DATA TABLE --- */}
         <UserTable users={filteredUsers} onDeleteUser={handleDeleteUser} onEditUser={handleOpenEdit} />
       </div>
@@ -329,8 +315,8 @@ const UserManagement = ({ onBack }) => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
-              <button onClick={resetForm} className="back-btn">
+            <div className="mgmt-modal-actions">
+              <button onClick={resetForm} className="mgmt-cancel-btn">
                 Cancel
               </button>
               <button onClick={handleSaveUser} className="btn">

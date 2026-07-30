@@ -1,15 +1,18 @@
 :root {
-  /* Color Palette */
+  /* ─── Color Palette ─── */
   --accent-dark: #2A265F;
   --accent-primary: #5645EE;
+  --accent-light: #8B5CF6;
   --success: #02B974;
   --success-bg: #E6F8F0;
   --danger: #EF2A66;
   --danger-bg: #FDEAEF;
   --warning: #F5A623;
   --warning-bg: #FEF6E9;
+  --info: #3b82f6;
+  --info-bg: #EEF2FF;
 
-  /* Structural Colors */
+  /* ─── Structural Colors ─── */
   --bg-main: #F4F5F7;
   --card-bg: rgba(255, 255, 255, 0.98);
   --text-main: #1E293B;
@@ -17,9 +20,61 @@
   --table-header: #F8FAFC;
   --border-color: #E2E8F0;
 
-  /* Sidebar Colors */
+  /* ─── Sidebar Colors ─── */
   --sidebar-bg: #15133C;
   --sidebar-hover: #282463;
   --sidebar-text-muted: #8E8CB0;
   --sidebar-text-active: #FFFFFF;
+
+  /* ─── Typography ─── */
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Poppins', sans-serif;
+
+  /* ─── Border Radius Scale ─── */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* ─── Shadow Scale ─── */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.08), 0 0 80px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 24px 72px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.15);
+  --shadow-accent: 0 4px 15px rgba(86, 69, 238, 0.3);
+  --shadow-accent-hover: 0 8px 25px rgba(86, 69, 238, 0.4);
+
+  /* ─── Transitions ─── */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.25s ease;
+  --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ─── Spacing Scale ─── */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+
+  /* ─── Gradient Presets ─── */
+  --gradient-primary: linear-gradient(135deg, var(--accent-primary), var(--accent-light));
+  --gradient-dark: linear-gradient(135deg, var(--accent-dark), var(--accent-primary));
+
+  /* ─── Blueprint Texture (shared across cards/modals) ─── */
+  --blueprint-texture:
+    linear-gradient(rgba(86, 69, 238, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(86, 69, 238, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(86, 69, 238, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(86, 69, 238, 0.015) 1px, transparent 1px);
+  --blueprint-size: 60px 60px, 60px 60px, 15px 15px, 15px 15px;
+  --blueprint-position: -1px -1px, -1px -1px, -1px -1px, -1px -1px;
 }

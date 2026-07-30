@@ -58,17 +58,17 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
 
   return (
     <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+      <div className="mgmt-header">
+        <div className="mgmt-header-left">
           {onBack && (
-            <button className="back-btn" onClick={onBack} style={{ background: 'transparent', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button className="back-btn" onClick={onBack}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
               Back
             </button>
           )}
-          <div>
-            <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="mgmt-header-info">
+            <h3 className="card-title">
+              <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="16" y1="2" x2="16" y2="6"></line>
                 <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -76,9 +76,7 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
               </svg>
               Room Availability
             </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>
-              Real-time room matrix for {activeSemester} {activeSchoolYear}
-            </p>
+            <p>Real-time room matrix for {activeSemester} {activeSchoolYear}</p>
           </div>
         </div>
       </div>

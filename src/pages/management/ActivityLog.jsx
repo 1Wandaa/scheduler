@@ -187,16 +187,16 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
 
  {/* Header */}
       <div className="card" style={{ marginBottom: '20px', padding: '24px 28px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+        <div className="mgmt-header">
+          <div className="mgmt-header-left">
             {onBack && (
               <button className="back-btn" onClick={onBack}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
                 Back
               </button>
             )}
-            <div>
-              <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="mgmt-header-info">
+              <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(99,102,241,0.35)', flexShrink: 0 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -208,26 +208,20 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
                 </span>
                 Activity Log
               </h2>
-              <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              <p>
                 Real-time audit trail of all user actions in the system
               </p>
             </div>
           </div>
           <button
+            className="btn"
             onClick={handleClearAll}
             disabled={isDeletingAll || filteredLogs.length === 0}
             style={{
-              padding: '10px 20px', borderRadius: '24px',
-              background: 'var(--danger-bg)',
-              border: '1px solid rgba(239, 68, 68, 0.2)',
-              color: 'var(--danger)',
-              cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem',
-              display: 'flex', alignItems: 'center', gap: 8,
-              opacity: isDeletingAll || filteredLogs.length === 0 ? 0.5 : 1,
-              transition: 'all 0.2s',
+              background: isDeletingAll || filteredLogs.length === 0 ? 'var(--bg-main)' : 'var(--danger-bg)',
+              color: isDeletingAll || filteredLogs.length === 0 ? 'var(--text-muted)' : 'var(--danger)',
+              border: isDeletingAll || filteredLogs.length === 0 ? '1px solid var(--border-color)' : '1px solid rgba(239, 68, 68, 0.2)',
             }}
-            onMouseEnter={e => { if(!e.currentTarget.disabled) { e.currentTarget.style.background = 'var(--danger)'; e.currentTarget.style.color = '#fff'; } }}
-            onMouseLeave={e => { if(!e.currentTarget.disabled) { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)'; } }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             {isDeletingAll ? 'Clearing…' : 'Clear Logs'}

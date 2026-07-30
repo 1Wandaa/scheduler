@@ -141,49 +141,39 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
   return (
     <>
       <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+        <div className="mgmt-header">
+          <div className="mgmt-header-left">
             {onBack && (
               <button className="back-btn" onClick={onBack}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
                 Back
               </button>
             )}
-            <div>
-              <h3 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <div className="mgmt-header-info">
+              <h3 className="card-title">
+                <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 Section Management
               </h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '5px 0 0 0' }}>Manage student sections and their enrolled subjects</p>
+              <p>Manage student sections and their enrolled subjects</p>
             </div>
           </div>
           <button className="btn" onClick={handleOpenAdd}>+ Add Section</button>
         </div>
 
         {/* Department Filter and Search Bar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '500' }}>Filter by Department:</span>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        <div className="mgmt-toolbar">
+          <div className="mgmt-toolbar-row">
+            <span className="mgmt-toolbar-label">Filter by Department:</span>
+            <div className="mgmt-filter-pills">
               {['All', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
                 const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+                const isActive = departmentFilter === dept;
                 return (
                   <button
                     key={dept}
+                    className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
                     onClick={() => setDepartmentFilter(dept)}
-                    style={{
-                      padding: '6px 14px',
-                      borderRadius: '20px',
-                      border: departmentFilter === dept ? `1.5px solid ${deptColor}` : '1px solid var(--border-color)',
-                      background: departmentFilter === dept ? deptColor : 'transparent',
-                      color: departmentFilter === dept ? '#fff' : 'var(--text-muted)',
-                      cursor: 'pointer',
-                      fontSize: '0.82rem',
-                      fontWeight: '600',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = deptColor; e.target.style.color = deptColor; } }}
-                    onMouseLeave={(e) => { if (departmentFilter !== dept) { e.target.style.borderColor = 'var(--border-color)'; e.target.style.color = 'var(--text-muted)'; } }}
+                    style={isActive ? { background: deptColor, borderColor: deptColor } : undefined}
                   >
                     {dept === 'All' ? 'All Departments' : dept}
                   </button>
@@ -191,20 +181,17 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
               })}
             </div>
           </div>
-          <div style={{ display: 'flex' }}>
-            <div style={{ position: 'relative', flex: 1, maxWidth: '100%' }}>
-              <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              </span>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Search section name or program..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ width: '100%', paddingLeft: '42px', borderRadius: '24px', backgroundColor: '#fff', border: '1px solid var(--border-color)', boxSizing: 'border-box' }}
-              />
-            </div>
+          <div className="mgmt-search-wrapper">
+            <span className="mgmt-search-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </span>
+            <input
+              type="text"
+              className="mgmt-search-input"
+              placeholder="Search section name or program..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </div>
 
@@ -261,9 +248,9 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
         )}
 
         {sections.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-            <p style={{ fontSize: '1.1rem', marginBottom: '5px' }}>No sections yet</p>
-            <p style={{ fontSize: '0.85rem' }}>Add sections to enable the Auto-Scheduler</p>
+          <div className="mgmt-empty-state">
+            <h4>No sections yet</h4>
+            <p>Add sections to enable the Auto-Scheduler</p>
           </div>
         )}
       </div>
@@ -273,7 +260,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
           <div className="modal-content" style={{ width: '500px' }} onKeyDown={handleKeyDown}>
             <h3>{editMode ? 'Edit Section' : 'Add New Section'}</h3>
             {error && (
-              <div style={{ position: 'sticky', top: '0', zIndex: 10, padding: '10px 15px', backgroundColor: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '8px', marginBottom: '15px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.3s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}>
+              <div className="mgmt-modal-error">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                 {error}
               </div>
@@ -332,8 +319,8 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
               departments={departments}
               onToggleSubject={handleSubjectToggle}
             />
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowModal(false)} style={{ padding: '10px 18px', border: '1px solid var(--border-color)', background: 'transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', color: 'var(--text-muted)' }} disabled={isSaving}>Cancel</button>
+            <div className="mgmt-modal-actions">
+              <button className="mgmt-cancel-btn" onClick={() => setShowModal(false)} disabled={isSaving}>Cancel</button>
               <button className="btn" onClick={handleSave} disabled={isSaving}>
                 {isSaving ? 'Saving...' : 'Save Section'}
               </button>

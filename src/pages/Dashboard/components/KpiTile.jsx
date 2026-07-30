@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from './Icon';
 
 const KpiTile = ({ label, value, iconPath, color, onClick }) => {
@@ -8,45 +8,54 @@ const KpiTile = ({ label, value, iconPath, color, onClick }) => {
     return `rgb(${r},${g},${b})`;
   };
   const gradEnd = lighten(color, 60);
+
+  // Animated count-up
+  const [displayValue, setDisplayValue] = useState(0);
+  const prevValue = useRef(0);
+
+  useEffect(() => {
+    const target = typeof value === 'number' ? value : parseInt(value, 10);
+    if (isNaN(target)) { setDisplayValue(value); return; }
+
+    const start = prevValue.current;
+    const diff = target - start;
+    if (diff === 0) return;
+
+    const duration = 600;
+    const startTime = performance.now();
+
+    const animate = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(Math.round(start + diff * eased));
+      if (progress < 1) requestAnimationFrame(animate);
+      else prevValue.current = target;
+    };
+
+    requestAnimationFrame(animate);
+    prevValue.current = target;
+  }, [value]);
+
   return (
-    <div className="kpi-tile" onClick={onClick} style={{
-      backgroundColor: 'var(--card-bg)',
-      backgroundImage: `
-        linear-gradient(rgba(86, 69, 238, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(86, 69, 238, 0.03) 1px, transparent 1px),
-        linear-gradient(rgba(86, 69, 238, 0.015) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(86, 69, 238, 0.015) 1px, transparent 1px)
-      `,
-      backgroundSize: '60px 60px, 60px 60px, 15px 15px, 15px 15px',
-      backgroundPosition: '-1px -1px, -1px -1px, -1px -1px, -1px -1px',
-      border: '1px solid var(--border-color)',
-      borderRadius: '16px',
-      padding: '22px 24px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '18px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-      transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease',
-      cursor: onClick ? 'pointer' : 'default',
-      animation: 'floatUp 0.5s ease-out backwards',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      <div className="kpi-icon" style={{
-        width: 48, height: 48,
-        borderRadius: '14px',
-        background: `linear-gradient(135deg, ${color}, ${gradEnd})`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#fff',
-        flexShrink: 0,
-        boxShadow: `0 4px 14px ${color}40`,
-        transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease',
-      }}>
+    <div
+      className="kpi-tile"
+      onClick={onClick}
+      data-clickable={onClick ? 'true' : 'false'}
+    >
+      <div
+        className="kpi-icon"
+        style={{
+          background: `linear-gradient(135deg, ${color}, ${gradEnd})`,
+          boxShadow: `0 4px 14px ${color}40`,
+        }}
+      >
         <Icon d={iconPath} size={22} />
       </div>
       <div>
-        <div style={{ fontSize: '1.8rem', fontWeight: 800, lineHeight: 1, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>{value}</div>
-        <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{label}</div>
+        <div className="kpi-value">{displayValue}</div>
+        <div className="kpi-label">{label}</div>
       </div>
     </div>
   );

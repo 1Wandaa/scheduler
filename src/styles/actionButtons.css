@@ -1,13 +1,34 @@
-/* Action Buttons (Edit/Delete) */
+/* =========================================
+   ACTION BUTTONS (Edit / Delete)
+   ========================================= */
 .btn-edit, .btn-delete {
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;
   font-weight: 600;
   font-size: 0.8rem;
+  font-family: var(--font-body);
   transition: all 0.2s ease;
   margin-right: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer sweep effect (matches .btn pattern) */
+.btn-edit::before,
+.btn-delete::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.btn-edit:hover::before,
+.btn-delete:hover::before {
+  transform: translateX(100%);
 }
 
 .btn-edit {
@@ -20,6 +41,11 @@
   color: white;
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(86, 69, 238, 0.2);
+}
+
+.btn-edit:active {
+  transform: translateY(0) scale(0.97);
+  transition-duration: 0.1s;
 }
 
 .btn-delete {
@@ -35,4 +61,7 @@
   box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
 }
 
-
+.btn-delete:active {
+  transform: translateY(0) scale(0.97);
+  transition-duration: 0.1s;
+}
