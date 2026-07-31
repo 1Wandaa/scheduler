@@ -45,6 +45,7 @@
 .data-table tbody tr {
   animation: tableRowSlide 0.35s ease-out backwards;
   transition: background 0.2s ease, transform 0.2s ease;
+  will-change: transform, opacity;
 }
 
 .data-table tbody tr:nth-child(even) {

@@ -266,7 +266,7 @@
   color: var(--accent-primary);
   font-family: inherit;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
   line-height: 1.4;
 }
 
@@ -301,7 +301,7 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .chat-retry-btn:hover {

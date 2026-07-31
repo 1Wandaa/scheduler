@@ -122,7 +122,7 @@
   font-weight: 600;
   cursor: pointer;
   font-family: var(--font-body);
-  transition: all var(--transition-base);
+  transition: opacity var(--transition-base), transform var(--transition-base), background-color var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
 }
 
 .widget-view-all-btn:hover {
@@ -366,7 +366,7 @@
   padding: 12px 14px;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
   position: relative;
 }
 
@@ -385,7 +385,7 @@
   border: 2px solid var(--border-color);
   background: #fff;
   color: var(--text-muted);
-  transition: all 0.3s var(--ease-spring);
+  transition: opacity 0.3s var(--ease-spring), transform 0.3s var(--ease-spring), background-color 0.3s var(--ease-spring), box-shadow 0.3s var(--ease-spring);
 }
 
 .quickstart-step.complete .quickstart-step-icon {

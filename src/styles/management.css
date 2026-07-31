@@ -50,6 +50,7 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   animation: fadeIn 0.3s ease-out;
+  will-change: opacity;
 }
 
 .mgmt-toolbar-row {
@@ -83,7 +84,7 @@
   font-size: 0.82rem;
   font-weight: 600;
   font-family: var(--font-body);
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
   white-space: nowrap;
 }
 
@@ -241,6 +242,7 @@
   padding: 48px 24px;
   color: var(--text-muted);
   animation: fadeIn 0.4s ease-out;
+  will-change: opacity;
 }
 
 .mgmt-empty-state-icon {
@@ -313,6 +315,7 @@
   align-items: center;
   gap: 8px;
   animation: fadeIn 0.3s;
+  will-change: opacity;
   box-shadow: var(--shadow-md);
 }
 
@@ -333,7 +336,7 @@
   font-size: 0.9rem;
   font-family: var(--font-body);
   color: var(--text-muted);
-  transition: all var(--transition-base);
+  transition: opacity var(--transition-base), transform var(--transition-base), background-color var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
 }
 
 .mgmt-cancel-btn:hover {
