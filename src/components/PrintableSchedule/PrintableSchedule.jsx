@@ -1,66 +1,80 @@
 import React, { useMemo } from 'react';
-import { TIME_SLOTS } from '../../config/constants';
+import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS } from '../../config/constants';
 import { slotsNeededFromIndex } from '../../utils/scheduleUtils';
 import '../../styles/PrintableSchedule.css';
 
-/**
- * Map each 30-min TIME_SLOTS id → printable row index in fixedTimeSlots.
- * The printable grid uses 1-hour blocks; each maps to two 30-min slot IDs.
- *
- *  fixedTimeSlots index 0 "7:30 - 8:30"  ← slot ids 2,3
- *  fixedTimeSlots index 1 "8:30 - 9:30"  ← slot ids 4,5
- *  fixedTimeSlots index 2 "9:30 - 10:30" ← slot ids 6,7
- *  fixedTimeSlots index 3 "10:30 - 11:30"← slot ids 8,9
- *  fixedTimeSlots index 4 "11:30 - 12:00"← slot id  10
- *  fixedTimeSlots index 5 "LUNCH"         (no data)
- *  fixedTimeSlots index 6 "1:00 - 2:00"  ← slot ids 11,12
- *  fixedTimeSlots index 7 "2:00 - 3:00"  ← slot ids 13,14
- *  fixedTimeSlots index 8 "3:00 - 4:00"  ← slot ids 15,16
- *  fixedTimeSlots index 9 "4:00 - 5:00"  ← slot ids 17,18
- */
-const SLOT_TO_ROW = {
+const SLOT_TO_ROW_STANDARD = {
     2: 0, 3: 0,     // 7:30-8:30
     4: 1, 5: 1,     // 8:30-9:30
     6: 2, 7: 2,     // 9:30-10:30
     8: 3, 9: 3,     // 10:30-11:30
-    10: 4,           // 11:30-12:00
+    10: 4,          // 11:30-12:00
     11: 6, 12: 6,   // 1:00-2:00
     13: 7, 14: 7,   // 2:00-3:00
     15: 8, 16: 8,   // 3:00-4:00
     17: 9, 18: 9,   // 4:00-5:00
 };
 
-/**
- * Given a schedule entry, return the sorted list of printable row indices it occupies.
- * Uses the real TIME_SLOTS + slotsNeededFromIndex for accurate duration calculation.
- */
-function getOccupiedPrintRows(schedule) {
+const SLOT_TO_ROW_FOUR_DAY = {
+    1: 0, 2: 0,     // 7:00-8:00
+    3: 1, 4: 1,     // 8:00-9:00
+    5: 2, 6: 2,     // 9:00-10:00
+    7: 3, 8: 3,     // 10:00-11:00
+    9: 4,           // 11:00-11:30
+    11: 6, 12: 6,   // 12:30-1:30
+    13: 7, 14: 7,   // 1:30-2:30
+    15: 8, 16: 8,   // 2:30-3:30
+    17: 9, 18: 9,   // 3:30-4:30
+    20: 10, 21: 10, // 4:30-5:30
+    22: 11          // 5:30-6:00
+};
+
+function getOccupiedPrintRows(schedule, isFourDay) {
     if (!schedule?.timeSlot) return [];
+    
+    const slotToRowMap = isFourDay ? SLOT_TO_ROW_FOUR_DAY : SLOT_TO_ROW_STANDARD;
+    const timeSlotsArray = isFourDay ? FOUR_DAY_TIME_SLOTS : TIME_SLOTS;
+
     const startId = parseInt(schedule.timeSlot.id);
-    const startRow = SLOT_TO_ROW[startId];
+    const startRow = slotToRowMap[startId];
     if (startRow === undefined) return [];
 
-    const startIdx = TIME_SLOTS.findIndex(ts => ts.id === startId);
+    const startIdx = timeSlotsArray.findIndex(ts => ts.id === startId);
     if (startIdx < 0) return [startRow];
 
-    const count = slotsNeededFromIndex(startIdx, schedule.subject?.hoursPerMeeting);
+    const scheduleMode = isFourDay ? 'fourDay' : 'standard';
+    const count = slotsNeededFromIndex(startIdx, schedule.subject?.hoursPerMeeting, scheduleMode);
     if (count <= 0) return [startRow];
 
     const rows = new Set();
     for (let i = 0; i < count; i++) {
-        const slot = TIME_SLOTS[startIdx + i];
+        const slot = timeSlotsArray[startIdx + i];
         if (!slot) break;
-        const row = SLOT_TO_ROW[slot.id];
+        const row = slotToRowMap[slot.id];
         if (row !== undefined) rows.add(row);
     }
 
     return [...rows].sort((a, b) => a - b);
 }
 
-const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
+const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo, scheduleMode }) => {
+    const isFourDay = scheduleMode === 'fourDay';
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-    const fixedTimeSlots = [
+    const fixedTimeSlots = isFourDay ? [
+        "7:00 - 8:00",   // index 0
+        "8:00 - 9:00",   // index 1
+        "9:00 - 10:00",  // index 2
+        "10:00 - 11:00", // index 3
+        "11:00 - 11:30", // index 4
+        "LUNCH",         // index 5
+        "12:30 - 1:30",  // index 6
+        "1:30 - 2:30",   // index 7
+        "2:30 - 3:30",   // index 8
+        "3:30 - 4:30",   // index 9
+        "4:30 - 5:30",   // index 10
+        "5:30 - 6:00"    // index 11
+    ] : [
         "7:30 - 8:30",   // index 0
         "8:30 - 9:30",   // index 1
         "9:30 - 10:30",  // index 2
@@ -73,22 +87,22 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
         "4:00 - 5:00"    // index 9
     ];
 
-    /** Find the schedule entry whose start time falls into the given printable row */
+    const slotToRowMap = isFourDay ? SLOT_TO_ROW_FOUR_DAY : SLOT_TO_ROW_STANDARD;
+
     const getClassForRow = (day, rowIndex) => {
         return scheduleItems.find(s => {
             if (s.day !== day || !s.timeSlot) return false;
-            return SLOT_TO_ROW[parseInt(s.timeSlot.id)] === rowIndex;
+            return slotToRowMap[parseInt(s.timeSlot.id)] === rowIndex;
         });
     };
 
-    // Pre-compute rowSpan values and which cells to skip
     const { skipCells, spanInfo } = useMemo(() => {
         const skip = new Set();
         const spans = {};
 
         scheduleItems.forEach(schedule => {
             if (!schedule.day || !schedule.timeSlot) return;
-            const printRows = getOccupiedPrintRows(schedule);
+            const printRows = getOccupiedPrintRows(schedule, isFourDay);
             if (printRows.length <= 1) return;
 
             const startRow = printRows[0];
@@ -97,14 +111,13 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
 
             spans[cellKey] = printRows.length;
 
-            // Mark all rows except the first as skipped for this day
             for (let i = 1; i < printRows.length; i++) {
                 skip.add(`${day}-${printRows[i]}`);
             }
         });
 
         return { skipCells: skip, spanInfo: spans };
-    }, [scheduleItems]);
+    }, [scheduleItems, isFourDay]);
 
     return (
         <div className="printable-iso-document">
@@ -160,8 +173,8 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo }) => {
                         if (timeLabel === "LUNCH") {
                             return (
                                 <tr key="lunch">
-                                    <td className="time-cell bold lunch-break-time">12:00 - 1:00</td>
-                                    <td colSpan="5" className="lunch-break">
+                                    <td className="time-cell bold lunch-break-time">{isFourDay ? "11:30 - 12:30" : "12:00 - 1:00"}</td>
+                                    <td colSpan={days.length} className="lunch-break">
                                         LUNCH BREAK
                                     </td>
                                 </tr>

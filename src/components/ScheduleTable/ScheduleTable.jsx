@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { TIME_SLOTS, DAYS } from '../../config/constants';
+import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig } from '../../config/constants';
 import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap } from '../../utils/scheduleUtils';
 import '../../styles/ScheduleTable.css';
 
-function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID", departments = [] }) {
+function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID", departments = [], scheduleMode }) {
+  // Resolve time slots and days based on schedule mode
+  const config = getScheduleConfig(scheduleMode);
+  const activeTimeSlots = config.timeSlots;
+  // Always show all 5 days in the viewer (user requirement)
+  const displayDays = DAYS;
   const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
@@ -514,6 +519,10 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     return DEFAULT_DEPT_COLOR;
   };
 
+  // Determine the lunch break insertion index.
+  // We insert the break BEFORE the slot whose id equals config.lunchAfterId.
+  const lunchInsertIdx = activeTimeSlots.findIndex(ts => ts.id === config.lunchAfterId);
+
   const GridView = () => (
     <div className="table-wrapper">
       <table 
@@ -523,39 +532,56 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         <thead>
           <tr>
             <th style={{ position: 'sticky', left: 0, zIndex: 3, background: 'var(--bg-main)' }}>Time Slot</th>
-            {DAYS.map(day => <th key={day}>{day}</th>)}
+            {displayDays.map(day => <th key={day}>{day}</th>)}
           </tr>
         </thead>
         <tbody>
-          {TIME_SLOTS.map((timeSlot, tIdx) => {
-            const isEven = tIdx % 2 === 0;
+          {activeTimeSlots.map((timeSlot, tIdx) => {
+            const isMorning = tIdx < lunchInsertIdx;
+            const sessionStartIndex = isMorning ? 0 : lunchInsertIdx;
+            const indexInSession = tIdx - sessionStartIndex;
+            
+            let isHourGroupHead = false;
+            let timeRowSpan = 1;
             let hourLabel = '';
-            if (isEven) {
-              const startLabel = timeSlot.label.split(' - ')[0];
-              const nextSlot = TIME_SLOTS[tIdx + 1];
-              const endLabel = nextSlot ? nextSlot.label.split(' - ')[1] : '';
-              hourLabel = `${startLabel} - ${endLabel}`;
+            
+            if (indexInSession % 2 === 0) {
+              const nextSlot = activeTimeSlots[tIdx + 1];
+              const nextSlotIsSameSession = isMorning ? (tIdx + 1 < lunchInsertIdx) : (tIdx + 1 < activeTimeSlots.length);
+              
+              if (nextSlot && nextSlotIsSameSession) {
+                isHourGroupHead = true;
+                timeRowSpan = 2;
+                hourLabel = `${timeSlot.label.split(' - ')[0]} - ${nextSlot.label.split(' - ')[1]}`;
+              } else {
+                isHourGroupHead = true;
+                timeRowSpan = 1;
+                hourLabel = timeSlot.label;
+              }
+            } else {
+              isHourGroupHead = false;
+              timeRowSpan = 0;
             }
 
             return (
               <React.Fragment key={timeSlot.id}>
-                {tIdx === 10 && (
+                {tIdx === lunchInsertIdx && (
                   <tr className="lunch-break-row" style={{ height: '40px', backgroundColor: '#f1f5f9' }}>
                     <td className="time-label" style={{ position: 'sticky', left: 0, zIndex: 2, background: '#f1f5f9', borderTop: '2px solid var(--border-color)', borderBottom: '2px solid var(--border-color)' }}>
-                      <strong>12:00 - 1:00</strong>
+                      <strong>{scheduleMode === 'fourDay' ? '11:30 - 12:30' : '12:00 - 1:00'}</strong>
                     </td>
-                    <td colSpan={DAYS.length} style={{ textAlign: 'center', letterSpacing: '8px', color: '#64748b', fontSize: '0.9rem', borderTop: '2px solid var(--border-color)', borderBottom: '2px solid var(--border-color)' }}>
+                    <td colSpan={displayDays.length} style={{ textAlign: 'center', letterSpacing: '8px', color: '#64748b', fontSize: '0.9rem', borderTop: '2px solid var(--border-color)', borderBottom: '2px solid var(--border-color)' }}>
                       <strong>LUNCH BREAK</strong>
                     </td>
                   </tr>
                 )}
-                <tr className={isEven ? 'hour-row' : 'half-hour-row'}>
-                  {isEven && (
-                    <td className="time-label" rowSpan={2} style={{ position: 'sticky', left: 0, zIndex: 2, background: 'var(--bg-main)' }}>
+                <tr className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
+                  {isHourGroupHead && (
+                    <td className="time-label" rowSpan={timeRowSpan} style={{ position: 'sticky', left: 0, zIndex: 2, background: 'var(--bg-main)' }}>
                       <strong>{hourLabel}</strong>
                     </td>
                   )}
-              {DAYS.map(day => {
+              {displayDays.map(day => {
                 const cellKey = `${day}-${timeSlot.id}`;
                 if (window[`skip_cell_${cellKey}`]) {
                   delete window[`skip_cell_${cellKey}`];
@@ -565,12 +591,12 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                 const cellSchedules = schedules.filter(s => s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
                 let rowSpan = 1;
                 for (const s of cellSchedules) {
-                  const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting);
+                  const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting, scheduleMode);
                   if (needed > rowSpan) rowSpan = needed;
                 }
                 if (rowSpan > 1) {
                   for (let skip = 1; skip < rowSpan; skip++) {
-                    const skipSlot = TIME_SLOTS[tIdx + skip];
+                    const skipSlot = activeTimeSlots[tIdx + skip];
                     if (skipSlot) window[`skip_cell_${day}-${skipSlot.id}`] = true;
                   }
                 }

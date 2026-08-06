@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { suggestProfessorMatches } from '../../utils/scheduleAI';
-import { TIME_SLOTS, DAYS } from '../../config/constants';
+import { TIME_SLOTS, DAYS, SCHEDULE_MODES, getScheduleConfig } from '../../config/constants';
 import { getMeetingTimeLabel } from '../../utils/scheduleUtils';
 import '../../styles/AutoScheduler.css';
 import { toast } from 'sonner';
@@ -17,6 +17,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
   const [engineMode, setEngineMode] = useState('full');
   const [targetId, setTargetId] = useState('');
+  const [scheduleMode, setScheduleMode] = useState(SCHEDULE_MODES.STANDARD);
 
   // Constraints
   const [respectLabs, setRespectLabs] = useState(true);
@@ -56,7 +57,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   // Only consider subjects that match the currently selected active semester
   const activeSemesterSubjects = subjects.filter(sub => !sub.semester || sub.semester === 'Both' || sub.semester === activeSemester);
 
- // CLEAR ALL SCHEDULES (Independent action)
+  // CLEAR ALL SCHEDULES (Independent action)
   const handleClearAll = async () => {
     const isConfirmed = await confirm({
       title: 'Clear All Schedules?',
@@ -137,7 +138,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         return;
       }
 
-      const constraints = { respectLabs, preventDoubleBooking, aiProfessorMap };
+      const constraints = { respectLabs, preventDoubleBooking, aiProfessorMap, scheduleMode };
       const schedulerOptions = {
         onProgress: (p) => setProgress(p),
         signal: controller.signal,
@@ -162,12 +163,12 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
       if (r.results && r.results.length > 0) {
         setAiStatus('💾 Saving schedules to database...');
-        const batchResult = await validator.addSchedulesBatch(r.results);
+        const batchResult = await validator.addSchedulesBatch(r.results, scheduleMode);
         if (!batchResult.ok) {
-           toast.error('Failed to save some schedules to the database.');
-           console.error('Batch save error:', batchResult.errors);
+          toast.error('Failed to save some schedules to the database.');
+          console.error('Batch save error:', batchResult.errors);
         } else {
-           toast.success(`Successfully saved ${batchResult.writtenCount} schedules.`);
+          toast.success(`Successfully saved ${batchResult.writtenCount} schedules.`);
         }
       }
 
@@ -268,6 +269,76 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         </label>
       </div>
 
+      {/* Schedule Mode Selector */}
+      <div style={{ marginBottom: '20px' }}>
+        <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Class Schedule Type</label>
+        <div style={{ display: 'flex', gap: '0', borderRadius: '10px', overflow: 'hidden', border: '2px solid var(--border-color)', background: 'var(--bg-main)' }}>
+          <button
+            type="button"
+            onClick={() => setScheduleMode(SCHEDULE_MODES.STANDARD)}
+            style={{
+              flex: 1,
+              padding: '12px 16px',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '4px',
+              fontWeight: scheduleMode === SCHEDULE_MODES.STANDARD ? 700 : 500,
+              fontSize: '0.85rem',
+              background: scheduleMode === SCHEDULE_MODES.STANDARD
+                ? 'linear-gradient(135deg, var(--accent-primary), #7c3aed)'
+                : 'transparent',
+              color: scheduleMode === SCHEDULE_MODES.STANDARD ? '#fff' : 'var(--text-main)',
+              transition: 'all 0.25s ease',
+              outline: 'none',
+            }}
+          >
+            <span style={{ fontSize: '1.1rem' }}>📅</span>
+            <span>5-Day Schedule</span>
+            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 400 }}>Mon–Fri · 7:30 AM – 5:00 PM</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setScheduleMode(SCHEDULE_MODES.FOUR_DAY)}
+            style={{
+              flex: 1,
+              padding: '12px 16px',
+              border: 'none',
+              borderLeft: '2px solid var(--border-color)',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '4px',
+              fontWeight: scheduleMode === SCHEDULE_MODES.FOUR_DAY ? 700 : 500,
+              fontSize: '0.85rem',
+              background: scheduleMode === SCHEDULE_MODES.FOUR_DAY
+                ? 'linear-gradient(135deg, #f59e0b, #ef4444)'
+                : 'transparent',
+              color: scheduleMode === SCHEDULE_MODES.FOUR_DAY ? '#fff' : 'var(--text-main)',
+              transition: 'all 0.25s ease',
+              outline: 'none',
+            }}
+          >
+            <span style={{ fontSize: '1.1rem' }}>⚡</span>
+            <span>4-Day Schedule</span>
+            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 400 }}>Mon–Thu · 7:00 AM – 6:00 PM</span>
+          </button>
+        </div>
+        {scheduleMode === SCHEDULE_MODES.FOUR_DAY && (
+          <div style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', fontSize: '0.78rem', color: 'var(--text-main)' }}>
+            ⚡ <strong>4-Day Mode:</strong> Classes run Monday–Thursday only. Morning: 7:00 AM – 11:30 AM · Lunch: 11:30 AM – 12:30 PM · Afternoon: 12:30 PM – 6:00 PM
+          </div>
+        )}
+        {scheduleMode === SCHEDULE_MODES.STANDARD && (
+          <div style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', fontSize: '0.78rem', color: 'var(--text-main)' }}>
+            📅 <strong>5-Day Mode:</strong> Classes run Monday–Friday. Morning: 7:30 AM – 12:00 PM · Lunch: 12:00 PM – 1:00 PM · Afternoon: 1:00 PM – 5:00 PM
+          </div>
+        )}
+      </div>
+
       {/* Pre-Scheduling Summary */}
       <div style={{ marginBottom: '15px', padding: '10px 15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
         <strong>Pre-flight Summary:</strong> {sections?.reduce((sum, sec) => sum + (sec.subjects?.length || 0), 0) || 0} subjects total across all sections ready to be scheduled.
@@ -326,7 +397,9 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
             }} />
           </div>
           <p style={{ textAlign: 'center', fontSize: '0.78rem', marginTop: '6px', color: 'var(--text-muted)' }}>
-            {progress.pass === 1 && 'Scheduling with department rooms & preferred day pairs...'}
+            {progress.pass === 1 && (scheduleMode === SCHEDULE_MODES.FOUR_DAY
+              ? 'Scheduling with 4-day rooms & preferred day pairs (Mon–Thu)...'
+              : 'Scheduling with department rooms & preferred day pairs...')}
             {progress.pass === 2 && 'Trying shared rooms with flexible days...'}
             {progress.pass === 3 && 'Attempting overflow placement with all rooms...'}
             {progress.pass === 4 && 'AI resolving remaining conflicts...'}

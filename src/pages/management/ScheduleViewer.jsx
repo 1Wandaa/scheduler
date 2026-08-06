@@ -139,6 +139,14 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         activeEntity = professors.find(p => p.id === selectedId);
     }
 
+    const detectedScheduleMode = React.useMemo(() => {
+        const hasFourDaySlots = schedules.some(s => s.timeSlot && parseInt(s.timeSlot.id) >= 20);
+        const hasFriday = schedules.some(s => s.day === 'Friday');
+        if (hasFourDaySlots) return 'fourDay';
+        if (schedules.length > 0 && !hasFriday) return 'fourDay'; 
+        return 'standard';
+    }, [schedules]);
+
     const titlePrefix = viewType === 'department' 
         ? (deptSectionId ? 'CLASS' : 'DEPARTMENT') 
         : viewType === 'room' ? 'ROOM' 
@@ -266,11 +274,13 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     title={`${titlePrefix} SCHEDULE: ${titleName}`}
                     onUpdateSchedule={isAdmin ? onUpdateSchedule : undefined}
                     departments={departments}
+                    scheduleMode={detectedScheduleMode}
                 />
             </div>
 
             <PrintableSchedule
                 scheduleItems={filteredSchedules}
+                scheduleMode={detectedScheduleMode}
                 sectionName={
                     viewType === 'department' && deptSectionId
                         ? (sections.find(s => s.id === deptSectionId)?.name || titleName)

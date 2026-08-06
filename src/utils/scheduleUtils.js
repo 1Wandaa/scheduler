@@ -2,44 +2,56 @@
  * Shared scheduling utilities used by GA, Dashboard validation, AI, and AutoScheduler.
  */
 
-import { TIME_SLOTS, getSlotDurationHours } from '../config/constants.js';
+import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS, getSlotDurationHours, getScheduleConfig } from '../config/constants.js';
 
 const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
 
 /**
- * How many consecutive TIME_SLOTS rows a meeting occupies from a start index.
- * Blocks any meeting that would cross the lunch break (12:00 PM – 1:00 PM).
- * Returns 0 if the meeting does not fit from that start index.
+ * Resolve which TIME_SLOTS array to use based on schedule mode.
+ * @param {'standard'|'fourDay'} [scheduleMode]
  */
-export function slotsNeededFromIndex(startIdx, hoursPerMeeting) {
-  if (startIdx < 0 || startIdx >= TIME_SLOTS.length) return 0;
-  
-  // Prevent classes from starting at 7:00 AM (id: 1)
-  if (TIME_SLOTS[startIdx].id === 1) return 0;
+function resolveSlots(scheduleMode) {
+  return scheduleMode === 'fourDay' ? FOUR_DAY_TIME_SLOTS : TIME_SLOTS;
+}
+
+/**
+ * How many consecutive TIME_SLOTS rows a meeting occupies from a start index.
+ * Blocks any meeting that would cross the lunch break.
+ * Returns 0 if the meeting does not fit from that start index.
+ *
+ * @param {number} startIdx - index in the active slots array
+ * @param {number} hoursPerMeeting
+ * @param {'standard'|'fourDay'} [scheduleMode] - defaults to standard
+ */
+export function slotsNeededFromIndex(startIdx, hoursPerMeeting, scheduleMode) {
+  const slots = resolveSlots(scheduleMode);
+  if (startIdx < 0 || startIdx >= slots.length) return 0;
+
+  const config = getScheduleConfig(scheduleMode);
+
+  // In standard mode, block the 7:00 AM slot (id 1) from being a start slot.
+  // In 4-day mode, 7:00 AM is allowed.
+  if (!config.allowSevenAm && slots[startIdx].id === 1) return 0;
 
   const target = Number(hoursPerMeeting) || 1.5;
   let accumulated = 0;
   let count = 0;
   let crossesLunch = false;
-  
-  while (startIdx + count < TIME_SLOTS.length && accumulated < target - 0.001) {
+
+  while (startIdx + count < slots.length && accumulated < target - 0.001) {
     if (count > 0) {
-      const prevSlot = TIME_SLOTS[startIdx + count - 1];
-      const currSlot = TIME_SLOTS[startIdx + count];
-      // Detect the lunch gap: last morning slot (id 10, 11:30-12:00) →
-      // first afternoon slot (id 11, 1:00-1:30). Use IDs for robustness.
-      if (
-        (prevSlot.id === 10 && currSlot.id === 11) ||
-        (prevSlot.label === '11:30 - 12:00' && currSlot.label === '1:00 - 1:30')
-      ) {
+      const prevSlot = slots[startIdx + count - 1];
+      const currSlot = slots[startIdx + count];
+      // Detect the lunch gap using the mode-specific boundary IDs
+      if (prevSlot.id === config.lunchBeforeId && currSlot.id === config.lunchAfterId) {
         crossesLunch = true;
         break;
       }
     }
-    accumulated += getSlotDurationHours(startIdx + count);
+    accumulated += getSlotDurationHours(startIdx + count, scheduleMode);
     count++;
   }
-  
+
   if (crossesLunch || accumulated < target - 0.001) {
     return 0;
   }
@@ -54,20 +66,26 @@ export function slotsNeeded(hoursPerMeeting) {
 }
 
 /** True if a meeting fits starting at the given TIME_SLOTS index. */
-export function fitsFromTimeSlotIndex(startIdx, hoursPerMeeting) {
-  return slotsNeededFromIndex(startIdx, hoursPerMeeting) > 0;
+export function fitsFromTimeSlotIndex(startIdx, hoursPerMeeting, scheduleMode) {
+  return slotsNeededFromIndex(startIdx, hoursPerMeeting, scheduleMode) > 0;
 }
 
-/** Human-readable time range for a scheduled class (e.g. "7:30 - 9:00"). */
-export function getMeetingTimeLabel(startTimeSlot, hoursPerMeeting) {
+/**
+ * Human-readable time range for a scheduled class (e.g. "7:30 - 9:00").
+ * @param {Object} startTimeSlot
+ * @param {number} hoursPerMeeting
+ * @param {'standard'|'fourDay'} [scheduleMode]
+ */
+export function getMeetingTimeLabel(startTimeSlot, hoursPerMeeting, scheduleMode) {
   if (!startTimeSlot) return '';
-  const startIdx = getTimeSlotIndex(startTimeSlot);
+  const slots = resolveSlots(scheduleMode);
+  const startIdx = getTimeSlotIndex(startTimeSlot, scheduleMode);
   if (startIdx < 0) return startTimeSlot.label || '';
 
-  const rowCount = slotsNeededFromIndex(startIdx, hoursPerMeeting);
+  const rowCount = slotsNeededFromIndex(startIdx, hoursPerMeeting, scheduleMode);
   const endIdx = startIdx + rowCount - 1;
   const startLabel = (startTimeSlot.label || '').split(' - ')[0]?.trim();
-  const endSlot = TIME_SLOTS[endIdx];
+  const endSlot = slots[endIdx];
   const endLabel = endSlot ? (endSlot.label || '').split(' - ').pop()?.trim() : '';
   if (startLabel && endLabel) return `${startLabel} - ${endLabel}`;
   return startTimeSlot.label || '';
@@ -101,30 +119,38 @@ export function professorMatchesSubject(professor, subject) {
   });
 }
 
-/** Get the TIME_SLOTS index for a schedule entry's start slot. */
-export function getTimeSlotIndex(timeSlot) {
+/**
+ * Get the index of a time slot in the active slots array.
+ * @param {Object} timeSlot
+ * @param {'standard'|'fourDay'} [scheduleMode]
+ */
+export function getTimeSlotIndex(timeSlot, scheduleMode) {
   if (!timeSlot) return -1;
-  return TIME_SLOTS.findIndex(ts => String(ts.id) === String(timeSlot.id));
+  const slots = resolveSlots(scheduleMode);
+  return slots.findIndex(ts => String(ts.id) === String(timeSlot.id));
 }
 
 /**
  * Returns all (day, timeSlotId) pairs occupied by a schedule entry,
  * accounting for multi-slot duration.
+ * @param {Object} schedule
+ * @param {'standard'|'fourDay'} [scheduleMode]
  */
-export function getOccupiedSlots(schedule) {
+export function getOccupiedSlots(schedule, scheduleMode) {
   if (!schedule?.day || !schedule?.timeSlot?.id) return [];
-  const startIdx = getTimeSlotIndex(schedule.timeSlot);
+  const slots = resolveSlots(scheduleMode);
+  const startIdx = getTimeSlotIndex(schedule.timeSlot, scheduleMode);
   if (startIdx < 0) return [{ day: schedule.day, timeSlotId: schedule.timeSlot.id }];
 
-  const needed = slotsNeededFromIndex(startIdx, schedule.subject?.hoursPerMeeting);
+  const needed = slotsNeededFromIndex(startIdx, schedule.subject?.hoursPerMeeting, scheduleMode);
   if (needed === 0) return [{ day: schedule.day, timeSlotId: schedule.timeSlot.id }];
-  const slots = [];
+  const slotList = [];
   for (let i = 0; i < needed; i++) {
     const idx = startIdx + i;
-    if (idx >= TIME_SLOTS.length) break;
-    slots.push({ day: schedule.day, timeSlotId: TIME_SLOTS[idx].id });
+    if (idx >= slots.length) break;
+    slotList.push({ day: schedule.day, timeSlotId: slots[idx].id });
   }
-  return slots;
+  return slotList;
 }
 
 /** True if two schedules share any occupied slot on room, professor, or section. */

@@ -9,7 +9,7 @@
  * addSchedule callback.
  */
 
-import { TIME_SLOTS, DAYS } from '../config/constants';
+import { TIME_SLOTS, DAYS, getScheduleConfig } from '../config/constants';
 import {
   professorMatchesSubject,
   getEligibleProfessors,
@@ -22,13 +22,6 @@ import {
   isProfessorStageLocked,
 } from '../utils/scheduleUtils';
 import { resolveUnscheduledClasses } from '../utils/scheduleAI';
-
-const PREFERRED_PAIRS = [
-  ['Monday', 'Thursday'], 
-  ['Tuesday', 'Friday'],
-  ['Monday', 'Wednesday'],
-  ['Wednesday', 'Friday']
-];
 
 /**
  * Yield to the main thread without using setTimeout.
@@ -128,6 +121,13 @@ function buildAssignments(subjects, sections, activeSemester, filter) {
 export async function runTargetedScheduler(assignments, context, constraints, addScheduleFn, options = {}) {
   const { professors, rooms, activeSchedules } = context;
   const { onProgress, signal } = options;
+
+  // Resolve schedule mode configuration (standard 5-day or 4-day)
+  const scheduleMode = constraints?.scheduleMode || 'standard';
+  const config = getScheduleConfig(scheduleMode);
+  const ACTIVE_TIME_SLOTS = config.timeSlots;
+  const ACTIVE_DAYS = config.days;
+  const PREFERRED_PAIRS = config.preferredPairs;
 
   // Early abort check - yield so pending Cancel clicks can fire
   await yieldToMain();
@@ -250,8 +250,8 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     if (temp.some((s) => schedulesOverlap(candidate, s))) return false;
     // Verify the time slot fits the meeting duration (already checked by caller,
     // but needed for the flexible fallback where timeSlot varies)
-    const startIdx = getTimeSlotIndex(timeSlot);
-    if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting) === 0) return false;
+    const startIdx = getTimeSlotIndex(timeSlot, scheduleMode);
+    if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting, scheduleMode) === 0) return false;
     if (subject?.code?.toUpperCase().startsWith('PE') && String(timeSlot.id) === '2') return false;
     return true;
   };
@@ -337,17 +337,19 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         // attempts on combos that will always fail Firestore validation.
         if (!isProfessorAllowedInRoom(room, professor, subject, section, rooms)) continue;
 
-        for (const timeSlot of TIME_SLOTS) {
+        for (const timeSlot of ACTIVE_TIME_SLOTS) {
           if (signal?.aborted) return { success: false };
-          const startIdx = getTimeSlotIndex(timeSlot);
-          if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting) === 0) continue;
+          const startIdx = getTimeSlotIndex(timeSlot, scheduleMode);
+          if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting, scheduleMode) === 0) continue;
 
           const isFree = (d) => isSlotFree(room, professor, subject, section, d, timeSlot);
+          // Only use days allowed in this schedule mode
+          const modeAllowsDay = (d) => ACTIVE_DAYS.includes(d);
 
           // Try preferred day pairs for 2-meeting classes
           if (count === 2) {
             for (const pair of PREFERRED_PAIRS) {
-              if (isFree(pair[0]) && isFree(pair[1])) {
+              if (modeAllowsDay(pair[0]) && modeAllowsDay(pair[1]) && isFree(pair[0]) && isFree(pair[1])) {
                 const s1 = { room, professor, subject, section, day: pair[0], timeSlot };
                 const s2 = { room, professor, subject, section, day: pair[1], timeSlot };
                 const w1 = await wrappedAddSchedule(s1);
@@ -361,13 +363,15 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
             }
           }
 
-          // Try preferred pattern for 3-meeting classes (MWF)
+          // Try preferred pattern for 3-meeting classes (MWF for 5-day, MWT for 4-day)
           if (count === 3) {
-            const mwf = ['Monday', 'Wednesday', 'Friday'];
-            if (isFree(mwf[0]) && isFree(mwf[1]) && isFree(mwf[2])) {
-              const s1 = { room, professor, subject, section, day: mwf[0], timeSlot };
-              const s2 = { room, professor, subject, section, day: mwf[1], timeSlot };
-              const s3 = { room, professor, subject, section, day: mwf[2], timeSlot };
+            const triple = scheduleMode === 'fourDay'
+              ? ['Monday', 'Wednesday', 'Thursday']
+              : ['Monday', 'Wednesday', 'Friday'];
+            if (triple.every(d => modeAllowsDay(d) && isFree(d))) {
+              const s1 = { room, professor, subject, section, day: triple[0], timeSlot };
+              const s2 = { room, professor, subject, section, day: triple[1], timeSlot };
+              const s3 = { room, professor, subject, section, day: triple[2], timeSlot };
               const w1 = await wrappedAddSchedule(s1);
               const w2 = await wrappedAddSchedule(s2);
               const w3 = await wrappedAddSchedule(s3);
@@ -382,7 +386,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
           // Any-day same-timeslot fallback
           if (!usePairsOnly) {
             const validDays = [];
-            for (const day of DAYS) {
+            for (const day of ACTIVE_DAYS) {
               if (isFree(day)) validDays.push(day);
               if (validDays.length === count) break;
             }
@@ -425,11 +429,11 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
               if (!isStageLocked && isStage) continue;
             }
             if (!isProfessorAllowedInRoom(room, professor, subject, section, rooms)) continue;
-            for (const ts of TIME_SLOTS) {
+            for (const ts of ACTIVE_TIME_SLOTS) {
               if (signal?.aborted) return { success: false };
-              const si = getTimeSlotIndex(ts);
-              if (si < 0 || slotsNeededFromIndex(si, subject?.hoursPerMeeting) === 0) continue;
-              for (const day of DAYS) {
+              const si = getTimeSlotIndex(ts, scheduleMode);
+              if (si < 0 || slotsNeededFromIndex(si, subject?.hoursPerMeeting, scheduleMode) === 0) continue;
+              for (const day of ACTIVE_DAYS) {
                 if (usedDays.has(day)) continue;
                 if (isSlotFree(room, professor, subject, section, day, ts)) {
                   const meeting = { room, professor, subject, section, day, timeSlot: ts };
@@ -501,7 +505,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   };
 
   // PASS 1 - STRICT: department rooms, preferred pairs
-  console.log(`[AutoScheduler] Pass 1 (Strict): ${allGroups.length} groups to schedule`);
+  console.log(`[AutoScheduler] Pass 1 (Strict): ${allGroups.length} groups to schedule [mode=${scheduleMode}]`);
   for (let i = 0; i < allGroups.length; i++) {
     if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
     const group = allGroups[i];
@@ -733,8 +737,8 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         if (!room || !professor || !timeSlot || !day) continue;
 
         // Hard check: reject AI suggestions that cross the lunch break
-        const aiStartIdx = getTimeSlotIndex(timeSlot);
-        if (aiStartIdx < 0 || slotsNeededFromIndex(aiStartIdx, group.subject?.hoursPerMeeting) === 0) {
+        const aiStartIdx = getTimeSlotIndex(timeSlot, scheduleMode);
+        if (aiStartIdx < 0 || slotsNeededFromIndex(aiStartIdx, group.subject?.hoursPerMeeting, scheduleMode) === 0) {
           console.warn(`[AutoScheduler] AI suggestion rejected: slot ${timeSlot.label} does not fit ${group.subject?.hoursPerMeeting || 1.5}hr meeting (likely crosses lunch break).`);
           continue;
         }

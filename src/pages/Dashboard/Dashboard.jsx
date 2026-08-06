@@ -178,8 +178,8 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
 
-  const handleAddSchedulesBatch = async (newSchedules) => {
-    return addSchedulesBatch(newSchedules, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin);
+  const handleAddSchedulesBatch = async (newSchedules, scheduleMode) => {
+    return addSchedulesBatch(newSchedules, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode);
   };
 
   const handleLogHistory = async (historyData) => {
@@ -196,7 +196,7 @@ const Dashboard = ({ user, onLogout }) => {
       schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear }
     }),
     clearAllSchedules: () => clearAllSchedules(activeSemester, activeSchoolYear),
-    addSchedulesBatch: handleAddSchedulesBatch,
+    addSchedulesBatch: (schedules, scheduleMode) => handleAddSchedulesBatch(schedules, scheduleMode),
     autoScheduleForSection: (sectionId, constraints, options) =>
       autoScheduleForSection(sectionId, schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
     autoScheduleForRoom: (roomId, constraints, options) =>

@@ -7,7 +7,7 @@
 
 import { db } from '../config/firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
-import { TIME_SLOTS } from '../config/constants';
+import { TIME_SLOTS, getScheduleConfig } from '../config/constants';
 import {
   professorMatchesSubject,
   findScheduleConflicts,
@@ -27,12 +27,13 @@ import {
  * @returns {{ valid: boolean, errors: string[], warnings: string[] }}
  */
 export function validateScheduleEntry(
-  { room, professor, subject, section, day, timeSlot, excludeScheduleId = null },
+  { room, professor, subject, section, day, timeSlot, excludeScheduleId = null, scheduleMode },
   activeSchedules,
   rooms
 ) {
   const errors = [];
   const warnings = [];
+  const config = getScheduleConfig(scheduleMode);
 
  // Required field checks
   if (!room?.id) errors.push('Room is required.');
@@ -101,8 +102,9 @@ export function validateScheduleEntry(
   if (errors.length > 0) return { valid: false, errors, warnings };
 
  // Time slot fit check
-  const startIdx = getTimeSlotIndex(timeSlot);
-  const needed = slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting);
+  const activeSlots = config.timeSlots;
+  const startIdx = activeSlots.findIndex(ts => String(ts.id) === String(timeSlot?.id));
+  const needed = slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting, scheduleMode);
   if (startIdx < 0 || needed === 0) {
     errors.push(`Time slot does not fit the ${subject?.hoursPerMeeting || 1.5}hr meeting duration.`);
     return { valid: false, errors, warnings };
@@ -142,7 +144,7 @@ export function validateScheduleEntry(
  * @param {boolean} isAdmin
  * @returns {{ ok: boolean, errors?: string[] }}
  */
-export async function addSchedule(newSchedule, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin) {
+export async function addSchedule(newSchedule, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode) {
   if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
 
   const check = validateScheduleEntry(
@@ -154,6 +156,7 @@ export async function addSchedule(newSchedule, activeSchedules, rooms, activeSem
       day: newSchedule?.day,
       timeSlot: newSchedule?.timeSlot,
       excludeScheduleId: null,
+      scheduleMode,
     },
     activeSchedules,
     rooms
@@ -205,7 +208,7 @@ export async function removeSchedule(id, isAdmin) {
 /**
  * Batch-add multiple schedule entries to Firestore.
  */
-export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin) {
+export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode) {
   if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
 
   const validSchedules = [];
@@ -214,7 +217,7 @@ export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, ac
   // Validate each schedule against both existing schedules AND already-accepted batch entries
   for (const s of newSchedules) {
     const check = validateScheduleEntry(
-      { room: s.room, professor: s.professor, subject: s.subject, section: s.section || null, day: s.day, timeSlot: s.timeSlot, excludeScheduleId: null },
+      { room: s.room, professor: s.professor, subject: s.subject, section: s.section || null, day: s.day, timeSlot: s.timeSlot, excludeScheduleId: null, scheduleMode },
       [...activeSchedules, ...validSchedules],
       rooms
     );
