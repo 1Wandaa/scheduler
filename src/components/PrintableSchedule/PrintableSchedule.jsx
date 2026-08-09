@@ -3,36 +3,25 @@ import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS } from '../../config/constants';
 import { slotsNeededFromIndex } from '../../utils/scheduleUtils';
 import '../../styles/PrintableSchedule.css';
 
-const SLOT_TO_ROW_STANDARD = {
-    2: 0, 3: 0,     // 7:30-8:30
-    4: 1, 5: 1,     // 8:30-9:30
-    6: 2, 7: 2,     // 9:30-10:30
-    8: 3, 9: 3,     // 10:30-11:30
-    10: 4,          // 11:30-12:00
-    11: 6, 12: 6,   // 1:00-2:00
-    13: 7, 14: 7,   // 2:00-3:00
-    15: 8, 16: 8,   // 3:00-4:00
-    17: 9, 18: 9,   // 4:00-5:00
-};
-
-const SLOT_TO_ROW_FOUR_DAY = {
+const SLOT_TO_ROW = {
     1: 0, 2: 0,     // 7:00-8:00
     3: 1, 4: 1,     // 8:00-9:00
     5: 2, 6: 2,     // 9:00-10:00
     7: 3, 8: 3,     // 10:00-11:00
-    9: 4,           // 11:00-11:30
-    11: 6, 12: 6,   // 12:30-1:30
-    13: 7, 14: 7,   // 1:30-2:30
-    15: 8, 16: 8,   // 2:30-3:30
-    17: 9, 18: 9,   // 3:30-4:30
-    20: 10, 21: 10, // 4:30-5:30
-    22: 11          // 5:30-6:00
+    9: 4, 10: 4,    // 11:00-12:00
+    // row 5 is LUNCH
+    19: 6, 11: 6,   // 12:00-1:00
+    12: 7, 13: 7,   // 1:00-2:00
+    14: 8, 15: 8,   // 2:00-3:00
+    16: 9, 17: 9,   // 3:00-4:00
+    18: 10, 20: 10, // 4:00-5:00
+    21: 11, 22: 11  // 5:00-6:00
 };
 
 function getOccupiedPrintRows(schedule, isFourDay) {
     if (!schedule?.timeSlot) return [];
     
-    const slotToRowMap = isFourDay ? SLOT_TO_ROW_FOUR_DAY : SLOT_TO_ROW_STANDARD;
+    const slotToRowMap = SLOT_TO_ROW;
     const timeSlotsArray = isFourDay ? FOUR_DAY_TIME_SLOTS : TIME_SLOTS;
 
     const startId = parseInt(schedule.timeSlot.id);
@@ -61,33 +50,22 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo, scheduleM
     const isFourDay = scheduleMode === 'fourDay';
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-    const fixedTimeSlots = isFourDay ? [
+    const fixedTimeSlots = [
         "7:00 - 8:00",   // index 0
         "8:00 - 9:00",   // index 1
         "9:00 - 10:00",  // index 2
         "10:00 - 11:00", // index 3
-        "11:00 - 11:30", // index 4
+        "11:00 - 12:00", // index 4
         "LUNCH",         // index 5
-        "12:30 - 1:30",  // index 6
-        "1:30 - 2:30",   // index 7
-        "2:30 - 3:30",   // index 8
-        "3:30 - 4:30",   // index 9
-        "4:30 - 5:30",   // index 10
-        "5:30 - 6:00"    // index 11
-    ] : [
-        "7:30 - 8:30",   // index 0
-        "8:30 - 9:30",   // index 1
-        "9:30 - 10:30",  // index 2
-        "10:30 - 11:30", // index 3
-        "11:30 - 12:00", // index 4
-        "LUNCH",         // index 5
-        "1:00 - 2:00",   // index 6
-        "2:00 - 3:00",   // index 7
-        "3:00 - 4:00",   // index 8
-        "4:00 - 5:00"    // index 9
+        "12:00 - 1:00",  // index 6
+        "1:00 - 2:00",   // index 7
+        "2:00 - 3:00",   // index 8
+        "3:00 - 4:00",   // index 9
+        "4:00 - 5:00",   // index 10
+        "5:00 - 6:00"    // index 11
     ];
 
-    const slotToRowMap = isFourDay ? SLOT_TO_ROW_FOUR_DAY : SLOT_TO_ROW_STANDARD;
+    const slotToRowMap = SLOT_TO_ROW;
 
     const getClassForRow = (day, rowIndex) => {
         return scheduleItems.find(s => {

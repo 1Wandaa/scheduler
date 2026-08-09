@@ -128,10 +128,10 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     try {
       showToast('Generating image, please wait...', false);
       const html2canvas = (await import('html2canvas')).default;
-      
+
       const oldViewMode = viewMode;
       setViewMode('grid');
-      
+
       // Wait for React to re-render to grid mode
       await new Promise(r => setTimeout(r, 500));
 
@@ -144,7 +144,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.style.position = 'absolute';
       wrapper.style.top = '-10000px';
       wrapper.style.left = '-10000px';
-      
+
       // Fixed width, and calculate height for exact Portrait aspect ratio (8.5 x 11)
       wrapper.style.width = '1100px';
       wrapper.style.height = `${1100 * (11 / 8.5)}px`;
@@ -152,7 +152,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.style.padding = '16px';
       wrapper.style.display = 'flex';
       wrapper.style.flexDirection = 'column';
-      
+
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
@@ -163,9 +163,9 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       clone.style.flexDirection = 'column';
       const tableWrapper = clone.querySelector('.table-wrapper');
       if (tableWrapper) {
-          tableWrapper.style.flex = '1';
-          tableWrapper.style.display = 'flex';
-          tableWrapper.style.flexDirection = 'column';
+        tableWrapper.style.flex = '1';
+        tableWrapper.style.display = 'flex';
+        tableWrapper.style.flexDirection = 'column';
       }
       const table = clone.querySelector('.schedule-table');
       if (table) table.style.height = '100%';
@@ -177,21 +177,21 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       const finalWidth = finalRect.width;
       const finalHeight = finalRect.height;
 
-      const canvas = await html2canvas(wrapper, { 
-          scale: 3, // HD quality
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          width: finalWidth,
-          height: finalHeight,
-          windowWidth: finalWidth,
-          windowHeight: finalHeight
+      const canvas = await html2canvas(wrapper, {
+        scale: 3, // HD quality
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        width: finalWidth,
+        height: finalHeight,
+        windowWidth: finalWidth,
+        windowHeight: finalHeight
       });
 
       document.body.removeChild(wrapper);
       if (toolbar) toolbar.style.display = 'flex';
 
       const imgData = canvas.toDataURL('image/png');
-      
+
       setViewMode(oldViewMode);
       setPreviewImage(imgData);
     } catch (err) {
@@ -205,10 +205,10 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     try {
       showToast('Preparing print, please wait...', false);
       const html2canvas = (await import('html2canvas')).default;
-      
+
       const oldViewMode = viewMode;
       setViewMode('grid');
-      
+
       // Wait for React to re-render to grid mode
       await new Promise(r => setTimeout(r, 500));
 
@@ -220,7 +220,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.style.position = 'absolute';
       wrapper.style.top = '-10000px';
       wrapper.style.left = '-10000px';
-      
+
       // Fixed width, and calculate height for exact Portrait aspect ratio (8.5 x 11)
       wrapper.style.width = '1100px';
       wrapper.style.height = `${1100 * (11 / 8.5)}px`;
@@ -228,7 +228,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.style.padding = '16px';
       wrapper.style.display = 'flex';
       wrapper.style.flexDirection = 'column';
-      
+
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
@@ -239,9 +239,9 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       clone.style.flexDirection = 'column';
       const tableWrapper = clone.querySelector('.table-wrapper');
       if (tableWrapper) {
-          tableWrapper.style.flex = '1';
-          tableWrapper.style.display = 'flex';
-          tableWrapper.style.flexDirection = 'column';
+        tableWrapper.style.flex = '1';
+        tableWrapper.style.display = 'flex';
+        tableWrapper.style.flexDirection = 'column';
       }
       const table = clone.querySelector('.schedule-table');
       if (table) table.style.height = '100%';
@@ -253,14 +253,14 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       const finalWidth = finalRect.width;
       const finalHeight = finalRect.height;
 
-      const canvas = await html2canvas(wrapper, { 
-          scale: 3, // HD quality
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          width: finalWidth,
-          height: finalHeight,
-          windowWidth: finalWidth,
-          windowHeight: finalHeight
+      const canvas = await html2canvas(wrapper, {
+        scale: 3, // HD quality
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        width: finalWidth,
+        height: finalHeight,
+        windowWidth: finalWidth,
+        windowHeight: finalHeight
       });
 
       document.body.removeChild(wrapper);
@@ -268,13 +268,13 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       setViewMode(oldViewMode);
 
       const imgData = canvas.toDataURL('image/png');
-      
+
       const iframe = document.createElement('iframe');
       iframe.style.position = 'fixed';
       iframe.style.top = '-10000px';
       iframe.style.left = '-10000px';
       document.body.appendChild(iframe);
-      
+
       const doc = iframe.contentDocument || iframe.contentWindow.document;
       doc.open();
       doc.write(`
@@ -296,13 +296,13 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
           </html>
       `);
       doc.close();
-      
+
       iframe.contentWindow.focus();
       setTimeout(() => {
-          iframe.contentWindow.print();
-          setTimeout(() => {
-              if (document.body.contains(iframe)) document.body.removeChild(iframe);
-          }, 1000);
+        iframe.contentWindow.print();
+        setTimeout(() => {
+          if (document.body.contains(iframe)) document.body.removeChild(iframe);
+        }, 1000);
       }, 300);
 
     } catch (err) {
@@ -320,7 +320,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       window.removeEventListener('export-ordinary-image', onExportImage);
       window.removeEventListener('export-ordinary-print', onExportPrint);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, schedules, title]);
 
 
@@ -356,17 +356,17 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   // Handle Fit Scale for Mobile Fullscreen & Grid View
   useEffect(() => {
     const updateFitScale = () => {
-      const padding = 32; 
+      const padding = 32;
       const availableWidth = window.innerWidth - padding;
       const minTableWidth = 680; // from CSS
-      
+
       if (availableWidth < minTableWidth && (isFullscreen || viewMode === 'grid')) {
         setFitScale(availableWidth / minTableWidth);
       } else {
         setFitScale(1);
       }
     };
-    
+
     updateFitScale();
     window.addEventListener('resize', updateFitScale);
     return () => window.removeEventListener('resize', updateFitScale);
@@ -478,7 +478,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   const getDeptColor = (schedule) => {
     // 1. Try to find a known department in the section name (e.g. "BSCS 1A", "BSOA-1B")
     const sectionName = (schedule?.section?.name || '').toUpperCase();
-    
+
     // Check dynamic departments first
     if (departments && departments.length > 0) {
       for (const d of departments) {
@@ -500,7 +500,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       const depts = Array.isArray(subj.departments) ? subj.departments : (subj.department ? [subj.department] : []);
       for (const d of depts) {
         const upperD = String(d).toUpperCase();
-        
+
         if (departments && departments.length > 0) {
           for (const dynDept of departments) {
             if (upperD.includes((dynDept.id || '').toUpperCase())) {
@@ -523,149 +523,188 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   // We insert the break BEFORE the slot whose id equals config.lunchAfterId.
   const lunchInsertIdx = activeTimeSlots.findIndex(ts => ts.id === config.lunchAfterId);
 
-  const GridView = () => (
-    <div className="table-wrapper">
-      <table 
-        className="schedule-table"
-        style={(isFullscreen || viewMode === 'grid') && fitScale < 1 ? { zoom: fitScale } : {}}
-      >
-        <thead>
-          <tr>
-            <th style={{ position: 'sticky', left: 0, zIndex: 3, background: 'var(--bg-main)' }}>Time Slot</th>
-            {displayDays.map(day => <th key={day}>{day}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {activeTimeSlots.map((timeSlot, tIdx) => {
-            const isMorning = tIdx < lunchInsertIdx;
-            const sessionStartIndex = isMorning ? 0 : lunchInsertIdx;
-            const indexInSession = tIdx - sessionStartIndex;
-            
-            let isHourGroupHead = false;
-            let timeRowSpan = 1;
-            let hourLabel = '';
-            
-            if (indexInSession % 2 === 0) {
-              const nextSlot = activeTimeSlots[tIdx + 1];
-              const nextSlotIsSameSession = isMorning ? (tIdx + 1 < lunchInsertIdx) : (tIdx + 1 < activeTimeSlots.length);
-              
-              if (nextSlot && nextSlotIsSameSession) {
-                isHourGroupHead = true;
-                timeRowSpan = 2;
-                hourLabel = `${timeSlot.label.split(' - ')[0]} - ${nextSlot.label.split(' - ')[1]}`;
-              } else {
-                isHourGroupHead = true;
-                timeRowSpan = 1;
-                hourLabel = timeSlot.label;
-              }
-            } else {
-              isHourGroupHead = false;
-              timeRowSpan = 0;
-            }
+  const GridView = () => {
+    const skippedCells = new Set();
 
-            return (
-              <React.Fragment key={timeSlot.id}>
-                {tIdx === lunchInsertIdx && (
-                  <tr className="lunch-break-row" style={{ height: '40px', backgroundColor: '#f1f5f9' }}>
-                    <td className="time-label" style={{ position: 'sticky', left: 0, zIndex: 2, background: '#f1f5f9', borderTop: '2px solid var(--border-color)', borderBottom: '2px solid var(--border-color)' }}>
-                      <strong>{scheduleMode === 'fourDay' ? '11:30 - 12:30' : '12:00 - 1:00'}</strong>
-                    </td>
-                    <td colSpan={displayDays.length} style={{ textAlign: 'center', letterSpacing: '8px', color: '#64748b', fontSize: '0.9rem', borderTop: '2px solid var(--border-color)', borderBottom: '2px solid var(--border-color)' }}>
-                      <strong>LUNCH BREAK</strong>
-                    </td>
-                  </tr>
-                )}
-                <tr className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
-                  {isHourGroupHead && (
-                    <td className="time-label" rowSpan={timeRowSpan} style={{ position: 'sticky', left: 0, zIndex: 2, background: 'var(--bg-main)' }}>
-                      <strong>{hourLabel}</strong>
-                    </td>
-                  )}
-              {displayDays.map(day => {
-                const cellKey = `${day}-${timeSlot.id}`;
-                if (window[`skip_cell_${cellKey}`]) {
-                  delete window[`skip_cell_${cellKey}`];
-                  return null;
+    return (
+      <div className="table-wrapper">
+        <table
+          className="schedule-table"
+          style={(isFullscreen || viewMode === 'grid') && fitScale < 1 ? { zoom: fitScale } : {}}
+        >
+          <thead>
+            <tr>
+              <th style={{ position: 'sticky', left: 0, zIndex: 3, background: 'var(--bg-main)' }}>Time Slot</th>
+              {displayDays.map(day => <th key={day}>{day}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {activeTimeSlots.map((timeSlot, tIdx) => {
+              const indexInSession = tIdx;
+
+              let isHourGroupHead = false;
+              let timeRowSpan = 1;
+              let hourLabel = '';
+
+              if (indexInSession % 2 === 0) {
+                const nextSlot = activeTimeSlots[tIdx + 1];
+                if (nextSlot) {
+                  isHourGroupHead = true;
+                  timeRowSpan = 2;
+                  hourLabel = `${timeSlot.label.split(' - ')[0]} - ${nextSlot.label.split(' - ')[1]}`;
+                } else {
+                  isHourGroupHead = true;
+                  timeRowSpan = 1;
+                  hourLabel = timeSlot.label;
                 }
-                const isDropTarget = dragOverCell === cellKey;
-                const cellSchedules = schedules.filter(s => s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
-                let rowSpan = 1;
-                for (const s of cellSchedules) {
-                  const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting, scheduleMode);
-                  if (needed > rowSpan) rowSpan = needed;
-                }
-                if (rowSpan > 1) {
-                  for (let skip = 1; skip < rowSpan; skip++) {
-                    const skipSlot = activeTimeSlots[tIdx + skip];
-                    if (skipSlot) window[`skip_cell_${day}-${skipSlot.id}`] = true;
-                  }
-                }
-                return (
-                  <td
-                    key={cellKey}
-                    rowSpan={rowSpan}
-                    className={`schedule-cell ${isDropTarget ? 'drag-over' : ''} ${cellSchedules.length > 0 ? 'has-schedule' : ''}`}
-                    onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
-                    onDrop={(e) => handleDrop(e, day, timeSlot.id)}
-                    style={cellSchedules.length > 0 ? { backgroundColor: getDeptColor(cellSchedules[0]).bg, padding: 0 } : {}}
-                  >
-                    {cellSchedules.map(schedule => {
-                      const deptColor = getDeptColor(schedule);
+              } else {
+                isHourGroupHead = false;
+                timeRowSpan = 0;
+              }
+
+              const isLunchSlot = timeSlot.id === 10 || timeSlot.id === 19;
+              const canRenderMonolithicLunch = isLunchSlot;
+
+              return (
+                <React.Fragment key={timeSlot.id}>
+                  <tr className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
+                    {isHourGroupHead && (
+                      <td className="time-label" rowSpan={timeRowSpan} style={{ position: 'sticky', left: 0, zIndex: 2, background: 'var(--bg-main)' }}>
+                        <strong>{hourLabel}</strong>
+                      </td>
+                    )}
+                    {displayDays.map((day, dayIdx) => {
+                      const cellKey = `${day}-${timeSlot.id}`;
+
+                      if (skippedCells.has(cellKey)) {
+                        return null;
+                      }
+
+                      if (canRenderMonolithicLunch && dayIdx === 0) {
+                        // Skip all other days for this row
+                        displayDays.slice(1).forEach(d => skippedCells.add(`${d}-${timeSlot.id}`));
+
+                        if (timeSlot.id === 10) {
+                          return (
+                            <td
+                              key="monolithic-lunch-top"
+                              colSpan={displayDays.length}
+                              style={{ backgroundColor: '#f1f5f9', position: 'relative', padding: 0, borderBottom: 'none' }}
+                            >
+                              {/* Absolute container to span both rows vertically */}
+                              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '81px', zIndex: 1, pointerEvents: 'none' }}>
+                                {/* Sticky container to keep text centered horizontally while scrolling */}
+                                <div style={{ position: 'sticky', left: '50%', width: 'fit-content', height: '100%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: '8px', color: '#94a3b8', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                  L U N C H &nbsp; B R E A K
+                                </div>
+                              </div>
+                            </td>
+                          );
+                        } else if (timeSlot.id === 19) {
+                          return (
+                            <td
+                              key="monolithic-lunch-bottom"
+                              colSpan={displayDays.length}
+                              style={{ backgroundColor: '#f1f5f9', borderTop: 'none' }}
+                            >
+                            </td>
+                          );
+                        }
+                      }
+
+                      if (canRenderMonolithicLunch && dayIdx > 0) {
+                        return null;
+                      }
+
+                      const isDropTarget = dragOverCell === cellKey;
+                      const cellSchedules = schedules.filter(s => s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
+                      let rowSpan = 1;
+                      for (const s of cellSchedules) {
+                        const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting, scheduleMode);
+                        if (needed > rowSpan) rowSpan = needed;
+                      }
+                      if (rowSpan > 1) {
+                        for (let skip = 1; skip < rowSpan; skip++) {
+                          const skipSlot = activeTimeSlots[tIdx + skip];
+                          if (skipSlot) skippedCells.add(`${day}-${skipSlot.id}`);
+                        }
+                      }
+
+                      const isLunchSlot = timeSlot.id === 10 || timeSlot.id === 19;
+
                       return (
-                        <div
-                          key={schedule.id}
-                          className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''}`}
-                          draggable={!!onUpdateSchedule}
-                          onDragStart={(e) => handleDragStart(e, schedule)}
-                          onDragEnd={handleDragEnd}
-                          style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
+                        <td
+                          key={cellKey}
+                          rowSpan={rowSpan}
+                          className={`schedule-cell ${isDropTarget ? 'drag-over' : ''} ${cellSchedules.length > 0 ? 'has-schedule' : ''}`}
+                          onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
+                          onDrop={(e) => handleDrop(e, day, timeSlot.id)}
+                          style={
+                            cellSchedules.length > 0
+                              ? { backgroundColor: getDeptColor(cellSchedules[0]).bg, padding: 0 }
+                              : isLunchSlot
+                                ? { backgroundColor: '#f8fafc' }
+                                : {}
+                          }
                         >
-                          <div className="schedule-content" style={{ display: 'flex', flexDirection: 'column' }}>
-                            <p className="subject" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0 }}>
-                              {schedule.subject?.code ?? '—'}
-                            </p>
-                            <div className="details" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <p className="professor" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
-                                {schedule.professor?.name ? (() => {
-                                  const name = schedule.professor.name.trim();
-                                  if (name.includes(',')) {
-                                    const [surname, firstNames] = name.split(',').map(s => s.trim());
-                                    const initial = firstNames ? firstNames[0].toUpperCase() : '';
-                                    return initial ? `${initial}. ${surname}` : surname;
-                                  } else {
-                                    const parts = name.split(/\s+/);
-                                    if (parts.length === 1) return parts[0];
-                                    const initial = parts[0][0].toUpperCase();
-                                    const surname = parts.slice(1).join(' ');
-                                    return `${initial}. ${surname}`;
-                                  }
-                                })() : '—'}
-                              </p>
-                              <p className="room" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>{schedule.room?.name ?? '—'}</p>
-                              {schedule.section && (
-                                <p className="section" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>{schedule.section.name}</p>
-                              )}
-                            </div>
-                          </div>
-                          {onRemove && (
-                            <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                            </button>
-                          )}
-                        </div>
+                          {cellSchedules.map(schedule => {
+                            const deptColor = getDeptColor(schedule);
+                            return (
+                              <div
+                                key={schedule.id}
+                                className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''}`}
+                                draggable={!!onUpdateSchedule}
+                                onDragStart={(e) => handleDragStart(e, schedule)}
+                                onDragEnd={handleDragEnd}
+                                style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
+                              >
+                                <div className="schedule-content" style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <p className="subject" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0 }}>
+                                    {schedule.subject?.code ?? '—'}
+                                  </p>
+                                  <div className="details" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <p className="professor" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
+                                      {schedule.professor?.name ? (() => {
+                                        const name = schedule.professor.name.trim();
+                                        if (name.includes(',')) {
+                                          const [surname, firstNames] = name.split(',').map(s => s.trim());
+                                          const initial = firstNames ? firstNames[0].toUpperCase() : '';
+                                          return initial ? `${initial}. ${surname}` : surname;
+                                        } else {
+                                          const parts = name.split(/\s+/);
+                                          if (parts.length === 1) return parts[0];
+                                          const initial = parts[0][0].toUpperCase();
+                                          const surname = parts.slice(1).join(' ');
+                                          return `${initial}. ${surname}`;
+                                        }
+                                      })() : '—'}
+                                    </p>
+                                    <p className="room" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>{schedule.room?.name ?? '—'}</p>
+                                    {schedule.section && (
+                                      <p className="section" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>{schedule.section.name}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                {onRemove && (
+                                  <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </td>
                       );
                     })}
-                  </td>
-                );
-              })}
-                </tr>
-              </React.Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
+                  </tr>
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
 
   const CardView = () => (
     <div className="schedule-card-view">
@@ -733,7 +772,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
             onClick={() => setViewMode('grid')}
             title="Grid view"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
             <span>Grid</span>
           </button>
           <button
@@ -741,7 +780,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
             onClick={() => setViewMode('cards')}
             title="Card view"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
             <span>Cards</span>
           </button>
         </div>
@@ -756,9 +795,9 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
             title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
           >
             {isFullscreen ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" /></svg>
             ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
             )}
             <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
           </button>
@@ -792,7 +831,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
 
       {/* Content */}
-      {viewMode === 'grid' || isFullscreen ? <GridView /> : <CardView />}
+      {viewMode === 'grid' || isFullscreen ? GridView() : CardView()}
 
       {/* Floating exit fullscreen button for presentation mode */}
       {isFullscreen && (
@@ -809,12 +848,12 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
             }}
             title="Exit Fullscreen"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" /></svg>
           </button>
-          
+
           {/* Rotate hint for mobile devices in portrait */}
           <div className="rotate-device-hint">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.34-11.14l1.5 1.5"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.34-11.14l1.5 1.5" /></svg>
             <span>Rotate for best view</span>
           </div>
         </>
@@ -867,19 +906,19 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
           maxWidth: '400px'
         }}>
           {errorToast ? (
-             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
           ) : (
-             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
           )}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontWeight: 'bold', fontSize: '1rem', marginBottom: '4px' }}>
-                {errorToast ? 'Error' : 'Success'}
+              {errorToast ? 'Error' : 'Success'}
             </span>
             <span style={{ fontSize: '0.85rem', opacity: 0.9, whiteSpace: 'pre-line', lineHeight: '1.4' }}>
-                {errorToast || successToast}
+              {errorToast || successToast}
             </span>
           </div>
-          <button 
+          <button
             onClick={() => { setErrorToast(null); setSuccessToast(null); }}
             style={{ background: 'transparent', border: 'none', color: 'white', opacity: 0.7, cursor: 'pointer', marginLeft: 'auto', padding: '4px' }}
           >

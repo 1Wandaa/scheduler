@@ -140,9 +140,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     }
 
     const detectedScheduleMode = React.useMemo(() => {
-        const hasFourDaySlots = schedules.some(s => s.timeSlot && parseInt(s.timeSlot.id) >= 20);
         const hasFriday = schedules.some(s => s.day === 'Friday');
-        if (hasFourDaySlots) return 'fourDay';
         if (schedules.length > 0 && !hasFriday) return 'fourDay'; 
         return 'standard';
     }, [schedules]);
