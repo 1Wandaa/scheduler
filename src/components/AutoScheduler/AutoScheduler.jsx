@@ -270,73 +270,73 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       </div>
 
       {/* Schedule Mode Selector */}
-      <div style={{ marginBottom: '20px' }}>
-        <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Class Schedule Type</label>
-        <div style={{ display: 'flex', gap: '0', borderRadius: '10px', overflow: 'hidden', border: '2px solid var(--border-color)', background: 'var(--bg-main)' }}>
+      <div style={{ marginBottom: '32px' }}>
+        <label className="form-label" style={{ marginBottom: '12px', display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Class Schedule Type</label>
+        
+        {/* Ultra-Minimalist Segmented Control (Themed) */}
+        <div style={{ 
+          display: 'inline-flex', 
+          backgroundColor: 'var(--bg-main)', 
+          borderRadius: '8px', 
+          padding: '4px', 
+          gap: '2px',
+          border: '1px solid var(--border-color)'
+        }}>
           <button
             type="button"
             onClick={() => setScheduleMode(SCHEDULE_MODES.STANDARD)}
             style={{
-              flex: 1,
-              padding: '12px 16px',
+              padding: '8px 20px',
               border: 'none',
+              borderRadius: '6px',
               cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '4px',
-              fontWeight: scheduleMode === SCHEDULE_MODES.STANDARD ? 700 : 500,
-              fontSize: '0.85rem',
-              background: scheduleMode === SCHEDULE_MODES.STANDARD
-                ? 'linear-gradient(135deg, var(--accent-primary), #7c3aed)'
-                : 'transparent',
-              color: scheduleMode === SCHEDULE_MODES.STANDARD ? '#fff' : 'var(--text-main)',
-              transition: 'all 0.25s ease',
+              fontWeight: 600,
+              fontSize: '0.8rem',
+              letterSpacing: '0.3px',
+              background: scheduleMode === SCHEDULE_MODES.STANDARD ? 'var(--accent-primary)' : 'transparent',
+              color: scheduleMode === SCHEDULE_MODES.STANDARD ? '#ffffff' : 'var(--text-muted)',
+              transition: 'all 0.2s ease',
               outline: 'none',
             }}
           >
-            <span style={{ fontSize: '1.1rem' }}>📅</span>
-            <span>5-Day Schedule</span>
-            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 400 }}>Mon–Fri · 7:30 AM – 5:00 PM</span>
+            5-Day Standard
           </button>
+
           <button
             type="button"
             onClick={() => setScheduleMode(SCHEDULE_MODES.FOUR_DAY)}
             style={{
-              flex: 1,
-              padding: '12px 16px',
+              padding: '8px 20px',
               border: 'none',
-              borderLeft: '2px solid var(--border-color)',
+              borderRadius: '6px',
               cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '4px',
-              fontWeight: scheduleMode === SCHEDULE_MODES.FOUR_DAY ? 700 : 500,
-              fontSize: '0.85rem',
-              background: scheduleMode === SCHEDULE_MODES.FOUR_DAY
-                ? 'linear-gradient(135deg, #f59e0b, #ef4444)'
-                : 'transparent',
-              color: scheduleMode === SCHEDULE_MODES.FOUR_DAY ? '#fff' : 'var(--text-main)',
-              transition: 'all 0.25s ease',
+              fontWeight: 600,
+              fontSize: '0.8rem',
+              letterSpacing: '0.3px',
+              background: scheduleMode === SCHEDULE_MODES.FOUR_DAY ? 'var(--accent-primary)' : 'transparent',
+              color: scheduleMode === SCHEDULE_MODES.FOUR_DAY ? '#ffffff' : 'var(--text-muted)',
+              transition: 'all 0.2s ease',
               outline: 'none',
             }}
           >
-            <span style={{ fontSize: '1.1rem' }}>⚡</span>
-            <span>4-Day Schedule</span>
-            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 400 }}>Mon–Thu · 7:00 AM – 6:00 PM</span>
+            4-Day Accelerated
           </button>
         </div>
-        {scheduleMode === SCHEDULE_MODES.FOUR_DAY && (
-          <div style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', fontSize: '0.78rem', color: 'var(--text-main)' }}>
-            ⚡ <strong>4-Day Mode:</strong> Classes run Monday–Thursday only. Morning: 7:00 AM – 11:30 AM · Lunch: 11:30 AM – 12:30 PM · Afternoon: 12:30 PM – 6:00 PM
-          </div>
-        )}
-        {scheduleMode === SCHEDULE_MODES.STANDARD && (
-          <div style={{ marginTop: '8px', padding: '8px 12px', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', fontSize: '0.78rem', color: 'var(--text-main)' }}>
-            📅 <strong>5-Day Mode:</strong> Classes run Monday–Friday. Morning: 7:30 AM – 12:00 PM · Lunch: 12:00 PM – 1:00 PM · Afternoon: 1:00 PM – 5:00 PM
-          </div>
-        )}
+
+        {/* Minimalist Info Callouts (Themed) */}
+        <div style={{ marginTop: '16px', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.6', maxWidth: '600px' }}>
+          {scheduleMode === SCHEDULE_MODES.FOUR_DAY ? (
+            <p style={{ margin: 0 }}>
+              <strong style={{ color: 'var(--text-main)', fontWeight: 600 }}>Monday–Thursday</strong> only.<br/>
+              Morning: 7:00 AM – 11:30 AM <span style={{ opacity: 0.5 }}>|</span> Lunch: 11:30 AM – 12:30 PM <span style={{ opacity: 0.5 }}>|</span> Afternoon: 12:30 PM – 6:00 PM
+            </p>
+          ) : (
+            <p style={{ margin: 0 }}>
+              <strong style={{ color: 'var(--text-main)', fontWeight: 600 }}>Monday–Friday</strong>.<br/>
+              Morning: 7:30 AM – 12:00 PM <span style={{ opacity: 0.5 }}>|</span> Lunch: 12:00 PM – 1:00 PM <span style={{ opacity: 0.5 }}>|</span> Afternoon: 1:00 PM – 5:00 PM
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Pre-Scheduling Summary */}
