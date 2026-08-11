@@ -284,6 +284,13 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                         ? (sections.find(s => s.id === deptSectionId)?.name || titleName)
                         : titleName
                 }
+                programName={
+                    viewType === 'department' && deptSectionId
+                        ? (sections.find(s => s.id === deptSectionId)?.program || '')
+                        : viewType === 'section' && selectedId
+                            ? (sections.find(s => s.id === selectedId)?.program || '')
+                            : ''
+                }
                 semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "2nd Sem 2025-2026"}
             />
 

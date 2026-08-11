@@ -542,7 +542,7 @@
   border: 1px solid var(--border-color);
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  animation: cardEntrance 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation: cardEntrance 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .schedule-day-header {
@@ -630,7 +630,7 @@
 }
 
 @keyframes cardEntrance {
-  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 

@@ -46,7 +46,7 @@ function getOccupiedPrintRows(schedule, isFourDay) {
     return [...rows].sort((a, b) => a - b);
 }
 
-const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo, scheduleMode }) => {
+const PrintableSchedule = ({ scheduleItems, sectionName, programName, semesterInfo, scheduleMode }) => {
     const isFourDay = scheduleMode === 'fourDay';
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -131,7 +131,7 @@ const PrintableSchedule = ({ scheduleItems, sectionName, semesterInfo, scheduleM
 
             {/* Meta Info */}
             <div className="meta-info">
-                <div>DEGREE PROGRAM: <span className="meta-value">Bachelor of Science in Computer Science</span></div>
+                <div>DEGREE PROGRAM: <span className="meta-value">{programName || 'Bachelor of Science in Computer Science'}</span></div>
                 <div>COURSE &amp; YEAR: <span className="meta-value">{sectionName || 'BSCS 4C'}</span></div>
                 <div>SEMESTER &amp; AY: <span className="meta-value">{semesterInfo || '1ST Sem 2025-2026'}</span></div>
             </div>

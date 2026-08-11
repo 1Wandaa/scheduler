@@ -708,10 +708,10 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
   const CardView = () => (
     <div className="schedule-card-view">
-      {DAYS.map(day => {
+      {DAYS.map((day, dayIndex) => {
         const daySched = schedulesByDay[day] || [];
         return (
-          <div key={day} className="schedule-day-group">
+          <div key={day} className="schedule-day-group" style={{ animationDelay: `${dayIndex * 0.05}s` }}>
             <div className="schedule-day-header" style={{ borderLeftColor: DAY_COLORS[day] }}>
               <span style={{ color: DAY_COLORS[day] }}>{day}</span>
               <span className="schedule-day-count">{daySched.length} class{daySched.length !== 1 ? 'es' : ''}</span>
