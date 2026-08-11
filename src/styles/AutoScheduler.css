@@ -303,7 +303,7 @@
 .schedule-card {
   padding: 10px;
   background: var(--success-bg);
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 0.85rem;
 }
 

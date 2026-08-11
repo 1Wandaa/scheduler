@@ -643,7 +643,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                             cellSchedules.length > 0
                               ? { backgroundColor: getDeptColor(cellSchedules[0]).bg, padding: 0 }
                               : isLunchSlot
-                                ? { backgroundColor: '#f8fafc' }
+                                ? { backgroundColor: '#f8fafc', borderRadius: '6px' }
                                 : {}
                           }
                         >

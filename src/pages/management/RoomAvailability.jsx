@@ -123,7 +123,7 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
       </div>
 
       <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }} className="custom-scrollbar">
-        <table className="data-table" style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', margin: 0, zoom: fitScale < 1 ? fitScale : 1 }}>
+        <table className="data-table" style={{ width: '100%', minWidth: '700px', borderCollapse: 'separate', borderSpacing: 0, borderTop: '1px solid var(--border-color)', borderLeft: '1px solid var(--border-color)', margin: 0, zoom: fitScale < 1 ? fitScale : 1 }}>
           <thead>
             <tr>
               <th style={{ position: 'sticky', left: 0, zIndex: 10, background: 'var(--bg-card)', borderRight: '2px solid var(--border-color)', minWidth: '90px', boxShadow: '2px 0 5px rgba(0,0,0,0.05)', fontSize: '0.75rem' }}>
@@ -196,6 +196,7 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
                           <td key={t.id} colSpan={colSpan} style={{ 
                             background: theme.bg, 
                             border: '3px solid #ffffff', 
+                            borderRadius: '6px',
                             padding: '4px', 
                             textAlign: 'center',
                             verticalAlign: 'middle'
