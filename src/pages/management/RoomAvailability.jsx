@@ -196,7 +196,7 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
                           <td key={t.id} colSpan={colSpan} style={{ 
                             background: theme.bg, 
                             border: '3px solid #ffffff', 
-                            borderRadius: '6px',
+                            borderRadius: '4px',
                             padding: '4px', 
                             textAlign: 'center',
                             verticalAlign: 'middle'
