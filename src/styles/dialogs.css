@@ -12,8 +12,7 @@
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  opacity: 0;
-  will-change: opacity;
+  opacity: 1;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 }
 
@@ -29,9 +28,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transform: scale(0.96) translateY(5px);
-  opacity: 0;
-  will-change: transform, opacity;
+  opacity: 1;
 }
 
 .dialog-content.closing {

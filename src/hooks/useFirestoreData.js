@@ -17,6 +17,8 @@ import {
   setDoc,
   writeBatch,
   doc,
+  query,
+  where,
 } from 'firebase/firestore';
 import {
   initialRooms,
@@ -183,10 +185,7 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
       )
     );
 
-    const unsubSched = onSnapshot(collection(db, 'schedules'), (snap) =>
-      setSchedules(snap.docs.map((d) => ({ ...d.data(), id: d.id })))
-    );
-
+    // We removed unsubSched from here so it can be in its own useEffect
     const unsubHist = onSnapshot(collection(db, 'scheduleHistory'), (snap) =>
       setScheduleHistory(
         snap.docs
@@ -217,13 +216,31 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
       unsubProfs();
       unsubSubj();
       unsubSec();
-      unsubSched();
       unsubHist();
       unsubDept();
       unsubCourse();
       unsubMeta();
     };
   }, []);
+
+  // Real-time listener for schedules (filtered by active semester and school year)
+  useEffect(() => {
+    if (!activeSemester || !activeSchoolYear) return;
+
+    const schedulesQuery = query(
+      collection(db, 'schedules'),
+      where('semester', '==', activeSemester),
+      where('schoolYear', '==', activeSchoolYear)
+    );
+
+    const unsubSched = onSnapshot(schedulesQuery, (snap) => {
+      setSchedules(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
+    });
+
+    return () => {
+      unsubSched();
+    };
+  }, [activeSemester, activeSchoolYear]);
 
  // Derived data
 

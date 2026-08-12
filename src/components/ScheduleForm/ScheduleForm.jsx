@@ -9,7 +9,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     section: '',
     professor: '',
     room: '',
-    day: '',
+    day: [],
     timeSlot: ''
   });
 
@@ -36,7 +36,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     setLoading(true);
 
     if (!formData.subject || !formData.section || !formData.professor || !formData.room || 
-        !formData.day || !formData.timeSlot) {
+        !formData.day || formData.day.length === 0 || !formData.timeSlot) {
       setValidation({
         valid: false,
         errors: ['Please fill in all fields']
@@ -51,27 +51,41 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     const room = rooms.find(r => r.id === formData.room);
     const timeSlot = TIME_SLOTS.find(t => t.id === parseInt(formData.timeSlot));
 
-    const result = validator.validateAssignment(
-      room,
-      professor,
-      subject,
-      section,
-      formData.day,
-      timeSlot
-    );
+    let allValid = true;
+    let allWarnings = [];
+    let allErrors = [];
 
-    if (result.valid) {
-      const scheduleResult = validator.addSchedule(room, professor, subject, section, formData.day, timeSlot);
-      setValidation({ valid: true, warnings: result.warnings });
-      const addResult = await onSchedule(scheduleResult.schedule);
-      if (addResult && addResult.ok === false) {
-        setValidation({ valid: false, errors: addResult.errors || ['Schedule could not be added.'] });
+    // Validate all selected days first
+    for (const day of formData.day) {
+      const result = validator.validateAssignment(room, professor, subject, section, day, timeSlot);
+      if (!result.valid) {
+        allValid = false;
+        allErrors.push(`Failed for ${day}: ${result.errors.join(', ')}`);
+      } else if (result.warnings) {
+        allWarnings.push(...result.warnings.map(w => `${day}: ${w}`));
+      }
+    }
+
+    if (allValid) {
+      let hasAddError = false;
+      for (const day of formData.day) {
+        const scheduleResult = validator.addSchedule(room, professor, subject, section, day, timeSlot);
+        const addResult = await onSchedule(scheduleResult.schedule);
+        if (addResult && addResult.ok === false) {
+          hasAddError = true;
+          allErrors.push(`Failed to save for ${day}: ${addResult.errors?.join(', ') || 'Unknown error'}`);
+        }
+      }
+
+      if (hasAddError) {
+        setValidation({ valid: false, errors: allErrors, warnings: allWarnings });
       } else {
-        setFormData({ subject: '', section: '', professor: '', room: '', day: '', timeSlot: '' });
+        setValidation({ valid: true, warnings: allWarnings });
+        setFormData({ subject: '', section: '', professor: '', room: '', day: [], timeSlot: '' });
         setTimeout(() => setValidation(null), 3000);
       }
     } else {
-      setValidation(result);
+      setValidation({ valid: false, errors: allErrors, warnings: allWarnings });
     }
 
     setLoading(false);
@@ -100,7 +114,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
   const checkConflict = (overrides) => {
     if (!selectedSubject || !activeSchedules) return false;
 
-    const candidate = {
+    const candidateBase = {
       subject: selectedSubject,
       section: selectedSection,
       professor: selectedProfessor,
@@ -110,10 +124,19 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       ...overrides
     };
 
-    if (!candidate.day || !candidate.timeSlot) return false;
+    const daysToCheck = Array.isArray(candidateBase.day) ? candidateBase.day : [candidateBase.day];
 
-    const conflicts = findScheduleConflicts(candidate, activeSchedules);
-    return !!(conflicts.room || conflicts.professor || conflicts.section);
+    if (daysToCheck.length === 0 || !candidateBase.timeSlot) return false;
+
+    for (const d of daysToCheck) {
+      if (!d) continue;
+      const candidate = { ...candidateBase, day: d };
+      const conflicts = findScheduleConflicts(candidate, activeSchedules);
+      if (conflicts.room || conflicts.professor || conflicts.section) {
+        return true;
+      }
+    }
+    return false;
   };
 
   return (
@@ -221,14 +244,20 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             <div className="day-selector">
               {DAYS.map(day => {
                 const shortDay = day.substring(0, 3);
-                const isActive = formData.day === day;
+                const isActive = Array.isArray(formData.day) ? formData.day.includes(day) : formData.day === day;
                 const isConflict = checkConflict({ day });
                 return (
                   <button
                     key={day}
                     type="button"
                     onClick={() => {
-                      setFormData(prev => ({ ...prev, day }));
+                      setFormData(prev => {
+                        const prevDays = Array.isArray(prev.day) ? prev.day : (prev.day ? [prev.day] : []);
+                        const newDays = prevDays.includes(day)
+                          ? prevDays.filter(d => d !== day)
+                          : [...prevDays, day];
+                        return { ...prev, day: newDays };
+                      });
                       setValidation(null);
                     }}
                     disabled={isConflict}
@@ -242,7 +271,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               })}
             </div>
             {/* Hidden input to maintain HTML5 validation if needed */}
-            <input type="hidden" name="day" value={formData.day} required />
+            <input type="hidden" name="day" value={Array.isArray(formData.day) ? formData.day.join(',') : formData.day} required={!formData.day || formData.day.length === 0} />
           </div>
 
           <div className="form-group">

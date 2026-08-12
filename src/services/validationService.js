@@ -6,7 +6,7 @@
  */
 
 import { db } from '../config/firebase';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, writeBatch, query, where, limit } from 'firebase/firestore';
 import { TIME_SLOTS, getScheduleConfig } from '../config/constants';
 import {
   professorMatchesSubject,
@@ -255,19 +255,34 @@ export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, ac
  * Clear all schedules for the active semester/year.
  */
 export async function clearAllSchedules(activeSemester, activeSchoolYear) {
-  const snap = await getDocs(collection(db, 'schedules'));
-  if (snap.empty) return;
-  // Filter to matching term and chunk into batches of 499
-  const docsToDelete = snap.docs.filter((d) => {
-    const data = d.data();
-    return (data.semester === activeSemester || !data.semester) && (data.schoolYear === activeSchoolYear || !data.schoolYear);
-  });
   const BATCH_LIMIT = 499;
-  for (let i = 0; i < docsToDelete.length; i += BATCH_LIMIT) {
-    const chunk = docsToDelete.slice(i, i + BATCH_LIMIT);
+  let hasMore = true;
+
+  while (hasMore) {
+    let q;
+    if (activeSemester && activeSchoolYear) {
+      q = query(
+        collection(db, 'schedules'),
+        where('semester', '==', activeSemester),
+        where('schoolYear', '==', activeSchoolYear),
+        limit(BATCH_LIMIT)
+      );
+    } else {
+      q = query(collection(db, 'schedules'), limit(BATCH_LIMIT));
+    }
+
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      hasMore = false;
+      break;
+    }
+
     const batch = writeBatch(db);
-    chunk.forEach((d) => batch.delete(d.ref));
+    snap.docs.forEach((d) => batch.delete(d.ref));
     await batch.commit();
+
+    // Yield to the main thread to allow React to process snapshot updates and re-render without freezing
+    await new Promise((resolve) => setTimeout(resolve, 150));
   }
 }
 
