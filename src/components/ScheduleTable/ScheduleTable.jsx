@@ -616,6 +616,11 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                                 style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
                               >
                                 <div className="schedule-content" style={{ display: 'flex', flexDirection: 'column' }}>
+                                  {schedule.timeSlot?.customLabel && (
+                                    <p className="custom-time" style={{ color: deptColor.text, fontSize: '0.8rem', fontWeight: 'normal', margin: '0 0 2px 0', opacity: 0.9 }}>
+                                      🕒 {schedule.timeSlot.customLabel}
+                                    </p>
+                                  )}
                                   <p className="subject" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0 }}>
                                     {schedule.subject?.code ?? '—'}
                                   </p>
@@ -657,6 +662,8 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                 </React.Fragment>
               );
             })}
+
+
           </tbody>
         </table>
       </div>
@@ -681,7 +688,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                 return (
                   <div key={schedule.id} className="schedule-card-item" style={{ borderLeftColor: deptColor.bg, backgroundColor: `${deptColor.bg}12` }}>
                     <div className="schedule-card-time">
-                      {getMeetingTimeLabel(schedule.timeSlot, schedule.subject?.hoursPerMeeting) || schedule.timeSlot?.label || '—'}
+                      {schedule.timeSlot?.customLabel || getMeetingTimeLabel(schedule.timeSlot, schedule.subject?.hoursPerMeeting) || schedule.timeSlot?.label || '—'}
                     </div>
                     <div className="schedule-card-body">
                       <div className="schedule-card-subject">

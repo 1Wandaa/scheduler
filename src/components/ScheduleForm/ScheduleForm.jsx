@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import { getEligibleProfessors, slotsNeededFromIndex, getMeetingTimeLabel, findScheduleConflicts } from '../../utils/scheduleUtils';
 import '../../styles/SchedulerForm.css';
@@ -15,6 +15,34 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
   const [validation, setValidation] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isTimeSlotOpen, setIsTimeSlotOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const parseTimeToMinutes = (timeStr) => {
+    if (!timeStr) return null;
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+    if (!match) return null;
+    let [_, hours, mins, period] = match;
+    hours = parseInt(hours, 10);
+    mins = parseInt(mins, 10);
+    if (period) {
+      if (period.toUpperCase() === 'PM' && hours < 12) hours += 12;
+      if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+    } else {
+      if (hours >= 1 && hours <= 6) hours += 12; // Assume 1-6 is PM
+    }
+    return hours * 60 + mins;
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsTimeSlotOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -49,7 +77,38 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     const section = sections ? sections.find(s => s.id === formData.section) : null;
     const professor = professors.find(p => p.id === formData.professor);
     const room = rooms.find(r => r.id === formData.room);
-    const timeSlot = TIME_SLOTS.find(t => t.id === parseInt(formData.timeSlot));
+    
+    // Determine if timeslot is standard or custom
+    let timeSlot = null;
+    if (formData.timeSlot) {
+      const eligibleSlots = subject
+        ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, subject.hoursPerMeeting) > 0)
+        : TIME_SLOTS;
+        
+      timeSlot = eligibleSlots.find(t => getMeetingTimeLabel(t, subject?.hoursPerMeeting) === formData.timeSlot);
+      if (!timeSlot) timeSlot = TIME_SLOTS.find(t => t.id.toString() === formData.timeSlot);
+      
+      if (!timeSlot) {
+        const typedMins = parseTimeToMinutes(formData.timeSlot);
+        if (typedMins !== null && eligibleSlots.length > 0) {
+          let closest = eligibleSlots[0];
+          let minDiff = Infinity;
+          for (const s of eligibleSlots) {
+            const sMins = parseTimeToMinutes(s.time);
+            if (sMins !== null) {
+              const diff = Math.abs(sMins - typedMins);
+              if (diff < minDiff) {
+                minDiff = diff;
+                closest = s;
+              }
+            }
+          }
+          timeSlot = { ...closest, customLabel: formData.timeSlot };
+        } else if (eligibleSlots.length > 0) {
+          timeSlot = { ...eligibleSlots[0], customLabel: formData.timeSlot };
+        }
+      }
+    }
 
     let allValid = true;
     let allWarnings = [];
@@ -109,7 +168,32 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
   const selectedProfessor = professors.find(p => p.id === formData.professor);
   const selectedRoom = rooms.find(r => r.id === formData.room);
-  const selectedTimeSlot = TIME_SLOTS.find(t => t.id === parseInt(formData.timeSlot));
+  
+  let selectedTimeSlot = null;
+  if (formData.timeSlot) {
+    selectedTimeSlot = eligibleTimeSlots.find(t => getMeetingTimeLabel(t, selectedSubject?.hoursPerMeeting) === formData.timeSlot);
+    if (!selectedTimeSlot) selectedTimeSlot = TIME_SLOTS.find(t => t.id.toString() === formData.timeSlot);
+    if (!selectedTimeSlot) {
+      const typedMins = parseTimeToMinutes(formData.timeSlot);
+      if (typedMins !== null && eligibleTimeSlots.length > 0) {
+        let closest = eligibleTimeSlots[0];
+        let minDiff = Infinity;
+        for (const s of eligibleTimeSlots) {
+          const sMins = parseTimeToMinutes(s.time);
+          if (sMins !== null) {
+            const diff = Math.abs(sMins - typedMins);
+            if (diff < minDiff) {
+              minDiff = diff;
+              closest = s;
+            }
+          }
+        }
+        selectedTimeSlot = { ...closest, customLabel: formData.timeSlot };
+      } else if (eligibleTimeSlots.length > 0) {
+        selectedTimeSlot = { ...eligibleTimeSlots[0], customLabel: formData.timeSlot };
+      }
+    }
+  }
 
   const checkConflict = (overrides) => {
     if (!selectedSubject || !activeSchedules) return false;
@@ -274,29 +358,105 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             <input type="hidden" name="day" value={Array.isArray(formData.day) ? formData.day.join(',') : formData.day} required={!formData.day || formData.day.length === 0} />
           </div>
 
-          <div className="form-group">
+          <div className="form-group" ref={dropdownRef} style={{ position: 'relative' }}>
             <label className="form-label">Time Slot *</label>
-            <select
-              className="form-select"
-              name="timeSlot"
-              value={formData.timeSlot}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select a time</option>
-              {eligibleTimeSlots.map(slot => {
-                const idx = TIME_SLOTS.findIndex(ts => ts.id === slot.id);
-                const rangeLabel = selectedSubject
-                  ? getMeetingTimeLabel(slot, selectedSubject.hoursPerMeeting)
-                  : slot.label;
-                const isConflict = checkConflict({ timeSlot: slot });
-                return (
-                  <option key={slot.id} value={slot.id} disabled={isConflict}>
-                    {rangeLabel}{idx >= 0 && slotsNeededFromIndex(idx, selectedSubject?.hoursPerMeeting) > 1 ? ` (${selectedSubject?.hoursPerMeeting || 1.5} hrs)` : ''} {isConflict ? '(Unavailable)' : ''}
-                  </option>
-                );
-              })}
-            </select>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                className="form-select"
+                name="timeSlot"
+                value={formData.timeSlot}
+                onChange={(e) => {
+                  handleChange(e);
+                  setIsTimeSlotOpen(true);
+                }}
+                onFocus={() => setIsTimeSlotOpen(true)}
+                placeholder="Select or type a time..."
+                required
+                style={{ paddingRight: '30px', width: '100%' }}
+                autoComplete="off"
+              />
+              <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </div>
+            </div>
+            
+            {isTimeSlotOpen && (
+              <div className="custom-dropdown-menu" style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                maxHeight: '220px',
+                overflowY: 'auto',
+                backgroundColor: 'var(--bg-main)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                marginTop: '4px',
+                zIndex: 100,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                {eligibleTimeSlots.map(slot => {
+                  const rangeLabel = selectedSubject
+                    ? getMeetingTimeLabel(slot, selectedSubject.hoursPerMeeting)
+                    : slot.label;
+                  
+                  // Filter based on input
+                  if (formData.timeSlot && !rangeLabel.toLowerCase().includes(formData.timeSlot.toLowerCase())) {
+                    return null;
+                  }
+
+                  return (
+                    <div
+                      key={slot.id}
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, timeSlot: rangeLabel }));
+                        setIsTimeSlotOpen(false);
+                        setValidation(null);
+                      }}
+                      style={{
+                        padding: '10px 12px',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid var(--border-color)',
+                        color: 'var(--text-main)',
+                        fontSize: '0.9rem',
+                        transition: 'background-color 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--table-header)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      {rangeLabel}
+                    </div>
+                  );
+                })}
+                
+                {formData.timeSlot && !eligibleTimeSlots.some(slot => {
+                    const rangeLabel = selectedSubject ? getMeetingTimeLabel(slot, selectedSubject.hoursPerMeeting) : slot.label;
+                    return rangeLabel.toLowerCase() === formData.timeSlot.toLowerCase();
+                }) && (
+                  <div
+                    onClick={() => {
+                      setIsTimeSlotOpen(false);
+                      setValidation(null);
+                    }}
+                    style={{
+                      padding: '12px',
+                      cursor: 'pointer',
+                      color: 'var(--accent-primary)',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      backgroundColor: 'var(--bg-main)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--table-header)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    + Use custom time: "{formData.timeSlot}"
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

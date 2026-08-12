@@ -102,16 +102,18 @@ export function validateScheduleEntry(
   if (errors.length > 0) return { valid: false, errors, warnings };
 
  // Time slot fit check
-  const activeSlots = config.timeSlots;
-  const startIdx = activeSlots.findIndex(ts => String(ts.id) === String(timeSlot?.id));
-  const needed = slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting, scheduleMode);
-  if (startIdx < 0 || needed === 0) {
-    errors.push(`Time slot does not fit the ${subject?.hoursPerMeeting || 1.5}hr meeting duration.`);
-    return { valid: false, errors, warnings };
-  }
-  
-  if (subject?.code?.toUpperCase().startsWith('PE') && String(timeSlot?.id) === '2') {
-    errors.push('Physical Education (PE) subjects cannot be scheduled in the first period (7:30 AM).');
+  if (!timeSlot?.isCustom) {
+    const activeSlots = config.timeSlots;
+    const startIdx = activeSlots.findIndex(ts => String(ts.id) === String(timeSlot?.id));
+    const needed = slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting, scheduleMode);
+    if (startIdx < 0 || needed === 0) {
+      errors.push(`Time slot does not fit the ${subject?.hoursPerMeeting || 1.5}hr meeting duration.`);
+      return { valid: false, errors, warnings };
+    }
+    
+    if (subject?.code?.toUpperCase().startsWith('PE') && String(timeSlot?.id) === '2') {
+      errors.push('Physical Education (PE) subjects cannot be scheduled in the first period (7:30 AM).');
+    }
   }
 
  // Conflict detection
