@@ -562,9 +562,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                 timeRowSpan = 0;
               }
 
-              const isLunchSlot = timeSlot.id === 10 || timeSlot.id === 19;
-              const canRenderMonolithicLunch = isLunchSlot;
-
               return (
                 <React.Fragment key={timeSlot.id}>
                   <tr className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
@@ -577,42 +574,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                       const cellKey = `${day}-${timeSlot.id}`;
 
                       if (skippedCells.has(cellKey)) {
-                        return null;
-                      }
-
-                      if (canRenderMonolithicLunch && dayIdx === 0) {
-                        // Skip all other days for this row
-                        displayDays.slice(1).forEach(d => skippedCells.add(`${d}-${timeSlot.id}`));
-
-                        if (timeSlot.id === 10) {
-                          return (
-                            <td
-                              key="monolithic-lunch-top"
-                              colSpan={displayDays.length}
-                              style={{ backgroundColor: '#f1f5f9', position: 'relative', padding: 0, borderBottom: 'none' }}
-                            >
-                              {/* Absolute container to span both rows vertically */}
-                              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '81px', zIndex: 1, pointerEvents: 'none' }}>
-                                {/* Sticky container to keep text centered horizontally while scrolling */}
-                                <div style={{ position: 'sticky', left: '50%', width: 'fit-content', height: '100%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: '8px', color: '#94a3b8', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                  L U N C H &nbsp; B R E A K
-                                </div>
-                              </div>
-                            </td>
-                          );
-                        } else if (timeSlot.id === 19) {
-                          return (
-                            <td
-                              key="monolithic-lunch-bottom"
-                              colSpan={displayDays.length}
-                              style={{ backgroundColor: '#f1f5f9', borderTop: 'none' }}
-                            >
-                            </td>
-                          );
-                        }
-                      }
-
-                      if (canRenderMonolithicLunch && dayIdx > 0) {
                         return null;
                       }
 
@@ -630,8 +591,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                         }
                       }
 
-                      const isLunchSlot = timeSlot.id === 10 || timeSlot.id === 19;
-
                       return (
                         <td
                           key={cellKey}
@@ -642,9 +601,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                           style={
                             cellSchedules.length > 0
                               ? { backgroundColor: getDeptColor(cellSchedules[0]).bg, padding: 0 }
-                              : isLunchSlot
-                                ? { backgroundColor: '#f8fafc', borderRadius: '4px' }
-                                : {}
+                              : {}
                           }
                         >
                           {cellSchedules.map(schedule => {

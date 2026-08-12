@@ -16,7 +16,6 @@ function resolveSlots(scheduleMode) {
 
 /**
  * How many consecutive TIME_SLOTS rows a meeting occupies from a start index.
- * Blocks any meeting that would cross the lunch break.
  * Returns 0 if the meeting does not fit from that start index.
  *
  * @param {number} startIdx - index in the active slots array
@@ -36,23 +35,12 @@ export function slotsNeededFromIndex(startIdx, hoursPerMeeting, scheduleMode) {
   const target = Number(hoursPerMeeting) || 1.5;
   let accumulated = 0;
   let count = 0;
-  let crossesLunch = false;
-
   while (startIdx + count < slots.length && accumulated < target - 0.001) {
-    if (count > 0) {
-      const prevSlot = slots[startIdx + count - 1];
-      const currSlot = slots[startIdx + count];
-      // Detect the lunch gap using the mode-specific boundary IDs
-      if (prevSlot.id === config.lunchBeforeId && currSlot.id === config.lunchAfterId) {
-        crossesLunch = true;
-        break;
-      }
-    }
     accumulated += getSlotDurationHours(startIdx + count, scheduleMode);
     count++;
   }
 
-  if (crossesLunch || accumulated < target - 0.001) {
+  if (accumulated < target - 0.001) {
     return 0;
   }
   return Math.max(1, count);

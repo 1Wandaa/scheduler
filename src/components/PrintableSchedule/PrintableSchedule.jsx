@@ -9,13 +9,12 @@ const SLOT_TO_ROW = {
     5: 2, 6: 2,     // 9:00-10:00
     7: 3, 8: 3,     // 10:00-11:00
     9: 4, 10: 4,    // 11:00-12:00
-    // row 5 is LUNCH
-    19: 6, 11: 6,   // 12:00-1:00
-    12: 7, 13: 7,   // 1:00-2:00
-    14: 8, 15: 8,   // 2:00-3:00
-    16: 9, 17: 9,   // 3:00-4:00
-    18: 10, 20: 10, // 4:00-5:00
-    21: 11, 22: 11  // 5:00-6:00
+    19: 5, 11: 5,   // 12:00-1:00
+    12: 6, 13: 6,   // 1:00-2:00
+    14: 7, 15: 7,   // 2:00-3:00
+    16: 8, 17: 8,   // 3:00-4:00
+    18: 9, 20: 9,   // 4:00-5:00
+    21: 10, 22: 10  // 5:00-6:00
 };
 
 function getOccupiedPrintRows(schedule, isFourDay) {
@@ -56,8 +55,7 @@ const PrintableSchedule = ({ scheduleItems, sectionName, programName, semesterIn
         "9:00 - 10:00",  // index 2
         "10:00 - 11:00", // index 3
         "11:00 - 12:00", // index 4
-        "LUNCH",         // index 5
-        "12:00 - 1:00",  // index 6
+        "12:00 - 1:00",  // index 5
         "1:00 - 2:00",   // index 7
         "2:00 - 3:00",   // index 8
         "3:00 - 4:00",   // index 9
@@ -148,16 +146,6 @@ const PrintableSchedule = ({ scheduleItems, sectionName, programName, semesterIn
                 </thead>
                 <tbody>
                     {fixedTimeSlots.map((timeLabel, index) => {
-                        if (timeLabel === "LUNCH") {
-                            return (
-                                <tr key="lunch">
-                                    <td className="time-cell bold lunch-break-time">{isFourDay ? "11:30 - 12:30" : "12:00 - 1:00"}</td>
-                                    <td colSpan={days.length} className="lunch-break">
-                                        LUNCH BREAK
-                                    </td>
-                                </tr>
-                            );
-                        }
 
                         return (
                             <tr key={timeLabel}>
