@@ -7,14 +7,8 @@
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  animation: slideInRight 0.4s ease-out backwards;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.alert-item:hover {
-  transform: translateX(4px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
 
 .alert-item:nth-child(1) {
   animation-delay: 0.1s;
@@ -29,12 +23,8 @@
 }
 
 .alert-item svg {
-  transition: transform 0.3s ease;
 }
 
-.alert-item:hover svg {
-  transform: scale(1.15) rotate(-5deg);
-}
 
 .alert-danger {
   background: var(--danger-bg);
@@ -85,58 +75,16 @@
 /* =========================================
    LOGIN — ANIMATED BACKGROUND ORBS
    ========================================= */
-@keyframes loginOrbFloat1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(60px, -80px) scale(1.1); }
-  66% { transform: translate(-40px, 40px) scale(0.95); }
-}
-@keyframes loginOrbFloat2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(-70px, 60px) scale(1.05); }
-  66% { transform: translate(50px, -50px) scale(0.9); }
-}
-@keyframes loginOrbFloat3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(40px, 70px) scale(1.15); }
-}
-@keyframes loginOrbFloat4 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  40% { transform: translate(-50px, -60px) scale(0.9); }
-  80% { transform: translate(30px, 40px) scale(1.1); }
-}
 
-@keyframes loginCardReveal {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 
-@keyframes loginHeroSlide {
-  from {
-    opacity: 0;
-    transform: translateX(-40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
 
-@keyframes loginFeatureSlide {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
+
+
+
+
+
+
+
 
 /* =========================================
    APP INITIAL LOADING SCREEN
@@ -159,7 +107,6 @@
   border: 4px solid rgba(255, 255, 255, 0.05);
   border-left-color: var(--accent-primary);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
   box-shadow: 0 0 20px rgba(86, 69, 238, 0.2);
 }
 
@@ -169,14 +116,10 @@
   font-size: 1.2rem;
   font-weight: 500;
   letter-spacing: 0.1em;
-  animation: pulse 1.5s ease-in-out infinite;
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
+
 
 /* =========================================
    LOGIN SCREEN — FULLSCREEN LAYOUT
@@ -237,7 +180,6 @@
 .login-branding {
   text-align: center;
   margin-bottom: 24px;
-  animation: loginHeroSlide 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .login-logo {
@@ -249,26 +191,10 @@
   box-shadow: 0 6px 24px rgba(86, 69, 238, 0.2),
               0 0 0 6px rgba(86, 69, 238, 0.12);
   margin-bottom: 12px;
-  transition: transform 0.4s ease, box-shadow 0.4s ease;
 }
 
-.login-logo:hover {
-  transform: scale(1.05) rotate(2deg);
-  box-shadow: 0 10px 32px rgba(86, 69, 238, 0.3),
-              0 0 0 8px rgba(86, 69, 238, 0.2);
-}
 
-@keyframes logoGradientPulse {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
+
 
 .dashboard-logo {
   width: 80px;
@@ -278,21 +204,13 @@
   padding: 3px;
   background: linear-gradient(135deg, var(--accent-primary), var(--success), #8B5CF6, var(--accent-primary));
   background-size: 300% 300%;
-  animation: logoGradientPulse 6s ease infinite;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 
               0 0 0 4px rgba(255, 255, 255, 0.05);
   margin: 0 auto 12px;
-  transition: opacity 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   display: block;
   border: none;
 }
 
-.dashboard-logo:hover {
-  transform: scale(1.1) rotate(6deg);
-  box-shadow: 0 12px 32px rgba(86, 69, 238, 0.4),
-              0 0 0 6px rgba(2, 185, 116, 0.25);
-  animation-duration: 2s;
-}
 
 .login-system-title {
   font-family: 'Poppins', sans-serif;

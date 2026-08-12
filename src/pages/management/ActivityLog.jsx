@@ -183,7 +183,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
 
  // Render
   return (
-    <div style={{ animation: 'fadeIn 0.4s' }}>
+    <div style={{  }}>
 
  {/* Header */}
       <div className="card" style={{ marginBottom: '20px', padding: '24px 28px' }}>
@@ -248,11 +248,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
                 e.currentTarget.style.boxShadow = `0 6px 16px ${s.color}20`; 
                 e.currentTarget.style.borderColor = `${s.color}60`; 
               }}
-              onMouseLeave={e => { 
-                e.currentTarget.style.transform = 'translateY(0)'; 
-                e.currentTarget.style.boxShadow = 'none'; 
-                e.currentTarget.style.borderColor = 'var(--border-color)'; 
-              }}
+              
               onClick={() => {
                 if (i === 3 && stats.topAction) {
                   setSearchQuery(ACTION_LABELS[stats.topAction[0]] || stats.topAction[0]);
@@ -332,7 +328,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
       <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
-            <div style={{ width: 36, height: 36, border: '3px solid var(--border-color)', borderTop: '3px solid var(--accent-primary)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
+            <div style={{ width: 36, height: 36, border: '3px solid var(--border-color)', borderTop: '3px solid var(--accent-primary)', borderRadius: '50%',  margin: '0 auto 14px' }} />
             Loading activity logs…
           </div>
         ) : filteredLogs.length === 0 ? (
@@ -369,8 +365,8 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
                       transition: 'background 0.15s',
                       background: isExpanded ? 'rgba(99,102,241,0.04)' : 'transparent',
                     }}
-                    onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = 'var(--bg-main)'; }}
-                    onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = 'transparent'; }}
+                    
+                    
                   >
                     <div
                       style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 3fr 1.2fr 40px', gap: 0, padding: '13px 20px', cursor: 'pointer', alignItems: 'center' }}
@@ -422,7 +418,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
 
                     {/* Expanded detail panel */}
                     {isExpanded && (
-                      <div style={{ padding: '0 20px 16px 20px', borderTop: '1px solid var(--border-color)', animation: 'fadeIn 0.2s' }}>
+                      <div style={{ padding: '0 20px 16px 20px', borderTop: '1px solid var(--border-color)',  }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 12 }}>
                           <DetailBox label="Full Timestamp" value={formatFullDate(log.timestamp)} />
                           <DetailBox label="Username" value={log.username} />

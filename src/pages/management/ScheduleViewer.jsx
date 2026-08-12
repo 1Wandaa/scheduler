@@ -153,7 +153,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
 
     if (!isAdmin && !isPublished) {
         return (
-            <div className="card" style={{ animation: 'fadeIn 0.5s', textAlign: 'center', padding: '50px 20px', minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+            <div className="card" style={{  textAlign: 'center', padding: '50px 20px', minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                 <div style={{ marginBottom: '20px', background: 'var(--bg-main)', padding: '24px', borderRadius: '50%' }}>
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -171,7 +171,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     }
 
     return (
-        <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
+        <div className="card" style={{  }}>
 
             {/* Header Row: Title & Print Button separated from filters */}
             <div className="mgmt-header no-print">

@@ -346,8 +346,8 @@ const Dashboard = ({ user, onLogout }) => {
               border: '1px solid rgba(255, 255, 255, 0.12)',
               transition: 'background 0.2s ease',
             }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+              
+              
             >
               <CustomDropdown
                 options={availableSemesters}
@@ -388,7 +388,7 @@ const Dashboard = ({ user, onLogout }) => {
 
         {/* Dashboard Tab */}
         {!isStudent && activeTab === 'dashboard' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.4s' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px',  }}>
 
             {/* KPI row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
@@ -532,7 +532,7 @@ const Dashboard = ({ user, onLogout }) => {
         {/* Other Tabs */}
         {isAdmin && activeTab === 'users' && <UserManagement onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'schedule' && (
-          <div className="schedule-grid" style={{ animation: 'fadeIn 0.4s' }}>
+          <div className="schedule-grid" style={{  }}>
             {!isMobile && (
               <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} activeSemester={activeSemester} activeSchedules={activeSchedules} />
             )}
@@ -596,7 +596,7 @@ const Dashboard = ({ user, onLogout }) => {
           position: 'fixed', inset: 0, zIndex: 100000,
           background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'flex-end',
-          animation: 'fadeIn 0.3s ease'
+          
         }} onClick={() => setIsScheduleFormOpen(false)}>
           <div style={{
             background: 'var(--bg-main)',
@@ -606,7 +606,7 @@ const Dashboard = ({ user, onLogout }) => {
             borderTopLeftRadius: '24px',
             borderTopRightRadius: '24px',
             padding: '20px',
-            animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            
             position: 'relative'
           }} onClick={e => e.stopPropagation()}>
             <div style={{ width: '40px', height: '5px', background: 'var(--border-color)', borderRadius: '3px', margin: '0 auto 16px' }} />

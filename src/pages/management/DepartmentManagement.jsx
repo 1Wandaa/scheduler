@@ -122,7 +122,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
 
   return (
     <>
-      <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
+      <div className="card" style={{  position: 'relative' }}>
         <div className="mgmt-header">
           <div className="mgmt-header-left">
             {onBack && (

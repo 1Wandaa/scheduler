@@ -23,8 +23,6 @@
   padding: 22px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.6);
-  transition: box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.35s ease;
-  animation: cardEntrance 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   position: relative;
   overflow: hidden;
 }
@@ -39,18 +37,8 @@
   height: 3px;
   background: linear-gradient(90deg, var(--accent-primary), #8B5CF6, #06b6d4);
   opacity: 0;
-  transition: opacity 0.3s ease;
 }
 
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.06);
-  border-color: rgba(86, 69, 238, 0.15);
-}
-
-.card:hover::before {
-  opacity: 1;
-}
 
 
 

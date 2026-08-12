@@ -48,21 +48,15 @@ const CustomDropdown = ({ options, value, onChange, title, alignRight = false })
           minWidth: '200px',
           boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)',
           zIndex: 9999,
-          animation: 'fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          
           display: 'flex', flexDirection: 'column', gap: '2px'
         }} className="custom-dropdown-menu">
           {options.map(opt => (
             <div 
               key={opt}
               onClick={() => { onChange(opt); setIsOpen(false); }}
-              onMouseEnter={e => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.color = '#ffffff';
-              }}
-              onMouseLeave={e => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = opt === value ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.8)';
-              }}
+              
+              
               style={{
                 padding: '10px 14px',
                 borderRadius: '8px',

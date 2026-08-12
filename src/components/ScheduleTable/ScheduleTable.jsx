@@ -899,7 +899,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
           borderRadius: '12px',
           boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
           zIndex: 999999,
-          animation: 'fadeIn 0.3s ease-out',
+          
           display: 'flex',
           alignItems: 'flex-start',
           gap: '12px',

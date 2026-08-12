@@ -19,8 +19,8 @@ const NavItem = ({ label, iconPath, active, onClick, danger, indent }) => (
       userSelect: 'none',
       listStyle: 'none',
     }}
-    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; }}
-    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+    
+    
   >
     {iconPath && <Icon d={iconPath} size={indent ? 15 : 17} />}
     <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>

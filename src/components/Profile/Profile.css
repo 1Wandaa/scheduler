@@ -23,14 +23,9 @@
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
-  transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+
 }
 
-.btn-back-floating:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  transform: translateY(-2px);
-}
 
 .profile-hero {
   position: relative;
@@ -144,7 +139,7 @@
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
   border: none;
 }
 
@@ -155,11 +150,6 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.btn-premium-edit:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-}
 
 .btn-premium-cancel {
   background: rgba(239, 68, 68, 0.15);
@@ -168,11 +158,6 @@
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-.btn-premium-cancel:hover {
-  background: rgba(239, 68, 68, 0.25);
-  color: #fef2f2;
-  transform: translateY(-2px);
-}
 
 /* CARDS */
 .profile-cards-grid {
@@ -194,13 +179,9 @@
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
 }
 
-.profile-glass-card:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.1);
-}
 
 .glass-card-header {
   padding: 20px 24px;
@@ -282,7 +263,7 @@
   padding: 12px 16px;
   border-radius: 12px;
   font-size: 0.95rem;
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+
   width: 100%;
   box-sizing: border-box;
 }
@@ -307,7 +288,7 @@
   margin-top: 16px;
   display: flex;
   justify-content: flex-end;
-  animation: slideUp 0.3s ease;
+
 }
 
 .btn-premium-save {
@@ -319,7 +300,7 @@
   font-weight: 700;
   font-size: 1rem;
   cursor: pointer;
-  transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+
   box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
   display: flex;
   align-items: center;
@@ -332,10 +313,6 @@
   gap: 8px;
 }
 
-.btn-premium-save:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(99, 102, 241, 0.6);
-}
 
 .btn-premium-save:disabled {
   opacity: 0.7;
@@ -354,7 +331,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(12px);
 }
@@ -377,38 +354,14 @@
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: white;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+
 }
 
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
 
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
 
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
 
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+
 
 @media (max-width: 768px) {
   .profile-wrapper {

@@ -77,7 +77,7 @@ const RecycleBin = ({ onBack, user }) => {
   };
 
   return (
-    <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(100vh - 120px)' }}>
+    <div className="card" style={{  position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(100vh - 120px)' }}>
       <div className="mgmt-header" style={{ flexShrink: 0 }}>
         <div className="mgmt-header-left">
           {onBack && (

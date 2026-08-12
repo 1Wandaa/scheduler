@@ -9,7 +9,7 @@
   font-weight: 600;
   font-size: 0.8rem;
   font-family: var(--font-body);
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+
   margin-right: 8px;
   position: relative;
   overflow: hidden;
@@ -23,25 +23,15 @@
   inset: 0;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   transform: translateX(-100%);
-  transition: transform 0.5s ease;
+
 }
 
-.btn-edit:hover::before,
-.btn-delete:hover::before {
-  transform: translateX(100%);
-}
 
 .btn-edit {
   background: rgba(86, 69, 238, 0.1);
   color: var(--accent-primary);
 }
 
-.btn-edit:hover {
-  background: var(--accent-primary);
-  color: white;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(86, 69, 238, 0.2);
-}
 
 .btn-edit:active {
   transform: translateY(0) scale(0.97);
@@ -54,12 +44,6 @@
   margin-right: 0;
 }
 
-.btn-delete:hover {
-  background: var(--danger);
-  color: white;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
-}
 
 .btn-delete:active {
   transform: translateY(0) scale(0.97);

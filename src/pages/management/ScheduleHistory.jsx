@@ -51,7 +51,7 @@ const ScheduleHistory = ({ history, onBack }) => {
   };
 
   return (
-    <div className="card" style={{ animation: 'fadeIn 0.4s', display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(100vh - 120px)' }}>
+    <div className="card" style={{  display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(100vh - 120px)' }}>
       <div className="mgmt-header" style={{ flexShrink: 0, paddingBottom: '16px', borderBottom: '1px solid var(--border-color)' }}>
         <div className="mgmt-header-left">
           <button className="back-btn" onClick={onBack}>
@@ -113,12 +113,8 @@ const ScheduleHistory = ({ history, onBack }) => {
                       borderBottom: isExpanded ? '1px solid var(--border-color)' : '1px solid transparent',
                       transition: 'all 0.3s ease'
                     }}
-                    onMouseEnter={(e) => {
-                      if (!isExpanded) e.currentTarget.style.background = 'rgba(0,0,0,0.015)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isExpanded) e.currentTarget.style.background = 'transparent';
-                    }}
+                    
+                    
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                       <div style={{
@@ -212,8 +208,8 @@ const ScheduleHistory = ({ history, onBack }) => {
                                 transition: 'transform 0.2s',
                                 boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
                               }}
-                              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                              
+                              
                               >
                                 <div style={{ fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>

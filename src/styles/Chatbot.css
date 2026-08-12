@@ -21,7 +21,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
   position: relative;
 }
 
@@ -33,17 +32,8 @@
   background: linear-gradient(135deg, rgba(86, 69, 238, 0.3), rgba(139, 92, 246, 0.15));
   z-index: -1;
   opacity: 0;
-  transition: opacity 0.3s ease;
 }
 
-.chatbot-fab:hover {
-  transform: scale(1.08) translateY(-2px);
-  box-shadow: 0 8px 28px rgba(86, 69, 238, 0.5), 0 0 0 6px rgba(86, 69, 238, 0.08);
-}
-
-.chatbot-fab:hover::before {
-  opacity: 1;
-}
 
 .chatbot-window {
   width: 380px;
@@ -55,13 +45,9 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: chatSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-@keyframes chatSlideUp {
-  from { opacity: 0; transform: translateY(24px) scale(0.92); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
+
 
 .chatbot-header {
   padding: 18px 22px;
@@ -89,7 +75,6 @@
   line-height: 1;
   cursor: pointer;
   opacity: 0.85;
-  transition: opacity 0.2s, background 0.2s, transform 0.2s;
   width: 32px;
   height: 32px;
   border-radius: 8px;
@@ -98,11 +83,6 @@
   justify-content: center;
 }
 
-.chatbot-close:hover {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
-}
 
 .chatbot-messages {
   flex: 1;
@@ -117,13 +97,9 @@
 .chat-message {
   display: flex;
   width: 100%;
-  animation: chatMsgSlide 0.3s ease-out;
 }
 
-@keyframes chatMsgSlide {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+
 
 .chat-message.user {
   justify-content: flex-end;
@@ -183,7 +159,6 @@
   outline: none;
   font-family: inherit;
   font-size: 0.88rem;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
 }
 
 .chatbot-input-area input:focus {
@@ -203,15 +178,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
   box-shadow: 0 2px 8px rgba(86, 69, 238, 0.25);
   flex-shrink: 0;
 }
 
-.chatbot-input-area button:hover:not(:disabled) {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(86, 69, 238, 0.35);
-}
 
 .chatbot-input-area button:disabled {
   opacity: 0.4;
@@ -233,16 +203,12 @@
   height: 7px;
   background: var(--accent-primary);
   border-radius: 50%;
-  animation: typingBounce 1.4s infinite ease-in-out both;
 }
 
 .typing .dot:nth-child(1) { animation-delay: -0.32s; }
 .typing .dot:nth-child(2) { animation-delay: -0.16s; }
 
-@keyframes typingBounce {
-  0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
-  40% { transform: scale(1); opacity: 1; }
-}
+
 
 /* =========================================
    SUGGESTION CHIPS (persistent + contextual)
@@ -253,7 +219,6 @@
   gap: 8px;
   padding: 6px 4px;
   justify-content: center;
-  animation: chatMsgSlide 0.3s ease-out;
 }
 
 .chat-suggestion-chip {
@@ -266,17 +231,9 @@
   color: var(--accent-primary);
   font-family: inherit;
   font-weight: 500;
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
   line-height: 1.4;
 }
 
-.chat-suggestion-chip:hover {
-  background: var(--accent-primary);
-  color: white;
-  border-color: var(--accent-primary);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(86, 69, 238, 0.25);
-}
 
 /* =========================================
    RETRY BUTTON
@@ -285,7 +242,6 @@
   display: flex;
   justify-content: center;
   padding: 4px 0;
-  animation: chatMsgSlide 0.3s ease-out;
 }
 
 .chat-retry-btn {
@@ -301,16 +257,8 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.chat-retry-btn:hover {
-  background: #dc2626;
-  color: white;
-  border-color: #dc2626;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
-}
 
 /* =========================================
    MARKDOWN RENDERING IN CHAT BUBBLES

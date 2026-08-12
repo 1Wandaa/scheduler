@@ -19,13 +19,10 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-@keyframes pwFadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+
 
 .pw-animate {
-  animation: pwFadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+
 }
 
 /* --- Header --- */
@@ -133,7 +130,7 @@
   border: 1px solid var(--border-color);
   background: var(--card-bg, #f8fafc);
   font-size: 0.95rem;
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+
   color: var(--text-main);
 }
 .pw-search input:focus {
@@ -164,7 +161,7 @@
   background-repeat: no-repeat;
   background-position: right 12px center;
   background-size: 16px;
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+
 }
 .pw-select:focus {
   outline: none;
@@ -186,7 +183,7 @@
   background: var(--card-bg, #ffffff);
   border: 1px solid var(--border-color);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-  transition: opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
   position: relative;
   overflow: hidden;
   display: flex;
@@ -202,17 +199,9 @@
   height: 5px;
   background: var(--status-color, #10b981);
   opacity: 0.8;
-  transition: opacity 0.3s ease;
+
 }
 
-.pw-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08);
-  border-color: var(--status-color, var(--border-color));
-}
-.pw-card:hover::before {
-  opacity: 1;
-}
 
 /* Card Header Area */
 .pw-card-header {
@@ -279,7 +268,7 @@
   height: 100%;
   background: var(--status-color);
   border-radius: 4px;
-  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+
   position: relative;
   box-shadow: 0 0 10px var(--status-color);
 }
@@ -288,13 +277,10 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-  animation: pwShimmer 2s infinite;
+
 }
 
-@keyframes pwShimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
+
 
 .pw-progress-text {
   font-size: 0.9rem;
@@ -333,24 +319,15 @@
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.02);
   border-left: 3px solid var(--status-color);
-  transition: background 0.2s ease, transform 0.2s ease;
+
   gap: 8px; /* Prevent overlap */
-  animation: pwItemFadeIn 0.3s ease-out forwards;
+
 }
-@keyframes pwItemFadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+
 [data-theme='dark'] .pw-assignment-item {
   background: rgba(255, 255, 255, 0.02);
 }
-.pw-assignment-item:hover {
-  background: rgba(0, 0, 0, 0.04);
-  transform: translateX(2px);
-}
-[data-theme='dark'] .pw-assignment-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
+
 
 .pw-assignment-subj {
   font-weight: 700;
@@ -381,12 +358,9 @@
   font-weight: 600;
   font-size: 0.8rem;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+
 }
-.pw-more-btn:hover {
-  background: rgba(99, 102, 241, 0.05);
-  border-color: rgba(99, 102, 241, 0.3);
-}
+
 
 /* Responsive */
 @media (max-width: 768px) {

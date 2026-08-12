@@ -32,7 +32,7 @@
   padding: 0 12px;
   height: 48px;
   cursor: text;
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+
 }
 
 .autocomplete-input-wrapper.focused {
@@ -48,7 +48,7 @@
 .autocomplete-chevron {
   color: var(--text-muted);
   margin-left: 8px;
-  transition: transform 0.2s ease;
+
 }
 
 .autocomplete-chevron.open {
@@ -80,7 +80,7 @@
   max-height: 250px;
   overflow-y: auto;
   z-index: 1000;
-  animation: fadeIn 0.2s ease;
+
 }
 
 .autocomplete-empty {
@@ -98,7 +98,7 @@
 .autocomplete-option {
   padding: 10px 16px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -106,9 +106,6 @@
   border-bottom: none;
 }
 
-.autocomplete-option:hover {
-  background: rgba(59, 130, 246, 0.05);
-}
 
 .default-option {
   color: var(--text-main);

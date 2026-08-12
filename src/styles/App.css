@@ -14,3 +14,72 @@
 @import './forms.css';
 @import './management.css';
 @import './dashboard-widgets.css';
+
+/* Disable all animations and transitions globally to reduce lag */
+*,
+*::before,
+*::after {
+
+
+}
+
+/* Force HD Rendering for all content */
+body, html {
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+img, svg, video, canvas, *[style*="background-image"] {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: high-quality;
+}
+
+/* Logo specific animations and hovers */
+.dashboard-logo,
+.login-logo,
+.login-hero-logo,
+.login-mobile-banner-logo,
+.pw-header-logo img,
+.schedule-doc-logo img,
+img[alt="CAPSU Logo"] {
+  animation: logoBreathingGlow 4s ease-in-out infinite alternate !important;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease !important;
+}
+
+.dashboard-logo:hover,
+.login-logo:hover,
+.login-hero-logo:hover,
+.login-mobile-banner-logo:hover,
+.pw-header-logo img:hover,
+.schedule-doc-logo img:hover,
+img[alt="CAPSU Logo"]:hover {
+  transform: scale(1.08) !important;
+  filter: drop-shadow(0 0 12px rgba(86, 69, 238, 0.7)) !important;
+}
+
+@keyframes logoBreathingGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(86, 69, 238, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(86, 69, 238, 0.6));
+  }
+}
+
+/* Restore Loading Spinners */
+.btn-spinner,
+.app-loading-spinner {
+  animation: spin 1s linear infinite !important;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+

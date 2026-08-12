@@ -117,7 +117,7 @@ const DraggableSpeedDial = ({ onAddSchedule, onAutoScheduleAction, isHidden }) =
           onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
           onMouseMove={(e) => handleMove(e.clientX, e.clientY)}
           onMouseUp={handleEnd}
-          onMouseLeave={handleEnd}
+          
           onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
           onTouchMove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)}
           onTouchEnd={handleEnd}

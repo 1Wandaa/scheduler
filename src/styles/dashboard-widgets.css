@@ -17,24 +17,16 @@
   align-items: center;
   gap: 18px;
   box-shadow: var(--shadow-sm);
-  transition:
-    transform 0.3s var(--ease-spring),
-    box-shadow 0.3s ease,
-    border-color 0.3s ease;
+
   position: relative;
   overflow: hidden;
-  animation: floatUp 0.5s ease-out backwards;
+
 }
 
 .kpi-tile[data-clickable="true"] {
   cursor: pointer;
 }
 
-.kpi-tile:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.04);
-  border-color: rgba(86, 69, 238, 0.2);
-}
 
 /* Stagger KPI entrance */
 .kpi-tile:nth-child(1) { animation-delay: 0s; }
@@ -52,15 +44,9 @@
   justify-content: center;
   color: #fff;
   flex-shrink: 0;
-  transition:
-    transform 0.3s var(--ease-spring),
-    box-shadow 0.3s ease;
+
 }
 
-.kpi-tile:hover .kpi-icon {
-  transform: scale(1.12) rotate(-3deg);
-  box-shadow: 0 6px 20px rgba(86, 69, 238, 0.2);
-}
 
 /* ─── KPI Value (animated counter) ─── */
 .kpi-value {
@@ -122,15 +108,9 @@
   font-weight: 600;
   cursor: pointer;
   font-family: var(--font-body);
-  transition: opacity var(--transition-base), transform var(--transition-base), background-color var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+
 }
 
-.widget-view-all-btn:hover {
-  background: var(--accent-primary);
-  color: #fff;
-  box-shadow: var(--shadow-accent);
-  transform: translateY(-1px);
-}
 
 /* ─── Recent Activity Items ─── */
 .activity-list {
@@ -147,10 +127,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-  animation: slideInRight 0.4s ease-out backwards;
+
+
 }
 
 /* Stagger activity items */
@@ -159,10 +137,6 @@
 .activity-item:nth-child(3) { animation-delay: 0.15s; }
 .activity-item:nth-child(4) { animation-delay: 0.2s; }
 
-.activity-item:hover {
-  transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-}
 
 .activity-item-content {
   min-width: 0;
@@ -236,12 +210,9 @@
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  transition: transform 0.2s ease;
+
 }
 
-.reminder-item:hover {
-  transform: translateY(-2px);
-}
 
 .reminder-item-accent {
   background: linear-gradient(135deg, #EEF2FF, #F5F3FF);
@@ -301,7 +272,7 @@
   border: 1px solid var(--border-color);
   padding: 24px;
   box-shadow: var(--shadow-md);
-  animation: cardEntrance 0.5s var(--ease-out) backwards;
+
 }
 
 .quickstart-header {
@@ -340,11 +311,11 @@
 }
 
 .quickstart-progress-ring circle {
-  transition: stroke-dashoffset 0.6s var(--ease-out);
+
 }
 
 .quickstart-collapse-icon {
-  transition: transform 0.3s var(--ease-smooth);
+
   color: var(--text-muted);
 }
 
@@ -366,13 +337,10 @@
   padding: 12px 14px;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+
   position: relative;
 }
 
-.quickstart-step:hover {
-  background: var(--bg-main);
-}
 
 .quickstart-step-icon {
   width: 36px;
@@ -385,7 +353,7 @@
   border: 2px solid var(--border-color);
   background: #fff;
   color: var(--text-muted);
-  transition: opacity 0.3s var(--ease-spring), transform 0.3s var(--ease-spring), background-color 0.3s var(--ease-spring), box-shadow 0.3s var(--ease-spring);
+
 }
 
 .quickstart-step.complete .quickstart-step-icon {

@@ -217,7 +217,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   }, {}) || {};
 
   return (
-    <div className="card" style={{ animation: 'fadeIn 0.5s' }}>
+    <div className="card" style={{  }}>
       <div style={{ marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '15px' }}>
         <h2 style={{ margin: '0 0 5px 0', color: 'var(--accent-dark)' }}>Smart Auto-Scheduler</h2>
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Generate conflict-free timetables automatically.</p>
@@ -375,7 +375,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
       {/* Progress Bar */}
       {loading && (
-        <div style={{ marginTop: '12px', animation: 'fadeIn 0.3s' }}>
+        <div style={{ marginTop: '12px',  }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
               {progress.pass > 0
@@ -419,7 +419,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
       {/* Results Section */}
       {result && !loading && (
-        <div style={{ marginTop: '30px', animation: 'fadeIn 0.5s' }}>
+        <div style={{ marginTop: '30px',  }}>
 
           {/* Error Message */}
           {result.error && (

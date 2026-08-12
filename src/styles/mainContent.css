@@ -25,9 +25,6 @@
   border-radius: 100px;
 }
 
-.main-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(86, 69, 238, 0.3);
-}
 
 .header-title {
   color: white;

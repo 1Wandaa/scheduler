@@ -132,7 +132,7 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
 
   return (
     <>
-      <div className="card" style={{ animation: 'fadeIn 0.5s', position: 'relative' }}>
+      <div className="card" style={{  position: 'relative' }}>
       <div className="mgmt-header">
         <div className="mgmt-header-left">
           {onBack && (
