@@ -51,6 +51,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage }) => {
                                 .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
                                 .meta-value { font-weight: normal; text-decoration: underline; }
                                 .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; table-layout: fixed; }
+                                .iso-schedule-table tr { height: 52px; }
                                 .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 52px; overflow: hidden; box-sizing: border-box; }
                                 .iso-schedule-table th { background-color: #f0f0f0 !important; padding: 6px 4px; height: 32px; font-size: 9pt; }
                                 .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8pt; padding: 2px 4px; }
@@ -118,6 +119,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage }) => {
                                     .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; flex-shrink: 0; }
                                     .meta-value { font-weight: normal; text-decoration: underline; }
                                     .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; flex: 1; height: 100%; margin: 0; }
+                                    .iso-schedule-table tr { height: 52px; }
                                     .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; overflow: hidden; box-sizing: border-box; }
                                     .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 2px 4px; font-size: 9pt; height: 4vh; }
                                     .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8pt; padding: 2px 4px; }
