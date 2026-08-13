@@ -347,9 +347,6 @@
 .table-wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  will-change: transform;
   max-width: 100%;
   background: rgba(255, 255, 255, 0.97);
   border: 1px solid var(--border-color);

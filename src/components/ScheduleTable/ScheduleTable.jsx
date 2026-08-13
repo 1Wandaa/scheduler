@@ -19,8 +19,8 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   const [draggingId, setDraggingId] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef(null);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'cards'
   const [, setIsMobile] = useState(window.innerWidth <= 768);
+  const viewMode = 'grid'; // Statically set to grid
   const [errorToast, setErrorToast] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
   const [fitScale, setFitScale] = useState(1);
@@ -326,28 +326,14 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   }, [viewMode, schedules, title]);
 
 
-  // Init once
-  useEffect(() => {
-    if (window.innerWidth <= 768) {
-      setViewMode('cards');
-    }
-  }, []);
-
   useEffect(() => {
     const onResize = () => {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
-      // Auto-switch to cards on mobile if still in grid
-      setViewMode(prev => {
-        if (isFullscreen || document.fullscreenElement) return 'grid';
-        if (mobile && prev === 'grid') return 'cards';
-        if (!mobile && prev === 'cards') return 'grid';
-        return prev;
-      });
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [isFullscreen]);
+  }, []);
 
   // Fullscreen: lock body scroll when fullscreen
   useEffect(() => {
@@ -379,13 +365,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     const handleFullscreenChange = () => {
       const isFS = !!document.fullscreenElement;
       setIsFullscreen(isFS);
-      if (isFS) {
-        setViewMode('grid');
-      } else {
-        if (window.innerWidth <= 768) {
-          setViewMode('cards');
-        }
-      }
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -758,25 +737,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
       {/* Toolbar row */}
       <div className="schedule-toolbar">
-        {/* View toggle */}
-        <div className="schedule-view-toggle">
-          <button
-            className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
-            onClick={() => setViewMode('grid')}
-            title="Grid view"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
-            <span>Grid</span>
-          </button>
-          <button
-            className={`view-toggle-btn ${viewMode === 'cards' ? 'active' : ''}`}
-            onClick={() => setViewMode('cards')}
-            title="Card view"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
-            <span>Cards</span>
-          </button>
-        </div>
+        {/* View toggle removed */}
 
         <div style={{ marginLeft: 'auto' }}></div>
 
@@ -824,7 +785,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
 
       {/* Content */}
-      {viewMode === 'grid' || isFullscreen ? GridView() : CardView()}
+      {GridView()}
 
       {/* Floating exit fullscreen button for presentation mode */}
       {isFullscreen && (
@@ -836,7 +797,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                 document.exitFullscreen();
               } else {
                 setIsFullscreen(false);
-                if (window.innerWidth <= 768) setViewMode('cards');
               }
             }}
             title="Exit Fullscreen"

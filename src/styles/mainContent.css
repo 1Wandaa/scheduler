@@ -4,9 +4,6 @@
   padding: 24px 28px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  will-change: transform;
   display: block;
   position: relative;
   z-index: 1;

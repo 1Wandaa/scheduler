@@ -44,8 +44,6 @@
 
 .data-table tbody tr {
 
-
-  will-change: transform, opacity;
 }
 
 .data-table tbody tr:nth-child(even) {
