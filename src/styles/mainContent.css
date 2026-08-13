@@ -4,6 +4,9 @@
   padding: 24px 28px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform, scroll-position;
   display: block;
   position: relative;
   z-index: 1;
@@ -42,4 +45,3 @@
   font-size: 0.9rem;
   opacity: 0.9;
 }
-

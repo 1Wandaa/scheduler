@@ -3,6 +3,117 @@ import { TIME_SLOTS, DAYS } from '../../config/constants';
 import { getEligibleProfessors, slotsNeededFromIndex, getMeetingTimeLabel, findScheduleConflicts } from '../../utils/scheduleUtils';
 import '../../styles/SchedulerForm.css';
 
+const CustomSelect = ({ options, value, onChange, placeholder, name, required }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const flatOptions = options.flatMap(o => o.options || [o]);
+  const selectedOption = flatOptions.find(o => o.value === value);
+
+  useEffect(() => {
+    if (!isOpen) setSearch(selectedOption ? selectedOption.label : '');
+  }, [isOpen, selectedOption]);
+
+  const filteredOptions = options.map(group => {
+    if (group.options) {
+      return {
+        ...group,
+        options: group.options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()))
+      };
+    }
+    return group;
+  }).filter(group => group.options ? group.options.length > 0 : group.label.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative' }}>
+      <input
+        type="text"
+        className="form-select"
+        value={isOpen ? search : (selectedOption ? selectedOption.label : '')}
+        onChange={e => { setSearch(e.target.value); setIsOpen(true); }}
+        onFocus={() => { setIsOpen(true); setSearch(''); }}
+        placeholder={placeholder}
+        required={required && !value}
+        style={{ width: '100%', paddingRight: '30px' }}
+      />
+      <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+      {isOpen && (
+        <div className="custom-dropdown-menu" style={{
+           position: 'absolute', top: '100%', left: 0, right: 0, maxHeight: '220px', overflowY: 'auto',
+           backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '8px',
+           marginTop: '4px', zIndex: 100, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column'
+        }}>
+          {filteredOptions.length === 0 ? (
+            <div style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>No options found</div>
+          ) : filteredOptions.map((opt, i) => {
+            if (opt.options) {
+              return (
+                <div key={opt.label}>
+                  <div style={{ padding: '8px 12px', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-muted)', backgroundColor: 'var(--bg-secondary)' }}>{opt.label}</div>
+                  {opt.options.map(child => (
+                    <div
+                      key={child.value}
+                      onClick={() => {
+                        if (!child.disabled) {
+                           onChange({ target: { name, value: child.value } });
+                           setIsOpen(false);
+                        }
+                      }}
+                      style={{
+                        padding: '10px 12px', paddingLeft: '20px', cursor: child.disabled ? 'not-allowed' : 'pointer',
+                        color: child.disabled ? 'var(--text-muted)' : 'var(--text-main)',
+                        textDecoration: child.disabled ? 'line-through' : 'none',
+                        borderBottom: '1px solid var(--border-color)'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = child.disabled ? 'transparent' : 'var(--table-header)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      {child.label}
+                    </div>
+                  ))}
+                </div>
+              );
+            } else {
+              return (
+                <div
+                  key={opt.value}
+                  onClick={() => {
+                    if (!opt.disabled) {
+                       onChange({ target: { name, value: opt.value } });
+                       setIsOpen(false);
+                    }
+                  }}
+                  style={{
+                    padding: '10px 12px', cursor: opt.disabled ? 'not-allowed' : 'pointer',
+                    color: opt.disabled ? 'var(--text-muted)' : 'var(--text-main)',
+                    textDecoration: opt.disabled ? 'line-through' : 'none',
+                    borderBottom: '1px solid var(--border-color)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = opt.disabled ? 'transparent' : 'var(--table-header)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  {opt.label}
+                </div>
+              );
+            }
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, validator, activeSemester, activeSchedules = [] }) {
   const [formData, setFormData] = useState({
     subject: '',
@@ -224,95 +335,84 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">Subject *</label>
-            <select
-              className="form-select"
+            <CustomSelect
               name="subject"
               value={formData.subject}
               onChange={handleChange}
+              placeholder="Select a subject..."
               required
-            >
-              <option value="">Select a subject</option>
-              {[...subjects].filter(s => !s.semester || s.semester === 'Both' || s.semester === activeSemester).sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' })).map(subject => (
-                  <option key={subject.id} value={subject.id}>
-                  {subject.code} - {subject.name}
-                </option>
-              ))}
-            </select>
+              options={[...subjects]
+                .filter(s => !s.semester || s.semester === 'Both' || s.semester === activeSemester)
+                .sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' }))
+                .map(subject => ({ value: subject.id, label: `${subject.code} - ${subject.name}` }))}
+            />
           </div>
 
           <div className="form-group">
             <label className="form-label">Section *</label>
-            <select
-              className="form-select"
+            <CustomSelect
               name="section"
               value={formData.section}
               onChange={handleChange}
+              placeholder="Select a section..."
               required
-            >
-              <option value="">Select a section</option>
-              {eligibleSections && [...eligibleSections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(sec => (
-                <option key={sec.id} value={sec.id}>
-                  {sec.name}
-                </option>
-              ))}
-            </select>
+              options={eligibleSections ? [...eligibleSections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(sec => ({
+                value: sec.id,
+                label: sec.name
+              })) : []}
+            />
           </div>
         </div>
 
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">Professor *</label>
-            <select
-              className="form-select"
+            <CustomSelect
               name="professor"
               value={formData.professor}
               onChange={handleChange}
+              placeholder="Select a professor..."
               required
-            >
-              <option value="">Select a professor</option>
-              {[...eligibleProfessors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(professor => {
+              options={[...eligibleProfessors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(professor => {
                 const isConflict = checkConflict({ professor });
-                return (
-                  <option key={professor.id} value={professor.id} disabled={isConflict}>
-                    {professor.name} {isConflict ? '(Busy)' : ''}
-                  </option>
-                );
+                return {
+                  value: professor.id,
+                  label: `${professor.name} ${isConflict ? '(Busy)' : ''}`,
+                  disabled: isConflict
+                };
               })}
-            </select>
+            />
           </div>
 
           <div className="form-group">
             <label className="form-label">Room *</label>
-            <select
-              className="form-select"
+            <CustomSelect
               name="room"
               value={formData.room}
               onChange={handleChange}
+              placeholder="Select a room..."
               required
-            >
-              <option value="">Select a room</option>
-              {Object.entries(rooms.reduce((acc, r) => {
+              options={Object.entries(rooms.reduce((acc, r) => {
                 const b = r.building || 'Other';
                 if (!acc[b]) acc[b] = [];
                 acc[b].push(r);
                 return acc;
               }, {}))
               .sort(([bA], [bB]) => bA.localeCompare(bB))
-              .map(([building, bRooms]) => (
-                <optgroup key={building} label={building}>
-                  {bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => {
-                    const isConflict = checkConflict({ room });
-                    const isNonLabForLabSubject = selectedSubject?.requiredLab && !room.hasComputers;
-                    const isDisabled = isConflict || isNonLabForLabSubject;
-                    return (
-                      <option key={room.id} value={room.id} disabled={isDisabled}>
-                        {room.name}{room.hasComputers ? ' (Lab)' : ''} {isConflict ? '(In Use)' : isNonLabForLabSubject ? '(Not a Lab)' : ''}
-                      </option>
-                    );
-                  })}
-                </optgroup>
-              ))}
-            </select>
+              .map(([building, bRooms]) => ({
+                label: building,
+                options: bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => {
+                  const isConflict = checkConflict({ room });
+                  const isNonLabForLabSubject = selectedSubject?.requiredLab && !room.hasComputers;
+                  const isDisabled = isConflict || isNonLabForLabSubject;
+                  return {
+                    value: room.id,
+                    label: `${room.name}${room.hasComputers ? ' (Lab)' : ''} ${isConflict ? '(In Use)' : isNonLabForLabSubject ? '(Not a Lab)' : ''}`,
+                    disabled: isDisabled
+                  };
+                })
+              }))}
+            />
           </div>
         </div>
 

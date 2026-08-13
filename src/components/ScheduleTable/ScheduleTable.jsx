@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig } from '../../config/constants';
 import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange } from '../../utils/scheduleUtils';
 import '../../styles/ScheduleTable.css';
 
 function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID", departments = [], scheduleMode }) {
+  const { confirm } = useGlobalDialog();
   // Resolve time slots and days based on schedule mode
   const config = getScheduleConfig(scheduleMode);
   const activeTimeSlots = config.timeSlots;
@@ -651,7 +653,19 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                                   </div>
                                 </div>
                                 {onRemove && (
-                                  <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
+                      <button className="remove-btn" onClick={async (e) => {
+  e.stopPropagation();
+  const isConfirmed = await confirm({
+    title: 'Delete Schedule',
+    text: 'Are you sure you want to delete this schedule?',
+    icon: 'warning',
+    confirmButtonText: 'Delete',
+    isDestructive: true
+  });
+  if (isConfirmed) {
+    onRemove(schedule.id);
+  }
+}} title="Remove schedule">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                   </button>
                                 )}
@@ -713,7 +727,12 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                       </div>
                     </div>
                     {onRemove && (
-                      <button className="remove-btn" onClick={() => onRemove(schedule.id)} title="Remove schedule">
+                      <button className="remove-btn" onClick={(e) => {
+  e.stopPropagation();
+  if(window.confirm('Are you sure you want to delete this schedule?')) {
+    onRemove(schedule.id);
+  }
+}} title="Remove schedule">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                       </button>
                     )}

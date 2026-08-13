@@ -7,6 +7,8 @@ import {
   validateScheduleEntry,
   addSchedule,
   updateSchedule,
+  removeSchedule,
+  removeSchedulesBatch,
   addSchedulesBatch,
   clearAllSchedules,
   logScheduleHistory,
@@ -177,6 +179,13 @@ const Dashboard = ({ user, onLogout }) => {
     return updateSchedule(scheduleId, newDay, newTimeSlotId, schedules, activeSchedules, rooms, isAdmin);
   };
 
+  const handleRemoveSchedule = async (scheduleId) => {
+    return removeSchedule(scheduleId, isAdmin);
+  };
+
+  const handleRemoveSchedulesBatch = async (scheduleIds) => {
+    return removeSchedulesBatch(scheduleIds, isAdmin);
+  };
 
   const handleAddSchedulesBatch = async (newSchedules, scheduleMode) => {
     return addSchedulesBatch(newSchedules, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode);
@@ -561,7 +570,7 @@ const Dashboard = ({ user, onLogout }) => {
         )}
 
         {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
-        {activeTab === 'view-schedules' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={displaySchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} departments={departments} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
+        {activeTab === 'view-schedules' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={displaySchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} onRemoveSchedule={handleRemoveSchedule} onRemoveSchedulesBatch={handleRemoveSchedulesBatch} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} departments={departments} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
 
         {activeTab === 'profile' && (
           <Profile

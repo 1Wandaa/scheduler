@@ -102,7 +102,7 @@ export function validateScheduleEntry(
   if (errors.length > 0) return { valid: false, errors, warnings };
 
  // Time slot fit check
-  if (!timeSlot?.isCustom) {
+  if (!timeSlot?.isCustom && !timeSlot?.customLabel) {
     const activeSlots = config.timeSlots;
     const startIdx = activeSlots.findIndex(ts => String(ts.id) === String(timeSlot?.id));
     const needed = slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting, scheduleMode);
@@ -205,6 +205,28 @@ export async function removeSchedule(id, isAdmin) {
   if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
   await deleteDoc(doc(db, 'schedules', id.toString()));
   return { ok: true };
+}
+
+/**
+ * Remove multiple schedule entries from Firestore in a batch.
+ */
+export async function removeSchedulesBatch(ids, isAdmin) {
+  if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
+  
+  try {
+    const BATCH_LIMIT = 499;
+    for (let i = 0; i < ids.length; i += BATCH_LIMIT) {
+      const chunk = ids.slice(i, i + BATCH_LIMIT);
+      const batch = writeBatch(db);
+      for (const id of chunk) {
+        batch.delete(doc(db, 'schedules', id.toString()));
+      }
+      await batch.commit();
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, errors: [e.message] };
+  }
 }
 
 /**

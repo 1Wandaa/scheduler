@@ -5,7 +5,7 @@ import { DEPARTMENTS } from '../../config/constants';
 import ExportOptions from './components/ExportOptions';
 import PreviewModal from './components/PreviewModal';
 
-function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true }) {
+function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, onRemoveSchedule, onRemoveSchedulesBatch, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true }) {
     const [viewType, setViewType] = useState('department');
     const [selectedId, setSelectedId] = useState('');
     const [deptSectionId, setDeptSectionId] = useState('');
@@ -151,6 +151,25 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         : viewType === 'faculty' ? 'FACULTY' : '';
     const titleName = activeEntity ? activeEntity.name.toUpperCase() : 'SELECT ITEM';
 
+    const handleDeleteSchedules = async () => {
+        if (!isAdmin) return;
+        if (filteredSchedules.length === 0) {
+            alert('No schedules found to delete for the current view.');
+            return;
+        }
+        
+        const confirmMsg = `Are you sure you want to delete ${filteredSchedules.length} schedule(s) for ${titleName}? This action cannot be undone.`;
+        if (window.confirm(confirmMsg)) {
+            const ids = filteredSchedules.map(s => s.id);
+            if (onRemoveSchedulesBatch) {
+                const res = await onRemoveSchedulesBatch(ids);
+                if (res && !res.ok) {
+                    alert(`Failed to delete schedules: ${res.errors?.join(', ') || 'Unknown error'}`);
+                }
+            }
+        }
+    };
+
     if (!isAdmin && !isPublished) {
         return (
             <div className="card" style={{  textAlign: 'center', padding: '50px 20px', minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
@@ -184,12 +203,31 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                         <p>Filter schedules by department{isAdmin ? ', faculty, or room' : ' or room'}</p>
                     </div>
                 </div>
-
-                <ExportOptions 
-                    isGenerating={isGenerating} 
-                    setIsGenerating={setIsGenerating} 
-                    setPreviewImage={setPreviewImage} 
-                />
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {isAdmin && (
+                        <button 
+                            className="btn btn-sm" 
+                            onClick={handleDeleteSchedules} 
+                            style={{ 
+                                backgroundColor: 'var(--danger-bg, #fee2e2)', 
+                                color: 'var(--danger-text, #ef4444)', 
+                                border: '1px solid currentColor',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                            title="Delete all schedules in current view"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            Delete All
+                        </button>
+                    )}
+                    <ExportOptions 
+                        isGenerating={isGenerating} 
+                        setIsGenerating={setIsGenerating} 
+                        setPreviewImage={setPreviewImage} 
+                    />
+                </div>
             </div>
 
             {/* Filters Row: Dedicated block with responsive grid */}
@@ -271,6 +309,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     schedules={filteredSchedules}
                     title={`${titlePrefix} SCHEDULE: ${titleName}`}
                     onUpdateSchedule={isAdmin ? onUpdateSchedule : undefined}
+                    onRemove={isAdmin ? onRemoveSchedule : undefined}
                     departments={departments}
                     scheduleMode={detectedScheduleMode}
                 />
