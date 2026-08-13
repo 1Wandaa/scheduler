@@ -349,7 +349,7 @@
   -webkit-overflow-scrolling: touch;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  will-change: transform, scroll-position;
+  will-change: transform;
   max-width: 100%;
   background: rgba(255, 255, 255, 0.97);
   border: 1px solid var(--border-color);
@@ -486,19 +486,33 @@
 }
 
 .remove-btn {
-  background-color: transparent;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: rgba(255, 255, 255, 0.95);
   color: #e11d48;
-  border: none;
-  border-radius: 6px;
-  width: 24px;
-  height: 24px;
+  border: 1px solid rgba(225, 29, 72, 0.2);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
   cursor: pointer;
-  font-size: 1.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-left: 0.5rem;
-  flex-shrink: 0;
+  padding: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.remove-btn:hover {
+  background-color: #fee2e2;
+  transform: scale(1.1);
+}
+
+.remove-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 

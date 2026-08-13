@@ -6,7 +6,7 @@
   -webkit-overflow-scrolling: touch;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  will-change: transform, scroll-position;
+  will-change: transform;
   display: block;
   position: relative;
   z-index: 1;

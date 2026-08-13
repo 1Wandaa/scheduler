@@ -5,7 +5,7 @@ import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig } from '../../
 import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange } from '../../utils/scheduleUtils';
 import '../../styles/ScheduleTable.css';
 
-function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID", departments = [], scheduleMode }) {
+function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID", departments = [], scheduleMode, isDeleteMode }) {
   const { confirm } = useGlobalDialog();
   // Resolve time slots and days based on schedule mode
   const config = getScheduleConfig(scheduleMode);
@@ -620,10 +620,10 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                               <div
                                 key={schedule.id}
                                 className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''}`}
-                                draggable={!!onUpdateSchedule}
+                                draggable={!!onUpdateSchedule && isDeleteMode}
                                 onDragStart={(e) => handleDragStart(e, schedule)}
                                 onDragEnd={handleDragEnd}
-                                style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
+                                style={{ cursor: (onUpdateSchedule && isDeleteMode) ? 'grab' : 'default' }}
                               >
                                 <div className="schedule-content" style={{ display: 'flex', flexDirection: 'column' }}>
                                   <p className="subject" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0 }}>
@@ -652,7 +652,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                                     )}
                                   </div>
                                 </div>
-                                {onRemove && (
+                                {onRemove && isDeleteMode && (
                       <button className="remove-btn" onClick={async (e) => {
   e.stopPropagation();
   const isConfirmed = await confirm({
@@ -726,10 +726,17 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                         <span>🏫 {schedule.room?.name ?? '—'}</span>
                       </div>
                     </div>
-                    {onRemove && (
-                      <button className="remove-btn" onClick={(e) => {
+                    {onRemove && isDeleteMode && (
+                      <button className="remove-btn" onClick={async (e) => {
   e.stopPropagation();
-  if(window.confirm('Are you sure you want to delete this schedule?')) {
+  const isConfirmed = await confirm({
+    title: 'Delete Schedule',
+    text: 'Are you sure you want to delete this schedule?',
+    icon: 'warning',
+    confirmButtonText: 'Delete',
+    isDestructive: true
+  });
+  if (isConfirmed) {
     onRemove(schedule.id);
   }
 }} title="Remove schedule">
