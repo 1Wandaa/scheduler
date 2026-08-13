@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig } from '../../config/constants';
-import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap } from '../../utils/scheduleUtils';
+import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange } from '../../utils/scheduleUtils';
 import '../../styles/ScheduleTable.css';
 
 function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID", departments = [], scheduleMode }) {
@@ -581,8 +581,16 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                       const cellSchedules = schedules.filter(s => s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
                       let rowSpan = 1;
                       for (const s of cellSchedules) {
-                        const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting, scheduleMode);
-                        if (needed > rowSpan) rowSpan = needed;
+                        const range = getScheduleTimeRange(s, scheduleMode);
+                        if (range.start > 0 && range.end > 0) {
+                          const durationMins = range.end - range.start;
+                          let needed = Math.ceil(durationMins / 30);
+                          if (needed < 1) needed = 1;
+                          if (needed > rowSpan) rowSpan = needed;
+                        } else {
+                          const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting, scheduleMode);
+                          if (needed > rowSpan) rowSpan = needed;
+                        }
                       }
                       if (rowSpan > 1) {
                         for (let skip = 1; skip < rowSpan; skip++) {
@@ -604,7 +612,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                               : {}
                           }
                         >
-                          {cellSchedules.map(schedule => {
+                          {cellSchedules.map((schedule) => {
                             const deptColor = getDeptColor(schedule);
                             return (
                               <div
@@ -616,11 +624,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                                 style={{ cursor: onUpdateSchedule ? 'grab' : 'default' }}
                               >
                                 <div className="schedule-content" style={{ display: 'flex', flexDirection: 'column' }}>
-                                  {schedule.timeSlot?.customLabel && (
-                                    <p className="custom-time" style={{ color: deptColor.text, fontSize: '0.8rem', fontWeight: 'normal', margin: '0 0 2px 0', opacity: 0.9 }}>
-                                      🕒 {schedule.timeSlot.customLabel}
-                                    </p>
-                                  )}
                                   <p className="subject" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0 }}>
                                     {schedule.subject?.code ?? '—'}
                                   </p>
@@ -863,7 +866,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
           borderRadius: '12px',
           boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
           zIndex: 999999,
-          
+
           display: 'flex',
           alignItems: 'flex-start',
           gap: '12px',

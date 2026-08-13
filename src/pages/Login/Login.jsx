@@ -600,7 +600,7 @@ const Login = ({ onLogin }) => {
               }}
             />
             <h1 className="login-system-title">SMARTSCHED</h1>
-            <p className="login-school-name">Capiz State University<br />Mambusao Poblacion Campus</p>
+            <p className="login-school-name">Capiz State University<br />Mambusao Satellite College</p>
           </div>
 
           {isSignUp ? (

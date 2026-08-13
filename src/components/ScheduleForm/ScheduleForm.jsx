@@ -91,19 +91,16 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       if (!timeSlot) {
         const typedMins = parseTimeToMinutes(formData.timeSlot);
         if (typedMins !== null && eligibleSlots.length > 0) {
-          let closest = eligibleSlots[0];
-          let minDiff = Infinity;
+          let floorSlot = eligibleSlots[0];
+          let maxStart = -1;
           for (const s of eligibleSlots) {
             const sMins = parseTimeToMinutes(s.time);
-            if (sMins !== null) {
-              const diff = Math.abs(sMins - typedMins);
-              if (diff < minDiff) {
-                minDiff = diff;
-                closest = s;
-              }
+            if (sMins !== null && sMins <= typedMins && sMins > maxStart) {
+              maxStart = sMins;
+              floorSlot = s;
             }
           }
-          timeSlot = { ...closest, customLabel: formData.timeSlot };
+          timeSlot = { ...floorSlot, customLabel: formData.timeSlot };
         } else if (eligibleSlots.length > 0) {
           timeSlot = { ...eligibleSlots[0], customLabel: formData.timeSlot };
         }
@@ -174,24 +171,21 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     selectedTimeSlot = eligibleTimeSlots.find(t => getMeetingTimeLabel(t, selectedSubject?.hoursPerMeeting) === formData.timeSlot);
     if (!selectedTimeSlot) selectedTimeSlot = TIME_SLOTS.find(t => t.id.toString() === formData.timeSlot);
     if (!selectedTimeSlot) {
-      const typedMins = parseTimeToMinutes(formData.timeSlot);
-      if (typedMins !== null && eligibleTimeSlots.length > 0) {
-        let closest = eligibleTimeSlots[0];
-        let minDiff = Infinity;
-        for (const s of eligibleTimeSlots) {
-          const sMins = parseTimeToMinutes(s.time);
-          if (sMins !== null) {
-            const diff = Math.abs(sMins - typedMins);
-            if (diff < minDiff) {
-              minDiff = diff;
-              closest = s;
+        const typedMins = parseTimeToMinutes(formData.timeSlot);
+        if (typedMins !== null && eligibleTimeSlots.length > 0) {
+          let floorSlot = eligibleTimeSlots[0];
+          let maxStart = -1;
+          for (const s of eligibleTimeSlots) {
+            const sMins = parseTimeToMinutes(s.time);
+            if (sMins !== null && sMins <= typedMins && sMins > maxStart) {
+              maxStart = sMins;
+              floorSlot = s;
             }
           }
+          selectedTimeSlot = { ...floorSlot, customLabel: formData.timeSlot };
+        } else if (eligibleTimeSlots.length > 0) {
+          selectedTimeSlot = { ...eligibleTimeSlots[0], customLabel: formData.timeSlot };
         }
-        selectedTimeSlot = { ...closest, customLabel: formData.timeSlot };
-      } else if (eligibleTimeSlots.length > 0) {
-        selectedTimeSlot = { ...eligibleTimeSlots[0], customLabel: formData.timeSlot };
-      }
     }
   }
 

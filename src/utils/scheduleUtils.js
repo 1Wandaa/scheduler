@@ -141,20 +141,79 @@ export function getOccupiedSlots(schedule, scheduleMode) {
   return slotList;
 }
 
-/** True if two schedules share any occupied slot on room, professor, or section. */
-export function schedulesOverlap(a, b) {
-  if (!a || !b) return false;
-  const slotsA = getOccupiedSlots(a);
-  const slotsB = getOccupiedSlots(b);
+export function parseTimeToMinutes(timeStr) {
+  if (!timeStr) return null;
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+  if (!match) return null;
+  let [_, hours, mins, period] = match;
+  hours = parseInt(hours, 10);
+  mins = parseInt(mins, 10);
+  if (period) {
+    if (period.toUpperCase() === 'PM' && hours < 12) hours += 12;
+    if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+  } else {
+    if (hours >= 1 && hours <= 6) hours += 12; // Assume 1-6 is PM
+  }
+  return hours * 60 + mins;
+}
 
-  for (const sa of slotsA) {
-    for (const sb of slotsB) {
-      if (sa.day !== sb.day || String(sa.timeSlotId) !== String(sb.timeSlotId)) continue;
-      if (a.room?.id && b.room?.id && String(a.room.id) === String(b.room.id)) return true;
-      if (a.professor?.id && b.professor?.id && String(a.professor.id) === String(b.professor.id)) return true;
-      if (a.section?.id && b.section?.id && String(a.section.id) === String(b.section.id)) return true;
+export function getScheduleTimeRange(schedule, scheduleMode) {
+  if (!schedule) return { start: 0, end: 0 };
+  
+  // Custom label takes highest precedence
+  if (schedule.timeSlot?.customLabel) {
+    const parts = schedule.timeSlot.customLabel.split('-');
+    if (parts.length === 2) {
+      const start = parseTimeToMinutes(parts[0].trim());
+      const end = parseTimeToMinutes(parts[1].trim());
+      if (start !== null && end !== null) return { start, end };
+    }
+    const start = parseTimeToMinutes(schedule.timeSlot.customLabel);
+    if (start !== null) {
+      const duration = (schedule.subject?.hoursPerMeeting || 1.5) * 60;
+      return { start, end: start + duration };
     }
   }
+  
+  // Try standard label resolution
+  const label = getMeetingTimeLabel(schedule.timeSlot, schedule.subject?.hoursPerMeeting, scheduleMode);
+  const parts = label.split('-');
+  if (parts.length === 2) {
+    const start = parseTimeToMinutes(parts[0].trim());
+    const end = parseTimeToMinutes(parts[1].trim());
+    if (start !== null && end !== null) return { start, end };
+  }
+  
+  // Fallback to raw timeSlot.time
+  const timeParts = (schedule.timeSlot?.time || '').split('-');
+  if (timeParts.length === 2) {
+    const start = parseTimeToMinutes(timeParts[0].trim());
+    const end = parseTimeToMinutes(timeParts[1].trim());
+    if (start !== null && end !== null) return { start, end };
+  }
+  
+  return { start: 0, end: 0 };
+}
+
+/** True if two schedules share any occupied time range on room, professor, or section. */
+export function schedulesOverlap(a, b, scheduleMode) {
+  if (!a || !b) return false;
+  if (a.day !== b.day) return false;
+
+  let entityOverlap = false;
+  if (a.room?.id && b.room?.id && String(a.room.id) === String(b.room.id)) entityOverlap = true;
+  if (a.professor?.id && b.professor?.id && String(a.professor.id) === String(b.professor.id)) entityOverlap = true;
+  if (a.section?.id && b.section?.id && String(a.section.id) === String(b.section.id)) entityOverlap = true;
+
+  if (!entityOverlap) return false;
+
+  const rangeA = getScheduleTimeRange(a, scheduleMode);
+  const rangeB = getScheduleTimeRange(b, scheduleMode);
+
+  if (rangeA.start < rangeB.end && rangeA.end > rangeB.start) {
+    return true;
+  }
+  
   return false;
 }
 
