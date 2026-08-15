@@ -131,9 +131,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       showToast('Generating image, please wait...', false);
       const html2canvas = (await import('html2canvas')).default;
 
-      const oldViewMode = viewMode;
-      setViewMode('grid');
-
       // Wait for React to re-render to grid mode
       await new Promise(r => setTimeout(r, 500));
 
@@ -194,7 +191,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
       const imgData = canvas.toDataURL('image/png');
 
-      setViewMode(oldViewMode);
       setPreviewImage(imgData);
     } catch (err) {
       console.error(err);
@@ -207,9 +203,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     try {
       showToast('Preparing print, please wait...', false);
       const html2canvas = (await import('html2canvas')).default;
-
-      const oldViewMode = viewMode;
-      setViewMode('grid');
 
       // Wait for React to re-render to grid mode
       await new Promise(r => setTimeout(r, 500));
@@ -267,7 +260,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
       document.body.removeChild(wrapper);
       if (toolbar) toolbar.style.display = 'flex';
-      setViewMode(oldViewMode);
 
       const imgData = canvas.toDataURL('image/png');
 
@@ -378,7 +370,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         });
       } else {
         setIsFullscreen(true); // fallback
-        setViewMode('grid');
       }
     } else {
       if (document.exitFullscreen) {
