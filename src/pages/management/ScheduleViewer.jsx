@@ -335,6 +335,14 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     departments={departments}
                     scheduleMode={detectedScheduleMode}
                     isDeleteMode={isDeleteMode}
+                    programName={
+                        viewType === 'department' && deptSectionId
+                            ? (sections.find(s => s.id === deptSectionId)?.program || '')
+                            : viewType === 'section' && selectedId
+                                ? (sections.find(s => s.id === selectedId)?.program || '')
+                                : ''
+                    }
+                    semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "First Semester, School Year 2026 - 2027"}
                 />
             </div>
 

@@ -5,8 +5,45 @@ import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig } from '../../
 import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange } from '../../utils/scheduleUtils';
 import '../../styles/ScheduleTable.css';
 
-function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID", departments = [], scheduleMode, isDeleteMode }) {
+function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID", departments = [], scheduleMode, isDeleteMode, programName, semesterInfo }) {
   const { confirm } = useGlobalDialog();
+  const getFullDepartmentName = () => {
+    let deptAcronym = null;
+    for (const s of schedules) {
+        if (s.section?.name) {
+             const name = s.section.name.toUpperCase();
+             if (name.includes('BSCS')) deptAcronym = 'BSCS';
+             else if (name.includes('BAEL')) deptAcronym = 'BAEL';
+             else if (name.includes('BSOA')) deptAcronym = 'BSOA';
+             else if (name.includes('BSFT')) deptAcronym = 'BSFT';
+             if (deptAcronym) break;
+        }
+    }
+    
+    const prog = (programName || '').toUpperCase();
+    if (!deptAcronym) {
+       if (prog.includes('COMPUTER SCIENCE') || prog.includes('BSCS')) deptAcronym = 'BSCS';
+       else if (prog.includes('ENGLISH LANGUAGE') || prog.includes('BAEL')) deptAcronym = 'BAEL';
+       else if (prog.includes('OFFICE ADMINISTRATION') || prog.includes('BSOA')) deptAcronym = 'BSOA';
+       else if (prog.includes('FOOD TECHNOLOGY') || prog.includes('BSFT')) deptAcronym = 'BSFT';
+    }
+
+    switch (deptAcronym) {
+        case 'BSCS': return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
+        case 'BAEL': return 'BACHELOR OF ARTS IN ENGLISH LANGUAGE DEPARTMENT';
+        case 'BSOA': return 'BACHELOR OF SCIENCE IN OFFICE ADMINISTRATION DEPARTMENT';
+        case 'BSFT': return 'BACHELOR OF SCIENCE IN FOOD TECHNOLOGY DEPARTMENT';
+        default: 
+             if (programName) {
+                 let formatted = programName.toUpperCase();
+                 if (formatted.startsWith('BA ')) formatted = formatted.replace('BA ', 'BACHELOR OF ARTS IN ');
+                 if (formatted.startsWith('BS ')) formatted = formatted.replace('BS ', 'BACHELOR OF SCIENCE IN ');
+                 return `${formatted} DEPARTMENT`;
+             }
+             return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
+    }
+  };
+
   // Resolve time slots and days based on schedule mode
   const config = getScheduleConfig(scheduleMode);
   const activeTimeSlots = config.timeSlots;
@@ -47,7 +84,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   };
 
   // Helper: prepare a clean, desktop-like clone of the schedule for export
-  const prepareExportClone = (clone) => {
+  const prepareExportClone = (clone, isPrint = true) => {
     // Hide toolbar and remove buttons in the clone
     const clonedToolbar = clone.querySelector('.schedule-toolbar');
     if (clonedToolbar) clonedToolbar.style.display = 'none';
@@ -91,6 +128,48 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
     // Hide all remove buttons (the X to delete schedules)
     clone.querySelectorAll('.remove-btn').forEach(btn => btn.style.display = 'none');
+
+    if (isPrint) {
+      // Shrink the summary table for export so it fits on one page
+      const summaryContainer = clone.querySelector('.schedule-summary-container');
+    if (summaryContainer) {
+      summaryContainer.style.margin = '5px 0';
+      summaryContainer.style.padding = '0';
+      
+      const h3 = summaryContainer.querySelector('h3');
+      if (h3) h3.style.fontSize = '0.9rem';
+      const h4 = summaryContainer.querySelector('h4');
+      if (h4) {
+         h4.style.fontSize = '0.8rem';
+         h4.style.margin = '2px 0';
+      }
+      const p = summaryContainer.querySelector('p');
+      if (p) p.style.fontSize = '0.75rem';
+      
+      const summaryTable = clone.querySelector('.schedule-summary-table');
+      if (summaryTable) {
+         summaryTable.style.fontSize = '0.65rem';
+         summaryTable.style.marginBottom = '5px';
+         summaryTable.querySelectorAll('th, td').forEach(cell => {
+             cell.style.padding = '2px';
+         });
+      }
+
+      // Also shrink the main schedule grid
+      const scheduleTable = clone.querySelector('.schedule-table');
+      if (scheduleTable) {
+         scheduleTable.style.fontSize = '0.7rem'; // scale down the font
+         scheduleTable.querySelectorAll('th, td').forEach(cell => {
+             cell.style.padding = '2px';
+         });
+         scheduleTable.querySelectorAll('.schedule-item').forEach(item => {
+             item.style.padding = '2px';
+             const details = item.querySelector('.details');
+             if (details) details.style.marginTop = '2px';
+         });
+      }
+    }
+  }
 
     // Hide card view if it leaked through, force table-wrapper visible
     const cardView = clone.querySelector('.schedule-card-view');
@@ -144,9 +223,9 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.style.top = '-10000px';
       wrapper.style.left = '-10000px';
 
-      // Fixed width, and calculate height for exact Portrait aspect ratio (8.5 x 11)
-      wrapper.style.width = '1100px';
-      wrapper.style.height = `${1100 * (11 / 8.5)}px`;
+      // Match container width for exact layout instead of fixed 1100px
+      wrapper.style.width = `${Math.max(containerRef.current.scrollWidth, 900)}px`;
+      wrapper.style.height = 'auto';
       wrapper.style.backgroundColor = '#ffffff';
       wrapper.style.padding = '16px';
       wrapper.style.display = 'flex';
@@ -155,29 +234,28 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
-      // Apply desktop-like overrides to the clone
-      prepareExportClone(clone);
-      clone.style.height = '100%';
+      // Apply desktop-like overrides to the clone, false means don't shrink fonts
+      prepareExportClone(clone, false);
+      clone.style.height = 'auto';
       clone.style.display = 'flex';
       clone.style.flexDirection = 'column';
       const tableWrapper = clone.querySelector('.table-wrapper');
       if (tableWrapper) {
-        tableWrapper.style.flex = '1';
         tableWrapper.style.display = 'flex';
         tableWrapper.style.flexDirection = 'column';
       }
       const table = clone.querySelector('.schedule-table');
-      if (table) table.style.height = '100%';
+      if (table) table.style.height = 'auto';
 
-      // Wait a tiny bit for the browser to apply the new layout
-      await new Promise(r => setTimeout(r, 50));
+      // Wait for the browser to apply the new layout completely
+      await new Promise(r => setTimeout(r, 150));
 
       const finalRect = wrapper.getBoundingClientRect();
       const finalWidth = finalRect.width;
       const finalHeight = finalRect.height;
 
       const canvas = await html2canvas(wrapper, {
-        scale: 3, // HD quality
+        scale: 2, // 2x gives clear resolution but prevents choppy downscaling issues
         useCORS: true,
         backgroundColor: '#ffffff',
         width: finalWidth,
@@ -216,9 +294,9 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.style.top = '-10000px';
       wrapper.style.left = '-10000px';
 
-      // Fixed width, and calculate height for exact Portrait aspect ratio (8.5 x 11)
+      // Fixed width, let height be auto to capture full content without clipping
       wrapper.style.width = '1100px';
-      wrapper.style.height = `${1100 * (11 / 8.5)}px`;
+      wrapper.style.height = 'auto';
       wrapper.style.backgroundColor = '#ffffff';
       wrapper.style.padding = '16px';
       wrapper.style.display = 'flex';
@@ -227,29 +305,28 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
-      // Apply desktop-like overrides to the clone
-      prepareExportClone(clone);
-      clone.style.height = '100%';
+      // Apply desktop-like overrides to the clone, true means shrink fonts for printing
+      prepareExportClone(clone, true);
+      clone.style.height = 'auto';
       clone.style.display = 'flex';
       clone.style.flexDirection = 'column';
       const tableWrapper = clone.querySelector('.table-wrapper');
       if (tableWrapper) {
-        tableWrapper.style.flex = '1';
         tableWrapper.style.display = 'flex';
         tableWrapper.style.flexDirection = 'column';
       }
       const table = clone.querySelector('.schedule-table');
-      if (table) table.style.height = '100%';
+      if (table) table.style.height = 'auto';
 
-      // Wait a tiny bit for the browser to apply the new layout
-      await new Promise(r => setTimeout(r, 50));
+      // Wait for the browser to apply the new layout completely
+      await new Promise(r => setTimeout(r, 150));
 
       const finalRect = wrapper.getBoundingClientRect();
       const finalWidth = finalRect.width;
       const finalHeight = finalRect.height;
 
       const canvas = await html2canvas(wrapper, {
-        scale: 3, // HD quality
+        scale: 2, // HD quality, but scales smoothly
         useCORS: true,
         backgroundColor: '#ffffff',
         width: finalWidth,
@@ -280,8 +357,8 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                   * { margin: 0; padding: 0; box-sizing: border-box; }
                   html, body { width: 100%; height: 100%; background: #fff; overflow: hidden; }
                   body { display: flex; align-items: center; justify-content: center; }
-                  /* The image slightly stretches to perfectly fill any remaining micro margins */
-                  img { display: block; width: 100vw; height: 100vh; object-fit: fill; }
+                  /* The image maintains aspect ratio to perfectly fit on a single page */
+                  img { display: block; max-width: 100vw; max-height: 100vh; width: auto; height: auto; object-fit: contain; }
               </style>
           </head>
           <body>
@@ -490,6 +567,31 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     }
     return DEFAULT_DEPT_COLOR;
   };
+
+  // Group unique subjects for the summary table
+  const uniqueSubjectsMap = schedules.reduce((acc, current) => {
+    const subjId = current.subject?.id || current.id;
+    if (!acc[subjId]) {
+      acc[subjId] = {
+        ...current,
+        rooms: new Set([current.room?.name].filter(Boolean)),
+      };
+    } else {
+      if (current.room?.name) acc[subjId].rooms.add(current.room.name);
+    }
+    return acc;
+  }, {});
+
+  const uniqueSubjectsList = Object.values(uniqueSubjectsMap).map(s => ({
+    ...s,
+    roomNameList: Array.from(s.rooms).join(' / ') || 'TBA'
+  })).sort((a, b) => {
+    const codeA = (a.subject?.code || '').toString();
+    const codeB = (b.subject?.code || '').toString();
+    return codeA.localeCompare(codeB);
+  });
+
+  const totalUnits = uniqueSubjectsList.reduce((sum, s) => sum + (Number(s.subject?.credits) || 0), 0);
 
   // Determine the lunch break insertion index.
   // We insert the break BEFORE the slot whose id equals config.lunchAfterId.
@@ -775,6 +877,42 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
 
 
+      {/* Subject Summary Table */}
+      <div className="schedule-summary-container" style={{ margin: '20px 0', padding: '0 10px', width: '100%' }}>
+        <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+           <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#033279', textTransform: 'uppercase' }}>{getFullDepartmentName()}</h3>
+           <h4 style={{ margin: '5px 0', fontSize: '0.9rem', color: '#000' }}>SCHEDULE OF CLASSES</h4>
+           <p style={{ margin: 0, fontSize: '0.85rem', color: '#000' }}>{semesterInfo || 'First Semester, School Year 2026 - 2027'}</p>
+        </div>
+        <table className="schedule-summary-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', color: '#000', marginBottom: '20px' }}>
+            <thead>
+                <tr>
+                    <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#fff', fontWeight: 'bold' }}>Subject</th>
+                    <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#fff', fontWeight: 'bold' }}>Description</th>
+                    <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', backgroundColor: '#fff', fontWeight: 'bold' }}>Unit</th>
+                    <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#fff', fontWeight: 'bold' }}>Faculty</th>
+                    <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#fff', fontWeight: 'bold' }}>Room</th>
+                </tr>
+            </thead>
+            <tbody>
+                {uniqueSubjectsList.map(s => (
+                    <tr key={s.subject?.id || s.id}>
+                        <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.code || ''}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.title || s.subject?.description || ''}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{s.subject?.credits || ''}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px' }}>{s.professor?.name || ''}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px' }}>{s.roomNameList}</td>
+                    </tr>
+                ))}
+                <tr>
+                    <td colSpan="2" style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>Total</td>
+                    <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>{totalUnits}</td>
+                    <td colSpan="2" style={{ border: '1px solid #000', padding: '6px' }}></td>
+                </tr>
+            </tbody>
+        </table>
+      </div>
+
       {/* Content */}
       {GridView()}
 
@@ -806,23 +944,16 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
       {/* Preview Modal */}
       {previewImage && createPortal(
-        <div className="modal-overlay" style={{ zIndex: 9999 }}>
-          <div className="modal-content" style={{ maxWidth: '900px', width: '90%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3 style={{ margin: 0 }}>Schedule Preview</h3>
-              <button onClick={() => setPreviewImage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-            </div>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 100000, display: 'flex', flexDirection: 'column', padding: '20px' }}>
+          <div style={{ backgroundColor: 'white', margin: 'auto', padding: '20px', borderRadius: '12px', maxWidth: '90vw', width: '1000px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Schedule Preview</h3>
             <div style={{ maxHeight: '60vh', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#f9fafb', display: 'flex', justifyContent: 'center' }}>
-              <img src={previewImage} alt="Schedule Preview" style={{ maxWidth: '100%', height: 'auto' }} />
+              <img src={previewImage} alt="Schedule Preview" style={{ maxWidth: '100%', height: 'auto', imageRendering: 'high-quality' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button className="btn" style={{ background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)' }} onClick={() => setPreviewImage(null)}>
-                Cancel
-              </button>
-              <button className="btn" onClick={handleDownloadImage} style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <button className="btn btn-outline" onClick={() => setPreviewImage(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleDownloadImage}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Download Image
               </button>
             </div>
