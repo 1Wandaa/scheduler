@@ -377,6 +377,9 @@
   letter-spacing: 0.06em;
   border-bottom: 1px solid #E2E8F0;
   border-right: 1px solid #E2E8F0;
+  
+  /* Prevent background transparency bleed */
+  background-clip: padding-box;
 }
 
 .schedule-table td {
@@ -405,6 +408,9 @@
   vertical-align: middle;
   text-align: center;
   letter-spacing: 0.02em;
+  
+  /* Prevent background transparency bleed */
+  background-clip: padding-box;
 }
 
 .schedule-cell {

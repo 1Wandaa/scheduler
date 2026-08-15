@@ -608,7 +608,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         >
           <thead>
             <tr>
-              <th style={{ position: 'sticky', left: 0, zIndex: 3, background: 'var(--bg-main)' }}>Time Slot</th>
+              <th style={{ position: 'sticky', left: 0, zIndex: 3, width: '130px', minWidth: '130px', backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)' }}>Time Slot</th>
               {displayDays.map(day => <th key={day}>{day}</th>)}
             </tr>
           </thead>
@@ -640,7 +640,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                 <React.Fragment key={timeSlot.id}>
                   <tr className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
                     {isHourGroupHead && (
-                      <td className="time-label" rowSpan={timeRowSpan} style={{ position: 'sticky', left: 0, zIndex: 2, background: 'var(--bg-main)' }}>
+                      <td className="time-label" rowSpan={timeRowSpan} style={{ position: 'sticky', left: 0, zIndex: 2 }}>
                         <strong>{hourLabel}</strong>
                       </td>
                     )}
@@ -878,7 +878,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
 
 
       {/* Subject Summary Table */}
-      <div className="schedule-summary-container" style={{ margin: '20px 0', padding: '0 10px', width: '100%' }}>
+      <div className="schedule-summary-container" style={{ margin: '20px 0', padding: '0 10px', width: '100%', overflowX: 'auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '15px' }}>
            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#033279', textTransform: 'uppercase' }}>{getFullDepartmentName()}</h3>
            <h4 style={{ margin: '5px 0', fontSize: '0.9rem', color: '#000' }}>SCHEDULE OF CLASSES</h4>

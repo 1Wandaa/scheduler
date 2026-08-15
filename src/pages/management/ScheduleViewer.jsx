@@ -191,7 +191,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     }
 
     return (
-        <div className="card" style={{  }}>
+        <div className="card" style={{ backgroundImage: 'none', backgroundColor: '#ffffff' }}>
 
             {/* Header Row: Title & Print Button separated from filters */}
             <div className="mgmt-header no-print">
