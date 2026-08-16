@@ -4,8 +4,10 @@ import PrintableSchedule from '../../components/PrintableSchedule/PrintableSched
 import { DEPARTMENTS } from '../../config/constants';
 import ExportOptions from './components/ExportOptions';
 import PreviewModal from './components/PreviewModal';
+import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
 function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, onRemoveSchedule, onRemoveSchedulesBatch, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true }) {
+    const { confirm } = useGlobalDialog();
     const [viewType, setViewType] = useState('department');
     const [selectedId, setSelectedId] = useState('');
     const [deptSectionId, setDeptSectionId] = useState('');
@@ -160,7 +162,15 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         }
         
         const confirmMsg = `Are you sure you want to delete ${filteredSchedules.length} schedule(s) for ${titleName}? This action cannot be undone.`;
-        if (window.confirm(confirmMsg)) {
+        const isConfirmed = await confirm({
+            title: 'Delete Schedules',
+            text: confirmMsg,
+            icon: 'warning',
+            isDestructive: true,
+            confirmButtonText: 'Delete All'
+        });
+        
+        if (isConfirmed) {
             const ids = filteredSchedules.map(s => s.id);
             if (onRemoveSchedulesBatch) {
                 const res = await onRemoveSchedulesBatch(ids);
