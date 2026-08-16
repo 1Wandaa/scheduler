@@ -1,10 +1,11 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 const PreviewModal = ({ previewImage, setPreviewImage, titleName }) => {
     if (!previewImage) return null;
 
-    return (
-        <div className="modal-overlay">
+    return createPortal(
+        <div className="modal-overlay" style={{ zIndex: 100000 }}>
             <div className="modal-content" style={{ maxWidth: '900px', width: '90%' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h3 style={{ margin: 0 }}>Schedule Preview</h3>
@@ -12,8 +13,8 @@ const PreviewModal = ({ previewImage, setPreviewImage, titleName }) => {
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
-                <div style={{ maxHeight: '60vh', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#f9fafb', display: 'flex', justifyContent: 'center' }}>
-                    <img src={previewImage} alt="Schedule Preview" style={{ maxWidth: '100%', height: 'auto' }} />
+                <div style={{ maxHeight: '60vh', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#f9fafb', display: 'block', textAlign: 'center' }}>
+                    <img src={previewImage} alt="Schedule Preview" style={{ width: '100%', minWidth: '1000px', maxWidth: '1400px', height: 'auto', margin: '0 auto' }} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                     <button className="btn" style={{ background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)' }} onClick={() => setPreviewImage(null)}>
@@ -31,7 +32,8 @@ const PreviewModal = ({ previewImage, setPreviewImage, titleName }) => {
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

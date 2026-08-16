@@ -255,7 +255,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       const finalHeight = finalRect.height;
 
       const canvas = await html2canvas(wrapper, {
-        scale: 2, // 2x gives clear resolution but prevents choppy downscaling issues
+        scale: 3, // 3x gives HD clear resolution
         useCORS: true,
         backgroundColor: '#ffffff',
         width: finalWidth,
@@ -326,7 +326,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       const finalHeight = finalRect.height;
 
       const canvas = await html2canvas(wrapper, {
-        scale: 2, // HD quality, but scales smoothly
+        scale: 3, // HD quality
         useCORS: true,
         backgroundColor: '#ffffff',
         width: finalWidth,
@@ -947,8 +947,8 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 100000, display: 'flex', flexDirection: 'column', padding: '20px' }}>
           <div style={{ backgroundColor: 'white', margin: 'auto', padding: '20px', borderRadius: '12px', maxWidth: '90vw', width: '1000px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Schedule Preview</h3>
-            <div style={{ maxHeight: '60vh', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#f9fafb', display: 'flex', justifyContent: 'center' }}>
-              <img src={previewImage} alt="Schedule Preview" style={{ maxWidth: '100%', height: 'auto', imageRendering: 'high-quality' }} />
+            <div style={{ maxHeight: '60vh', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#f9fafb', display: 'block', textAlign: 'center' }}>
+              <img src={previewImage} alt="Schedule Preview" style={{ width: '100%', minWidth: '1000px', maxWidth: '1400px', height: 'auto', margin: '0 auto', imageRendering: 'high-quality' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button className="btn btn-outline" onClick={() => setPreviewImage(null)}>Cancel</button>

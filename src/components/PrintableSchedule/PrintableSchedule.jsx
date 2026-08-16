@@ -180,14 +180,14 @@ const PrintableSchedule = ({ scheduleItems, sectionName, programName, semesterIn
             </table>
 
             {/* Signatures */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', padding: '0 40px', fontSize: '10pt', fontFamily: '"Times New Roman", Times, serif', color: '#000' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', padding: '0 40px', fontSize: '10pt', fontFamily: '"Times New Roman", Times, serif', color: '#000' }}>
                 <div style={{ textAlign: 'left' }}>
-                    <div style={{ marginBottom: '25px' }}>Prepared by:</div>
+                    <div style={{ marginBottom: '20px' }}>Prepared by:</div>
                     <div style={{ fontWeight: 'bold', textDecoration: 'underline' }}>JELLY L. PAREDES, EdD</div>
                     <div>Program Chairman, BSCS</div>
                 </div>
                 <div style={{ textAlign: 'left', paddingRight: '40px' }}>
-                    <div style={{ marginBottom: '30px' }}>Approved:</div>
+                    <div style={{ marginBottom: '20px' }}>Approved:</div>
                     <div style={{ fontWeight: 'bold', textDecoration: 'underline' }}>RAMY LLOYD LOTILLA, EdD</div>
                     <div>Campus Administrator</div>
                 </div>
