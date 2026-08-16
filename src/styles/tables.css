@@ -29,9 +29,7 @@
 
 
 
-.data-table tbody tr {
 
-}
 
 .data-table tbody tr:nth-child(even) {
   background: rgba(248, 250, 252, 0.5);

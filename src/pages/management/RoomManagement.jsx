@@ -133,6 +133,8 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
   return (
     <>
       <div className="card" style={{ position: 'relative', backgroundImage: 'none', backgroundColor: '#ffffff' }}>
+      {/* Sticky Wrapper for Header & Filters */}
+      <div className="sticky-mgmt-header" style={{ position: 'sticky', top: '-24px', zIndex: 40, backgroundColor: '#ffffff', paddingTop: '24px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', margin: '-24px -24px 20px -24px', paddingLeft: '24px', paddingRight: '24px' }}>
       <div className="mgmt-header">
         <div className="mgmt-header-left">
           {onBack && (
@@ -200,6 +202,7 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
             </select>
           </div>
         </div>
+      </div>
       </div>
 
       <RoomTable roomList={filteredRooms} onEdit={handleOpenEdit} onDelete={handleDelete} />
