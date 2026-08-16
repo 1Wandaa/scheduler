@@ -5,13 +5,6 @@
 /* --- Container & Animations --- */
 .professor-workload-container {
   background-color: var(--bg-main, rgba(255, 255, 255, 0.97));
-  background-image: 
-    linear-gradient(rgba(86, 69, 238, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(86, 69, 238, 0.03) 1px, transparent 1px),
-    linear-gradient(rgba(86, 69, 238, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(86, 69, 238, 0.015) 1px, transparent 1px);
-  background-size: 60px 60px, 60px 60px, 15px 15px, 15px 15px;
-  background-position: -1px -1px, -1px -1px, -1px -1px, -1px -1px;
   padding: 2rem;
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.03);

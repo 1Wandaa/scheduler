@@ -48,7 +48,6 @@ import CustomDropdown from './components/CustomDropdown';
 import BottomNav from './components/BottomNav';
 import SystemReminders from './components/SystemReminders';
 import RecentActivity from './components/RecentActivity';
-import QuickStartGuide from './components/QuickStartGuide';
 import { showAutoScheduleModal } from './utils/autoScheduleModals';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
@@ -514,19 +513,7 @@ const Dashboard = ({ user, onLogout }) => {
               </div>
             )}
 
-            {isAdmin && (
-              <QuickStartGuide
-                availableSemesters={availableSemesters}
-                departments={departments}
-                courses={courses}
-                rooms={rooms}
-                professors={professors}
-                subjects={subjects}
-                sections={sections}
-                schedules={displaySchedules}
-                onNavigate={handleTabClick}
-              />
-            )}
+            {/* QuickStartGuide removed */}
 
             {/* Dashboard Widgets */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>

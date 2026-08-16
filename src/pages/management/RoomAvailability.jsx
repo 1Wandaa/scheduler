@@ -57,7 +57,7 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
   }, [schedules, selectedDay, rooms]);
 
   return (
-    <div className="card" style={{  }}>
+    <div className="card" style={{ backgroundImage: 'none', backgroundColor: '#ffffff' }}>
       <div className="mgmt-header">
         <div className="mgmt-header-left">
           {onBack && (

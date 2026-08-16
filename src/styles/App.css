@@ -40,9 +40,7 @@ img, svg, video, canvas, *[style*="background-image"] {
 .dashboard-logo,
 .login-logo,
 .login-hero-logo,
-.login-mobile-banner-logo,
-.pw-header-logo img,
-img[alt="CAPSU Logo"] {
+.login-mobile-banner-logo {
   animation: logoBreathingGlow 4s ease-in-out infinite alternate !important;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease !important;
 }
@@ -50,9 +48,7 @@ img[alt="CAPSU Logo"] {
 .dashboard-logo:hover,
 .login-logo:hover,
 .login-hero-logo:hover,
-.login-mobile-banner-logo:hover,
-.pw-header-logo img:hover,
-img[alt="CAPSU Logo"]:hover {
+.login-mobile-banner-logo:hover {
   transform: scale(1.08) !important;
   filter: drop-shadow(0 0 12px rgba(86, 69, 238, 0.7)) !important;
 }

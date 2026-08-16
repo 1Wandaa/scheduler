@@ -11,14 +11,7 @@
 
 /* --- Card Styles --- */
 .card {
-  background-color: rgba(255, 255, 255, 0.97);
-  background-image: 
-    linear-gradient(rgba(86, 69, 238, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(86, 69, 238, 0.03) 1px, transparent 1px),
-    linear-gradient(rgba(86, 69, 238, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(86, 69, 238, 0.015) 1px, transparent 1px);
-  background-size: 60px 60px, 60px 60px, 15px 15px, 15px 15px;
-  background-position: -1px -1px, -1px -1px, -1px -1px, -1px -1px;
+  background-color: var(--card-bg, #ffffff);
   border-radius: 16px;
   padding: 22px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
@@ -38,9 +31,6 @@
   background: linear-gradient(90deg, var(--accent-primary), #8B5CF6, #06b6d4);
   opacity: 0;
 }
-
-
-
 
 /* Stagger card entrance animations */
 .card:nth-child(1) {
@@ -81,4 +71,3 @@
   margin: 0;
   letter-spacing: -0.01em;
 }
-
