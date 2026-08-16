@@ -19,8 +19,8 @@
 *,
 *::before,
 *::after {
-
-
+  animation: none !important;
+  transition: none !important;
 }
 
 /* Force HD Rendering for all content */
@@ -42,7 +42,6 @@ img, svg, video, canvas, *[style*="background-image"] {
 .login-hero-logo,
 .login-mobile-banner-logo,
 .pw-header-logo img,
-.schedule-doc-logo img,
 img[alt="CAPSU Logo"] {
   animation: logoBreathingGlow 4s ease-in-out infinite alternate !important;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease !important;
@@ -53,7 +52,6 @@ img[alt="CAPSU Logo"] {
 .login-hero-logo:hover,
 .login-mobile-banner-logo:hover,
 .pw-header-logo img:hover,
-.schedule-doc-logo img:hover,
 img[alt="CAPSU Logo"]:hover {
   transform: scale(1.08) !important;
   filter: drop-shadow(0 0 12px rgba(86, 69, 238, 0.7)) !important;
