@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import ScheduleTable from '../../components/ScheduleTable/ScheduleTable';
 import PrintableSchedule from '../../components/PrintableSchedule/PrintableSchedule';
 import { DEPARTMENTS } from '../../config/constants';
@@ -8,15 +9,24 @@ import { useGlobalDialog } from '../../context/GlobalDialogContext';
 
 function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, onRemoveSchedule, onRemoveSchedulesBatch, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true }) {
     const { confirm } = useGlobalDialog();
-    const [viewType, setViewType] = useState('department');
-    const [selectedId, setSelectedId] = useState('');
-    const [deptSectionId, setDeptSectionId] = useState('');
+    const location = useLocation();
+    
+    const [viewType, setViewType] = useState(location.state?.viewTarget?.viewType || 'department');
+    const [selectedId, setSelectedId] = useState(location.state?.viewTarget?.selectedId || '');
+    const [deptSectionId, setDeptSectionId] = useState(location.state?.viewTarget?.deptSectionId || '');
     const [selectedYearLevel, setSelectedYearLevel] = useState('');
     const [previewImage, setPreviewImage] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isDeleteMode, setIsDeleteMode] = useState(false);
+    
+    const [hasAppliedInitialTarget, setHasAppliedInitialTarget] = useState(!!location.state?.viewTarget);
 
     useEffect(() => {
+        if (hasAppliedInitialTarget) {
+            setHasAppliedInitialTarget(false);
+            return;
+        }
+
         if (viewType === 'department') {
             const allDepts = departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
             if (user?.department && allDepts.includes(user.department)) {

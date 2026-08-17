@@ -17,6 +17,7 @@ import {
   isRoomAllowedFor,
   isProfessorAllowedInRoom,
 } from '../utils/scheduleUtils';
+import { generateConflictResolutions } from './conflictResolutionService';
 
 /**
  * Validate a schedule entry against all business rules.
@@ -128,7 +129,17 @@ export function validateScheduleEntry(
   if (subject?.requiredLab && !room?.hasComputers) errors.push(`Subject "${subject?.code || 'selected'}" requires a computer laboratory, but room "${room?.name || 'selected'}" does not have computers.`);
   if (subject?.isFoodLab && !room?.isFoodLab) errors.push(`Subject "${subject?.code || 'selected'}" requires a food laboratory, but room "${room?.name || 'selected'}" is not a food laboratory.`);
 
-  return { valid: errors.length === 0, errors, warnings };
+  let suggestions = [];
+  if (Object.keys(conflicts).length > 0 && rooms && rooms.length > 0) {
+    suggestions = generateConflictResolutions(
+      { room, professor, subject, section, day, timeSlot, excludeScheduleId },
+      activeSchedules,
+      rooms,
+      scheduleMode
+    );
+  }
+
+  return { valid: errors.length === 0, errors, warnings, suggestions };
 }
 
 // --------------------------------------------------------------------------

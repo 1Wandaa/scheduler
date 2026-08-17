@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
 import { getEligibleProfessors, slotsNeededFromIndex, getMeetingTimeLabel, findScheduleConflicts } from '../../utils/scheduleUtils';
 import '../../styles/SchedulerForm.css';
@@ -115,6 +116,7 @@ const CustomSelect = ({ options, value, onChange, placeholder, name, required })
 };
 
 function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, validator, activeSemester, activeSchedules = [] }) {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     subject: '',
     section: '',
@@ -247,9 +249,8 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       if (hasAddError) {
         setValidation({ valid: false, errors: allErrors, warnings: allWarnings });
       } else {
-        setValidation({ valid: true, warnings: allWarnings });
+        setValidation({ valid: true, warnings: allWarnings, room: formData.room });
         setFormData({ subject: '', section: '', professor: '', room: '', day: [], timeSlot: '' });
-        setTimeout(() => setValidation(null), 3000);
       }
     } else {
       setValidation({ valid: false, errors: allErrors, warnings: allWarnings });
@@ -572,12 +573,24 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       )}
 
       {validation && (
-        <div className={`validation-box ${validation.valid ? 'success' : 'error'}`}>
+        <div 
+          className={`validation-box ${validation.valid ? 'success' : 'error'}`}
+          style={validation.valid ? { cursor: 'pointer', transition: 'background-color 0.2s ease' } : {}}
+          onClick={validation.valid ? () => {
+            const room = validation.room;
+            setValidation(null);
+            navigate('/dashboard/view-schedules', { state: { viewTarget: { viewType: 'room', selectedId: room } } });
+          } : undefined}
+          onMouseEnter={validation.valid ? (e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)' : undefined}
+          onMouseLeave={validation.valid ? (e) => e.currentTarget.style.backgroundColor = '' : undefined}
+        >
           {validation.valid ? (
             <>
-              <p>✓ Schedule added successfully!</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ margin: 0 }}>✓ Schedule added successfully! <span style={{ textDecoration: 'underline', fontSize: '0.85em', marginLeft: '8px' }}>Click to view</span></p>
+              </div>
               {validation.warnings && validation.warnings.length > 0 && (
-                <ul>
+                <ul style={{ marginTop: '8px' }}>
                   {validation.warnings.map((w, i) => (
                     <li key={i}>⚠️ {w}</li>
                   ))}

@@ -168,7 +168,12 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           toast.error('Failed to save some schedules to the database.');
           console.error('Batch save error:', batchResult.errors);
         } else {
-          toast.success(`Successfully saved ${batchResult.writtenCount} schedules.`);
+          toast.success(`Successfully saved ${batchResult.writtenCount} schedules.`, {
+            action: {
+              label: 'View Schedules',
+              onClick: () => window.location.href = '/dashboard/view-schedules'
+            }
+          });
         }
       }
 
