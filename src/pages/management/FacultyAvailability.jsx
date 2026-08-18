@@ -133,7 +133,7 @@ function FacultyAvailability({ professors, schedules, activeSemester, activeScho
                 const ampm = hour >= 12 ? 'PM' : 'AM';
                 return (
                   <div key={hour} style={{ position: 'absolute', left: `${pct}%`, top: 0, bottom: 0, borderLeft: '1px solid var(--border-color)' }}>
-                     <div style={{ position: 'absolute', top: '12px', left: hour === 7 ? '4px' : 0, transform: hour === 7 ? 'none' : 'translateX(-50%)', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                     <div style={{ position: 'absolute', top: '12px', left: hour === 7 ? '4px' : 0, transform: hour === 7 ? 'none' : 'translateX(-50%)', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
                        {displayHour}:00 {ampm}
                      </div>
                   </div>
@@ -212,6 +212,7 @@ function FacultyAvailability({ professors, schedules, activeSemester, activeScho
                           justifyContent: 'center',
                           overflow: 'hidden',
                           boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                          boxSizing: 'border-box',
                           zIndex: 5
                         }}>
                           <div style={{ fontSize: '0.7rem', fontWeight: 700, color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
