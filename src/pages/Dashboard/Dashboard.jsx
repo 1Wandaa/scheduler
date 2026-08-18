@@ -37,6 +37,7 @@ import ActivityLog from '../management/ActivityLog';
 import DepartmentManagement from '../management/DepartmentManagement';
 import CourseManagement from '../management/CourseManagement';
 import RoomAvailability from '../management/RoomAvailability';
+import FacultyAvailability from '../management/FacultyAvailability';
 import RecycleBin from '../management/RecycleBin';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
@@ -282,6 +283,7 @@ const Dashboard = ({ user, onLogout }) => {
                     <NavItem label="Courses / Programs" iconPath={NAV_ICONS.subjects} active={activeTab === 'courses'} onClick={() => handleTabClick('courses')} indent />
                     <NavItem label="Room List" iconPath={NAV_ICONS.rooms} active={activeTab === 'rooms'} onClick={() => handleTabClick('rooms')} indent />
                     <NavItem label="Room Availability Matrix" iconPath={NAV_ICONS.rooms} active={activeTab === 'availability'} onClick={() => handleTabClick('availability')} indent />
+                    <NavItem label="Faculty Availability Matrix" iconPath={NAV_ICONS.faculty} active={activeTab === 'faculty-availability'} onClick={() => handleTabClick('faculty-availability')} indent />
                     <NavItem label="Subject Constraints" iconPath={NAV_ICONS.subjects} active={activeTab === 'subjects'} onClick={() => handleTabClick('subjects')} indent />
                     <NavItem label="Sections" iconPath={NAV_ICONS.sections} active={activeTab === 'sections'} onClick={() => handleTabClick('sections')} indent />
                     <NavItem label="Semesters & Years" iconPath={NAV_ICONS.calendar} active={activeTab === 'terms'} onClick={() => handleTabClick('terms')} indent />
@@ -538,6 +540,7 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} professors={professors} schedules={displaySchedules} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'availability' && <RoomAvailability rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'faculty-availability' && <FacultyAvailability professors={professors} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'departments' && <DepartmentManagement departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'courses' && <CourseManagement courses={courses} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
