@@ -183,10 +183,16 @@ export async function addSchedule(newSchedule, activeSchedules, rooms, activeSem
 /**
  * Update day/time for an existing schedule entry.
  */
-export async function updateSchedule(scheduleId, newDay, newTimeSlotId, schedules, activeSchedules, rooms, isAdmin) {
+export async function updateSchedule(scheduleId, newDay, newTimeSlotOrId, schedules, activeSchedules, rooms, isAdmin) {
   if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
 
-  const newTimeSlot = TIME_SLOTS.find((ts) => ts.id === newTimeSlotId);
+  let newTimeSlot;
+  if (typeof newTimeSlotOrId === 'object' && newTimeSlotOrId !== null) {
+    newTimeSlot = newTimeSlotOrId;
+  } else {
+    newTimeSlot = TIME_SLOTS.find((ts) => String(ts.id) === String(newTimeSlotOrId));
+  }
+  
   const existing = schedules.find((s) => s.id === scheduleId);
   if (!existing) return { ok: false, errors: ['Schedule not found.'] };
 

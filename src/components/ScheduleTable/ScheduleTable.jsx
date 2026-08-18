@@ -486,14 +486,38 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     const movingSchedule = schedules.find(s => s.id === scheduleId);
     if (!movingSchedule) return;
     if (movingSchedule.day === day && String(movingSchedule.timeSlot?.id) === String(timeSlotId)) return;
-    const newTimeSlot = TIME_SLOTS.find(ts => String(ts.id) === String(timeSlotId));
-    const candidate = { ...movingSchedule, day, timeSlot: newTimeSlot };
-    const overlap = schedules.find(s => s.id !== scheduleId && schedulesOverlap(candidate, s));
+    
+    const baseTimeSlot = TIME_SLOTS.find(ts => String(ts.id) === String(timeSlotId));
+    let finalTimeSlot = { ...baseTimeSlot };
+    
+    if (movingSchedule.timeSlot && movingSchedule.timeSlot.customLabel) {
+      const range = getScheduleTimeRange(movingSchedule, scheduleMode);
+      if (range.start > 0 && range.end > 0) {
+        const durationMins = range.end - range.start;
+        const newStartStr = baseTimeSlot.time.split('-')[0].trim();
+        const newStartMins = parseTimeToMinutes(newStartStr);
+        if (newStartMins !== null) {
+          const newEndMins = newStartMins + durationMins;
+          const formatMin = (mins) => {
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            const period = h >= 12 ? 'PM' : 'AM';
+            const displayH = h % 12 === 0 ? 12 : h % 12;
+            const displayM = m.toString().padStart(2, '0');
+            return `${displayH}:${displayM} ${period}`;
+          };
+          finalTimeSlot.customLabel = `${newStartStr} - ${formatMin(newEndMins)}`;
+        }
+      }
+    }
+    
+    const candidate = { ...movingSchedule, day, timeSlot: finalTimeSlot };
+    const overlap = schedules.find(s => s.id !== scheduleId && schedulesOverlap(candidate, s, scheduleMode));
     if (overlap) {
       showToast('Cannot move schedule: the new time overlaps an existing class (room, faculty, or section).');
       return;
     }
-    const result = await onUpdateSchedule(scheduleId, day, timeSlotId);
+    const result = await onUpdateSchedule(scheduleId, day, finalTimeSlot);
     if (result && result.ok === false) {
       showToast(`Cannot move schedule:\n${result.errors?.join('\n') || result.error || 'Unknown error'}`);
     } else if (result && result.ok) {
