@@ -277,12 +277,12 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
                 Program
               </label>
-              <select className="form-select" value={formData.program} onChange={e => setFormData({ ...formData, program: e.target.value })}>
-                <option value="">Select Program / Department</option>
+              <select className="form-select" value={formData.program} onChange={e => setFormData({ ...formData, program: e.target.value })} style={{ color: !formData.program ? '#757575' : 'inherit' }}>
+                <option value="" disabled hidden>Select Program / Department</option>
                 {courses.length > 0 ? courses.map(c => (
-                  <option key={c.id} value={c.code}>{c.code} ({c.title})</option>
+                  <option key={c.id} value={c.code} style={{ color: '#000' }}>{c.code} ({c.title})</option>
                 )) : (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
+                  <option key={dept} value={dept} style={{ color: '#000' }}>{dept}</option>
                 ))}
               </select>
             </div>

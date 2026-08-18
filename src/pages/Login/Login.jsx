@@ -358,7 +358,7 @@ const Login = ({ onLogin }) => {
       <div className="signup-row">
         <div className="input-group" style={{ flex: 1 }}>
           <label>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
             Age
           </label>
           <input
@@ -380,11 +380,12 @@ const Login = ({ onLogin }) => {
             required
             value={gender}
             onChange={e => setGender(e.target.value)}
+            style={{ color: !gender ? '#757575' : 'inherit' }}
           >
-            <option value="">Select Gender</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
+            <option value="" disabled hidden>Select Gender</option>
+            <option value="Male" style={{ color: '#000' }}>Male</option>
+            <option value="Female" style={{ color: '#000' }}>Female</option>
+            <option value="Other" style={{ color: '#000' }}>Other</option>
           </select>
         </div>
       </div>
@@ -490,7 +491,7 @@ const Login = ({ onLogin }) => {
           value={department}
           onChange={e => handleDepartmentChange(e.target.value)}
         >
-          <option value="">Select your program</option>
+          <option value="" disabled hidden>Select your program</option>
           {Object.keys(DEPARTMENT_PROGRAM).map(dept => (
             <option key={dept} value={dept}>{DEPARTMENT_LABELS[dept] || dept}</option>
           ))}
@@ -514,7 +515,7 @@ const Login = ({ onLogin }) => {
             disabled={!department}
             className={!department ? 'select-disabled' : ''}
           >
-            <option value="">Select</option>
+            <option value="" disabled hidden>Select</option>
             {YEAR_LEVELS.map(yl => (
               <option key={yl.value} value={yl.value}>{yl.label}</option>
             ))}
@@ -533,7 +534,7 @@ const Login = ({ onLogin }) => {
             disabled={!department || !yearLevel}
             className={(!department || !yearLevel) ? 'select-disabled' : ''}
           >
-            <option value="">
+            <option value="" disabled hidden>
               {!department
                 ? 'Select dept first'
                 : !yearLevel
