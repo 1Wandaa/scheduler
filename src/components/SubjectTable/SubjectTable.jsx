@@ -9,7 +9,7 @@ export const getSubjectDepts = (subject) => {
   return [];
 };
 
-const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, departments = [] }) => {
+const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, onViewDetails, departments = [] }) => {
   if (!subjectList || subjectList.length === 0) return null;
 
   return (
@@ -89,6 +89,7 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
                 </span>
               </td>
               <td style={{ whiteSpace: 'nowrap' }}>
+                <button className="btn-details" onClick={() => onViewDetails && onViewDetails(s)}>Details</button>
                 <button className="btn-edit" onClick={() => onEdit(s)}>Edit</button>
                 <button className="btn-delete" onClick={() => onDelete(s.id)}>Delete</button>
               </td>

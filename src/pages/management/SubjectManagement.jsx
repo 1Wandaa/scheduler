@@ -13,6 +13,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
+  const [detailsSubject, setDetailsSubject] = useState(null);
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
@@ -217,6 +218,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
             titleColor={getDeptColor('Minor')} 
             onEdit={handleOpenEdit} 
             onDelete={handleDelete} 
+            onViewDetails={setDetailsSubject}
             departments={departments}
           />
         )}
@@ -235,6 +237,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               titleColor={deptColor} 
               onEdit={handleOpenEdit} 
               onDelete={handleDelete} 
+              onViewDetails={setDetailsSubject}
               departments={departments}
             />
           );
@@ -248,6 +251,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
             titleColor="var(--text-muted)" 
             onEdit={handleOpenEdit} 
             onDelete={handleDelete} 
+            onViewDetails={setDetailsSubject}
             departments={departments}
           />
         )}
@@ -343,6 +347,74 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               <button className="btn" onClick={handleSave} disabled={isSaving}>
                 {isSaving ? 'Saving...' : 'Save Subject'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Details Modal */}
+      {detailsSubject && (
+        <div className="modal-overlay" onClick={() => setDetailsSubject(null)}>
+          <div className="modal-content" style={{ width: '500px', maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <h3 style={{ margin: 0, color: 'var(--accent-primary)' }}>{detailsSubject.code}</h3>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>{detailsSubject.name}</p>
+              </div>
+              <button onClick={() => setDetailsSubject(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '5px' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-primary)' }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Assigned Professors
+              </h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, background: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                {professors && professors.filter(p => p.specialization && (p.specialization.includes(detailsSubject.id) || p.specialization.includes(detailsSubject.code) || p.specialization.includes(detailsSubject.name))).length > 0 ? (
+                  professors.filter(p => p.specialization && (p.specialization.includes(detailsSubject.id) || p.specialization.includes(detailsSubject.code) || p.specialization.includes(detailsSubject.name))).map((prof, index, arr) => (
+                    <li key={prof.id} style={{ padding: '10px 15px', borderBottom: index < arr.length - 1 ? '1px solid var(--border-color)' : 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                        {prof.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: '500' }}>{prof.name}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{prof.department}</div>
+                      </div>
+                    </li>
+                  ))
+                ) : (
+                  <li style={{ padding: '15px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>No professors specialized in this subject.</li>
+                )}
+              </ul>
+            </div>
+
+            <div>
+              <h4 style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--success)' }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Enrolled Sections
+              </h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, background: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                {sections && sections.filter(s => s.subjects && (s.subjects.includes(detailsSubject.id) || s.subjects.includes(detailsSubject.code) || s.subjects.includes(detailsSubject.name))).length > 0 ? (
+                  sections.filter(s => s.subjects && (s.subjects.includes(detailsSubject.id) || s.subjects.includes(detailsSubject.code) || s.subjects.includes(detailsSubject.name))).map((sec, index, arr) => (
+                    <li key={sec.id} style={{ padding: '10px 15px', borderBottom: index < arr.length - 1 ? '1px solid var(--border-color)' : 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                        {sec.name}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        {sec.department} • {sec.yearLevel}
+                      </div>
+                    </li>
+                  ))
+                ) : (
+                  <li style={{ padding: '15px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>No sections enrolled in this subject.</li>
+                )}
+              </ul>
+            </div>
+            
+            <div className="mgmt-modal-actions" style={{ marginTop: '25px' }}>
+              <button className="btn" onClick={() => setDetailsSubject(null)}>Close</button>
             </div>
           </div>
         </div>

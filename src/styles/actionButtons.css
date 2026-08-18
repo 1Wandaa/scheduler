@@ -1,7 +1,7 @@
 /* =========================================
    ACTION BUTTONS (Edit / Delete)
    ========================================= */
-.btn-edit, .btn-delete {
+.btn-edit, .btn-delete, .btn-details {
   padding: 6px 12px;
   border-radius: var(--radius-sm);
   border: none;
@@ -17,7 +17,8 @@
 
 /* Shimmer sweep effect (matches .btn pattern) */
 .btn-edit::before,
-.btn-delete::before {
+.btn-delete::before,
+.btn-details::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -32,8 +33,14 @@
   color: var(--accent-primary);
 }
 
+.btn-details {
+  background: var(--info-bg);
+  color: var(--info);
+}
 
-.btn-edit:active {
+
+.btn-edit:active,
+.btn-details:active {
   transform: translateY(0) scale(0.97);
   transition-duration: 0.1s;
 }
