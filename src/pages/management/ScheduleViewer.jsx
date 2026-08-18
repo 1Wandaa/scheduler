@@ -6,6 +6,7 @@ import { DEPARTMENTS } from '../../config/constants';
 import ExportOptions from './components/ExportOptions';
 import PreviewModal from './components/PreviewModal';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
+import CustomSelect from '../../components/CustomSelect/CustomSelect';
 
 function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, onRemoveSchedule, onRemoveSchedulesBatch, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true }) {
     const { confirm } = useGlobalDialog();
@@ -293,27 +294,35 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target</label>
-                    <select
-                        className="form-select"
+                    <CustomSelect
+                        name="targetId"
                         value={selectedId}
                         onChange={(e) => setSelectedId(e.target.value)}
-                        style={{ width: '100%', borderColor: 'var(--accent-primary)', backgroundColor: 'var(--success-bg)' }}
-                    >
-                        {viewType === 'department' && (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).sort((a, b) => a.localeCompare(b)).map(d => <option key={d} value={d}>{d}</option>)}
-                        {viewType === 'room' && Object.entries(rooms.reduce((acc, r) => {
-                            const b = r.building || 'Other';
-                            if (!acc[b]) acc[b] = [];
-                            acc[b].push(r);
-                            return acc;
-                        }, {}))
-                        .sort(([bA], [bB]) => bA.localeCompare(bB))
-                        .map(([building, bRooms]) => (
-                            <optgroup key={building} label={building}>
-                                {bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                            </optgroup>
-                        ))}
-                        {viewType === 'faculty' && [...professors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+                        placeholder={`Select ${viewType}...`}
+                        style={{ width: '100%' }}
+                        options={(() => {
+                            if (viewType === 'department') {
+                                return (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)
+                                    .sort((a, b) => a.localeCompare(b))
+                                    .map(d => ({ value: d, label: d }));
+                            } else if (viewType === 'room') {
+                                return Object.entries(rooms.reduce((acc, r) => {
+                                    const b = r.building || 'Other';
+                                    if (!acc[b]) acc[b] = [];
+                                    acc[b].push(r);
+                                    return acc;
+                                }, {}))
+                                .sort(([bA], [bB]) => bA.localeCompare(bB))
+                                .map(([building, bRooms]) => ({
+                                    label: building,
+                                    options: bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => ({ value: r.id, label: r.name }))
+                                }));
+                            } else if (viewType === 'faculty') {
+                                return [...professors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(p => ({ value: p.id, label: p.name }));
+                            }
+                            return [];
+                        })()}
+                    />
                 </div>
 
                 {viewType === 'department' && availableYearLevels.length > 0 && (

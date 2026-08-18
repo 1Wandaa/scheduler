@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import '../../styles/ProfessorWorkload.css';
+import { getScheduleTimeRange } from '../../utils/scheduleUtils';
 
 function ProfessorWorkload({ professors, schedules, departments = [] }) {
   const LOGO_SRC = '/logo.png?v=1';
@@ -42,17 +43,15 @@ function ProfessorWorkload({ professors, schedules, departments = [] }) {
     return professors.map(professor => {
       const profSchedules = schedules.filter(s => matchesProfessor(s, professor));
       
-      const uniqueSubjectSections = new Map();
+      let units = 0;
       for (const s of profSchedules) {
-        const subjectId = s.subject?.id || s.subject?.code || 'unknown';
-        const sectionId = s.section?.id || 'no-section';
-        const key = `${subjectId}__${sectionId}`;
-        if (!uniqueSubjectSections.has(key)) {
-          uniqueSubjectSections.set(key, Number(s.subject?.credits) || 3);
+        const range = getScheduleTimeRange(s);
+        if (range && range.start > 0 && range.end > 0) {
+          units += (range.end - range.start) / 60;
+        } else {
+          units += (Number(s.subject?.hoursPerMeeting) || 1.5);
         }
       }
-      
-      const units = Array.from(uniqueSubjectSections.values()).reduce((sum, c) => sum + c, 0);
       const cap = Math.max(1, Number(professor.maxUnits || professor.maxHours || 12));
       const utilization = (units / cap) * 100;
 

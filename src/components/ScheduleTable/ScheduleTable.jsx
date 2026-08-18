@@ -615,7 +615,13 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     return codeA.localeCompare(codeB);
   });
 
-  const totalUnits = uniqueSubjectsList.reduce((sum, s) => sum + (Number(s.subject?.credits) || 0), 0);
+  const totalUnits = schedules.reduce((sum, s) => {
+    const range = getScheduleTimeRange(s, scheduleMode);
+    if (range && range.start > 0 && range.end > 0) {
+      return sum + (range.end - range.start) / 60;
+    }
+    return sum + (Number(s.subject?.hoursPerMeeting) || 1.5);
+  }, 0);
 
   // Determine the lunch break insertion index.
   // We insert the break BEFORE the slot whose id equals config.lunchAfterId.
