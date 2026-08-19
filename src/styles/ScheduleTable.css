@@ -644,6 +644,23 @@
     font-size: 0.7rem;
   }
 
+  .schedule-summary-container h3 {
+    font-size: 0.85rem !important;
+  }
+  .schedule-summary-container h4 {
+    font-size: 0.75rem !important;
+  }
+  .schedule-summary-container p {
+    font-size: 0.65rem !important;
+  }
+  .schedule-summary-table {
+    font-size: 0.65rem !important;
+  }
+  .schedule-summary-table th, 
+  .schedule-summary-table td {
+    padding: 3px !important;
+  }
+
   .view-toggle-btn span,
   .fullscreen-btn span {
     display: none;
