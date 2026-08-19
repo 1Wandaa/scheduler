@@ -414,3 +414,128 @@
     text-align: center;
   }
 }
+
+/* ─── Availability Timeline Grids (Faculty & Room) ─── */
+.availability-grid-container {
+  min-width: 850px;
+  display: flex;
+  flex-direction: column;
+}
+
+.availability-header-label {
+  width: 140px;
+  flex-shrink: 0;
+  position: sticky;
+  left: 0;
+  background: var(--bg-card);
+  border-right: 2px solid var(--border-color);
+  z-index: 30;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.availability-row-label {
+  width: 140px;
+  flex-shrink: 0;
+  position: sticky;
+  left: 0;
+  background: var(--bg-card);
+  border-right: 2px solid var(--border-color);
+  z-index: 10;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+}
+
+.availability-room-label {
+  width: 130px;
+}
+
+.availability-time-header {
+  position: absolute;
+  top: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.availability-block-text {
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.availability-block-subtext {
+  font-size: 0.6rem;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.availability-block-time {
+  font-size: 0.55rem;
+  opacity: 0.85;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+  .availability-grid-container {
+    min-width: 100%;
+  }
+
+  .availability-header-label,
+  .availability-row-label {
+    width: 65px !important;
+    padding: 8px 4px !important;
+  }
+  
+  .availability-room-label {
+    width: 65px !important;
+  }
+
+  .availability-row-label > div:first-child {
+    font-size: 0.6rem !important;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.1;
+  }
+
+  .availability-row-label > div:last-child {
+    font-size: 0.5rem !important;
+    white-space: normal;
+    line-height: 1.1;
+    margin-top: 4px !important;
+  }
+
+  .availability-time-header {
+    font-size: 0.5rem;
+    top: 14px;
+  }
+  
+  /* Hide the AM/PM part and only keep the hour on mobile */
+  .availability-time-header .time-min,
+  .availability-time-header .time-ampm {
+    display: none;
+  }
+
+  .availability-block-text {
+    font-size: 0.55rem;
+  }
+
+  .availability-block-subtext,
+  .availability-block-time {
+    display: none;
+  }
+}
+

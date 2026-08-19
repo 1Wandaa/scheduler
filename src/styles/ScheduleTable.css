@@ -71,43 +71,45 @@
   inset: 0;
   z-index: 99999;
   background: #ffffff !important;
-  padding: 1rem !important;
-  overflow: hidden; /* prevent scrolling to act like a slide */
+  padding: 0 !important;
+  overflow: hidden; /* prevent scrolling to fit in one page */
   border-radius: 0 !important;
   margin: 0 !important;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
-/* Hide extra elements in fullscreen like a powerpoint slide */
+/* Hide all extra elements so it's JUST the grid */
 .schedule-fullscreen .schedule-toolbar,
 .schedule-fullscreen .schedule-doc-header,
-.schedule-fullscreen .dept-legend {
+.schedule-fullscreen .dept-legend,
+.schedule-fullscreen .schedule-summary-container {
   display: none !important;
 }
 
 .schedule-fullscreen .table-wrapper {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
   box-shadow: none !important;
   border-radius: 0 !important;
   background: #fff;
   border: none !important;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
 }
 
 .schedule-fullscreen .schedule-table {
-  height: auto;
+  width: auto;
+  min-width: 680px;
 }
 
 .schedule-fullscreen .schedule-table th {
   padding: 18px 12px;
   font-size: 0.9rem;
-}
-
-.schedule-fullscreen .schedule-table td {
-  height: auto;
 }
 
 .schedule-fullscreen .time-label {

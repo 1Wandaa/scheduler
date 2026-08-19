@@ -413,21 +413,44 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   // Handle Fit Scale for Mobile Fullscreen & Grid View
   useEffect(() => {
     const updateFitScale = () => {
-      const padding = 32;
-      const availableWidth = window.innerWidth - padding;
-      const minTableWidth = 680; // from CSS
-
-      if (availableWidth < minTableWidth && (isFullscreen || viewMode === 'grid')) {
-        setFitScale(availableWidth / minTableWidth);
+      if (isFullscreen) {
+        // In fullscreen, we want to scale the table to perfectly fit the screen (both width and height)
+        // maintaining its aspect ratio ("same square")
+        const padding = 32;
+        const availableWidth = window.innerWidth - padding;
+        const availableHeight = window.innerHeight - padding;
+        
+        // The natural size of the table roughly (we can use scrollWidth/scrollHeight if containerRef is available)
+        // But since we need to set it, let's use fixed min dimensions or actual DOM rect
+        const tableEl = containerRef.current?.querySelector('.schedule-table');
+        const contentWidth = tableEl ? (tableEl.offsetWidth / (fitScale || 1)) : 680;
+        const contentHeight = tableEl ? (tableEl.offsetHeight / (fitScale || 1)) : 500;
+        
+        const scaleX = availableWidth / Math.max(contentWidth, 680);
+        const scaleY = availableHeight / Math.max(contentHeight, 300);
+        
+        // Use the smaller scale so it fits entirely on one page without scrolling
+        const scale = Math.min(scaleX, scaleY);
+        setFitScale(scale);
       } else {
-        setFitScale(1);
+        // Standard grid view logic
+        const padding = 32;
+        const availableWidth = window.innerWidth - padding;
+        const minTableWidth = 680; // from CSS
+
+        if (availableWidth < minTableWidth && viewMode === 'grid') {
+          setFitScale(availableWidth / minTableWidth);
+        } else {
+          setFitScale(1);
+        }
       }
     };
 
-    updateFitScale();
+    // Small delay to allow DOM to render before calculating height
+    setTimeout(updateFitScale, 50);
     window.addEventListener('resize', updateFitScale);
     return () => window.removeEventListener('resize', updateFitScale);
-  }, [isFullscreen, viewMode]);
+  }, [isFullscreen, viewMode, activeTimeSlots.length]);
 
   // Listen to native fullscreen changes
   useEffect(() => {
@@ -440,17 +463,28 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   }, []);
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
+    if (!document.fullscreenElement && !isFullscreen) {
       if (containerRef.current?.requestFullscreen) {
         containerRef.current.requestFullscreen().catch(err => {
           console.error(`Error attempting to enable fullscreen: ${err.message}`);
+          setIsFullscreen(true); // Fallback if native fails
         });
+      } else if (containerRef.current?.webkitRequestFullscreen) {
+        containerRef.current.webkitRequestFullscreen();
+        setIsFullscreen(true); // Fallback/state update for Safari
       } else {
         setIsFullscreen(true); // fallback
       }
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {
+          setIsFullscreen(false);
+        });
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+        setIsFullscreen(false);
+      } else {
+        setIsFullscreen(false);
       }
     }
   };
@@ -634,7 +668,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       <div className="table-wrapper">
         <table
           className="schedule-table"
-          style={(isFullscreen || viewMode === 'grid') && fitScale < 1 ? { zoom: fitScale } : {}}
+          style={(isFullscreen ? fitScale !== 1 : (viewMode === 'grid' && fitScale < 1)) ? { zoom: fitScale } : {}}
         >
           <thead style={{ position: 'sticky', top: 0, zIndex: 40 }}>
             <tr>

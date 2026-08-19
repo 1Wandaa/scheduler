@@ -117,12 +117,12 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
       </div>
 
       <div style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }} className="custom-scrollbar">
-        <div style={{ minWidth: '850px', display: 'flex', flexDirection: 'column' }}>
+        <div className="availability-grid-container">
           
           {/* Header */}
           <div style={{ display: 'flex', borderBottom: '2px solid var(--border-color)', background: 'var(--bg-card)', position: 'sticky', top: 0, zIndex: 20 }}>
             {/* Sticky row label header */}
-            <div style={{ width: '130px', flexShrink: 0, position: 'sticky', left: 0, background: 'var(--bg-card)', borderRight: '2px solid var(--border-color)', zIndex: 30, padding: '12px', display: 'flex', alignItems: 'center' }}>
+            <div className="availability-header-label availability-room-label">
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Room</span>
             </div>
             
@@ -134,8 +134,8 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
                 const ampm = hour >= 12 ? 'PM' : 'AM';
                 return (
                   <div key={hour} style={{ position: 'absolute', left: `${pct}%`, top: 0, bottom: 0, borderLeft: '1px solid var(--border-color)' }}>
-                     <div style={{ position: 'absolute', top: '12px', left: hour === 7 ? '4px' : 0, transform: hour === 7 ? 'none' : 'translateX(-50%)', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
-                       {displayHour}:00 {ampm}
+                     <div className="availability-time-header" style={{ left: hour === 7 ? '4px' : 0, transform: hour === 7 ? 'none' : 'translateX(-50%)' }}>
+                       {displayHour}<span className="time-min">:00</span> <span className="time-ampm">{ampm}</span>
                      </div>
                   </div>
                 );
@@ -150,7 +150,7 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
             filteredRooms.map(room => (
               <div key={room.id} style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-main)' }}>
                 {/* Sticky row label */}
-                <div style={{ width: '130px', flexShrink: 0, position: 'sticky', left: 0, background: 'var(--bg-card)', borderRight: '2px solid var(--border-color)', zIndex: 10, padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', boxShadow: '2px 0 5px rgba(0,0,0,0.02)' }}>
+                <div className="availability-row-label availability-room-label">
                   <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{room.name}</div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>{room.building || 'Unassigned'}</div>
                 </div>
@@ -216,15 +216,15 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
                           boxSizing: 'border-box',
                           zIndex: 5
                         }}>
-                          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: theme.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
+                          <div className="availability-block-text" style={{ color: theme.text }}>
                             {sched.subject?.code}
                           </div>
                           {sched.section && (
-                            <div style={{ fontSize: '0.6rem', color: theme.subtext, marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div className="availability-block-subtext" style={{ color: theme.subtext }}>
                               {sched.section.name}
                             </div>
                           )}
-                          <div style={{ fontSize: '0.55rem', color: theme.text, opacity: 0.85, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div className="availability-block-time" style={{ color: theme.text }}>
                             {formatTime(startMin)} - {formatTime(endMin)}
                           </div>
                         </div>
