@@ -429,8 +429,18 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         const scaleX = availableWidth / Math.max(contentWidth, 680);
         const scaleY = availableHeight / Math.max(contentHeight, 300);
         
-        // Use the smaller scale so it fits entirely on one page without scrolling
-        const scale = Math.min(scaleX, scaleY);
+        const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
+        
+        let scale;
+        if (isMobilePortrait) {
+            // On mobile portrait, avoid shrinking it to an unreadable tiny square.
+            // Force a minimum readable scale (e.g. 0.85) and let the user pan horizontally.
+            scale = Math.max(0.85, Math.min(scaleX, scaleY));
+        } else {
+            // For PC and landscape mobile, scale to perfectly fit one page
+            scale = Math.min(scaleX, scaleY);
+        }
+        
         setFitScale(scale);
       } else {
         // Standard grid view logic

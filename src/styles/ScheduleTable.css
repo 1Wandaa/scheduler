@@ -91,20 +91,20 @@
 
 .schedule-fullscreen .table-wrapper {
   flex: 1;
-  overflow: hidden;
+  overflow: auto; /* allow panning */
   box-shadow: none !important;
   border-radius: 0 !important;
   background: #fff;
   border: none !important;
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
   width: 100%;
 }
 
 .schedule-fullscreen .schedule-table {
   width: auto;
   min-width: 680px;
+  margin: auto; /* Safe centering that doesn't clip top/left when overflowing */
 }
 
 .schedule-fullscreen .schedule-table th {
