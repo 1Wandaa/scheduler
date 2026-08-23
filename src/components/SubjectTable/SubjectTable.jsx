@@ -36,67 +36,69 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
           {title}
         </h4>
       </div>
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Code</th>
-            <th>Name</th>
-            <th>Semester</th>
-            <th>Department(s)</th>
-            <th>Units</th>
-            <th>Meeting Time</th>
-            <th>Lab Required</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {subjectList.map(s => (
-            <tr key={s.id}>
-              <td><strong style={{ color: titleColor }}>{s.code}</strong></td>
-              <td style={{ fontWeight: '500' }}>{s.name}</td>
-              <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                {s.semester && s.semester !== 'Both' ? s.semester.replace(' Semester', ' Sem') : 'Both'}
-              </td>
-              <td>
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  {getSubjectDepts(s).length > 0 ? getSubjectDepts(s).map(dept => {
-                    const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
-                    return (
-                      <span key={dept} style={{ 
-                        background: deptColor.startsWith('#') ? `${deptColor}15` : 'var(--bg-main)', 
-                        padding: '3px 8px', 
-                        borderRadius: '12px', 
-                        fontSize: '0.75rem', 
-                        fontWeight: '600', 
-                        color: deptColor 
-                      }}>
-                        {dept}
-                      </span>
-                    );
-                  }) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>None</span>}
-                </div>
-              </td>
-              <td style={{ fontWeight: '500', textAlign: 'center' }}>{s.credits || 3}</td>
-              <td style={{ fontWeight: '500', color: 'var(--text-muted)' }}>{s.hoursPerMeeting || 1.5} hrs</td>
-              <td>
-                <span style={{
-                  background: s.requiredLab ? 'var(--danger-bg)' : s.isFoodLab ? '#fff3cd' : 'var(--success-bg)',
-                  color: s.requiredLab ? 'var(--danger)' : s.isFoodLab ? '#856404' : 'var(--success)',
-                  padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600',
-                  border: s.isFoodLab ? '1px solid #ffeeba' : 'none'
-                }}>
-                  {s.requiredLab ? 'Computer' : s.isFoodLab ? 'Food' : 'No'}
-                </span>
-              </td>
-              <td style={{ whiteSpace: 'nowrap' }}>
-                <button className="btn-details" onClick={() => onViewDetails && onViewDetails(s)}>Details</button>
-                <button className="btn-edit" onClick={() => onEdit(s)}>Edit</button>
-                <button className="btn-delete" onClick={() => onDelete(s.id)}>Delete</button>
-              </td>
+      <div className="table-responsive">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Name</th>
+              <th>Semester</th>
+              <th>Department(s)</th>
+              <th>Units</th>
+              <th>Meeting Time</th>
+              <th>Lab Required</th>
+              <th>Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {subjectList.map(s => (
+              <tr key={s.id}>
+                <td><strong style={{ color: titleColor }}>{s.code}</strong></td>
+                <td style={{ fontWeight: '500' }}>{s.name}</td>
+                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                  {s.semester && s.semester !== 'Both' ? s.semester.replace(' Semester', ' Sem') : 'Both'}
+                </td>
+                <td>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                    {getSubjectDepts(s).length > 0 ? getSubjectDepts(s).map(dept => {
+                      const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+                      return (
+                        <span key={dept} style={{ 
+                          background: deptColor.startsWith('#') ? `${deptColor}15` : 'var(--bg-main)', 
+                          padding: '3px 8px', 
+                          borderRadius: '12px', 
+                          fontSize: '0.75rem', 
+                          fontWeight: '600', 
+                          color: deptColor 
+                        }}>
+                          {dept}
+                        </span>
+                      );
+                    }) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>None</span>}
+                  </div>
+                </td>
+                <td style={{ fontWeight: '500', textAlign: 'center' }}>{s.credits || 3}</td>
+                <td style={{ fontWeight: '500', color: 'var(--text-muted)' }}>{s.hoursPerMeeting || 1.5} hrs</td>
+                <td>
+                  <span style={{
+                    background: s.requiredLab ? 'var(--danger-bg)' : s.isFoodLab ? '#fff3cd' : 'var(--success-bg)',
+                    color: s.requiredLab ? 'var(--danger)' : s.isFoodLab ? '#856404' : 'var(--success)',
+                    padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600',
+                    border: s.isFoodLab ? '1px solid #ffeeba' : 'none'
+                  }}>
+                    {s.requiredLab ? 'Computer' : s.isFoodLab ? 'Food' : 'No'}
+                  </span>
+                </td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <button className="btn-details" onClick={() => onViewDetails && onViewDetails(s)}>Details</button>
+                  <button className="btn-edit" onClick={() => onEdit(s)}>Edit</button>
+                  <button className="btn-delete" onClick={() => onDelete(s.id)}>Delete</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

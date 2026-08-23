@@ -72,53 +72,55 @@ const RoomTable = ({ roomList, onEdit, onDelete }) => {
   }
 
   return (
-    <table className="data-table">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Dept Owner</th>
-          <th>Building</th>
-          <th>Type & Facilities</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {roomList.map(r => (
-          <tr key={r.id}>
-            <td><strong style={{ color: 'var(--text-main)' }}>{r.name}</strong></td>
-            <td>
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: '4px',
-                fontSize: '0.75rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
-                background: (r.department && r.department !== 'SHARED')
-                  ? 'linear-gradient(135deg, #EEF2FF, #E0E7FF)' : '#F1F5F9',
-                color: (r.department && r.department !== 'SHARED') ? '#4338ca' : '#64748b',
-                border: (r.department && r.department !== 'SHARED') ? '1px solid #c7d2fe' : '1px solid #e2e8f0',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-              }}>
-                {(r.department && r.department !== 'SHARED') ? (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                ) : (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
-                )}
-                {r.department || 'SHARED'}
-              </span>
-            </td>
-            <td>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontWeight: 500, fontSize: '0.85rem' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
-                {r.building || 'Unassigned'}
-              </div>
-            </td>
-            <td>{getRoomTypeBadge(r)}</td>
-            <td style={{ whiteSpace: 'nowrap' }}>
-              <button className="btn-edit" onClick={() => onEdit(r)}>Edit</button>
-              <button className="btn-delete" onClick={() => onDelete(r.id)}>Delete</button>
-            </td>
+    <div className="table-responsive">
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Dept Owner</th>
+            <th>Building</th>
+            <th>Type & Facilities</th>
+            <th>Actions</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {roomList.map(r => (
+            <tr key={r.id}>
+              <td><strong style={{ color: 'var(--text-main)' }}>{r.name}</strong></td>
+              <td>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  fontSize: '0.75rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
+                  background: (r.department && r.department !== 'SHARED')
+                    ? 'linear-gradient(135deg, #EEF2FF, #E0E7FF)' : '#F1F5F9',
+                  color: (r.department && r.department !== 'SHARED') ? '#4338ca' : '#64748b',
+                  border: (r.department && r.department !== 'SHARED') ? '1px solid #c7d2fe' : '1px solid #e2e8f0',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                }}>
+                  {(r.department && r.department !== 'SHARED') ? (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  ) : (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+                  )}
+                  {r.department || 'SHARED'}
+                </span>
+              </td>
+              <td>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontWeight: 500, fontSize: '0.85rem' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                  {r.building || 'Unassigned'}
+                </div>
+              </td>
+              <td>{getRoomTypeBadge(r)}</td>
+              <td style={{ whiteSpace: 'nowrap' }}>
+                <button className="btn-edit" onClick={() => onEdit(r)}>Edit</button>
+                <button className="btn-delete" onClick={() => onDelete(r.id)}>Delete</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
 
