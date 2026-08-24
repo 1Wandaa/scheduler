@@ -5,6 +5,7 @@ import { getMeetingTimeLabel } from '../../utils/scheduleUtils';
 import '../../styles/AutoScheduler.css';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
+import CustomSelect from '../CustomSelect/CustomSelect';
 
 // 1. ADDED 'schedules', 'onLogHistory', and 'onAutoScheduleBatch' to the props list
 function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, activeSemester, onLogHistory }) {
@@ -210,9 +211,54 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     runTargeted();
   };
 
-  const targetOptions = engineMode === 'faculty' ? professors
-    : engineMode === 'room' ? rooms
-      : sections;
+  const targetOptions = React.useMemo(() => {
+    if (engineMode === 'faculty') {
+      return (professors || [])
+        .slice()
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        .map(p => ({
+          value: p.id,
+          label: p.department ? `${p.name} (${p.department})` : p.name
+        }));
+    }
+    if (engineMode === 'room') {
+      return Object.entries(
+        (rooms || []).reduce((acc, r) => {
+          const b = r.building || 'Other';
+          if (!acc[b]) acc[b] = [];
+          acc[b].push(r);
+          return acc;
+        }, {})
+      )
+        .sort(([bA], [bB]) => bA.localeCompare(bB))
+        .map(([building, bRooms]) => ({
+          label: building,
+          options: bRooms
+            .slice()
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }))
+            .map(r => ({
+              value: r.id,
+              label: r.name + (r.type && r.type !== 'Lecture' ? ` [${r.type}]` : '')
+            }))
+        }));
+    }
+    if (engineMode === 'section') {
+      return (sections || [])
+        .slice()
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }))
+        .map(s => ({
+          value: s.id,
+          label: s.department ? `${s.name} (${s.department})` : s.name
+        }));
+    }
+    return [];
+  }, [engineMode, professors, rooms, sections]);
+
+  const targetPlaceholder =
+    engineMode === 'faculty' ? 'Search or select faculty...' :
+    engineMode === 'room' ? 'Search or select room...' :
+    engineMode === 'section' ? 'Search or select section...' :
+    'Choose...';
 
   // Group schedules by Day for cleaner UI
   const groupedSchedule = result?.schedule?.reduce((acc, curr) => {
@@ -222,7 +268,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   }, {}) || {};
 
   return (
-    <div className="card" style={{  }}>
+    <div className="card" style={{ overflow: 'visible' }}>
       <div style={{ marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '15px' }}>
         <h2 style={{ margin: '0 0 5px 0', color: 'var(--accent-dark)' }}>Smart Auto-Scheduler</h2>
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Generate conflict-free timetables automatically.</p>
@@ -246,14 +292,13 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         {engineMode !== 'full' && (
           <div className="form-group">
             <label className="form-label">Select Target</label>
-            <select
-              className="form-select"
+            <CustomSelect
+              name="targetId"
               value={targetId}
               onChange={(e) => setTargetId(e.target.value)}
-            >
-              <option value="">Choose...</option>
-              {targetOptions && [...targetOptions].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
+              placeholder={targetPlaceholder}
+              options={targetOptions}
+            />
           </div>
         )}
       </div>

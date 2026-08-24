@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const CustomSelect = ({ options, value, onChange, placeholder, name, required, style }) => {
+const CustomSelect = ({ options = [], value, onChange, placeholder = 'Select...', name, required, style }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const wrapperRef = useRef(null);
@@ -13,22 +13,31 @@ const CustomSelect = ({ options, value, onChange, placeholder, name, required, s
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const flatOptions = options.flatMap(o => o.options || [o]);
-  const selectedOption = flatOptions.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const flatOptions = safeOptions.flatMap(o => (o && o.options) ? o.options : (o ? [o] : []));
+  const selectedOption = flatOptions.find(o => o && String(o.value) === String(value));
 
   useEffect(() => {
     if (!isOpen) setSearch(selectedOption ? selectedOption.label : '');
   }, [isOpen, selectedOption]);
 
-  const filteredOptions = options.map(group => {
+  const query = (search || '').toLowerCase();
+  const filteredOptions = safeOptions.map(group => {
+    if (!group) return null;
     if (group.options) {
+      const groupLabelMatches = (group.label || '').toLowerCase().includes(query);
       return {
         ...group,
-        options: group.options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()))
+        options: group.options.filter(o => 
+          groupLabelMatches || (o.label || '').toLowerCase().includes(query)
+        )
       };
     }
     return group;
-  }).filter(group => group.options ? group.options.length > 0 : group.label.toLowerCase().includes(search.toLowerCase()));
+  }).filter(group => {
+    if (!group) return false;
+    return group.options ? group.options.length > 0 : (group.label || '').toLowerCase().includes(query);
+  });
 
   return (
     <div ref={wrapperRef} style={{ position: 'relative', width: '100%', ...style }}>
@@ -38,9 +47,10 @@ const CustomSelect = ({ options, value, onChange, placeholder, name, required, s
         value={isOpen ? search : (selectedOption ? selectedOption.label : '')}
         onChange={e => { setSearch(e.target.value); setIsOpen(true); }}
         onFocus={() => { setIsOpen(true); setSearch(''); }}
+        onClick={() => { if (!isOpen) { setIsOpen(true); setSearch(''); } }}
         placeholder={placeholder}
         required={required && !value}
-        style={{ width: '100%', paddingRight: '30px' }}
+        style={{ width: '100%', paddingRight: '30px', cursor: 'pointer' }}
       />
       <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -48,16 +58,16 @@ const CustomSelect = ({ options, value, onChange, placeholder, name, required, s
       {isOpen && (
         <div className="custom-dropdown-menu" style={{
            position: 'absolute', top: '100%', left: 0, right: 0, maxHeight: '220px', overflowY: 'auto',
-           backgroundColor: 'var(--bg-main, #ffffff)', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: '8px',
-           marginTop: '4px', zIndex: 100, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column'
+           backgroundColor: 'var(--card-bg, #ffffff)', border: '1px solid var(--border-color, #e2e8f0)', borderRadius: '8px',
+           marginTop: '4px', zIndex: 1000, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column'
         }}>
           {filteredOptions.length === 0 ? (
-            <div style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>No options found</div>
+            <div style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>No options found</div>
           ) : filteredOptions.map((opt, i) => {
             if (opt.options) {
               return (
                 <div key={opt.label || i}>
-                  <div style={{ padding: '8px 12px', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-muted)', backgroundColor: 'var(--bg-secondary, #f8fafc)' }}>{opt.label}</div>
+                  <div style={{ padding: '8px 12px', fontSize: '0.78rem', fontWeight: 'bold', color: 'var(--text-muted)', backgroundColor: 'var(--bg-secondary, #f8fafc)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{opt.label}</div>
                   {opt.options.map(child => (
                     <div
                       key={child.value}
@@ -71,10 +81,17 @@ const CustomSelect = ({ options, value, onChange, placeholder, name, required, s
                         padding: '10px 12px', paddingLeft: '20px', cursor: child.disabled ? 'not-allowed' : 'pointer',
                         color: child.disabled ? 'var(--text-muted)' : 'var(--text-main)',
                         textDecoration: child.disabled ? 'line-through' : 'none',
-                        borderBottom: '1px solid var(--border-color, #e2e8f0)'
+                        borderBottom: '1px solid var(--border-color, #e2e8f0)',
+                        backgroundColor: String(child.value) === String(value) ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent',
+                        fontWeight: String(child.value) === String(value) ? '600' : '400',
+                        fontSize: '0.88rem'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = child.disabled ? 'transparent' : 'var(--table-header, #f1f5f9)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onMouseEnter={(e) => {
+                        if (!child.disabled) e.currentTarget.style.backgroundColor = 'var(--table-header, #f1f5f9)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = String(child.value) === String(value) ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent';
+                      }}
                     >
                       {child.label}
                     </div>
@@ -95,10 +112,17 @@ const CustomSelect = ({ options, value, onChange, placeholder, name, required, s
                     padding: '10px 12px', cursor: opt.disabled ? 'not-allowed' : 'pointer',
                     color: opt.disabled ? 'var(--text-muted)' : 'var(--text-main)',
                     textDecoration: opt.disabled ? 'line-through' : 'none',
-                    borderBottom: '1px solid var(--border-color, #e2e8f0)'
+                    borderBottom: '1px solid var(--border-color, #e2e8f0)',
+                    backgroundColor: String(opt.value) === String(value) ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent',
+                    fontWeight: String(opt.value) === String(value) ? '600' : '400',
+                    fontSize: '0.88rem'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = opt.disabled ? 'transparent' : 'var(--table-header, #f1f5f9)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onMouseEnter={(e) => {
+                    if (!opt.disabled) e.currentTarget.style.backgroundColor = 'var(--table-header, #f1f5f9)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = String(opt.value) === String(value) ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent';
+                  }}
                 >
                   {opt.label}
                 </div>
