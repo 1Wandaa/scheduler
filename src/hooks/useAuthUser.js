@@ -8,7 +8,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { auth, db } from '../config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, setDoc } from 'firebase/firestore';
 
 /** Timeout (ms) for the initial Firestore profile fetch. */
 const PROFILE_FETCH_TIMEOUT = 5000;
@@ -76,38 +76,51 @@ export function useAuthUser() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          const storedUsername = localStorage.getItem('smartsched_username');
-          const emailPrefix = firebaseUser.email.split('@')[0];
+          const emailPrefix = firebaseUser.email ? firebaseUser.email.split('@')[0] : 'user';
+          let targetDoc = null;
 
-          const searchTargets = [emailPrefix, `@${emailPrefix}`, firebaseUser.email];
-          if (storedUsername && !searchTargets.includes(storedUsername)) {
-            searchTargets.push(storedUsername);
+          // 1. Try direct fetch by UID first (standard for all registered accounts)
+          try {
+            const uidSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
+            if (uidSnap.exists()) {
+              targetDoc = uidSnap;
+            }
+          } catch (uidErr) {
+            console.warn('Direct UID fetch in auth observer failed:', uidErr);
           }
 
-          const q = query(collection(db, 'users'), where('username', 'in', searchTargets));
-
-          const fetchPromise = getDocs(q);
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Firestore request timed out')), PROFILE_FETCH_TIMEOUT);
-          });
-
-          const snapshot = await Promise.race([fetchPromise, timeoutPromise]);
-
-          if (!snapshot.empty) {
-            let targetDoc = snapshot.docs[0];
-            const stored = localStorage.getItem('smartsched_username');
-
-            if (stored) {
-              const exactMatches = snapshot.docs.filter((d) => d.data().username === stored);
-              if (exactMatches.length > 0) {
-                const adminMatch = exactMatches.find((d) => {
-                  const role = d.data().role || '';
-                  return role === 'Admin' || role === 'Department Head';
-                });
-                targetDoc = adminMatch || exactMatches[0];
-              }
+          // 2. Fallback to username search if UID lookup returned nothing
+          if (!targetDoc) {
+            const storedUsername = localStorage.getItem('smartsched_username');
+            const searchTargets = [emailPrefix, `@${emailPrefix}`, firebaseUser.email];
+            if (storedUsername && !searchTargets.includes(storedUsername)) {
+              searchTargets.push(storedUsername);
             }
 
+            const q = query(collection(db, 'users'), where('username', 'in', searchTargets));
+            const fetchPromise = getDocs(q);
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('Firestore request timed out')), PROFILE_FETCH_TIMEOUT);
+            });
+
+            const snapshot = await Promise.race([fetchPromise, timeoutPromise]);
+
+            if (!snapshot.empty) {
+              targetDoc = snapshot.docs[0];
+              if (storedUsername) {
+                const exactMatches = snapshot.docs.filter((d) => d.data().username === storedUsername);
+                if (exactMatches.length > 0) {
+                  const adminMatch = exactMatches.find((d) => {
+                    const role = d.data().role || '';
+                    return role === 'Admin' || role === 'Department Head';
+                  });
+                  targetDoc = adminMatch || exactMatches[0];
+                }
+              }
+            }
+          }
+
+          if (targetDoc) {
             const userData = targetDoc.data();
             setUser({
               ...userData,
@@ -118,7 +131,7 @@ export function useAuthUser() {
           } else {
             // Auth exists but no Firestore profile - create one
             const newProfile = { username: emailPrefix, name: emailPrefix, role: 'Student' };
-            await addDoc(collection(db, 'users'), newProfile);
+            await setDoc(doc(db, 'users', firebaseUser.uid), newProfile);
             setUser(newProfile);
           }
         } catch (error) {

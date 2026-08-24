@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../../config/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc, setDoc, doc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, addDoc, setDoc, doc, onSnapshot } from 'firebase/firestore';
 
 // Department → Program mapping (must match the 'program' field stored in Firestore sections)
 const DEPARTMENT_PROGRAM = {
@@ -218,9 +218,21 @@ const Login = ({ onLogin }) => {
         let firestoreUserDoc = null;
 
         // Authenticate via Firebase Auth only - no plaintext password fallback
-        await signInWithEmailAndPassword(auth, dummyEmail, password);
+        const userCredential = await signInWithEmailAndPassword(auth, dummyEmail, password);
 
-        // After successful auth, fetch the user doc if not already fetched from fallback
+        // After successful auth, fetch the user doc directly by UID first
+        if (userCredential?.user?.uid) {
+          try {
+            const userDocSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
+            if (userDocSnap.exists()) {
+              firestoreUserDoc = userDocSnap;
+            }
+          } catch (fetchErr) {
+            console.warn('Could not fetch user by uid:', fetchErr);
+          }
+        }
+
+        // Fallback to username query if not found by UID
         if (!firestoreUserDoc) {
           firestoreUserDoc = await findUserDocument(username);
         }
@@ -241,6 +253,7 @@ const Login = ({ onLogin }) => {
 
         const userData = firestoreUserDoc.data();
         onLogin({
+          ...userData,
           name: userData.name || username,
           role: userData.role || 'User',
           username: userData.username || username
@@ -269,7 +282,19 @@ const Login = ({ onLogin }) => {
 
       const cleanUsername = googleUser.email.split('@')[0];
 
-      let firestoreUserDoc = await findUserDocument(cleanUsername);
+      let firestoreUserDoc = null;
+      if (googleUser.uid) {
+        try {
+          const uSnap = await getDoc(doc(db, 'users', googleUser.uid));
+          if (uSnap.exists()) firestoreUserDoc = uSnap;
+        } catch (e) {
+          console.warn('Google user UID fetch error:', e);
+        }
+      }
+
+      if (!firestoreUserDoc) {
+        firestoreUserDoc = await findUserDocument(cleanUsername);
+      }
       if (!firestoreUserDoc) {
         firestoreUserDoc = await findUserDocument(googleUser.email);
       }
@@ -279,23 +304,26 @@ const Login = ({ onLogin }) => {
       let finalUsername = googleUser.email;
 
       if (!firestoreUserDoc) {
-        await addDoc(collection(db, 'users'), {
+        const newProfile = {
           username: finalUsername,
           name: name,
           role: role
-        });
+        };
+        await setDoc(doc(db, 'users', googleUser.uid), newProfile);
+        onLogin(newProfile);
       } else {
         const userData = firestoreUserDoc.data();
         role = userData.role || 'Student';
         name = userData.name || name;
         finalUsername = userData.username || finalUsername;
-      }
 
-      onLogin({
-        name: name,
-        role: role,
-        username: finalUsername
-      });
+        onLogin({
+          ...userData,
+          name: name,
+          role: role,
+          username: finalUsername
+        });
+      }
 
     } catch (err) {
       console.error(err);

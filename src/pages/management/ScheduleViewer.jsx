@@ -13,42 +13,76 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     const location = useLocation();
     
     const [viewType, setViewType] = useState(location.state?.viewTarget?.viewType || 'department');
-    const [selectedId, setSelectedId] = useState(location.state?.viewTarget?.selectedId || '');
+    const [selectedId, setSelectedId] = useState(location.state?.viewTarget?.selectedId || user?.department || '');
     const [deptSectionId, setDeptSectionId] = useState(location.state?.viewTarget?.deptSectionId || '');
-    const [selectedYearLevel, setSelectedYearLevel] = useState('');
+    const [selectedYearLevel, setSelectedYearLevel] = useState(user?.yearLevel ? String(user.yearLevel) : '');
     const [previewImage, setPreviewImage] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isDeleteMode, setIsDeleteMode] = useState(false);
     
-    const [hasAppliedInitialTarget, setHasAppliedInitialTarget] = useState(!!location.state?.viewTarget);
+    const hasAppliedInitialTargetRef = React.useRef(!!location.state?.viewTarget);
+    const initialUserAppliedRef = React.useRef(false);
+    const prevSelectedIdRef = React.useRef(selectedId);
+    const prevViewTypeRef = React.useRef(viewType);
 
     useEffect(() => {
-        if (hasAppliedInitialTarget) {
-            setHasAppliedInitialTarget(false);
+        if (hasAppliedInitialTargetRef.current) {
+            hasAppliedInitialTargetRef.current = false;
             return;
         }
 
-        if (viewType === 'department') {
-            const allDepts = departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
-            if (user?.department && allDepts.includes(user.department)) {
-                setSelectedId(user.department);
-            } else if (allDepts.length > 0) {
-                setSelectedId(allDepts[0]);
-            }
-        }
-        else if (viewType === 'room' && rooms.length > 0) setSelectedId(rooms[0].id);
-        else if (viewType === 'faculty' && professors.length > 0) setSelectedId(professors[0].id);
-        else setSelectedId('');
+        const allDepts = departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
 
-        if (viewType === 'department' && user?.yearLevel) {
-            setSelectedYearLevel(user.yearLevel.toString());
-        } else {
-            setSelectedYearLevel('');
+        if (viewType === 'department') {
+            // Find user's section object if available
+            const userSectionObj = (user?.section && sections.length > 0)
+                ? sections.find(s => s.id === user.section || (s.name && s.name.trim().toUpperCase() === user.section.trim().toUpperCase()))
+                : null;
+
+            // Determine target department
+            let targetDept = selectedId;
+            if (!targetDept || !initialUserAppliedRef.current) {
+                if (user?.department && (allDepts.includes(user.department) || allDepts.length === 0)) {
+                    targetDept = user.department;
+                } else if (userSectionObj) {
+                    const secDept = userSectionObj.name.split(/\s+/)[0]?.toUpperCase();
+                    if (secDept && (allDepts.includes(secDept) || allDepts.length === 0)) {
+                        targetDept = secDept;
+                    }
+                }
+                if (!targetDept && allDepts.length > 0) {
+                    targetDept = allDepts[0];
+                }
+                if (targetDept) {
+                    setSelectedId(targetDept);
+                }
+            }
+
+            // Determine target year level
+            if (!initialUserAppliedRef.current) {
+                if (user?.yearLevel) {
+                    setSelectedYearLevel(String(user.yearLevel));
+                } else if (userSectionObj?.yearLevel) {
+                    setSelectedYearLevel(String(userSectionObj.yearLevel));
+                }
+            }
+
+            // Determine target section ID
+            if (userSectionObj && (!deptSectionId || !initialUserAppliedRef.current)) {
+                setDeptSectionId(userSectionObj.id);
+            }
+
+            if (user && (user.department || user.section) && sections.length > 0) {
+                initialUserAppliedRef.current = true;
+            }
+        } else if (viewType === 'room' && rooms.length > 0) {
+            if (!selectedId || prevViewTypeRef.current !== 'room') setSelectedId(rooms[0].id);
+        } else if (viewType === 'faculty' && professors.length > 0) {
+            if (!selectedId || prevViewTypeRef.current !== 'faculty') setSelectedId(professors[0].id);
         }
-        
-        setDeptSectionId('');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [viewType, rooms, professors, sections, user]);
+
+        prevViewTypeRef.current = viewType;
+    }, [viewType, rooms, professors, sections, user, departments]);
 
     // Listen for custom events to change view type from mobile Speed Dial
     useEffect(() => {
@@ -61,14 +95,17 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         return () => window.removeEventListener('change-viewer-type', handleViewChange);
     }, []);
 
-    // Reset stale year level when the department changes
+    // Reset stale year level when the user manually changes department
     useEffect(() => {
         if (viewType === 'department') {
-            setSelectedYearLevel('');
+            if (prevSelectedIdRef.current && prevSelectedIdRef.current !== selectedId) {
+                setSelectedYearLevel('');
+            }
+            prevSelectedIdRef.current = selectedId;
         }
     }, [selectedId, viewType]);
 
-    // Update section filter based on user or leave empty for aggregate view
+    // Update section filter based on department and year level, prioritizing the user's registered section
     useEffect(() => {
         if (viewType === 'department' && selectedId) {
             let matching = sections.filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()));
@@ -77,9 +114,14 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
             }
             if (matching.length > 0) {
                 // If user has a specific section and it's in the matching list, select it
-                if (user?.section && matching.some(sec => sec.name === user.section)) {
-                    const userSec = matching.find(sec => sec.name === user.section);
-                    setDeptSectionId(userSec.id);
+                const userSecMatch = user?.section
+                    ? matching.find(sec => sec.id === user.section || (sec.name && sec.name.trim().toUpperCase() === user.section.trim().toUpperCase()))
+                    : null;
+
+                if (userSecMatch) {
+                    setDeptSectionId(userSecMatch.id);
+                } else if (deptSectionId && matching.some(sec => sec.id === deptSectionId)) {
+                    // Keep current section if it remains valid
                 } else {
                     setDeptSectionId(matching[0].id);
                 }
