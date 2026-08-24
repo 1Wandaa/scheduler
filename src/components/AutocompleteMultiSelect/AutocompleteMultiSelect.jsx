@@ -46,6 +46,7 @@ const AutocompleteMultiSelect = ({
   };
 
   const handleOptionClick = (option) => {
+    if (option.disabled) return;
     onToggle(option);
     setSearchQuery('');
     // Keep focus on input for fast multi-selection
@@ -94,12 +95,21 @@ const AutocompleteMultiSelect = ({
             <div className="autocomplete-options-list">
               {options.map(opt => {
                 const isSelected = selectedIds.includes(opt.id) || selectedIds.includes(opt.name) || selectedIds.includes(opt.code);
+                const isDisabled = !!opt.disabled;
                 return (
                   <div 
                     key={opt.id} 
-                    className={`autocomplete-option ${isSelected ? 'selected' : ''}`}
+                    className={`autocomplete-option ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
                     onClick={() => handleOptionClick(opt)}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isSelected ? 0.7 : 1, background: isSelected ? 'var(--bg-main)' : '' }}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between', 
+                      opacity: isDisabled ? 0.45 : isSelected ? 0.7 : 1, 
+                      background: isSelected ? 'var(--bg-main)' : '',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer'
+                    }}
+                    title={opt.disabledReason || ''}
                   >
                     <div style={{ flex: 1 }}>
                       {renderOption ? renderOption(opt) : <span className="default-option">{opt.name || opt.code || opt.id}</span>}

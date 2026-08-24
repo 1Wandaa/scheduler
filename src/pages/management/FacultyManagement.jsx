@@ -34,6 +34,23 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
     setShowModal(true);
   };
 
+  const getSectionSubjects = (sec) => {
+    if (!sec || !sec.subjects || !Array.isArray(sec.subjects)) return [];
+    return (sec.subjects || []).map(subRef => {
+      return subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef, name: subRef };
+    });
+  };
+
+  const getFacultyMatchingSubjectsForSection = (sec, specialization) => {
+    if (!sec || !specialization || specialization.length === 0) return [];
+    const secSubjs = getSectionSubjects(sec);
+    return secSubjs.filter(sub => 
+      specialization.includes(sub.id) || 
+      specialization.includes(sub.code) || 
+      specialization.includes(sub.name)
+    );
+  };
+
   const handleSubjectToggle = (subjectId) => {
     // SubjectSelector only passes the subjectId
     const subject = subjects.find(s => s.id === subjectId);
@@ -42,11 +59,22 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
     setFormData(prev => {
       const current = prev.specialization || [];
       const isChecked = current.includes(subject.id) || current.includes(subject.code) || current.includes(subject.name);
-      if (isChecked) {
-        return { ...prev, specialization: current.filter(s => s !== subject.id && s !== subject.code && s !== subject.name) };
-      } else {
-        return { ...prev, specialization: [...current, subject.id] };
-      }
+      const newSpecialization = isChecked
+        ? current.filter(s => s !== subject.id && s !== subject.code && s !== subject.name)
+        : [...current, subject.id];
+
+      // Auto-prune any assigned sections that are no longer enrolled in any of the remaining subjects
+      const updatedSections = (prev.assignedSections || []).filter(secId => {
+        const sec = sections.find(s => s.id === secId || s.name === secId);
+        if (!sec) return false;
+        return getFacultyMatchingSubjectsForSection(sec, newSpecialization).length > 0;
+      });
+
+      return {
+        ...prev,
+        specialization: newSpecialization,
+        assignedSections: updatedSections
+      };
     });
   };
 
@@ -63,15 +91,32 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
   };
 
   const handleSectionToggle = (sec) => {
-    setFormData(prev => {
-      const current = prev.assignedSections || [];
-      const isChecked = current.includes(sec.id) || current.includes(sec.name);
-      if (isChecked) {
-        return { ...prev, assignedSections: current.filter(s => s !== sec.id && s !== sec.name) };
-      } else {
-        return { ...prev, assignedSections: [...current, sec.id] };
-      }
-    });
+    const current = formData.assignedSections || [];
+    const isChecked = current.includes(sec.id) || current.includes(sec.name);
+    if (isChecked) {
+      setFormData(prev => ({
+        ...prev,
+        assignedSections: (prev.assignedSections || []).filter(s => s !== sec.id && s !== sec.name)
+      }));
+      return;
+    }
+
+    const assignedSubjectIds = formData.specialization || [];
+    if (assignedSubjectIds.length === 0) {
+      toast.warning("Please select the faculty's Assigned Subjects first before assigning sections.");
+      return;
+    }
+
+    const matching = getFacultyMatchingSubjectsForSection(sec, assignedSubjectIds);
+    if (matching.length === 0) {
+      toast.error(`Cannot assign ${sec.name}: This section is not enrolled in any of the faculty's assigned subjects.`);
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      assignedSections: [...(prev.assignedSections || []), sec.id]
+    }));
   };
 
   const handleOpenEdit = (prof) => {
@@ -140,6 +185,28 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
       return;
     }
 
+    if (formData.assignedSections && formData.assignedSections.length > 0) {
+      if (!formData.specialization || formData.specialization.length === 0) {
+        setError("Cannot assign sections without selecting assigned subjects. Please select assigned subjects first.");
+        return;
+      }
+
+      const invalidSections = formData.assignedSections.filter(secId => {
+        const sec = sections.find(s => s.id === secId || s.name === secId);
+        if (!sec) return false;
+        return getFacultyMatchingSubjectsForSection(sec, formData.specialization).length === 0;
+      });
+
+      if (invalidSections.length > 0) {
+        const names = invalidSections.map(secId => {
+          const sec = sections.find(s => s.id === secId || s.name === secId);
+          return sec ? sec.name : secId;
+        }).join(', ');
+        setError(`Cannot save: The section(s) [${names}] are not enrolled in any of the faculty's assigned subjects.`);
+        return;
+      }
+    }
+
     const dataToSave = { ...formData, name: combinedName };
 
     setIsSaving(true);
@@ -205,10 +272,43 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
   }, [professors, departmentFilter, searchQuery]);
 
   const filteredSections = useMemo(() => {
+    const assignedSubjectIds = formData.specialization || [];
+    const hasAssignedSubjects = assignedSubjectIds.length > 0;
+
     return [...sections]
-      .filter(sec => (sec.name || '').toLowerCase().includes(sectionSearchQuery.toLowerCase()))
-      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [sections, sectionSearchQuery]);
+      .map(sec => {
+        const allEnrolled = getSectionSubjects(sec);
+        const matching = getFacultyMatchingSubjectsForSection(sec, assignedSubjectIds);
+        const isEligible = hasAssignedSubjects && matching.length > 0;
+        return {
+          ...sec,
+          allEnrolled,
+          matchingSubjects: matching,
+          disabled: !isEligible,
+          disabledReason: !hasAssignedSubjects 
+            ? 'Select assigned subjects first' 
+            : 'Section is not enrolled in any of the faculty’s assigned subjects'
+        };
+      })
+      .filter(sec => {
+        if (!sectionSearchQuery.trim()) return true;
+        const q = sectionSearchQuery.toLowerCase();
+        const nameMatch = (sec.name || '').toLowerCase().includes(q);
+        const deptMatch = (sec.department || sec.program || '').toLowerCase().includes(q);
+        const subjectMatch = sec.allEnrolled.some(s => 
+          (s.code || '').toLowerCase().includes(q) || 
+          (s.name || '').toLowerCase().includes(q)
+        );
+        return nameMatch || deptMatch || subjectMatch;
+      })
+      .sort((a, b) => {
+        // Show eligible sections first
+        if (a.disabled !== b.disabled) {
+          return a.disabled ? 1 : -1;
+        }
+        return (a.name || '').localeCompare(b.name || '');
+      });
+  }, [sections, sectionSearchQuery, formData.specialization, subjects]);
 
   const sortedRooms = useMemo(() => {
     return [...rooms].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -421,40 +521,140 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
             </div>
 
             <div className="form-group" style={{ marginBottom: '25px' }}>
-              <label className="form-label">Assigned Sections</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>Assigned Sections</label>
+                {formData.specialization && formData.specialization.length > 0 && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: '600' }}>
+                    {filteredSections.filter(s => !s.disabled).length} eligible section(s)
+                  </span>
+                )}
+              </div>
+
+              {(!formData.specialization || formData.specialization.length === 0) && (
+                <div style={{ 
+                  fontSize: '0.78rem', color: 'var(--warning)', 
+                  background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.25)', 
+                  padding: '8px 12px', borderRadius: '6px', marginBottom: '10px',
+                  display: 'flex', alignItems: 'center', gap: '6px'
+                }}>
+                  <span>⚠️</span>
+                  <span>Please select at least one <strong>Assigned Subject</strong> above first to view and assign eligible sections.</span>
+                </div>
+              )}
+
               <AutocompleteMultiSelect
                 allOptions={sections}
                 options={filteredSections}
                 selectedIds={formData.assignedSections || []}
                 onToggle={handleSectionToggle}
-                placeholder="Search section name..."
+                placeholder={(!formData.specialization || formData.specialization.length === 0) ? "Select subjects first..." : "Search section name or enrolled subject..."}
                 searchQuery={sectionSearchQuery}
                 setSearchQuery={setSectionSearchQuery}
-                noOptionsMessage={filteredSections.length === 0 ? "No sections available." : "No sections match your search."}
-                renderChip={(sec, onRemove) => (
-                  <div style={{ 
-                    display: 'flex', alignItems: 'center', gap: '6px', 
-                    padding: '4px 10px', borderRadius: '16px', 
-                    background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)',
-                    fontSize: '0.8rem', fontWeight: '600', color: '#10b981' 
-                  }}>
-                    {sec.name}
-                    <button 
-                      type="button" 
-                      onClick={(e) => { e.stopPropagation(); onRemove(); }}
-                      style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
-                      
-                      
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                  </div>
-                )}
-                renderOption={(sec) => (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{sec.name}</span>
-                  </div>
-                )}
+                noOptionsMessage={
+                  sections.length === 0 
+                    ? "No sections available." 
+                    : (!formData.specialization || formData.specialization.length === 0)
+                      ? "Select assigned subjects first to see eligible sections."
+                      : "No sections match your search."
+                }
+                renderChip={(sec, onRemove) => {
+                  const matching = getFacultyMatchingSubjectsForSection(sec, formData.specialization || []);
+                  const matchingLabel = matching.map(s => s.code || s.name).join(', ');
+
+                  return (
+                    <div style={{ 
+                      display: 'flex', alignItems: 'center', gap: '6px', 
+                      padding: '4px 10px', borderRadius: '16px', 
+                      background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)',
+                      fontSize: '0.8rem', fontWeight: '600', color: '#10b981' 
+                    }}>
+                      <span>{sec.name}</span>
+                      {matchingLabel && (
+                        <span style={{ fontSize: '0.72rem', opacity: 0.85, fontWeight: '500', color: '#047857' }}>
+                          ({matchingLabel})
+                        </span>
+                      )}
+                      <button 
+                        type="button" 
+                        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                        style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      </button>
+                    </div>
+                  );
+                }}
+                renderOption={(sec) => {
+                  const isEligible = !sec.disabled;
+                  const matchingCodes = (sec.matchingSubjects || []).map(s => s.code || s.name);
+                  const otherEnrolledCodes = (sec.allEnrolled || [])
+                    .filter(s => !matchingCodes.includes(s.code || s.name))
+                    .map(s => s.code || s.name);
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%', padding: '2px 0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontWeight: '700', color: isEligible ? 'var(--accent-dark)' : 'var(--text-muted)', fontSize: '0.9rem' }}>
+                            {sec.name}
+                          </span>
+                          {sec.program && (
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', background: 'var(--bg-main)', padding: '1px 6px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                              {sec.program}
+                            </span>
+                          )}
+                        </div>
+                        {!isEligible ? (
+                          <span style={{ fontSize: '0.7rem', color: '#ef4444', background: '#fee2e2', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>
+                            Not Enrolled
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.7rem', color: '#059669', background: '#d1fae5', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>
+                            {matchingCodes.length} Matching Subject{matchingCodes.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Enrolled Subjects List */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '600' }}>Enrolled:</span>
+                        {sec.allEnrolled && sec.allEnrolled.length > 0 ? (
+                          <>
+                            {matchingCodes.map(code => (
+                              <span key={code} style={{
+                                fontSize: '0.7rem', fontWeight: '700',
+                                background: 'rgba(16, 185, 129, 0.15)', color: '#059669',
+                                border: '1px solid rgba(16, 185, 129, 0.3)',
+                                padding: '1px 6px', borderRadius: '4px'
+                              }}>
+                                ✓ {code}
+                              </span>
+                            ))}
+                            {otherEnrolledCodes.slice(0, 4).map(code => (
+                              <span key={code} style={{
+                                fontSize: '0.7rem', fontWeight: '500',
+                                background: 'var(--bg-main)', color: 'var(--text-muted)',
+                                border: '1px solid var(--border-color)',
+                                padding: '1px 5px', borderRadius: '4px', opacity: 0.8
+                              }}>
+                                {code}
+                              </span>
+                            ))}
+                            {otherEnrolledCodes.length > 4 && (
+                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                +{otherEnrolledCodes.length - 4} more
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            No subjects enrolled
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }}
               />
             </div>
 
