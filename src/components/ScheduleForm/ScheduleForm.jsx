@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TIME_SLOTS, DAYS } from '../../config/constants';
-import { getEligibleProfessors, slotsNeededFromIndex, getMeetingTimeLabel, findScheduleConflicts } from '../../utils/scheduleUtils';
+import { getEligibleProfessors, professorMatchesSubject, slotsNeededFromIndex, getMeetingTimeLabel, findScheduleConflicts } from '../../utils/scheduleUtils';
 import CustomSelect from '../CustomSelect/CustomSelect';
 import '../../styles/SchedulerForm.css';
 
@@ -53,21 +53,90 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     const { name, value } = e.target;
     setFormData(prev => {
       const newData = { ...prev, [name]: value };
-      // Clear dependent fields when subject changes
+
       if (name === 'subject') {
-        newData.section = '';
-        newData.professor = '';
-        newData.room = '';
-      } else if (name === 'section' && newData.professor && value) {
-        const sub = subjects.find(s => s.id === prev.subject);
-        const sec = sections ? sections.find(s => s.id === value) : null;
-        if (sub && sec) {
-          const validProfs = getEligibleProfessors(professors, sub, sec);
-          if (!validProfs.some(p => p.id === newData.professor)) {
-            newData.professor = '';
+        if (!value) {
+          newData.room = '';
+        } else {
+          // If professor was selected, verify they can teach the newly selected subject
+          if (newData.professor) {
+            const prof = professors.find(p => p.id === newData.professor);
+            const sub = subjects.find(s => s.id === value);
+            if (prof && sub && !professorMatchesSubject(prof, sub)) {
+              newData.professor = '';
+            }
+          }
+          // If section was selected, verify it is enrolled in the newly selected subject
+          if (newData.section) {
+            const sec = sections ? sections.find(s => s.id === newData.section) : null;
+            const sub = subjects.find(s => s.id === value);
+            if (sec && sub) {
+              const secSubs = sec.subjects || [];
+              const enrolled = secSubs.includes(sub.id) ||
+                (sub.code && secSubs.includes(sub.code)) ||
+                (sub.name && secSubs.includes(sub.name));
+              if (!enrolled) {
+                newData.section = '';
+              }
+            }
+          }
+        }
+      } else if (name === 'professor') {
+        if (value) {
+          const prof = professors.find(p => p.id === value);
+          // If subject was selected, verify it matches the newly selected professor
+          if (newData.subject) {
+            const sub = subjects.find(s => s.id === newData.subject);
+            if (prof && sub && !professorMatchesSubject(prof, sub)) {
+              newData.subject = '';
+            }
+          }
+          // If section was selected, verify it is eligible for the newly selected professor
+          if (newData.section) {
+            const sec = sections ? sections.find(s => s.id === newData.section) : null;
+            if (sec && prof) {
+              if (prof.assignedSections && prof.assignedSections.length > 0) {
+                const isAssigned = prof.assignedSections.includes(sec.id) ||
+                  (sec.name && prof.assignedSections.includes(sec.name));
+                if (!isAssigned) {
+                  newData.section = '';
+                }
+              }
+            }
+          }
+        }
+      } else if (name === 'section') {
+        if (value) {
+          const sec = sections ? sections.find(s => s.id === value) : null;
+          // If subject was selected, verify it is enrolled in this section
+          if (newData.subject) {
+            const sub = subjects.find(s => s.id === newData.subject);
+            if (sec && sub) {
+              const secSubs = sec.subjects || [];
+              const enrolled = secSubs.includes(sub.id) ||
+                (sub.code && secSubs.includes(sub.code)) ||
+                (sub.name && secSubs.includes(sub.name));
+              if (!enrolled) {
+                newData.subject = '';
+              }
+            }
+          }
+          // If professor was selected, verify eligibility for this section
+          if (newData.professor) {
+            const prof = professors.find(p => p.id === newData.professor);
+            if (sec && prof) {
+              if (prof.assignedSections && prof.assignedSections.length > 0) {
+                const isAssigned = prof.assignedSections.includes(sec.id) ||
+                  (sec.name && prof.assignedSections.includes(sec.name));
+                if (!isAssigned) {
+                  newData.professor = '';
+                }
+              }
+            }
           }
         }
       }
+
       return newData;
     });
     setValidation(null);
@@ -162,24 +231,82 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
   const selectedSubject = subjects.find(s => s.id === formData.subject);
   const selectedSection = sections ? sections.find(s => s.id === formData.section) : null;
-  const eligibleSections = selectedSubject && sections
-    ? sections.filter(sec => {
-        const sectionSubjects = sec.subjects || [];
-        return sectionSubjects.includes(selectedSubject.id) || 
-               (selectedSubject.code && sectionSubjects.includes(selectedSubject.code)) ||
-               (selectedSubject.name && sectionSubjects.includes(selectedSubject.name));
-      })
-    : sections;
+  const selectedProfessor = professors.find(p => p.id === formData.professor);
+  const selectedRoom = rooms.find(r => r.id === formData.room);
+
+  // Active semester subjects base
+  const activeSemesterSubjects = subjects.filter(s => !s.semester || s.semester === 'Both' || s.semester === activeSemester);
+
+  // Eligible Subjects: filtered by active semester, selected professor's subjects, and selected section's subjects
+  const eligibleSubjects = activeSemesterSubjects.filter(sub => {
+    if (selectedProfessor && !professorMatchesSubject(selectedProfessor, sub)) {
+      return false;
+    }
+    if (selectedSection) {
+      const secSubjects = selectedSection.subjects || [];
+      const isEnrolled = secSubjects.includes(sub.id) ||
+        (sub.code && secSubjects.includes(sub.code)) ||
+        (sub.name && secSubjects.includes(sub.name));
+      if (!isEnrolled) return false;
+    }
+    return true;
+  });
+
+  // Eligible Sections: filtered by selected subject and selected professor
+  const eligibleSections = sections ? sections.filter(sec => {
+    const secSubjects = sec.subjects || [];
+
+    if (selectedSubject) {
+      const isEnrolled = secSubjects.includes(selectedSubject.id) || 
+        (selectedSubject.code && secSubjects.includes(selectedSubject.code)) ||
+        (selectedSubject.name && secSubjects.includes(selectedSubject.name));
+      if (!isEnrolled) return false;
+    }
+
+    if (selectedProfessor) {
+      if (selectedProfessor.assignedSections && selectedProfessor.assignedSections.length > 0) {
+        const isAssigned = selectedProfessor.assignedSections.includes(sec.id) ||
+          (sec.name && selectedProfessor.assignedSections.includes(sec.name));
+        if (!isAssigned) return false;
+      } else if (!selectedSubject) {
+        const profSubjects = activeSemesterSubjects.filter(sub => professorMatchesSubject(selectedProfessor, sub));
+        const takesAnyProfSubject = profSubjects.some(sub =>
+          secSubjects.includes(sub.id) ||
+          (sub.code && secSubjects.includes(sub.code)) ||
+          (sub.name && secSubjects.includes(sub.name))
+        );
+        if (!takesAnyProfSubject) return false;
+      }
+    }
+
+    return true;
+  }) : [];
+
+  // Eligible Professors: filtered by selected subject and selected section
   const eligibleProfessors = selectedSubject
     ? getEligibleProfessors(professors, selectedSubject, selectedSection)
-    : professors;
+    : selectedSection
+      ? professors.filter(p => {
+          const secSubjects = selectedSection.subjects || [];
+          const profSubjects = activeSemesterSubjects.filter(sub => professorMatchesSubject(p, sub));
+          const matchesSecSubject = profSubjects.some(sub =>
+            secSubjects.includes(sub.id) ||
+            (sub.code && secSubjects.includes(sub.code)) ||
+            (sub.name && secSubjects.includes(sub.name))
+          );
+          if (!matchesSecSubject) return false;
+
+          if (p.assignedSections && p.assignedSections.length > 0) {
+            return p.assignedSections.includes(selectedSection.id) ||
+              (selectedSection.name && p.assignedSections.includes(selectedSection.name));
+          }
+          return true;
+        })
+      : professors;
 
   const eligibleTimeSlots = selectedSubject
     ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, selectedSubject.hoursPerMeeting) > 0)
     : TIME_SLOTS;
-
-  const selectedProfessor = professors.find(p => p.id === formData.professor);
-  const selectedRoom = rooms.find(r => r.id === formData.room);
   
   let selectedTimeSlot = null;
   if (formData.timeSlot) {
@@ -245,8 +372,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               onChange={handleChange}
               placeholder="Select a subject..."
               required
-              options={[...subjects]
-                .filter(s => !s.semester || s.semester === 'Both' || s.semester === activeSemester)
+              options={[...eligibleSubjects]
                 .sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' }))
                 .map(subject => ({ value: subject.id, label: `${subject.code} - ${subject.name}` }))}
             />
@@ -406,11 +532,12 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                     return null;
                   }
 
+                  const isSelected = formData.timeSlot === rangeLabel;
                   return (
                     <div
                       key={slot.id}
                       onClick={() => {
-                        setFormData(prev => ({ ...prev, timeSlot: rangeLabel }));
+                        setFormData(prev => ({ ...prev, timeSlot: isSelected ? '' : rangeLabel }));
                         setIsTimeSlotOpen(false);
                         setValidation(null);
                       }}
@@ -419,11 +546,13 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                         cursor: 'pointer',
                         borderBottom: '1px solid var(--border-color)',
                         color: 'var(--text-main)',
+                        backgroundColor: isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent',
+                        fontWeight: isSelected ? '600' : '400',
                         fontSize: '0.9rem',
                         transition: 'background-color 0.15s ease'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--table-header)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--table-header)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent'; }}
                     >
                       {rangeLabel}
                     </div>

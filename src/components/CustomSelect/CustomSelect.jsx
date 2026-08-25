@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const CustomSelect = ({ options = [], value, onChange, placeholder = 'Select...', name, required, style }) => {
+const CustomSelect = ({ options = [], value, onChange, placeholder = 'Select...', name, required, style, allowDeselect = true }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const wrapperRef = useRef(null);
@@ -68,44 +68,50 @@ const CustomSelect = ({ options = [], value, onChange, placeholder = 'Select...'
               return (
                 <div key={opt.label || i}>
                   <div style={{ padding: '8px 12px', fontSize: '0.78rem', fontWeight: 'bold', color: 'var(--text-muted)', backgroundColor: 'var(--bg-secondary, #f8fafc)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{opt.label}</div>
-                  {opt.options.map(child => (
-                    <div
-                      key={child.value}
-                      onClick={() => {
-                        if (!child.disabled) {
-                           onChange({ target: { name, value: child.value } });
-                           setIsOpen(false);
-                        }
-                      }}
-                      style={{
-                        padding: '10px 12px', paddingLeft: '20px', cursor: child.disabled ? 'not-allowed' : 'pointer',
-                        color: child.disabled ? 'var(--text-muted)' : 'var(--text-main)',
-                        textDecoration: child.disabled ? 'line-through' : 'none',
-                        borderBottom: '1px solid var(--border-color, #e2e8f0)',
-                        backgroundColor: String(child.value) === String(value) ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent',
-                        fontWeight: String(child.value) === String(value) ? '600' : '400',
-                        fontSize: '0.88rem'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!child.disabled) e.currentTarget.style.backgroundColor = 'var(--table-header, #f1f5f9)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = String(child.value) === String(value) ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent';
-                      }}
-                    >
-                      {child.label}
-                    </div>
-                  ))}
+                  {opt.options.map(child => {
+                    const isSelected = String(child.value) === String(value);
+                    return (
+                      <div
+                        key={child.value}
+                        onClick={() => {
+                          if (!child.disabled) {
+                            const nextValue = (allowDeselect && isSelected) ? '' : child.value;
+                            onChange({ target: { name, value: nextValue } });
+                            setIsOpen(false);
+                          }
+                        }}
+                        style={{
+                          padding: '10px 12px', paddingLeft: '20px', cursor: child.disabled ? 'not-allowed' : 'pointer',
+                          color: child.disabled ? 'var(--text-muted)' : 'var(--text-main)',
+                          textDecoration: child.disabled ? 'line-through' : 'none',
+                          borderBottom: '1px solid var(--border-color, #e2e8f0)',
+                          backgroundColor: isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent',
+                          fontWeight: isSelected ? '600' : '400',
+                          fontSize: '0.88rem'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!child.disabled) e.currentTarget.style.backgroundColor = 'var(--table-header, #f1f5f9)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent';
+                        }}
+                      >
+                        {child.label}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             } else {
+              const isSelected = String(opt.value) === String(value);
               return (
                 <div
                   key={opt.value}
                   onClick={() => {
                     if (!opt.disabled) {
-                       onChange({ target: { name, value: opt.value } });
-                       setIsOpen(false);
+                      const nextValue = (allowDeselect && isSelected) ? '' : opt.value;
+                      onChange({ target: { name, value: nextValue } });
+                      setIsOpen(false);
                     }
                   }}
                   style={{
@@ -113,15 +119,15 @@ const CustomSelect = ({ options = [], value, onChange, placeholder = 'Select...'
                     color: opt.disabled ? 'var(--text-muted)' : 'var(--text-main)',
                     textDecoration: opt.disabled ? 'line-through' : 'none',
                     borderBottom: '1px solid var(--border-color, #e2e8f0)',
-                    backgroundColor: String(opt.value) === String(value) ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent',
-                    fontWeight: String(opt.value) === String(value) ? '600' : '400',
+                    backgroundColor: isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent',
+                    fontWeight: isSelected ? '600' : '400',
                     fontSize: '0.88rem'
                   }}
                   onMouseEnter={(e) => {
                     if (!opt.disabled) e.currentTarget.style.backgroundColor = 'var(--table-header, #f1f5f9)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = String(opt.value) === String(value) ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent';
+                    e.currentTarget.style.backgroundColor = isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent';
                   }}
                 >
                   {opt.label}
