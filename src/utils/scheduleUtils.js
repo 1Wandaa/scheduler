@@ -93,17 +93,17 @@ export function getSectionDepartment(section) {
   return null;
 }
 
-/** Strict match: professor specialization must equal subject ID or code. */
 export function professorMatchesSubject(professor, subject) {
   if (!professor || !subject) return false;
   const specs = professor.specialization || [];
-  const subId = String(subject.id).toLowerCase();
-  const subCode = String(subject.code || '').toLowerCase();
+  const subId = String(subject.id || '').toLowerCase().trim();
+  const subCode = String(subject.code || '').toLowerCase().trim();
+  const subName = String(subject.name || '').toLowerCase().trim();
 
   return specs.some(s => {
-    const spec = String(s).toLowerCase().trim();
+    const spec = String(s || '').toLowerCase().trim();
     if (!spec) return false;
-    return spec === subId || spec === subCode;
+    return (subId && spec === subId) || (subCode && spec === subCode) || (subName && spec === subName);
   });
 }
 
@@ -261,19 +261,21 @@ export function getEligibleProfessors(professors, subject, section) {
   const sectionId = section?.id;
   const sectionName = section?.name;
   
-  pool = pool.filter(p => {
-    if (p.assignedSections && p.assignedSections.length > 0) {
-      return p.assignedSections.includes(sectionId) || (sectionName && p.assignedSections.includes(sectionName));
-    }
-    return true;
-  });
-
-  if ((sectionId || sectionName) && pool.length > 0) {
-    const explicitProfs = pool.filter(p => {
-      const assigned = p.assignedSections || [];
-      return assigned.includes(sectionId) || (sectionName && assigned.includes(sectionName));
+  if (sectionId || sectionName) {
+    pool = pool.filter(p => {
+      if (p.assignedSections && p.assignedSections.length > 0) {
+        return p.assignedSections.includes(sectionId) || (sectionName && p.assignedSections.includes(sectionName));
+      }
+      return true;
     });
-    if (explicitProfs.length > 0) pool = explicitProfs;
+
+    if (pool.length > 0) {
+      const explicitProfs = pool.filter(p => {
+        const assigned = p.assignedSections || [];
+        return assigned.includes(sectionId) || (sectionName && assigned.includes(sectionName));
+      });
+      if (explicitProfs.length > 0) pool = explicitProfs;
+    }
   }
 
   return pool;

@@ -58,6 +58,15 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
         newData.section = '';
         newData.professor = '';
         newData.room = '';
+      } else if (name === 'section' && newData.professor && value) {
+        const sub = subjects.find(s => s.id === prev.subject);
+        const sec = sections ? sections.find(s => s.id === value) : null;
+        if (sub && sec) {
+          const validProfs = getEligibleProfessors(professors, sub, sec);
+          if (!validProfs.some(p => p.id === newData.professor)) {
+            newData.professor = '';
+          }
+        }
       }
       return newData;
     });
@@ -156,7 +165,9 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
   const eligibleSections = selectedSubject && sections
     ? sections.filter(sec => {
         const sectionSubjects = sec.subjects || [];
-        return sectionSubjects.includes(selectedSubject.id) || sectionSubjects.includes(selectedSubject.code);
+        return sectionSubjects.includes(selectedSubject.id) || 
+               (selectedSubject.code && sectionSubjects.includes(selectedSubject.code)) ||
+               (selectedSubject.name && sectionSubjects.includes(selectedSubject.name));
       })
     : sections;
   const eligibleProfessors = selectedSubject
