@@ -10,37 +10,37 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
   const getFullDepartmentName = () => {
     let deptAcronym = null;
     for (const s of schedules) {
-        if (s.section?.name) {
-             const name = s.section.name.toUpperCase();
-             if (name.includes('BSCS')) deptAcronym = 'BSCS';
-             else if (name.includes('BAEL')) deptAcronym = 'BAEL';
-             else if (name.includes('BSOA')) deptAcronym = 'BSOA';
-             else if (name.includes('BSFT')) deptAcronym = 'BSFT';
-             if (deptAcronym) break;
-        }
+      if (s.section?.name) {
+        const name = s.section.name.toUpperCase();
+        if (name.includes('BSCS')) deptAcronym = 'BSCS';
+        else if (name.includes('BAEL')) deptAcronym = 'BAEL';
+        else if (name.includes('BSOA')) deptAcronym = 'BSOA';
+        else if (name.includes('BSFT')) deptAcronym = 'BSFT';
+        if (deptAcronym) break;
+      }
     }
-    
+
     const prog = (programName || '').toUpperCase();
     if (!deptAcronym) {
-       if (prog.includes('COMPUTER SCIENCE') || prog.includes('BSCS')) deptAcronym = 'BSCS';
-       else if (prog.includes('ENGLISH LANGUAGE') || prog.includes('BAEL')) deptAcronym = 'BAEL';
-       else if (prog.includes('OFFICE ADMINISTRATION') || prog.includes('BSOA')) deptAcronym = 'BSOA';
-       else if (prog.includes('FOOD TECHNOLOGY') || prog.includes('BSFT')) deptAcronym = 'BSFT';
+      if (prog.includes('COMPUTER SCIENCE') || prog.includes('BSCS')) deptAcronym = 'BSCS';
+      else if (prog.includes('ENGLISH LANGUAGE') || prog.includes('BAEL')) deptAcronym = 'BAEL';
+      else if (prog.includes('OFFICE ADMINISTRATION') || prog.includes('BSOA')) deptAcronym = 'BSOA';
+      else if (prog.includes('FOOD TECHNOLOGY') || prog.includes('BSFT')) deptAcronym = 'BSFT';
     }
 
     switch (deptAcronym) {
-        case 'BSCS': return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
-        case 'BAEL': return 'BACHELOR OF ARTS IN ENGLISH LANGUAGE DEPARTMENT';
-        case 'BSOA': return 'BACHELOR OF SCIENCE IN OFFICE ADMINISTRATION DEPARTMENT';
-        case 'BSFT': return 'BACHELOR OF SCIENCE IN FOOD TECHNOLOGY DEPARTMENT';
-        default: 
-             if (programName) {
-                 let formatted = programName.toUpperCase();
-                 if (formatted.startsWith('BA ')) formatted = formatted.replace('BA ', 'BACHELOR OF ARTS IN ');
-                 if (formatted.startsWith('BS ')) formatted = formatted.replace('BS ', 'BACHELOR OF SCIENCE IN ');
-                 return `${formatted} DEPARTMENT`;
-             }
-             return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
+      case 'BSCS': return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
+      case 'BAEL': return 'BACHELOR OF ARTS IN ENGLISH LANGUAGE DEPARTMENT';
+      case 'BSOA': return 'BACHELOR OF SCIENCE IN OFFICE ADMINISTRATION DEPARTMENT';
+      case 'BSFT': return 'BACHELOR OF SCIENCE IN FOOD TECHNOLOGY DEPARTMENT';
+      default:
+        if (programName) {
+          let formatted = programName.toUpperCase();
+          if (formatted.startsWith('BA ')) formatted = formatted.replace('BA ', 'BACHELOR OF ARTS IN ');
+          if (formatted.startsWith('BS ')) formatted = formatted.replace('BS ', 'BACHELOR OF SCIENCE IN ');
+          return `${formatted} DEPARTMENT`;
+        }
+        return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
     }
   };
 
@@ -132,44 +132,44 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     if (isPrint) {
       // Shrink the summary table for export so it fits on one page
       const summaryContainer = clone.querySelector('.schedule-summary-container');
-    if (summaryContainer) {
-      summaryContainer.style.margin = '5px 0';
-      summaryContainer.style.padding = '0';
-      
-      const h3 = summaryContainer.querySelector('h3');
-      if (h3) h3.style.fontSize = '0.9rem';
-      const h4 = summaryContainer.querySelector('h4');
-      if (h4) {
-         h4.style.fontSize = '0.8rem';
-         h4.style.margin = '2px 0';
-      }
-      const p = summaryContainer.querySelector('p');
-      if (p) p.style.fontSize = '0.75rem';
-      
-      const summaryTable = clone.querySelector('.schedule-summary-table');
-      if (summaryTable) {
-         summaryTable.style.fontSize = '0.65rem';
-         summaryTable.style.marginBottom = '5px';
-         summaryTable.querySelectorAll('th, td').forEach(cell => {
-             cell.style.padding = '2px';
-         });
-      }
+      if (summaryContainer) {
+        summaryContainer.style.margin = '5px 0';
+        summaryContainer.style.padding = '0';
 
-      // Also shrink the main schedule grid
-      const scheduleTable = clone.querySelector('.schedule-table');
-      if (scheduleTable) {
-         scheduleTable.style.fontSize = '0.7rem'; // scale down the font
-         scheduleTable.querySelectorAll('th, td').forEach(cell => {
-             cell.style.padding = '2px';
-         });
-         scheduleTable.querySelectorAll('.schedule-item').forEach(item => {
-             item.style.padding = '2px';
-             const details = item.querySelector('.details');
-             if (details) details.style.marginTop = '2px';
-         });
+        const h3 = summaryContainer.querySelector('h3');
+        if (h3) h3.style.fontSize = '0.9rem';
+        const h4 = summaryContainer.querySelector('h4');
+        if (h4) {
+          h4.style.fontSize = '0.8rem';
+          h4.style.margin = '2px 0';
+        }
+        const p = summaryContainer.querySelector('p');
+        if (p) p.style.fontSize = '0.75rem';
+
+        const summaryTable = clone.querySelector('.schedule-summary-table');
+        if (summaryTable) {
+          summaryTable.style.fontSize = '0.65rem';
+          summaryTable.style.marginBottom = '5px';
+          summaryTable.querySelectorAll('th, td').forEach(cell => {
+            cell.style.padding = '2px';
+          });
+        }
+
+        // Also shrink the main schedule grid
+        const scheduleTable = clone.querySelector('.schedule-table');
+        if (scheduleTable) {
+          scheduleTable.style.fontSize = '0.7rem'; // scale down the font
+          scheduleTable.querySelectorAll('th, td').forEach(cell => {
+            cell.style.padding = '2px';
+          });
+          scheduleTable.querySelectorAll('.schedule-item').forEach(item => {
+            item.style.padding = '2px';
+            const details = item.querySelector('.details');
+            if (details) details.style.marginTop = '2px';
+          });
+        }
       }
     }
-  }
 
     // Hide card view if it leaked through, force table-wrapper visible
     const cardView = clone.querySelector('.schedule-card-view');
@@ -419,28 +419,28 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         const padding = 32;
         const availableWidth = window.innerWidth - padding;
         const availableHeight = window.innerHeight - padding;
-        
+
         // The natural size of the table roughly (we can use scrollWidth/scrollHeight if containerRef is available)
         // But since we need to set it, let's use fixed min dimensions or actual DOM rect
         const tableEl = containerRef.current?.querySelector('.schedule-table');
         const contentWidth = tableEl ? (tableEl.offsetWidth / (fitScale || 1)) : 680;
         const contentHeight = tableEl ? (tableEl.offsetHeight / (fitScale || 1)) : 500;
-        
+
         const scaleX = availableWidth / Math.max(contentWidth, 680);
         const scaleY = availableHeight / Math.max(contentHeight, 300);
-        
+
         const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
-        
+
         let scale;
         if (isMobilePortrait) {
-            // On mobile portrait, avoid shrinking it to an unreadable tiny square.
-            // Force a minimum readable scale (e.g. 0.85) and let the user pan horizontally.
-            scale = Math.max(0.85, Math.min(scaleX, scaleY));
+          // On mobile portrait, avoid shrinking it to an unreadable tiny square.
+          // Force a minimum readable scale (e.g. 0.85) and let the user pan horizontally.
+          scale = Math.max(0.85, Math.min(scaleX, scaleY));
         } else {
-            // For PC and landscape mobile, scale to perfectly fit one page
-            scale = Math.min(scaleX, scaleY);
+          // For PC and landscape mobile, scale to perfectly fit one page
+          scale = Math.min(scaleX, scaleY);
         }
-        
+
         setFitScale(scale);
       } else {
         // Standard grid view logic
@@ -530,10 +530,10 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     const movingSchedule = schedules.find(s => s.id === scheduleId);
     if (!movingSchedule) return;
     if (movingSchedule.day === day && String(movingSchedule.timeSlot?.id) === String(timeSlotId)) return;
-    
+
     const baseTimeSlot = TIME_SLOTS.find(ts => String(ts.id) === String(timeSlotId));
     let finalTimeSlot = { ...baseTimeSlot };
-    
+
     if (movingSchedule.timeSlot && movingSchedule.timeSlot.customLabel) {
       const range = getScheduleTimeRange(movingSchedule, scheduleMode);
       if (range.start > 0 && range.end > 0) {
@@ -554,7 +554,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         }
       }
     }
-    
+
     const candidate = { ...movingSchedule, day, timeSlot: finalTimeSlot };
     const overlap = schedules.find(s => s.id !== scheduleId && schedulesOverlap(candidate, s, scheduleMode));
     if (overlap) {
@@ -799,19 +799,19 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                                   </div>
                                 </div>
                                 {onRemove && isDeleteMode && (
-                      <button className="remove-btn" onClick={async (e) => {
-  e.stopPropagation();
-  const isConfirmed = await confirm({
-    title: 'Delete Schedule',
-    text: 'Are you sure you want to delete this schedule?',
-    icon: 'warning',
-    confirmButtonText: 'Delete',
-    isDestructive: true
-  });
-  if (isConfirmed) {
-    onRemove(schedule.id);
-  }
-}} title="Remove schedule">
+                                  <button className="remove-btn" onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const isConfirmed = await confirm({
+                                      title: 'Delete Schedule',
+                                      text: 'Are you sure you want to delete this schedule?',
+                                      icon: 'warning',
+                                      confirmButtonText: 'Delete',
+                                      isDestructive: true
+                                    });
+                                    if (isConfirmed) {
+                                      onRemove(schedule.id);
+                                    }
+                                  }} title="Remove schedule">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                   </button>
                                 )}
@@ -874,18 +874,18 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                     </div>
                     {onRemove && isDeleteMode && (
                       <button className="remove-btn" onClick={async (e) => {
-  e.stopPropagation();
-  const isConfirmed = await confirm({
-    title: 'Delete Schedule',
-    text: 'Are you sure you want to delete this schedule?',
-    icon: 'warning',
-    confirmButtonText: 'Delete',
-    isDestructive: true
-  });
-  if (isConfirmed) {
-    onRemove(schedule.id);
-  }
-}} title="Remove schedule">
+                        e.stopPropagation();
+                        const isConfirmed = await confirm({
+                          title: 'Delete Schedule',
+                          text: 'Are you sure you want to delete this schedule?',
+                          icon: 'warning',
+                          confirmButtonText: 'Delete',
+                          isDestructive: true
+                        });
+                        if (isConfirmed) {
+                          onRemove(schedule.id);
+                        }
+                      }} title="Remove schedule">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                       </button>
                     )}
@@ -954,36 +954,36 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       {/* Subject Summary Table */}
       <div className="schedule-summary-container" style={{ margin: '20px 0', padding: '0 10px', width: '100%', overflowX: 'auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-           <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#033279', textTransform: 'uppercase' }}>{getFullDepartmentName()}</h3>
-           <h4 style={{ margin: '5px 0', fontSize: '0.9rem', color: '#000' }}>SCHEDULE OF CLASSES</h4>
-           <p style={{ margin: 0, fontSize: '0.85rem', color: '#000' }}>{semesterInfo || 'First Semester, School Year 2026 - 2027'}</p>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#033279', textTransform: 'uppercase' }}>{getFullDepartmentName()}</h3>
+          <h4 style={{ margin: '5px 0', fontSize: '0.9rem', color: '#000' }}>SCHEDULE OF CLASSES</h4>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#000' }}>{semesterInfo || 'First Semester, School Year 2026 - 2027'}</p>
         </div>
         <table className="schedule-summary-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', color: '#000', marginBottom: '20px' }}>
-            <thead>
-                <tr>
-                    <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#fff', fontWeight: 'bold' }}>Subject</th>
-                    <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#fff', fontWeight: 'bold' }}>Description</th>
-                    <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', backgroundColor: '#fff', fontWeight: 'bold' }}>Unit</th>
-                    <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#fff', fontWeight: 'bold' }}>Faculty</th>
-                    <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#fff', fontWeight: 'bold' }}>Room</th>
-                </tr>
-            </thead>
-            <tbody>
-                {uniqueSubjectsList.map(s => (
-                    <tr key={s.subject?.id || s.id}>
-                        <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.code || ''}</td>
-                        <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.title || s.subject?.description || ''}</td>
-                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{s.subject?.credits || ''}</td>
-                        <td style={{ border: '1px solid #000', padding: '6px' }}>{s.professor?.name || ''}</td>
-                        <td style={{ border: '1px solid #000', padding: '6px' }}>{s.roomNameList}</td>
-                    </tr>
-                ))}
-                <tr>
-                    <td colSpan="2" style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>Total</td>
-                    <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>{totalUnits}</td>
-                    <td colSpan="2" style={{ border: '1px solid #000', padding: '6px' }}></td>
-                </tr>
-            </tbody>
+          <thead>
+            <tr>
+              <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#fff', fontWeight: 'bold' }}>Subject</th>
+              <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#fff', fontWeight: 'bold' }}>Description</th>
+              <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', backgroundColor: '#fff', fontWeight: 'bold' }}>Unit</th>
+              <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#fff', fontWeight: 'bold' }}>Faculty</th>
+              <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#fff', fontWeight: 'bold' }}>Room</th>
+            </tr>
+          </thead>
+          <tbody>
+            {uniqueSubjectsList.map(s => (
+              <tr key={s.subject?.id || s.id}>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.code || ''}</td>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.title || s.subject?.description || ''}</td>
+                <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{s.subject?.credits || ''}</td>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{s.professor?.name || ''}</td>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{s.roomNameList}</td>
+              </tr>
+            ))}
+            <tr>
+              <td colSpan="2" style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>Total</td>
+              <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>{totalUnits}</td>
+              <td colSpan="2" style={{ border: '1px solid #000', padding: '6px' }}></td>
+            </tr>
+          </tbody>
         </table>
       </div>
 

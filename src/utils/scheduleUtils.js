@@ -159,7 +159,7 @@ export function parseTimeToMinutes(timeStr) {
 
 export function getScheduleTimeRange(schedule, scheduleMode) {
   if (!schedule) return { start: 0, end: 0 };
-  
+
   // Custom label takes highest precedence
   if (schedule.timeSlot?.customLabel) {
     const parts = schedule.timeSlot.customLabel.split('-');
@@ -174,7 +174,7 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
       return { start, end: start + duration };
     }
   }
-  
+
   // Try standard label resolution
   const label = getMeetingTimeLabel(schedule.timeSlot, schedule.subject?.hoursPerMeeting, scheduleMode);
   const parts = label.split('-');
@@ -183,7 +183,7 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     const end = parseTimeToMinutes(parts[1].trim());
     if (start !== null && end !== null) return { start, end };
   }
-  
+
   // Fallback to raw timeSlot.time
   const timeParts = (schedule.timeSlot?.time || '').split('-');
   if (timeParts.length === 2) {
@@ -191,14 +191,31 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     const end = parseTimeToMinutes(timeParts[1].trim());
     if (start !== null && end !== null) return { start, end };
   }
-  
+
   return { start: 0, end: 0 };
+}
+
+/**
+ * Normalize any day representation (e.g. 'Mon', 'mon', 'Monday') to canonical full day name.
+ */
+export function normalizeDay(day) {
+  if (!day) return '';
+  const d = String(day).trim();
+  const lower = d.toLowerCase();
+  if (lower.startsWith('mon')) return 'Monday';
+  if (lower.startsWith('tue')) return 'Tuesday';
+  if (lower.startsWith('wed')) return 'Wednesday';
+  if (lower.startsWith('thu')) return 'Thursday';
+  if (lower.startsWith('fri')) return 'Friday';
+  if (lower.startsWith('sat')) return 'Saturday';
+  if (lower.startsWith('sun')) return 'Sunday';
+  return d;
 }
 
 /** True if two schedules share any occupied time range on room, professor, or section. */
 export function schedulesOverlap(a, b, scheduleMode) {
   if (!a || !b) return false;
-  if (a.day !== b.day) return false;
+  if (normalizeDay(a.day) !== normalizeDay(b.day)) return false;
 
   let entityOverlap = false;
   if (a.room?.id && b.room?.id && String(a.room.id) === String(b.room.id)) entityOverlap = true;
@@ -213,7 +230,7 @@ export function schedulesOverlap(a, b, scheduleMode) {
   if (rangeA.start < rangeB.end && rangeA.end > rangeB.start) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -260,7 +277,7 @@ export function getEligibleProfessors(professors, subject, section) {
 
   const sectionId = section?.id;
   const sectionName = section?.name;
-  
+
   if (sectionId || sectionName) {
     pool = pool.filter(p => {
       if (p.assignedSections && p.assignedSections.length > 0) {
@@ -520,3 +537,83 @@ export function getEligibleRoomsTiered(rooms, subject, section) {
     flat: sortLabRoomsLast([...tier1, ...tier2, ...tier3])
   };
 }
+
+/**
+ * Find conflict-free alternative slots when a candidate placement has conflicts.
+ */
+export function findAlternativeSlots(candidate, activeSchedules, rooms, eligibleTimeSlots, scheduleMode = 'standard') {
+  if (!candidate?.subject || !candidate?.day) return null;
+  const days = scheduleMode === 'fourDay'
+    ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday']
+    : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const alternatives = [];
+  const candDay = normalizeDay(candidate.day);
+
+  // 1. Try alternative rooms at the SAME day & timeSlot
+  if (candidate.timeSlot) {
+    for (const r of (rooms || [])) {
+      if (r.id === candidate.room?.id) continue;
+      if (!isRoomAllowedFor(r, candidate.subject, candidate.section)) continue;
+      if (candidate.professor && !isProfessorAllowedInRoom(r, candidate.professor, candidate.subject, candidate.section, rooms)) continue;
+
+      const testCand = { ...candidate, day: candDay, room: r };
+      const conf = findScheduleConflicts(testCand, activeSchedules);
+      if (!conf.room && !conf.professor && !conf.section) {
+        alternatives.push({
+          type: 'room',
+          title: `Switch Room to ${r.name}`,
+          room: r,
+          day: candDay,
+          timeSlot: candidate.timeSlot,
+          description: `Room ${r.name} is available on ${candDay} at ${candidate.timeSlot.label || candidate.timeSlot.time || ''}.`
+        });
+        if (alternatives.length >= 2) break;
+      }
+    }
+  }
+
+  // 2. Try alternative time slots on the SAME day with the same room
+  if (candidate.room) {
+    for (const ts of (eligibleTimeSlots || [])) {
+      if (String(ts.id) === String(candidate.timeSlot?.id)) continue;
+      const testCand = { ...candidate, day: candDay, timeSlot: ts };
+      const conf = findScheduleConflicts(testCand, activeSchedules);
+      if (!conf.room && !conf.professor && !conf.section) {
+        const label = getMeetingTimeLabel(ts, candidate.subject.hoursPerMeeting, scheduleMode) || ts.label;
+        alternatives.push({
+          type: 'timeSlot',
+          title: `Switch Time to ${label}`,
+          room: candidate.room,
+          day: candDay,
+          timeSlot: { ...ts, label },
+          description: `${candidate.room.name} and Prof. ${candidate.professor?.name || ''} are free on ${candDay} at ${label}.`
+        });
+        if (alternatives.length >= 3) break;
+      }
+    }
+  }
+
+  // 3. Try alternative Days
+  for (const d of days) {
+    const normD = normalizeDay(d);
+    if (normD === candDay) continue;
+    if (!candidate.room || !candidate.timeSlot) continue;
+    const testCand = { ...candidate, day: normD };
+    const conf = findScheduleConflicts(testCand, activeSchedules);
+    if (!conf.room && !conf.professor && !conf.section) {
+      const label = getMeetingTimeLabel(candidate.timeSlot, candidate.subject.hoursPerMeeting, scheduleMode) || candidate.timeSlot.label;
+      alternatives.push({
+        type: 'day',
+        title: `Switch Day to ${normD}`,
+        room: candidate.room,
+        day: normD,
+        timeSlot: candidate.timeSlot,
+        description: `Everything is free on ${normD} at ${label}.`
+      });
+      if (alternatives.length >= 3) break;
+    }
+  }
+
+  return alternatives.slice(0, 2);
+}
+

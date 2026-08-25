@@ -36,19 +36,19 @@ export function validateScheduleEntry(
   const warnings = [];
   const config = getScheduleConfig(scheduleMode);
 
- // Required field checks
+  // Required field checks
   if (!room?.id) errors.push('Room is required.');
   if (!professor?.id) errors.push('Faculty is required.');
   if (!subject?.id) errors.push('Subject is required.');
   if (!day) errors.push('Day is required.');
   if (!timeSlot?.id) errors.push('Time slot is required.');
 
- // Specialization check
+  // Specialization check
   if (professor && subject && !professorMatchesSubject(professor, subject)) {
     errors.push(`Faculty "${professor.name}" is not authorized to teach "${subject.code}".`);
   }
 
- // Section enrollment check
+  // Section enrollment check
   if (section && subject) {
     const sectionSubjects = section.subjects || [];
     if (!sectionSubjects.includes(subject.id) && !sectionSubjects.includes(subject.code)) {
@@ -56,7 +56,7 @@ export function validateScheduleEntry(
     }
   }
 
- // Room eligibility (section-level)
+  // Room eligibility (section-level)
   if (room?.id && subject) {
     if (!isRoomAllowedFor(room, subject, section)) {
       const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
@@ -85,7 +85,7 @@ export function validateScheduleEntry(
       }
     }
 
- // Room eligibility (professor-level)
+    // Room eligibility (professor-level)
     if (professor?.id && !isProfessorAllowedInRoom(room, professor, subject, section, rooms)) {
       const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
       const isSpeechLab = roomName.includes('SPEECH');
@@ -102,7 +102,7 @@ export function validateScheduleEntry(
 
   if (errors.length > 0) return { valid: false, errors, warnings };
 
- // Time slot fit check
+  // Time slot fit check
   if (!timeSlot?.isCustom && !timeSlot?.customLabel) {
     const activeSlots = config.timeSlots;
     const startIdx = activeSlots.findIndex(ts => String(ts.id) === String(timeSlot?.id));
@@ -111,13 +111,13 @@ export function validateScheduleEntry(
       errors.push(`Time slot does not fit the ${subject?.hoursPerMeeting || 1.5}hr meeting duration.`);
       return { valid: false, errors, warnings };
     }
-    
+
     if (subject?.code?.toUpperCase().startsWith('PE') && String(timeSlot?.id) === '2') {
       errors.push('Physical Education (PE) subjects cannot be scheduled in the first period (7:30 AM).');
     }
   }
 
- // Conflict detection
+  // Conflict detection
   const conflicts = findScheduleConflicts(
     { room, professor, subject, section, day, timeSlot },
     activeSchedules,
@@ -192,7 +192,7 @@ export async function updateSchedule(scheduleId, newDay, newTimeSlotOrId, schedu
   } else {
     newTimeSlot = TIME_SLOTS.find((ts) => String(ts.id) === String(newTimeSlotOrId));
   }
-  
+
   const existing = schedules.find((s) => s.id === scheduleId);
   if (!existing) return { ok: false, errors: ['Schedule not found.'] };
 
@@ -229,7 +229,7 @@ export async function removeSchedule(id, isAdmin) {
  */
 export async function removeSchedulesBatch(ids, isAdmin) {
   if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
-  
+
   try {
     const BATCH_LIMIT = 499;
     for (let i = 0; i < ids.length; i += BATCH_LIMIT) {

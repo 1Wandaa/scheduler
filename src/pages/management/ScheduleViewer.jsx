@@ -11,7 +11,7 @@ import CustomSelect from '../../components/CustomSelect/CustomSelect';
 function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, onRemoveSchedule, onRemoveSchedulesBatch, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true }) {
     const { confirm } = useGlobalDialog();
     const location = useLocation();
-    
+
     const [viewType, setViewType] = useState(location.state?.viewTarget?.viewType || 'department');
     const [selectedId, setSelectedId] = useState(location.state?.viewTarget?.selectedId || user?.department || '');
     const [deptSectionId, setDeptSectionId] = useState(location.state?.viewTarget?.deptSectionId || '');
@@ -19,7 +19,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     const [previewImage, setPreviewImage] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isDeleteMode, setIsDeleteMode] = useState(false);
-    
+
     const hasAppliedInitialTargetRef = React.useRef(!!location.state?.viewTarget);
     const initialUserAppliedRef = React.useRef(false);
     const prevSelectedIdRef = React.useRef(selectedId);
@@ -140,7 +140,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 .filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()))
                 .map(sec => sec.yearLevel)
                 .filter(Boolean)
-          )].sort((a, b) => a - b)
+        )].sort((a, b) => a - b)
         : [];
 
     const deptSections = viewType === 'department' && selectedId
@@ -149,7 +149,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
             if (!matchesDept) return false;
             if (selectedYearLevel) return String(sec.yearLevel) === String(selectedYearLevel);
             return true;
-          })
+        })
         : [];
 
 
@@ -197,14 +197,14 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
 
     const detectedScheduleMode = React.useMemo(() => {
         const hasFriday = schedules.some(s => s.day === 'Friday');
-        if (schedules.length > 0 && !hasFriday) return 'fourDay'; 
+        if (schedules.length > 0 && !hasFriday) return 'fourDay';
         return 'standard';
     }, [schedules]);
 
-    const titlePrefix = viewType === 'department' 
-        ? (deptSectionId ? 'CLASS' : 'DEPARTMENT') 
-        : viewType === 'room' ? 'ROOM' 
-        : viewType === 'faculty' ? 'FACULTY' : '';
+    const titlePrefix = viewType === 'department'
+        ? (deptSectionId ? 'CLASS' : 'DEPARTMENT')
+        : viewType === 'room' ? 'ROOM'
+            : viewType === 'faculty' ? 'FACULTY' : '';
     const titleName = activeEntity ? activeEntity.name.toUpperCase() : 'SELECT ITEM';
 
     const handleDeleteSchedules = async () => {
@@ -213,7 +213,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
             alert('No schedules found to delete for the current view.');
             return;
         }
-        
+
         const confirmMsg = `Are you sure you want to delete ${filteredSchedules.length} schedule(s) for ${titleName}? This action cannot be undone.`;
         const isConfirmed = await confirm({
             title: 'Delete Schedules',
@@ -222,7 +222,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
             isDestructive: true,
             confirmButtonText: 'Delete All'
         });
-        
+
         if (isConfirmed) {
             const ids = filteredSchedules.map(s => s.id);
             if (onRemoveSchedulesBatch) {
@@ -236,7 +236,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
 
     if (!isAdmin && !isPublished) {
         return (
-            <div className="card" style={{  textAlign: 'center', padding: '50px 20px', minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+            <div className="card" style={{ textAlign: 'center', padding: '50px 20px', minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                 <div style={{ marginBottom: '20px', background: 'var(--bg-main)', padding: '24px', borderRadius: '50%' }}>
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -260,144 +260,144 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
             <div className="sticky-mgmt-header" style={{ position: 'sticky', top: '0', zIndex: 40, backgroundColor: '#ffffff', paddingTop: '0px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', marginBottom: '20px' }}>
                 {/* Header Row: Title & Print Button separated from filters */}
                 <div className="mgmt-header no-print">
-                <div className="mgmt-header-left">
-                    <div className="mgmt-header-info">
-                        <h3 className="card-title">
-                            <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
-                            Schedule Viewer
-                        </h3>
-                        <p>Filter schedules by department{isAdmin ? ', faculty, or room' : ' or room'}</p>
+                    <div className="mgmt-header-left">
+                        <div className="mgmt-header-info">
+                            <h3 className="card-title">
+                                <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                                Schedule Viewer
+                            </h3>
+                            <p>Filter schedules by department{isAdmin ? ', faculty, or room' : ' or room'}</p>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {isAdmin && (
+                            <button
+                                className="btn btn-sm"
+                                onClick={handleDeleteSchedules}
+                                style={{
+                                    backgroundColor: 'var(--danger-bg, #fee2e2)',
+                                    color: 'var(--danger-text, #ef4444)',
+                                    border: '1px solid currentColor',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                                title="Delete all schedules in current view"
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                Delete All
+                            </button>
+                        )}
+                        {isAdmin && (
+                            <button
+                                className={`btn ${isDeleteMode ? 'btn-danger' : 'btn-outline'}`}
+                                onClick={() => setIsDeleteMode(!isDeleteMode)}
+                                style={{
+                                    padding: '8px 14px',
+                                    fontSize: '0.85rem',
+                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    backgroundColor: isDeleteMode ? '#fee2e2' : 'white',
+                                    color: isDeleteMode ? '#dc2626' : 'var(--text-main)',
+                                    border: `1px solid ${isDeleteMode ? '#fca5a5' : 'var(--border-color)'}`
+                                }}
+                                title="Toggle edit mode to delete individual schedules"
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                {isDeleteMode ? 'Done Editing' : 'Edit Schedules'}
+                            </button>
+                        )}
+                        <ExportOptions
+                            isGenerating={isGenerating}
+                            setIsGenerating={setIsGenerating}
+                            setPreviewImage={setPreviewImage}
+                        />
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    {isAdmin && (
-                        <button 
-                            className="btn btn-sm" 
-                            onClick={handleDeleteSchedules} 
-                            style={{ 
-                                backgroundColor: 'var(--danger-bg, #fee2e2)', 
-                                color: 'var(--danger-text, #ef4444)', 
-                                border: '1px solid currentColor',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                            }}
-                            title="Delete all schedules in current view"
-                        >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            Delete All
-                        </button>
-                    )}
-                    {isAdmin && (
-                        <button 
-                            className={`btn ${isDeleteMode ? 'btn-danger' : 'btn-outline'}`}
-                            onClick={() => setIsDeleteMode(!isDeleteMode)}
-                            style={{
-                                padding: '8px 14px',
-                                fontSize: '0.85rem',
-                                borderRadius: '8px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                backgroundColor: isDeleteMode ? '#fee2e2' : 'white',
-                                color: isDeleteMode ? '#dc2626' : 'var(--text-main)',
-                                border: `1px solid ${isDeleteMode ? '#fca5a5' : 'var(--border-color)'}`
-                            }}
-                            title="Toggle edit mode to delete individual schedules"
-                        >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                            {isDeleteMode ? 'Done Editing' : 'Edit Schedules'}
-                        </button>
-                    )}
-                    <ExportOptions 
-                        isGenerating={isGenerating} 
-                        setIsGenerating={setIsGenerating} 
-                        setPreviewImage={setPreviewImage} 
-                    />
-                </div>
-            </div>
 
-            {/* Filters Row: Dedicated block with responsive grid */}
-            <div className="mgmt-toolbar no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
+                {/* Filters Row: Dedicated block with responsive grid */}
+                <div className="mgmt-toolbar no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter By</label>
-                    <select
-                        className="form-select"
-                        value={viewType}
-                        onChange={(e) => setViewType(e.target.value)}
-                        style={{ width: '100%' }}
-                    >
-                        <option value="department">Department</option>
-                        {isAdmin && <option value="faculty">Faculty</option>}
-                        <option value="room">Room</option>
-                    </select>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target</label>
-                    <CustomSelect
-                        name="targetId"
-                        value={selectedId}
-                        onChange={(e) => setSelectedId(e.target.value)}
-                        placeholder={`Select ${viewType}...`}
-                        style={{ width: '100%' }}
-                        options={(() => {
-                            if (viewType === 'department') {
-                                return (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)
-                                    .sort((a, b) => a.localeCompare(b))
-                                    .map(d => ({ value: d, label: d }));
-                            } else if (viewType === 'room') {
-                                return Object.entries(rooms.reduce((acc, r) => {
-                                    const b = r.building || 'Other';
-                                    if (!acc[b]) acc[b] = [];
-                                    acc[b].push(r);
-                                    return acc;
-                                }, {}))
-                                .sort(([bA], [bB]) => bA.localeCompare(bB))
-                                .map(([building, bRooms]) => ({
-                                    label: building,
-                                    options: bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => ({ value: r.id, label: r.name }))
-                                }));
-                            } else if (viewType === 'faculty') {
-                                return [...professors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(p => ({ value: p.id, label: p.name }));
-                            }
-                            return [];
-                        })()}
-                    />
-                </div>
-
-                {viewType === 'department' && availableYearLevels.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Year</label>
+                        <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter By</label>
                         <select
                             className="form-select"
-                            value={selectedYearLevel}
-                            onChange={(e) => setSelectedYearLevel(e.target.value)}
-                            style={{ width: '100%', borderColor: selectedYearLevel ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: selectedYearLevel ? '#DBEAFE' : 'white' }}
+                            value={viewType}
+                            onChange={(e) => setViewType(e.target.value)}
+                            style={{ width: '100%' }}
                         >
-                            <option value="">All Years</option>
-                            {availableYearLevels.map(yr => (
-                                <option key={yr} value={yr}>{yr === 1 ? '1st' : yr === 2 ? '2nd' : yr === 3 ? '3rd' : `${yr}th`} Year</option>
-                            ))}
+                            <option value="department">Department</option>
+                            {isAdmin && <option value="faculty">Faculty</option>}
+                            <option value="room">Room</option>
                         </select>
                     </div>
-                )}
 
-                {viewType === 'department' && deptSections.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Section</label>
-                        <select
-                            className="form-select"
-                            value={deptSectionId}
-                            onChange={(e) => setDeptSectionId(e.target.value)}
-                            style={{ width: '100%', borderColor: deptSectionId ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: deptSectionId ? 'var(--warning-bg)' : 'white' }}
-                        >
-                            {[...deptSections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
+                        <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target</label>
+                        <CustomSelect
+                            name="targetId"
+                            value={selectedId}
+                            onChange={(e) => setSelectedId(e.target.value)}
+                            placeholder={`Select ${viewType}...`}
+                            style={{ width: '100%' }}
+                            options={(() => {
+                                if (viewType === 'department') {
+                                    return (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)
+                                        .sort((a, b) => a.localeCompare(b))
+                                        .map(d => ({ value: d, label: d }));
+                                } else if (viewType === 'room') {
+                                    return Object.entries(rooms.reduce((acc, r) => {
+                                        const b = r.building || 'Other';
+                                        if (!acc[b]) acc[b] = [];
+                                        acc[b].push(r);
+                                        return acc;
+                                    }, {}))
+                                        .sort(([bA], [bB]) => bA.localeCompare(bB))
+                                        .map(([building, bRooms]) => ({
+                                            label: building,
+                                            options: bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => ({ value: r.id, label: r.name }))
+                                        }));
+                                } else if (viewType === 'faculty') {
+                                    return [...professors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(p => ({ value: p.id, label: p.name }));
+                                }
+                                return [];
+                            })()}
+                        />
                     </div>
-                )}
-            </div>
+
+                    {viewType === 'department' && availableYearLevels.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Year</label>
+                            <select
+                                className="form-select"
+                                value={selectedYearLevel}
+                                onChange={(e) => setSelectedYearLevel(e.target.value)}
+                                style={{ width: '100%', borderColor: selectedYearLevel ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: selectedYearLevel ? '#DBEAFE' : 'white' }}
+                            >
+                                <option value="">All Years</option>
+                                {availableYearLevels.map(yr => (
+                                    <option key={yr} value={yr}>{yr === 1 ? '1st' : yr === 2 ? '2nd' : yr === 3 ? '3rd' : `${yr}th`} Year</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {viewType === 'department' && deptSections.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Section</label>
+                            <select
+                                className="form-select"
+                                value={deptSectionId}
+                                onChange={(e) => setDeptSectionId(e.target.value)}
+                                style={{ width: '100%', borderColor: deptSectionId ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: deptSectionId ? 'var(--warning-bg)' : 'white' }}
+                            >
+                                {[...deptSections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="colored-schedule-wrapper">
@@ -439,10 +439,10 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "2nd Sem 2025-2026"}
             />
 
-            <PreviewModal 
-                previewImage={previewImage} 
-                setPreviewImage={setPreviewImage} 
-                titleName={titleName} 
+            <PreviewModal
+                previewImage={previewImage}
+                setPreviewImage={setPreviewImage}
+                titleName={titleName}
             />
         </div>
     );
