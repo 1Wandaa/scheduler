@@ -160,13 +160,13 @@ export function parseTimeToMinutes(timeStr) {
 export function getScheduleTimeRange(schedule, scheduleMode) {
   if (!schedule) return { start: 0, end: 0 };
 
-  // Custom label takes highest precedence
+  // 1. Custom label takes highest precedence
   if (schedule.timeSlot?.customLabel) {
-    const parts = schedule.timeSlot.customLabel.split('-');
-    if (parts.length === 2) {
-      const start = parseTimeToMinutes(parts[0].trim());
-      const end = parseTimeToMinutes(parts[1].trim());
-      if (start !== null && end !== null) return { start, end };
+    const customParts = schedule.timeSlot.customLabel.split('-');
+    if (customParts.length === 2) {
+      const start = parseTimeToMinutes(customParts[0].trim());
+      const end = parseTimeToMinutes(customParts[1].trim());
+      if (start !== null && end !== null && start < end) return { start, end };
     }
     const start = parseTimeToMinutes(schedule.timeSlot.customLabel);
     if (start !== null) {
@@ -175,21 +175,29 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     }
   }
 
-  // Try standard label resolution
+  // 2. Try standard label resolution
   const label = getMeetingTimeLabel(schedule.timeSlot, schedule.subject?.hoursPerMeeting, scheduleMode);
-  const parts = label.split('-');
+  const parts = (label || '').split('-');
   if (parts.length === 2) {
     const start = parseTimeToMinutes(parts[0].trim());
     const end = parseTimeToMinutes(parts[1].trim());
-    if (start !== null && end !== null) return { start, end };
+    if (start !== null && end !== null && start < end) return { start, end };
   }
 
-  // Fallback to raw timeSlot.time
+  // 3. Fallback to raw timeSlot.time
   const timeParts = (schedule.timeSlot?.time || '').split('-');
   if (timeParts.length === 2) {
     const start = parseTimeToMinutes(timeParts[0].trim());
     const end = parseTimeToMinutes(timeParts[1].trim());
-    if (start !== null && end !== null) return { start, end };
+    if (start !== null && end !== null && start < end) return { start, end };
+  }
+
+  // 4. Fallback to raw timeSlot.label
+  const labelParts = (schedule.timeSlot?.label || '').split('-');
+  if (labelParts.length === 2) {
+    const start = parseTimeToMinutes(labelParts[0].trim());
+    const end = parseTimeToMinutes(labelParts[1].trim());
+    if (start !== null && end !== null && start < end) return { start, end };
   }
 
   return { start: 0, end: 0 };
@@ -215,7 +223,11 @@ export function normalizeDay(day) {
 /** True if two schedules share any occupied time range on room, professor, or section. */
 export function schedulesOverlap(a, b, scheduleMode) {
   if (!a || !b) return false;
-  if (normalizeDay(a.day) !== normalizeDay(b.day)) return false;
+
+  const daysA = Array.isArray(a.day) ? a.day.map(normalizeDay).filter(Boolean) : (a.day ? [normalizeDay(a.day)] : []);
+  const daysB = Array.isArray(b.day) ? b.day.map(normalizeDay).filter(Boolean) : (b.day ? [normalizeDay(b.day)] : []);
+  const sharesDay = daysA.some(dA => daysB.includes(dA));
+  if (!sharesDay) return false;
 
   let entityOverlap = false;
   if (a.room?.id && b.room?.id && String(a.room.id) === String(b.room.id)) entityOverlap = true;
@@ -226,6 +238,9 @@ export function schedulesOverlap(a, b, scheduleMode) {
 
   const rangeA = getScheduleTimeRange(a, scheduleMode);
   const rangeB = getScheduleTimeRange(b, scheduleMode);
+
+  if (rangeA.start === 0 && rangeA.end === 0) return false;
+  if (rangeB.start === 0 && rangeB.end === 0) return false;
 
   if (rangeA.start < rangeB.end && rangeA.end > rangeB.start) {
     return true;
@@ -541,74 +556,147 @@ export function getEligibleRoomsTiered(rooms, subject, section) {
 /**
  * Find conflict-free alternative slots when a candidate placement has conflicts.
  */
-export function findAlternativeSlots(candidate, activeSchedules, rooms, eligibleTimeSlots, scheduleMode = 'standard') {
-  if (!candidate?.subject || !candidate?.day) return null;
-  const days = scheduleMode === 'fourDay'
-    ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday']
-    : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const alternatives = [];
-  const candDay = normalizeDay(candidate.day);
+/**
+ * Standard 2-day pairs for academic schedules (e.g., Mon/Thu, Tue/Fri).
+ */
+export function getStandardDayPairs(scheduleMode = 'standard') {
+  if (scheduleMode === 'fourDay') {
+    return [
+      ['Monday', 'Wednesday'],
+      ['Tuesday', 'Thursday']
+    ];
+  }
+  return [
+    ['Monday', 'Thursday'],
+    ['Tuesday', 'Friday']
+  ];
+}
 
-  // 1. Try alternative rooms at the SAME day & timeSlot
+/**
+ * Resolve any day or array of days to its canonical 2-day academic pair.
+ */
+export function resolveToDayPair(daysInput, scheduleMode = 'standard') {
+  const pairs = getStandardDayPairs(scheduleMode);
+  const rawList = Array.isArray(daysInput)
+    ? daysInput.map(normalizeDay).filter(Boolean)
+    : (daysInput ? [normalizeDay(daysInput)] : []);
+
+  if (rawList.length === 0) {
+    return pairs[0];
+  }
+  for (const pair of pairs) {
+    if (rawList.some(d => pair.includes(d))) {
+      return pair;
+    }
+  }
+  if (rawList.length >= 2) return rawList.slice(0, 2);
+  return [rawList[0], pairs[0][1]];
+}
+
+/**
+ * Find conflict-free alternative slots when a candidate placement has conflicts.
+ * Always suggests and validates 2-day paired schedules.
+ */
+export function findAlternativeSlots(candidate, activeSchedules, rooms, eligibleTimeSlots, scheduleMode = 'standard') {
+  if (!candidate?.subject) return null;
+  const dayPairs = getStandardDayPairs(scheduleMode);
+  const alternatives = [];
+
+  // Always resolve to a complete 2-day pair
+  const candidateDays = resolveToDayPair(candidate.days || candidate.day, scheduleMode);
+  const dayLabel = candidateDays.map(d => d.slice(0, 3)).join(' / ');
+
+  // 1. Try alternative rooms across ALL 2 candidate days & timeSlot
   if (candidate.timeSlot) {
     for (const r of (rooms || [])) {
       if (r.id === candidate.room?.id) continue;
       if (!isRoomAllowedFor(r, candidate.subject, candidate.section)) continue;
       if (candidate.professor && !isProfessorAllowedInRoom(r, candidate.professor, candidate.subject, candidate.section, rooms)) continue;
 
-      const testCand = { ...candidate, day: candDay, room: r };
-      const conf = findScheduleConflicts(testCand, activeSchedules);
-      if (!conf.room && !conf.professor && !conf.section) {
+      let allDaysClean = true;
+      for (const d of candidateDays) {
+        const testCand = { ...candidate, day: d, room: r };
+        const conf = findScheduleConflicts(testCand, activeSchedules);
+        if (conf.room || conf.professor || conf.section) {
+          allDaysClean = false;
+          break;
+        }
+      }
+
+      if (allDaysClean) {
         alternatives.push({
           type: 'room',
           title: `Switch Room to ${r.name}`,
           room: r,
-          day: candDay,
+          days: candidateDays,
+          day: candidateDays,
           timeSlot: candidate.timeSlot,
-          description: `Room ${r.name} is available on ${candDay} at ${candidate.timeSlot.label || candidate.timeSlot.time || ''}.`
+          description: `Room ${r.name} is available on ${dayLabel} at ${candidate.timeSlot.label || candidate.timeSlot.time || ''}.`
         });
         if (alternatives.length >= 2) break;
       }
     }
   }
 
-  // 2. Try alternative time slots on the SAME day with the same room
+  // 2. Try alternative time slots on the SAME 2 candidate days with the same room
   if (candidate.room) {
     for (const ts of (eligibleTimeSlots || [])) {
       if (String(ts.id) === String(candidate.timeSlot?.id)) continue;
-      const testCand = { ...candidate, day: candDay, timeSlot: ts };
-      const conf = findScheduleConflicts(testCand, activeSchedules);
-      if (!conf.room && !conf.professor && !conf.section) {
+
+      let allDaysClean = true;
+      for (const d of candidateDays) {
+        const testCand = { ...candidate, day: d, timeSlot: ts };
+        const conf = findScheduleConflicts(testCand, activeSchedules);
+        if (conf.room || conf.professor || conf.section) {
+          allDaysClean = false;
+          break;
+        }
+      }
+
+      if (allDaysClean) {
         const label = getMeetingTimeLabel(ts, candidate.subject.hoursPerMeeting, scheduleMode) || ts.label;
         alternatives.push({
           type: 'timeSlot',
           title: `Switch Time to ${label}`,
           room: candidate.room,
-          day: candDay,
+          days: candidateDays,
+          day: candidateDays,
           timeSlot: { ...ts, label },
-          description: `${candidate.room.name} and Prof. ${candidate.professor?.name || ''} are free on ${candDay} at ${label}.`
+          description: `${candidate.room.name} and Prof. ${candidate.professor?.name || ''} are free on ${dayLabel} at ${label}.`
         });
         if (alternatives.length >= 3) break;
       }
     }
   }
 
-  // 3. Try alternative Days
-  for (const d of days) {
-    const normD = normalizeDay(d);
-    if (normD === candDay) continue;
+  // 3. Try alternative 2-Day Pairs
+  for (const pair of dayPairs) {
+    const pairNorm = pair.map(normalizeDay);
+    const isCurrentPair = candidateDays.length === pairNorm.length && candidateDays.every(d => pairNorm.includes(d));
+    if (isCurrentPair) continue;
     if (!candidate.room || !candidate.timeSlot) continue;
-    const testCand = { ...candidate, day: normD };
-    const conf = findScheduleConflicts(testCand, activeSchedules);
-    if (!conf.room && !conf.professor && !conf.section) {
+
+    let allDaysClean = true;
+    for (const d of pairNorm) {
+      const testCand = { ...candidate, day: d };
+      const conf = findScheduleConflicts(testCand, activeSchedules);
+      if (conf.room || conf.professor || conf.section) {
+        allDaysClean = false;
+        break;
+      }
+    }
+
+    if (allDaysClean) {
       const label = getMeetingTimeLabel(candidate.timeSlot, candidate.subject.hoursPerMeeting, scheduleMode) || candidate.timeSlot.label;
+      const pairLabel = pairNorm.map(d => d.slice(0, 3)).join(' / ');
       alternatives.push({
         type: 'day',
-        title: `Switch Day to ${normD}`,
+        title: `Switch Days to ${pairLabel}`,
         room: candidate.room,
-        day: normD,
+        days: pairNorm,
+        day: pairNorm,
         timeSlot: candidate.timeSlot,
-        description: `Everything is free on ${normD} at ${label}.`
+        description: `Everything is free on ${pairLabel} at ${label}.`
       });
       if (alternatives.length >= 3) break;
     }
@@ -616,4 +704,219 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
 
   return alternatives.slice(0, 2);
 }
+
+/**
+ * Compute real-time professor workloads.
+ */
+export function getProfessorWorkloadMap(professors, activeSchedules = []) {
+  const loadMap = {};
+  for (const p of (professors || [])) {
+    const max = Number(p.maxUnits) || Number(p.maxHours) || 15;
+    loadMap[p.id] = { usedUnits: 0, maxUnits: max, loadRatio: 0, count: 0 };
+  }
+
+  for (const s of (activeSchedules || [])) {
+    if (s.professor?.id && loadMap[s.professor.id]) {
+      const units = creditPerMeeting(s.subject);
+      loadMap[s.professor.id].usedUnits += units;
+      loadMap[s.professor.id].count += 1;
+    }
+  }
+
+  for (const profId in loadMap) {
+    const item = loadMap[profId];
+    item.usedUnits = Math.round(item.usedUnits * 10) / 10;
+    item.loadRatio = item.maxUnits > 0 ? item.usedUnits / item.maxUnits : 1;
+    item.isNearCapacity = item.usedUnits >= item.maxUnits;
+  }
+
+  return loadMap;
+}
+
+/**
+ * Generate smart recommendations for conflict-free manual schedule placement.
+ * Always suggests conflict-free 2-day pairs (e.g. Mon/Thu, Tue/Fri).
+ */
+export function getSmartScheduleRecommendations({
+  formData = {},
+  subjects = [],
+  sections = [],
+  professors = [],
+  rooms = [],
+  activeSchedules = [],
+  activeSemester = '',
+  scheduleMode = 'standard',
+  limit = 1
+}) {
+  const activeSemesterSubjects = subjects.filter(s => !s.semester || s.semester === 'Both' || s.semester === activeSemester);
+  const workloadMap = getProfessorWorkloadMap(professors, activeSchedules);
+  const dayPairs = getStandardDayPairs(scheduleMode);
+  const slots = resolveSlots(scheduleMode);
+
+  // Target subject candidate list
+  let candidateSubjects = [];
+  if (formData.subject) {
+    const found = subjects.find(s => s.id === formData.subject);
+    if (found) candidateSubjects = [found];
+  } else if (formData.professor) {
+    const prof = professors.find(p => p.id === formData.professor);
+    candidateSubjects = activeSemesterSubjects.filter(s => prof && professorMatchesSubject(prof, s));
+  } else if (formData.section) {
+    const sec = sections.find(s => s.id === formData.section);
+    if (sec) {
+      const secSubs = sec.subjects || [];
+      candidateSubjects = activeSemesterSubjects.filter(s =>
+        secSubs.includes(s.id) || (s.code && secSubs.includes(s.code)) || (s.name && secSubs.includes(s.name))
+      );
+    }
+  }
+
+  if (candidateSubjects.length === 0) {
+    return [];
+  }
+
+  const recommendations = [];
+
+  // Determine target day pairs to test
+  let targetDayPairs = dayPairs;
+  if (formData.day && (Array.isArray(formData.day) ? formData.day.length > 0 : !!formData.day)) {
+    const userDays = (Array.isArray(formData.day) ? formData.day : [formData.day]).map(normalizeDay);
+    // Find matching pair or create candidate pair
+    const matchingPairs = dayPairs.filter(pair => pair.some(d => userDays.includes(d)));
+    if (matchingPairs.length > 0) {
+      targetDayPairs = matchingPairs;
+    } else if (userDays.length >= 2) {
+      targetDayPairs = [userDays.slice(0, 2)];
+    }
+  }
+
+  for (const subject of candidateSubjects) {
+    // 1. Candidate sections
+    let candSections = [];
+    if (formData.section) {
+      const foundSec = sections.find(s => s.id === formData.section);
+      if (foundSec) candSections = [foundSec];
+    } else {
+      candSections = (sections || []).filter(sec => {
+        const secSubs = sec.subjects || [];
+        return secSubs.includes(subject.id) || (subject.code && secSubs.includes(subject.code)) || (subject.name && secSubs.includes(subject.name));
+      });
+    }
+    if (candSections.length === 0) continue;
+
+    for (const section of candSections) {
+      // 2. Candidate professors
+      let candProfs = [];
+      if (formData.professor) {
+        const foundProf = professors.find(p => p.id === formData.professor);
+        if (foundProf && professorMatchesSubject(foundProf, subject)) candProfs = [foundProf];
+      } else {
+        candProfs = getEligibleProfessors(professors, subject, section);
+      }
+      if (candProfs.length === 0) continue;
+
+      // Sort professors by lowest workload
+      candProfs.sort((a, b) => {
+        const loadA = workloadMap[a.id]?.loadRatio ?? 0;
+        const loadB = workloadMap[b.id]?.loadRatio ?? 0;
+        return loadA - loadB;
+      });
+
+      // 3. Candidate rooms
+      let candRooms = [];
+      if (formData.room) {
+        const foundRoom = rooms.find(r => r.id === formData.room);
+        if (foundRoom && isRoomAllowedFor(foundRoom, subject, section)) candRooms = [foundRoom];
+      } else {
+        const tiered = getEligibleRoomsTiered(rooms, subject, section);
+        candRooms = [...tiered.tier1, ...tiered.tier2, ...tiered.tier3];
+      }
+      if (candRooms.length === 0) continue;
+
+      // 4. Candidate Time Slots
+      const eligibleSlots = slots.filter((slot, idx) => slotsNeededFromIndex(idx, subject.hoursPerMeeting, scheduleMode) > 0);
+
+      // Explore combinations
+      for (const professor of candProfs.slice(0, 3)) {
+        const profLoad = workloadMap[professor.id] || { usedUnits: 0, maxUnits: 15 };
+        if (profLoad.isNearCapacity && candProfs.length > 1) continue;
+
+        for (const room of candRooms.slice(0, 5)) {
+          if (!isProfessorAllowedInRoom(room, professor, subject, section, rooms)) continue;
+
+          for (const pair of targetDayPairs) {
+            const pairNorm = pair.map(normalizeDay);
+
+            for (const timeSlot of eligibleSlots) {
+              // Verify BOTH days in the pair are 100% free of conflicts
+              let isPairConflictFree = true;
+              for (const day of pairNorm) {
+                const candidate = {
+                  subject,
+                  section,
+                  professor,
+                  room,
+                  day,
+                  timeSlot,
+                };
+                const conflicts = findScheduleConflicts(candidate, activeSchedules);
+                if (conflicts.room || conflicts.professor || conflicts.section) {
+                  isPairConflictFree = false;
+                  break;
+                }
+              }
+
+              if (!isPairConflictFree) continue;
+
+              // Calculate recommendation score
+              let score = 100;
+              score += (1 - (profLoad.loadRatio || 0)) * 40;
+              const sectionDept = getSectionDepartment(section);
+              const roomDept = (room.department || '').toUpperCase();
+              if (sectionDept && roomDept === sectionDept) score += 25;
+              if (subject.requiredLab && room.hasComputers) score += 20;
+              if (subject.isFoodLab && room.isFoodLab) score += 20;
+              const slotIdx = getTimeSlotIndex(timeSlot, scheduleMode);
+              if (slotIdx >= 1 && slotIdx <= 6) score += 10;
+
+              const timeLabel = getMeetingTimeLabel(timeSlot, subject.hoursPerMeeting, scheduleMode) || timeSlot.label;
+              const dayLabel = pairNorm.map(d => d.slice(0, 3)).join(' / ');
+
+              let badge = '✨ Best Match';
+              if (profLoad.usedUnits === 0) badge = '🌟 Lowest Load';
+              else if (subject.requiredLab) badge = '💻 Dedicated Lab';
+              else if (sectionDept && roomDept === sectionDept) badge = '🏛️ Dept Room';
+
+              recommendations.push({
+                subject,
+                section,
+                professor,
+                room,
+                days: pairNorm,
+                day: pairNorm,
+                dayLabel,
+                timeSlot: { ...timeSlot, label: timeLabel },
+                score,
+                badge,
+                reason: `Conflict-free on ${dayLabel} in ${room.name} with Prof. ${professor.name}.`
+              });
+
+              if (recommendations.length >= limit * 3) break;
+            }
+            if (recommendations.length >= limit * 3) break;
+          }
+          if (recommendations.length >= limit * 3) break;
+        }
+        if (recommendations.length >= limit * 3) break;
+      }
+      if (recommendations.length >= limit * 3) break;
+    }
+    if (recommendations.length >= limit * 3) break;
+  }
+
+  recommendations.sort((a, b) => b.score - a.score);
+  return recommendations.slice(0, limit);
+}
+
+
 
