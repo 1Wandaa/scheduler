@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS } from '../../config/constants';
+import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS, getProgramChairInfo } from '../../config/constants';
 import { slotsNeededFromIndex } from '../../utils/scheduleUtils';
 import '../../styles/PrintableSchedule.css';
 
@@ -45,9 +45,18 @@ function getOccupiedPrintRows(schedule, isFourDay) {
     return [...rows].sort((a, b) => a - b);
 }
 
-const PrintableSchedule = ({ scheduleItems, sectionName, programName, semesterInfo, scheduleMode }) => {
+const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, department, semesterInfo, scheduleMode }) => {
     const isFourDay = scheduleMode === 'fourDay';
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+    const chairInfo = useMemo(() => {
+        return getProgramChairInfo({
+            department,
+            programName,
+            sectionName,
+            scheduleItems
+        });
+    }, [department, programName, sectionName, scheduleItems]);
 
     const fixedTimeSlots = [
         "7:00 - 8:00",   // index 0
@@ -129,7 +138,7 @@ const PrintableSchedule = ({ scheduleItems, sectionName, programName, semesterIn
 
             {/* Meta Info */}
             <div className="meta-info">
-                <div>DEGREE PROGRAM: <span className="meta-value">{programName || 'Bachelor of Science in Computer Science'}</span></div>
+                <div>DEGREE PROGRAM: <span className="meta-value">{chairInfo.programName}</span></div>
                 <div>COURSE &amp; YEAR: <span className="meta-value">{sectionName || 'BSCS 4C'}</span></div>
                 <div>SEMESTER &amp; AY: <span className="meta-value">{semesterInfo || '1ST Sem 2025-2026'}</span></div>
             </div>
@@ -183,8 +192,8 @@ const PrintableSchedule = ({ scheduleItems, sectionName, programName, semesterIn
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', padding: '0 40px', fontSize: '10pt', fontFamily: '"Times New Roman", Times, serif', color: '#000' }}>
                 <div style={{ textAlign: 'left' }}>
                     <div style={{ marginBottom: '20px' }}>Prepared by:</div>
-                    <div style={{ fontWeight: 'bold', textDecoration: 'underline' }}>JELLY L. PAREDES, EdD</div>
-                    <div>Program Chairman, BSCS</div>
+                    <div style={{ fontWeight: 'bold', textDecoration: 'underline' }}>{chairInfo.chairName}</div>
+                    <div>{chairInfo.title}</div>
                 </div>
                 <div style={{ textAlign: 'left', paddingRight: '40px' }}>
                     <div style={{ marginBottom: '20px' }}>Approved:</div>

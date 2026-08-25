@@ -423,6 +423,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
             <PrintableSchedule
                 scheduleItems={filteredSchedules}
                 scheduleMode={detectedScheduleMode}
+                department={viewType === 'department' ? selectedId : ''}
                 sectionName={
                     viewType === 'department' && deptSectionId
                         ? (sections.find(s => s.id === deptSectionId)?.name || titleName)

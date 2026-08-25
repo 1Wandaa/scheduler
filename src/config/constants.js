@@ -127,6 +127,86 @@ export const PROGRAM_DEPARTMENTS = {
   'BA English Language': 'BAEL'
 };
 
+export const PROGRAM_CHAIRS = {
+  BSCS: {
+    deptCode: 'BSCS',
+    programName: 'Bachelor of Science in Computer Science',
+    chairName: 'JELLY L. PAREDES, EdD',
+    title: 'Program Chairman, BSCS'
+  },
+  BAEL: {
+    deptCode: 'BAEL',
+    programName: 'Bachelor of Arts in English Language',
+    chairName: 'MARIA AURORA G. VICTORIANO',
+    title: 'Program Chairman, BAEL'
+  },
+  BSOA: {
+    deptCode: 'BSOA',
+    programName: 'Bachelor of Science in Office Administration',
+    chairName: 'FROCY NAVARROSA',
+    title: 'Program Chairman, BSOA'
+  },
+  BSFT: {
+    deptCode: 'BSFT',
+    programName: 'Bachelor of Science in Food Technology',
+    chairName: 'MARIFE HILAPAD',
+    title: 'Program Chairman, BSFT'
+  }
+};
+
+/**
+ * Resolves program name and chair information based on department, program name, section name, or schedule list.
+ */
+export function getProgramChairInfo(input = {}) {
+  const { department, programName, sectionName, scheduleItems = [] } = input;
+  let deptKey = null;
+
+  if (department) {
+    const d = String(department).toUpperCase().trim();
+    if (PROGRAM_CHAIRS[d]) deptKey = d;
+  }
+
+  if (!deptKey && programName) {
+    const p = String(programName).toUpperCase().trim();
+    if (p.includes('COMPUTER SCIENCE') || p.includes('BSCS')) deptKey = 'BSCS';
+    else if (p.includes('ENGLISH LANGUAGE') || p.includes('BAEL') || p.includes('ARTS IN ENGLISH')) deptKey = 'BAEL';
+    else if (p.includes('OFFICE ADMINISTRATION') || p.includes('BSOA')) deptKey = 'BSOA';
+    else if (p.includes('FOOD TECHNOLOGY') || p.includes('BSFT')) deptKey = 'BSFT';
+  }
+
+  if (!deptKey && sectionName) {
+    const s = String(sectionName).toUpperCase().trim();
+    if (s.includes('BSCS')) deptKey = 'BSCS';
+    else if (s.includes('BAEL')) deptKey = 'BAEL';
+    else if (s.includes('BSOA')) deptKey = 'BSOA';
+    else if (s.includes('BSFT')) deptKey = 'BSFT';
+  }
+
+  if (!deptKey && Array.isArray(scheduleItems) && scheduleItems.length > 0) {
+    for (const item of scheduleItems) {
+      const sName = (item.section?.name || '').toUpperCase();
+      if (sName.includes('BSCS')) { deptKey = 'BSCS'; break; }
+      if (sName.includes('BAEL')) { deptKey = 'BAEL'; break; }
+      if (sName.includes('BSOA')) { deptKey = 'BSOA'; break; }
+      if (sName.includes('BSFT')) { deptKey = 'BSFT'; break; }
+
+      const subjDepts = Array.isArray(item.subject?.departments)
+        ? item.subject.departments
+        : (item.subject?.department ? [item.subject.department] : []);
+      for (const sd of subjDepts) {
+        const upper = String(sd).toUpperCase().trim();
+        if (PROGRAM_CHAIRS[upper]) { deptKey = upper; break; }
+      }
+      if (deptKey) break;
+
+      const profDept = String(item.professor?.department || '').toUpperCase().trim();
+      if (PROGRAM_CHAIRS[profDept]) { deptKey = profDept; break; }
+    }
+  }
+
+  return PROGRAM_CHAIRS[deptKey] || PROGRAM_CHAIRS.BSCS;
+}
+
 export const getDeptColor = (dept) => {
   switch (dept) {
     case 'BSCS': return '#109EEF'; // Blue
