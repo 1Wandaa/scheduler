@@ -52,8 +52,8 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
       setError('Room name is required.');
       return;
     }
-    const duplicate = rooms.find(r => 
-      r.name.toLowerCase() === formData.name.trim().toLowerCase() && 
+    const duplicate = rooms.find(r =>
+      r.name.toLowerCase() === formData.name.trim().toLowerCase() &&
       (editMode ? r.id !== currentId : true)
     );
     if (duplicate) {
@@ -69,7 +69,7 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
       building: formData.building || 'Unassigned',
       department: formData.department || 'SHARED',
     };
-    
+
     setIsSaving(true);
     try {
       if (editMode) {
@@ -133,79 +133,80 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
   return (
     <>
       <div className="card" style={{ position: 'relative', backgroundImage: 'none', backgroundColor: '#ffffff' }}>
-      {/* Sticky Wrapper for Header & Filters */}
-      <div className="sticky-mgmt-header" style={{ position: 'sticky', top: '-24px', zIndex: 40, backgroundColor: '#ffffff', paddingTop: '24px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', margin: '-24px -24px 20px -24px', paddingLeft: '24px', paddingRight: '24px' }}>
-      <div className="mgmt-header">
-        <div className="mgmt-header-left">
-          {onBack && (
-            <button className="back-btn" onClick={onBack}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-              Back
-            </button>
-          )}
-          <div className="mgmt-header-info">
-            <h3 className="card-title">
-              <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-              Manage Rooms
-            </h3>
-            <p>Configure campus facilities</p>
+        {/* Sticky Wrapper for Header & Filters */}
+        <div className="sticky-mgmt-header" style={{ position: 'sticky', top: '-24px', zIndex: 40, backgroundColor: '#ffffff', paddingTop: '24px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', margin: '-24px -24px 20px -24px', paddingLeft: '24px', paddingRight: '24px' }}>
+          <div className="mgmt-header">
+            <div className="mgmt-header-left">
+              {onBack && (
+                <button className="back-btn" onClick={onBack}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                  Back
+                </button>
+              )}
+              <div className="mgmt-header-info">
+                <h3 className="card-title">
+                  <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                  Manage Rooms
+                </h3>
+                <p>Configure campus facilities</p>
+              </div>
+            </div>
+            <button className="btn" onClick={handleOpenAdd}>+ Add Room</button>
           </div>
-        </div>
-        <button className="btn" onClick={handleOpenAdd}>+ Add Room</button>
-      </div>
 
-      <div className="mgmt-toolbar">
-        <div className="mgmt-toolbar-row">
-          <span className="mgmt-toolbar-label">Filter by Department:</span>
-          <div className="mgmt-filter-pills">
-            {['All', 'SHARED', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
-              const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
-              const isActive = departmentFilter === dept;
-              return (
-              <button
-                key={dept}
-                className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
-                onClick={() => setDepartmentFilter(dept)}
-                style={isActive ? { background: deptColor, borderColor: deptColor } : undefined}
-              >
-                {dept === 'All' ? 'All Departments' : dept}
-              </button>
-            )})}
-          </div>
-        </div>
-        <div className="mgmt-toolbar-row">
-          <div className="mgmt-search-wrapper" style={{ maxWidth: '300px' }}>
-            <span className="mgmt-search-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            </span>
-            <input 
-              type="text" 
-              className="mgmt-search-input" 
-              placeholder="Search room name or ID..." 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-            />
-          </div>
-          
-          <div className="mgmt-search-wrapper" style={{ maxWidth: '250px' }}>
-            <span className="mgmt-search-icon" style={{ pointerEvents: 'none' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
-            </span>
-            <select 
-              className="mgmt-search-input" 
-              value={filterBuilding} 
-              onChange={(e) => setFilterBuilding(e.target.value)}
-              style={{ appearance: 'auto' }}
-            >
-              <option value="">All Buildings</option>
-              {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
-      </div>
+          <div className="mgmt-toolbar">
+            <div className="mgmt-toolbar-row">
+              <span className="mgmt-toolbar-label">Filter by Department:</span>
+              <div className="mgmt-filter-pills">
+                {['All', 'SHARED', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
+                  const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+                  const isActive = departmentFilter === dept;
+                  return (
+                    <button
+                      key={dept}
+                      className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
+                      onClick={() => setDepartmentFilter(dept)}
+                      style={isActive ? { background: deptColor, borderColor: deptColor } : undefined}
+                    >
+                      {dept === 'All' ? 'All Departments' : dept}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="mgmt-toolbar-row">
+              <div className="mgmt-search-wrapper" style={{ maxWidth: '300px' }}>
+                <span className="mgmt-search-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </span>
+                <input
+                  type="text"
+                  className="mgmt-search-input"
+                  placeholder="Search room name or ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
 
-      <RoomTable roomList={filteredRooms} onEdit={handleOpenEdit} onDelete={handleDelete} />
+              <div className="mgmt-search-wrapper" style={{ maxWidth: '250px' }}>
+                <span className="mgmt-search-icon" style={{ pointerEvents: 'none' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                </span>
+                <select
+                  className="mgmt-search-input"
+                  value={filterBuilding}
+                  onChange={(e) => setFilterBuilding(e.target.value)}
+                  style={{ appearance: 'auto' }}
+                >
+                  <option value="">All Buildings</option>
+                  {BUILDINGS.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <RoomTable roomList={filteredRooms} onEdit={handleOpenEdit} onDelete={handleDelete} />
       </div>
 
       {showModal && (
@@ -274,22 +275,22 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '25px', padding: '12px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input 
-                  type="checkbox" 
-                  checked={(formData.building === 'BSCS Building' || formData.department === 'BSCS') ? true : formData.hasComputers} 
-                  disabled={formData.building === 'BSCS Building' || formData.department === 'BSCS'} 
-                  onChange={e => setFormData({ ...formData, hasComputers: e.target.checked, isFoodLab: e.target.checked ? false : formData.isFoodLab })} 
-                  style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} 
-                /> 
+                <input
+                  type="checkbox"
+                  checked={(formData.building === 'BSCS Building' || formData.department === 'BSCS') ? true : formData.hasComputers}
+                  disabled={formData.building === 'BSCS Building' || formData.department === 'BSCS'}
+                  onChange={e => setFormData({ ...formData, hasComputers: e.target.checked, isFoodLab: e.target.checked ? false : formData.isFoodLab })}
+                  style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
+                />
                 Has Computers
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input 
-                  type="checkbox" 
-                  checked={formData.isFoodLab} 
-                  onChange={e => setFormData({ ...formData, isFoodLab: e.target.checked, hasComputers: e.target.checked ? false : formData.hasComputers })} 
-                  style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} 
-                /> 
+                <input
+                  type="checkbox"
+                  checked={formData.isFoodLab}
+                  onChange={e => setFormData({ ...formData, isFoodLab: e.target.checked, hasComputers: e.target.checked ? false : formData.hasComputers })}
+                  style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
+                />
                 Is Food Laboratory
               </label>
             </div>

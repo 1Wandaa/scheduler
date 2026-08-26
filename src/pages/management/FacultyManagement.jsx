@@ -44,9 +44,9 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
   const getFacultyMatchingSubjectsForSection = (sec, specialization) => {
     if (!sec || !specialization || specialization.length === 0) return [];
     const secSubjs = getSectionSubjects(sec);
-    return secSubjs.filter(sub => 
-      specialization.includes(sub.id) || 
-      specialization.includes(sub.code) || 
+    return secSubjs.filter(sub =>
+      specialization.includes(sub.id) ||
+      specialization.includes(sub.code) ||
       specialization.includes(sub.name)
     );
   };
@@ -122,7 +122,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
   const handleOpenEdit = (prof) => {
     let fName = prof.firstName || '';
     let lName = prof.lastName || '';
-    
+
     if (!fName && !lName && prof.name) {
       if (prof.name.includes(',')) {
         const parts = prof.name.split(',');
@@ -133,7 +133,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
         let parts = prof.name.trim().split(/\s+/);
         let title = '';
         if (parts.length > 0 && titles.includes(parts[0])) title = parts.shift();
-        
+
         if (parts.length >= 2) {
           lName = parts.pop();
           fName = (title ? title + ' ' : '') + parts.join(' ');
@@ -165,7 +165,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
     }
 
     const combinedName = `${(formData.lastName || '').trim()}, ${(formData.firstName || '').trim()}`;
-    
+
     // Robust duplicate check: normalize by removing titles, spaces, and punctuation
     const normalizeName = (name) => {
       if (!name) return '';
@@ -175,8 +175,8 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
 
     const newNameNormalized = normalizeName(formData.firstName + formData.lastName);
 
-    const isDuplicate = professors.some(p => 
-      p.id !== currentId && 
+    const isDuplicate = professors.some(p =>
+      p.id !== currentId &&
       normalizeName(p.name) === newNameNormalized
     );
 
@@ -285,8 +285,8 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
           allEnrolled,
           matchingSubjects: matching,
           disabled: !isEligible,
-          disabledReason: !hasAssignedSubjects 
-            ? 'Select assigned subjects first' 
+          disabledReason: !hasAssignedSubjects
+            ? 'Select assigned subjects first'
             : 'Section is not enrolled in any of the faculty’s assigned subjects'
         };
       })
@@ -295,8 +295,8 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
         const q = sectionSearchQuery.toLowerCase();
         const nameMatch = (sec.name || '').toLowerCase().includes(q);
         const deptMatch = (sec.department || sec.program || '').toLowerCase().includes(q);
-        const subjectMatch = sec.allEnrolled.some(s => 
-          (s.code || '').toLowerCase().includes(q) || 
+        const subjectMatch = sec.allEnrolled.some(s =>
+          (s.code || '').toLowerCase().includes(q) ||
           (s.name || '').toLowerCase().includes(q)
         );
         return nameMatch || deptMatch || subjectMatch;
@@ -325,66 +325,67 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
 
   return (
     <>
-      <div className="card" style={{  position: 'relative' }}>
+      <div className="card" style={{ position: 'relative' }}>
         {/* Sticky Wrapper for Header & Filters */}
         <div className="sticky-mgmt-header" style={{ position: 'sticky', top: '-24px', zIndex: 40, backgroundColor: '#ffffff', paddingTop: '24px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', margin: '-24px -24px 20px -24px', paddingLeft: '24px', paddingRight: '24px' }}>
-        <div className="mgmt-header">
-          <div className="mgmt-header-left">
-            {onBack && (
-              <button className="back-btn" onClick={onBack}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-                Back
-              </button>
-            )}
-            <div className="mgmt-header-info">
-              <h3 className="card-title">
-                <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-                Faculty Management
-              </h3>
-              <p>Manage instructors, their departments, and constraints</p>
-            </div>
-          </div>
-          <button className="btn" onClick={handleOpenAdd}>+ Add Faculty</button>
-        </div>
-
-        {/* Department Filter and Search */}
-        <div className="mgmt-toolbar">
-          <div className="mgmt-toolbar-row">
-            <span className="mgmt-toolbar-label">Filter by Department:</span>
-            <div className="mgmt-filter-pills">
-              {['All', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
-                const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
-                const isActive = departmentFilter === dept;
-                return (
-                <button
-                  key={dept}
-                  className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
-                  onClick={() => setDepartmentFilter(dept)}
-                  style={isActive ? { background: deptColor, borderColor: deptColor } : undefined}
-                >
-                  {dept === 'All' ? 'All Departments' : dept}
+          <div className="mgmt-header">
+            <div className="mgmt-header-left">
+              {onBack && (
+                <button className="back-btn" onClick={onBack}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                  Back
                 </button>
-              )})}
+              )}
+              <div className="mgmt-header-info">
+                <h3 className="card-title">
+                  <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
+                  Faculty Management
+                </h3>
+                <p>Manage instructors, their departments, and constraints</p>
+              </div>
             </div>
-            {departmentFilter !== 'All' && (
-              <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: '500' }}>
-                Showing {professors.filter(p => p.department === departmentFilter).length} of {professors.length} faculty
+            <button className="btn" onClick={handleOpenAdd}>+ Add Faculty</button>
+          </div>
+
+          {/* Department Filter and Search */}
+          <div className="mgmt-toolbar">
+            <div className="mgmt-toolbar-row">
+              <span className="mgmt-toolbar-label">Filter by Department:</span>
+              <div className="mgmt-filter-pills">
+                {['All', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
+                  const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+                  const isActive = departmentFilter === dept;
+                  return (
+                    <button
+                      key={dept}
+                      className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
+                      onClick={() => setDepartmentFilter(dept)}
+                      style={isActive ? { background: deptColor, borderColor: deptColor } : undefined}
+                    >
+                      {dept === 'All' ? 'All Departments' : dept}
+                    </button>
+                  )
+                })}
+              </div>
+              {departmentFilter !== 'All' && (
+                <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: '500' }}>
+                  Showing {professors.filter(p => p.department === departmentFilter).length} of {professors.length} faculty
+                </span>
+              )}
+            </div>
+            <div className="mgmt-search-wrapper">
+              <span className="mgmt-search-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
               </span>
-            )}
+              <input
+                type="text"
+                className="mgmt-search-input"
+                placeholder="Search faculty name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="mgmt-search-wrapper">
-            <span className="mgmt-search-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            </span>
-            <input 
-              type="text" 
-              className="mgmt-search-input" 
-              placeholder="Search faculty name..." 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-            />
-          </div>
-        </div>
         </div>
 
         <FacultyTable facultyList={filteredProfessors} subjects={subjects} schedules={schedules} departments={departments} onEdit={handleOpenEdit} onDelete={handleDelete} />
@@ -401,7 +402,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
               </div>
             )}
             <div className="form-group"><label className="form-label">Faculty ID</label><input className="form-input" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="e.g. P001" /></div>
-            
+
             <div style={{ display: 'flex', gap: '15px' }}>
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Last Name (Surname)</label>
@@ -424,12 +425,12 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
               </div>
               {(() => {
                 let currentUnits = 0;
-                
+
                 if (editMode && currentId) {
                   const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
                   const matchesProfessor = (s, id) => professorIdOf(s) != null && String(professorIdOf(s)) === String(id);
                   const profSchedules = (schedules || []).filter(s => matchesProfessor(s, currentId));
-                  
+
                   const uniqueSubjectSections = new Map();
                   for (const s of profSchedules) {
                     const subjectId = s.subject?.id || s.subject?.code || 'unknown';
@@ -443,14 +444,14 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                 } else {
                   const selectedIds = formData.specialization || [];
                   const assignedSectionsCount = (formData.assignedSections || []).length;
-                  
+
                   const baseUnits = subjects
                     .filter(s => selectedIds.includes(s.id) || selectedIds.includes(s.code) || selectedIds.includes(s.name))
                     .reduce((sum, s) => sum + (Number(s.credits) || 3), 0);
-                    
+
                   currentUnits = baseUnits * Math.max(1, assignedSectionsCount);
                 }
-                
+
                 return (
                   <div className="form-group" style={{ width: '100px' }}>
                     <label className="form-label">Total Units</label>
@@ -494,19 +495,19 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                 setSearchQuery={setRoomSearchQuery}
                 noOptionsMessage={sortedRooms.length === 0 ? "No rooms available." : "No rooms match your search."}
                 renderChip={(room, onRemove) => (
-                  <div style={{ 
-                    display: 'flex', alignItems: 'center', gap: '6px', 
-                    padding: '4px 10px', borderRadius: '16px', 
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '4px 10px', borderRadius: '16px',
                     background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)',
-                    fontSize: '0.8rem', fontWeight: '600', color: '#3b82f6' 
+                    fontSize: '0.8rem', fontWeight: '600', color: '#3b82f6'
                   }}>
                     {room.name}
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={(e) => { e.stopPropagation(); onRemove(); }}
                       style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
-                      
-                      
+
+
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
@@ -531,9 +532,9 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
               </div>
 
               {(!formData.specialization || formData.specialization.length === 0) && (
-                <div style={{ 
-                  fontSize: '0.78rem', color: 'var(--warning)', 
-                  background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.25)', 
+                <div style={{
+                  fontSize: '0.78rem', color: 'var(--warning)',
+                  background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.25)',
                   padding: '8px 12px', borderRadius: '6px', marginBottom: '10px',
                   display: 'flex', alignItems: 'center', gap: '6px'
                 }}>
@@ -551,8 +552,8 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                 searchQuery={sectionSearchQuery}
                 setSearchQuery={setSectionSearchQuery}
                 noOptionsMessage={
-                  sections.length === 0 
-                    ? "No sections available." 
+                  sections.length === 0
+                    ? "No sections available."
                     : (!formData.specialization || formData.specialization.length === 0)
                       ? "Select assigned subjects first to see eligible sections."
                       : "No sections match your search."
@@ -562,11 +563,11 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                   const matchingLabel = matching.map(s => s.code || s.name).join(', ');
 
                   return (
-                    <div style={{ 
-                      display: 'flex', alignItems: 'center', gap: '6px', 
-                      padding: '4px 10px', borderRadius: '16px', 
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '4px 10px', borderRadius: '16px',
                       background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)',
-                      fontSize: '0.8rem', fontWeight: '600', color: '#10b981' 
+                      fontSize: '0.8rem', fontWeight: '600', color: '#10b981'
                     }}>
                       <span>{sec.name}</span>
                       {matchingLabel && (
@@ -574,8 +575,8 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                           ({matchingLabel})
                         </span>
                       )}
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={(e) => { e.stopPropagation(); onRemove(); }}
                         style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
                       >

@@ -680,10 +680,10 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
           className="schedule-table"
           style={(isFullscreen ? fitScale !== 1 : (viewMode === 'grid' && fitScale < 1)) ? { zoom: fitScale } : {}}
         >
-          <thead style={{ position: 'sticky', top: 0, zIndex: 40 }}>
+          <thead>
             <tr>
-              <th className="sticky-col" style={{ position: 'sticky', top: 0, left: 0, zIndex: 50, width: '130px', minWidth: '130px', backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)', borderRight: '1px solid var(--border-color)', boxShadow: '4px 0 8px -2px rgba(0,0,0,0.05)' }}>Time Slot</th>
-              {displayDays.map(day => <th key={day} style={{ position: 'sticky', top: 0, zIndex: 40, backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)' }}>{day}</th>)}
+              <th className="sticky-col" style={{ width: '130px', minWidth: '130px', backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)', borderRight: '1px solid var(--border-color)' }}>Time Slot</th>
+              {displayDays.map(day => <th key={day} style={{ backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)' }}>{day}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -714,7 +714,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                 <React.Fragment key={timeSlot.id}>
                   <tr className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
                     {isHourGroupHead && (
-                      <td className="time-label sticky-col" rowSpan={timeRowSpan} style={{ position: 'sticky', left: 0, zIndex: 30, borderRight: '1px solid var(--border-color)', boxShadow: '4px 0 8px -2px rgba(0,0,0,0.05)' }}>
+                      <td className="time-label sticky-col" rowSpan={timeRowSpan} style={{ borderRight: '1px solid var(--border-color)' }}>
                         <strong>{hourLabel}</strong>
                       </td>
                     )}
