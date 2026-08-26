@@ -784,28 +784,64 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               onChange={handleChange}
               placeholder="Select a room..."
               required
-              options={Object.entries(rooms.reduce((acc, r) => {
-                const b = r.building || 'Other';
-                if (!acc[b]) acc[b] = [];
-                acc[b].push(r);
-                return acc;
-              }, {}))
-                .sort(([bA], [bB]) => bA.localeCompare(bB))
-                .map(([building, bRooms]) => ({
-                  label: building,
-                  options: bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => {
-                    const isConflict = checkConflict({ room });
-                    const isNonLabForLabSubject = selectedSubject?.requiredLab && !room.hasComputers;
-                    let badge = null;
-                    if (isConflict) badge = '(In Use)';
-                    else if (isNonLabForLabSubject) badge = '(Not a Lab)';
-                    return {
-                      value: room.id,
-                      label: `${room.name}${room.hasComputers ? ' (Lab)' : ''}`,
-                      badge
-                    };
-                  })
-                }))}
+              options={(() => {
+                const buildingGroups = Object.entries(rooms.reduce((acc, r) => {
+                  const b = r.building || 'Other';
+                  if (!acc[b]) acc[b] = [];
+                  acc[b].push(r);
+                  return acc;
+                }, {}))
+                  .sort(([bA], [bB]) => bA.localeCompare(bB))
+                  .map(([building, bRooms]) => ({
+                    label: building,
+                    options: bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => {
+                      const isConflict = checkConflict({ room });
+                      const isNonLabForCompSubject = selectedSubject?.requiredLab && !room.hasComputers;
+                      const isNonFoodForFoodSubject = selectedSubject?.isFoodLab && !room.isFoodLab;
+                      let badge = null;
+                      if (isConflict) badge = '(In Use)';
+                      else if (isNonLabForCompSubject) badge = '(Not a Comp Lab)';
+                      else if (isNonFoodForFoodSubject) badge = '(Not a Food Lab)';
+                      
+                      let roomLabel = room.name;
+                      if (room.hasComputers) roomLabel += ' (Comp Lab)';
+                      if (room.isFoodLab) roomLabel += ' (Food Lab)';
+
+                      return {
+                        value: room.id,
+                        label: roomLabel,
+                        badge
+                      };
+                    })
+                  }));
+                  
+                let finalOptions = [];
+                if (selectedSubject && (selectedSubject.requiredLab || selectedSubject.isFoodLab)) {
+                  const suggestedRooms = rooms.filter(r => {
+                    if (selectedSubject.requiredLab && !r.hasComputers) return false;
+                    if (selectedSubject.isFoodLab && !r.isFoodLab) return false;
+                    return !checkConflict({ room: r });
+                  }).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+                  if (suggestedRooms.length > 0) {
+                    finalOptions.push({
+                      label: '✨ Suggested Labs',
+                      options: suggestedRooms.map(room => {
+                         let roomLabel = room.name;
+                         if (room.hasComputers) roomLabel += ' (Comp Lab)';
+                         if (room.isFoodLab) roomLabel += ' (Food Lab)';
+                         return {
+                           value: room.id,
+                           label: roomLabel,
+                           badge: '✨ Recommended'
+                         };
+                      })
+                    });
+                  }
+                }
+                
+                return finalOptions.concat(buildingGroups);
+              })()}
             />
           </div>
         </div>
