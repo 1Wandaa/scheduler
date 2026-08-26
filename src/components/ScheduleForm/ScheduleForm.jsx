@@ -847,13 +847,14 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             </div>
             {/* Hidden input to maintain HTML5 validation if needed */}
             <input type="hidden" name="day" value={Array.isArray(formData.day) ? formData.day.join(',') : formData.day} required={!formData.day || formData.day.length === 0} />
+          </div>
             
-            {/* Time Slot Dropdowns per selected day */}
-            {formData.day.map(dayStr => {
+          {/* Time Slot Dropdowns per selected day */}
+          {formData.day.map(dayStr => {
               const isDropdownOpen = openTimeSlotDay === dayStr;
               const timeValue = formData.timeSlot[dayStr] || '';
               return (
-              <div key={dayStr} className="form-group" style={{ gridColumn: '1 / -1', position: 'relative' }} ref={isDropdownOpen ? dropdownRef : null}>
+              <div key={dayStr} className="form-group" style={{ position: 'relative' }} ref={isDropdownOpen ? dropdownRef : null}>
                 <label>{dayStr} Time Slot</label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -972,7 +973,6 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               </div>
               );
             })}
-          </div>
         </div>
 
         <button type="submit" disabled={loading} className="submit-btn" style={{ width: '100%', marginTop: '10px' }}>
