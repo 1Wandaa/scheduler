@@ -174,27 +174,66 @@ const ScheduleHistory = ({ history, onBack }) => {
                   </div>
 
                   <div style={{ 
-                    maxHeight: isExpanded ? '1000px' : '0px', 
+                    maxHeight: isExpanded ? '1200px' : '0px', 
                     opacity: isExpanded ? 1 : 0, 
                     overflow: 'hidden', 
                     transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)' 
                   }}>
                     <div style={{ padding: '20px', background: 'var(--card-bg)' }}>
+                      {/* Success / Status Banner */}
                       {!hasErrors ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: 'rgba(16,185,129,0.08)', borderRadius: '12px', border: '1px dashed rgba(16,185,129,0.3)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: 'rgba(16,185,129,0.08)', borderRadius: '12px', border: '1px dashed rgba(16,185,129,0.3)', marginBottom: (record.createdSchedules && record.createdSchedules.length > 0) ? '16px' : '0' }}>
                           <div style={{ width: '32px', height: '32px', background: '#10b981', borderRadius: '50%', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                           </div>
                           <div>
-                            <div style={{ color: '#059669', fontWeight: 700, fontSize: '0.95rem' }}>Perfect Generation!</div>
-                            <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '2px' }}>All requested classes were scheduled successfully without conflicts.</div>
+                            <div style={{ color: '#059669', fontWeight: 700, fontSize: '0.95rem' }}>
+                              {record.engineMode === 'manual' ? 'Manual Schedule Created Successfully!' : 'Perfect Generation!'}
+                            </div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '2px' }}>
+                              {record.engineMode === 'manual'
+                                ? 'The manual schedule entry was validated and saved to timetable.'
+                                : 'All requested classes were scheduled successfully without conflicts.'}
+                            </div>
                           </div>
                         </div>
-                      ) : (
+                      ) : null}
+
+                      {/* Scheduled Classes Display (for manual additions & successful items) */}
+                      {record.createdSchedules && record.createdSchedules.length > 0 && (
+                        <div style={{ marginBottom: hasErrors ? '16px' : '0' }}>
+                          <h4 style={{ color: '#059669', margin: '0 0 12px', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            Scheduled Classes ({record.createdSchedules.length})
+                          </h4>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '10px' }}>
+                            {record.createdSchedules.map((sc, i) => (
+                              <div key={i} style={{ padding: '12px 14px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderLeft: '4px solid #10b981', borderRadius: '8px', fontSize: '0.85rem' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px' }}>
+                                  {sc.subject} {sc.section && <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>— {sc.section}</span>}
+                                </div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  <span>📅 {sc.day} ({sc.timeSlot})</span>
+                                  <span>·</span>
+                                  <span>🚪 {sc.room}</span>
+                                </div>
+                                {sc.professor && (
+                                  <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '4px' }}>
+                                    👨‍🏫 {sc.professor}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Unscheduled / Conflicts Display */}
+                      {hasErrors && (
                         <div>
                           <h4 style={{ color: '#ef4444', margin: '0 0 16px', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                            Unscheduled / Conflicts
+                            Unscheduled / Conflicts ({record.errors?.length || record.errorCount})
                           </h4>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '12px' }}>
                             {(record.errors || []).map((err, idx) => (
@@ -206,20 +245,25 @@ const ScheduleHistory = ({ history, onBack }) => {
                                 borderRadius: '10px',
                                 fontSize: '0.9rem',
                                 transition: 'transform 0.2s',
-                                boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-                              }}
-                              
-                              
-                              >
-                                <div style={{ fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px'
+                              }}>
+                                <div style={{ fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
                                   {err.subject} 
                                   {err.section && <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>— {err.section}</span>}
                                 </div>
-                                <div style={{ color: '#dc2626', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                                  <span style={{ marginTop: '2px', opacity: 0.7 }}>↳</span>
-                                  <span style={{ lineHeight: 1.4 }}>{err.reason}</span>
+                                <div style={{ color: '#dc2626', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '6px', lineHeight: 1.4 }}>
+                                  <span style={{ opacity: 0.7 }}>↳</span>
+                                  <span>{err.reason}</span>
                                 </div>
+                                {err.details?.suggestion && (
+                                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', background: 'rgba(99,102,241,0.05)', padding: '6px 8px', borderRadius: '6px', border: '1px solid rgba(99,102,241,0.1)' }}>
+                                    💡 <strong>Tip:</strong> {err.details.suggestion}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>

@@ -74,11 +74,11 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
     try {
       if (editMode) {
         await updateDoc(doc(db, 'courses', currentId.toString()), payload);
-        logActivity({ user, action: LOG_ACTIONS.UPDATE_ROOM || 'UPDATE_COURSE', details: `Updated course: ${formData.code}` });
+        logActivity({ user, action: LOG_ACTIONS.UPDATE_COURSE, details: `Updated course: ${formData.code} - ${formData.title}` });
       } else {
         const newId = formData.id.trim() || `C${Date.now().toString().slice(-4)}`;
         await addDoc(collection(db, 'courses'), { ...payload, id: newId });
-        logActivity({ user, action: LOG_ACTIONS.ADD_ROOM || 'ADD_COURSE', details: `Added new course: ${formData.code}` });
+        logActivity({ user, action: LOG_ACTIONS.ADD_COURSE, details: `Added new course: ${formData.code} - ${formData.title}` });
       }
       setShowModal(false);
     } catch (err) {
@@ -102,7 +102,7 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
       try {
         await deleteDoc(doc(db, 'courses', id.toString()));
         const course = courses.find(c => String(c.id) === String(id));
-        logActivity({ user, action: LOG_ACTIONS.DELETE_ROOM || 'DELETE_COURSE', details: `Deleted course: ${course?.code || id}` });
+        logActivity({ user, action: LOG_ACTIONS.DELETE_COURSE, details: `Deleted course: ${course?.code || id}` });
         toast.success('Course deleted successfully');
       } catch (err) {
         console.error("Error deleting course:", err);

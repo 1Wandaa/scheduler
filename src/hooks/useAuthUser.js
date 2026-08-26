@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 import { auth, db } from '../config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, getDocs, getDoc, doc, setDoc } from 'firebase/firestore';
+import { logActivity, LOG_ACTIONS } from '../utils/activityLogger';
 
 /** Timeout (ms) for the initial Firestore profile fetch. */
 const PROFILE_FETCH_TIMEOUT = 5000;
@@ -164,6 +165,13 @@ export function useAuthUser() {
   };
 
   const handleLogout = async () => {
+    if (user) {
+      logActivity({
+        user,
+        action: LOG_ACTIONS.LOGOUT,
+        details: `${user.name || user.username} logged out`
+      });
+    }
     const username = localStorage.getItem('smartsched_username');
     if (username) {
       sessionStorage.removeItem(`smartsched_login_logged_${username}`);

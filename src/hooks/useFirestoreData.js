@@ -190,7 +190,11 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
       setScheduleHistory(
         snap.docs
           .map((d) => ({ ...d.data(), id: d.id }))
-          .sort((a, b) => b.timestamp - a.timestamp)
+          .sort((a, b) => {
+            const timeA = a.timestamp?.toMillis ? a.timestamp.toMillis() : (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : new Date(a.timestamp || 0).getTime());
+            const timeB = b.timestamp?.toMillis ? b.timestamp.toMillis() : (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : new Date(b.timestamp || 0).getTime());
+            return timeB - timeA;
+          })
       )
     );
 

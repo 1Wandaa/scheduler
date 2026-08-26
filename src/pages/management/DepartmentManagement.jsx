@@ -66,11 +66,11 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
     try {
       if (editMode) {
         await updateDoc(doc(db, 'departments', currentId.toString()), payload);
-        logActivity({ user, action: LOG_ACTIONS.UPDATE_ROOM || 'UPDATE_DEPARTMENT', details: `Updated department: ${formData.name}` }); // Note: you might want to add UPDATE_DEPARTMENT to LOG_ACTIONS if it doesn't exist
+        logActivity({ user, action: LOG_ACTIONS.UPDATE_DEPARTMENT, details: `Updated department: ${formData.name}` });
       } else {
         const newId = formData.id.trim() || `D${Date.now().toString().slice(-4)}`;
         await addDoc(collection(db, 'departments'), { ...payload, id: newId });
-        logActivity({ user, action: LOG_ACTIONS.ADD_ROOM || 'ADD_DEPARTMENT', details: `Added new department: ${formData.name}` });
+        logActivity({ user, action: LOG_ACTIONS.ADD_DEPARTMENT, details: `Added new department: ${formData.name}` });
       }
       setShowModal(false);
     } catch (err) {
@@ -94,7 +94,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
       try {
         await deleteDoc(doc(db, 'departments', id.toString()));
         const dept = departments.find(d => String(d.id) === String(id));
-        logActivity({ user, action: LOG_ACTIONS.DELETE_ROOM || 'DELETE_DEPARTMENT', details: `Deleted department: ${dept?.name || id}` });
+        logActivity({ user, action: LOG_ACTIONS.DELETE_DEPARTMENT, details: `Deleted department: ${dept?.name || id}` });
         toast.success('Department deleted successfully');
       } catch (err) {
         console.error("Error deleting department:", err);

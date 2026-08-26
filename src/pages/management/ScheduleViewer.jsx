@@ -134,66 +134,91 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     }, [viewType, selectedId, selectedYearLevel, sections, user]);
 
     // Compute unique year levels from sections for the selected department
-    const availableYearLevels = viewType === 'department' && selectedId
-        ? [...new Set(
+    const availableYearLevels = React.useMemo(() => {
+        if (viewType !== 'department' || !selectedId) return [];
+        return [...new Set(
             sections
                 .filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()))
                 .map(sec => sec.yearLevel)
                 .filter(Boolean)
-        )].sort((a, b) => a - b)
-        : [];
+        )].sort((a, b) => a - b);
+    }, [viewType, selectedId, sections]);
 
-    const deptSections = viewType === 'department' && selectedId
-        ? sections.filter(sec => {
+    const deptSections = React.useMemo(() => {
+        if (viewType !== 'department' || !selectedId) return [];
+        return sections.filter(sec => {
             const matchesDept = sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase());
             if (!matchesDept) return false;
             if (selectedYearLevel) return String(sec.yearLevel) === String(selectedYearLevel);
             return true;
-        })
-        : [];
+        });
+    }, [viewType, selectedId, sections, selectedYearLevel]);
 
+    const filteredSchedules = React.useMemo(() => {
+        if (!selectedId) return [];
 
+        return schedules.filter(s => {
+            if (viewType === 'department') {
+                const subjDepts = Array.isArray(s.subject?.departments) ? s.subject.departments : (s.subject?.department ? [s.subject.department] : []);
+                const sectionDept = s.section?.name?.split(/\s+/)?.[0]?.toUpperCase() || '';
+                const matchesDept = subjDepts.includes(selectedId) || (s.professor?.department === selectedId) || sectionDept === selectedId;
+                if (!matchesDept) return false;
 
-    const filteredSchedules = schedules.filter(s => {
-        if (!selectedId) return false;
+                if (selectedYearLevel && !deptSectionId) {
+                    const sectionObj = sections.find(sec => s.section && String(sec.id) === String(s.section.id));
+                    if (!sectionObj || String(sectionObj.yearLevel) !== String(selectedYearLevel)) return false;
+                }
 
+                if (deptSectionId) {
+                    return s.section != null && String(s.section.id) === String(deptSectionId);
+                }
+                return true;
+            }
+            if (viewType === 'room') return s.room != null && String(s.room.id) === String(selectedId);
+            if (viewType === 'faculty') return s.professor != null && String(s.professor.id) === String(selectedId);
+
+            return false;
+        });
+    }, [schedules, selectedId, viewType, selectedYearLevel, deptSectionId, sections]);
+
+    const activeEntity = React.useMemo(() => {
         if (viewType === 'department') {
-            // Support both new `departments` array and legacy `department` string
-            const subjDepts = Array.isArray(s.subject?.departments) ? s.subject.departments : (s.subject?.department ? [s.subject.department] : []);
-            const sectionDept = s.section?.name?.split(/\s+/)?.[0]?.toUpperCase() || '';
-            const matchesDept = subjDepts.includes(selectedId) || (s.professor?.department === selectedId) || sectionDept === selectedId;
-            if (!matchesDept) return false;
-
-            // Filter by year level if selected (match against section's yearLevel)
-            if (selectedYearLevel && !deptSectionId) {
-                const sectionObj = sections.find(sec => s.section && String(sec.id) === String(s.section.id));
-                if (!sectionObj || String(sectionObj.yearLevel) !== String(selectedYearLevel)) return false;
-            }
-
             if (deptSectionId) {
-                return s.section != null && String(s.section.id) === String(deptSectionId);
+                const sec = sections.find(s => s.id === deptSectionId);
+                return { name: sec ? sec.name : selectedId };
             }
-            return true;
+            return { name: selectedId };
+        } else if (viewType === 'room') {
+            return rooms.find(r => r.id === selectedId);
+        } else if (viewType === 'faculty') {
+            return professors.find(p => p.id === selectedId);
         }
-        if (viewType === 'room') return s.room != null && String(s.room.id) === String(selectedId);
-        if (viewType === 'faculty') return s.professor != null && String(s.professor.id) === String(selectedId);
+        return null;
+    }, [viewType, deptSectionId, selectedId, sections, rooms, professors]);
 
-        return false;
-    });
-
-    let activeEntity = null;
-    if (viewType === 'department') {
-        if (deptSectionId) {
-            const sec = sections.find(s => s.id === deptSectionId);
-            activeEntity = { name: sec ? sec.name : selectedId };
-        } else {
-            activeEntity = { name: selectedId };
+    const targetOptions = React.useMemo(() => {
+        if (viewType === 'department') {
+            return (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)
+                .sort((a, b) => a.localeCompare(b))
+                .map(d => ({ value: d, label: d }));
+        } else if (viewType === 'room') {
+            const buildingMap = {};
+            rooms.forEach(r => {
+                const b = r.building || 'Other';
+                if (!buildingMap[b]) buildingMap[b] = [];
+                buildingMap[b].push(r);
+            });
+            return Object.entries(buildingMap)
+                .sort(([bA], [bB]) => bA.localeCompare(bB))
+                .map(([building, bRooms]) => ({
+                    label: building,
+                    options: bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => ({ value: r.id, label: r.name }))
+                }));
+        } else if (viewType === 'faculty') {
+            return [...professors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(p => ({ value: p.id, label: p.name }));
         }
-    } else if (viewType === 'room') {
-        activeEntity = rooms.find(r => r.id === selectedId);
-    } else if (viewType === 'faculty') {
-        activeEntity = professors.find(p => p.id === selectedId);
-    }
+        return [];
+    }, [viewType, departments, rooms, professors]);
 
     const detectedScheduleMode = React.useMemo(() => {
         const hasFriday = schedules.some(s => s.day === 'Friday');
@@ -310,6 +335,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                             </button>
                         )}
                         <ExportOptions
+                            user={user}
                             isGenerating={isGenerating}
                             setIsGenerating={setIsGenerating}
                             setPreviewImage={setPreviewImage}
@@ -342,28 +368,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                             onChange={(e) => setSelectedId(e.target.value)}
                             placeholder={`Select ${viewType}...`}
                             style={{ width: '100%' }}
-                            options={(() => {
-                                if (viewType === 'department') {
-                                    return (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)
-                                        .sort((a, b) => a.localeCompare(b))
-                                        .map(d => ({ value: d, label: d }));
-                                } else if (viewType === 'room') {
-                                    return Object.entries(rooms.reduce((acc, r) => {
-                                        const b = r.building || 'Other';
-                                        if (!acc[b]) acc[b] = [];
-                                        acc[b].push(r);
-                                        return acc;
-                                    }, {}))
-                                        .sort(([bA], [bB]) => bA.localeCompare(bB))
-                                        .map(([building, bRooms]) => ({
-                                            label: building,
-                                            options: bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => ({ value: r.id, label: r.name }))
-                                        }));
-                                } else if (viewType === 'faculty') {
-                                    return [...professors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(p => ({ value: p.id, label: p.name }));
-                                }
-                                return [];
-                            })()}
+                            options={targetOptions}
                         />
                     </div>
 

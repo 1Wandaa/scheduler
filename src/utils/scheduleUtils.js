@@ -66,6 +66,7 @@ export function fitsFromTimeSlotIndex(startIdx, hoursPerMeeting, scheduleMode) {
  */
 export function getMeetingTimeLabel(startTimeSlot, hoursPerMeeting, scheduleMode) {
   if (!startTimeSlot) return '';
+  if (startTimeSlot.customLabel) return startTimeSlot.customLabel;
   const slots = resolveSlots(scheduleMode);
   const startIdx = getTimeSlotIndex(startTimeSlot, scheduleMode);
   if (startIdx < 0) return startTimeSlot.label || '';

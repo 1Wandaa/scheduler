@@ -1,5 +1,5 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SEMESTERS, SCHOOL_YEARS } from '../../config/constants';
 import { useFirestoreData } from '../../hooks/useFirestoreData';
@@ -172,23 +172,75 @@ const Dashboard = ({ user, onLogout }) => {
   }, []);
 
   const handleAddSchedule = async (newSchedule) => {
-    return addSchedule(newSchedule, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin);
+    const res = await addSchedule(newSchedule, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin);
+    if (res?.ok !== false) {
+      logActivity({
+        user,
+        action: LOG_ACTIONS.ADD_SCHEDULE,
+        details: `Added schedule: ${newSchedule.subject?.code || 'Subject'} (${newSchedule.section?.name || 'Section'}) on ${newSchedule.day} in ${newSchedule.room?.name || 'Room'}`
+      });
+    }
+    return res;
   };
 
   const handleUpdateSchedule = async (scheduleId, newDay, newTimeSlot) => {
-    return updateSchedule(scheduleId, newDay, newTimeSlot, schedules, activeSchedules, rooms, isAdmin);
+    const sched = schedules.find(s => s.id === scheduleId) || activeSchedules.find(s => s.id === scheduleId);
+    const res = await updateSchedule(scheduleId, newDay, newTimeSlot, schedules, activeSchedules, rooms, isAdmin);
+    if (res?.ok !== false) {
+      logActivity({
+        user,
+        action: LOG_ACTIONS.UPDATE_SCHEDULE,
+        details: `Moved schedule: ${sched?.subject?.code || 'Subject'} (${sched?.section?.name || 'Section'}) to ${newDay} (${newTimeSlot?.label || newTimeSlot?.customLabel || 'slot'})`
+      });
+    }
+    return res;
   };
 
   const handleRemoveSchedule = async (scheduleId) => {
-    return removeSchedule(scheduleId, isAdmin);
+    const sched = schedules.find(s => s.id === scheduleId) || activeSchedules.find(s => s.id === scheduleId);
+    const res = await removeSchedule(scheduleId, isAdmin);
+    if (res?.ok !== false) {
+      logActivity({
+        user,
+        action: LOG_ACTIONS.DELETE_SCHEDULE,
+        details: `Deleted schedule: ${sched?.subject?.code || 'Subject'} (${sched?.section?.name || 'Section'}) on ${sched?.day || 'Day'}`
+      });
+    }
+    return res;
   };
 
   const handleRemoveSchedulesBatch = async (scheduleIds) => {
-    return removeSchedulesBatch(scheduleIds, isAdmin);
+    const res = await removeSchedulesBatch(scheduleIds, isAdmin);
+    if (res?.ok !== false) {
+      logActivity({
+        user,
+        action: LOG_ACTIONS.BATCH_DELETE_SCHEDULES,
+        details: `Batch deleted ${scheduleIds.length} schedule entries`
+      });
+    }
+    return res;
   };
 
   const handleAddSchedulesBatch = async (newSchedules, scheduleMode) => {
-    return addSchedulesBatch(newSchedules, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode);
+    const res = await addSchedulesBatch(newSchedules, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode);
+    if (res?.ok !== false) {
+      logActivity({
+        user,
+        action: LOG_ACTIONS.AUTO_SCHEDULE,
+        details: `Batch scheduled ${newSchedules.length} classes for ${activeSemester} (${activeSchoolYear})`
+      });
+    }
+    return res;
+  };
+
+  const handleClearAllSchedules = async () => {
+    const res = await clearAllSchedules(activeSemester, activeSchoolYear);
+    logActivity({
+      user,
+      action: LOG_ACTIONS.CLEAR_SCHEDULES,
+      details: `Cleared all schedules for ${activeSemester} (${activeSchoolYear})`
+    });
+    return res;
   };
 
   const handleLogHistory = async (historyData) => {
@@ -204,7 +256,7 @@ const Dashboard = ({ user, onLogout }) => {
     addSchedule: (room, professor, subject, section, day, timeSlot) => ({
       schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear }
     }),
-    clearAllSchedules: () => clearAllSchedules(activeSemester, activeSchoolYear),
+    clearAllSchedules: handleClearAllSchedules,
     addSchedulesBatch: (schedules, scheduleMode) => handleAddSchedulesBatch(schedules, scheduleMode),
     autoScheduleForSection: (sectionId, constraints, options) =>
       autoScheduleForSection(sectionId, schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
@@ -218,7 +270,9 @@ const Dashboard = ({ user, onLogout }) => {
 
   const firstName = user?.name?.split?.(/\s+/)?.[0] ?? 'there';
 
-  const displaySchedules = (!isAdmin && publishedTerms[`${activeSemester}_${activeSchoolYear}`] !== true) ? [] : enrichedSchedules;
+  const displaySchedules = useMemo(() => {
+    return (!isAdmin && publishedTerms[`${activeSemester}_${activeSchoolYear}`] !== true) ? [] : enrichedSchedules;
+  }, [isAdmin, publishedTerms, activeSemester, activeSchoolYear, enrichedSchedules]);
 
  // Render
   return (
@@ -528,11 +582,11 @@ const Dashboard = ({ user, onLogout }) => {
         )}
 
         {/* Other Tabs */}
-        {isAdmin && activeTab === 'users' && <UserManagement onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'users' && <UserManagement user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{  }}>
             {!isMobile && (
-              <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} activeSemester={activeSemester} activeSchedules={enrichedSchedules} />
+              <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} onLogHistory={handleLogHistory} validator={validator} activeSemester={activeSemester} activeSchedules={enrichedSchedules} />
             )}
             <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onAutoScheduleBatch={handleAddSchedulesBatch} onLogHistory={handleLogHistory} />
           </div>
@@ -545,8 +599,8 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'courses' && <CourseManagement courses={courses} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} professors={professors} sections={sections} schedules={displaySchedules} availableSemesters={availableSemesters} activeSemester={activeSemester} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} />}
-        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} user={user} />}
+        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} />}
         {isAdmin && activeTab === 'recycle-bin' && <RecycleBin user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'activity-log' && (
@@ -619,7 +673,7 @@ const Dashboard = ({ user, onLogout }) => {
               const res = await handleAddSchedule(sched);
               if (res && res.ok) setIsScheduleFormOpen(false);
               return res;
-            }} validator={validator} activeSemester={activeSemester} activeSchedules={enrichedSchedules} />
+            }} onLogHistory={handleLogHistory} validator={validator} activeSemester={activeSemester} activeSchedules={enrichedSchedules} />
           </div>
         </div>
       )}

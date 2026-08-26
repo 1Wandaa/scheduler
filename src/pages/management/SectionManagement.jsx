@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { deleteSectionCascade } from '../../services/cascadeDeleteService';
@@ -7,8 +7,9 @@ import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, PROGRAM_DEPARTMENTS, getDeptColor } from '../../config/constants';
 import SectionTable from '../../components/SectionTable/SectionTable';
 import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
+import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
-const SectionManagement = ({ sections, professors, schedules, subjects, activeSemester, departments = [], courses = [], onBack }) => {
+const SectionManagement = ({ sections, professors, schedules, subjects, activeSemester, departments = [], courses = [], user, onBack }) => {
   const { confirm } = useGlobalDialog();
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -74,9 +75,19 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
     try {
       if (editMode) {
         await updateDoc(doc(db, 'sections', currentId.toString()), formData);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.UPDATE_SECTION,
+          details: `Updated section: ${formData.name} (${formData.program})`
+        });
       } else {
         const newId = formData.id || `SEC${Date.now().toString().slice(-4)}`;
         await addDoc(collection(db, 'sections'), { ...formData, id: newId });
+        logActivity({
+          user,
+          action: LOG_ACTIONS.ADD_SECTION,
+          details: `Added new section: ${formData.name} (${formData.program}) with ${formData.subjects?.length || 0} enrolled subjects`
+        });
       }
       setShowModal(false);
     } catch (err) {
@@ -100,6 +111,11 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
       try {
         const sectionToDelete = sections.find(s => String(s.id) === String(id));
         await deleteSectionCascade(sectionToDelete, professors, schedules);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.DELETE_SECTION,
+          details: `Deleted section: ${sectionToDelete?.name || id} (${sectionToDelete?.program || 'Section'})`
+        });
         toast.success('Section deleted successfully');
       } catch (err) {
         console.error("Error deleting section:", err);

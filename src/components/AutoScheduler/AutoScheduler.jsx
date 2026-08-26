@@ -193,7 +193,8 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           errors: unscheduledResults.map(u => ({
             subject: u.subject?.code || u.subject?.name || 'Unknown',
             section: u.section?.name || 'Unknown',
-            reason: u.reason || 'Insufficient slots or conflict'
+            reason: u.reason || 'Insufficient slots or conflict',
+            details: u.details || null
           }))
         });
       }
@@ -549,20 +550,132 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                 ⚠️ Could Not Schedule ({result.unscheduled.length})
               </h3>
               <p className="section-description">
-                The following classes could not be scheduled due to resource constraints (e.g. professor max units reached or no available rooms).
+                The following classes could not be scheduled due to specific resource constraints, room occupancies, or faculty workload limits.
               </p>
               <div className="card-list">
-                {result.unscheduled.map((s, idx) => (
-                  <div key={idx} className="prescription-card">
-                    <div className="card-title">
-                      {s?.subject?.code || s?.subject?.name || 'Unknown Subject'}
-                      {s?.section?.name ? ` — ${s.section.name}` : ''}
+                {result.unscheduled.map((s, idx) => {
+                  const subjectCredits = s?.subject?.credits || 3;
+                  const hoursPerMeeting = s?.subject?.hoursPerMeeting || 1.5;
+                  const labLabel = s?.subject?.isFoodLab ? 'Food Lab' : s?.subject?.requiredLab ? 'Computer Lab' : null;
+                  const details = s?.details;
+
+                  return (
+                    <div key={idx} className="prescription-card">
+                      <div className="prescription-card-header">
+                        <div className="prescription-card-title">
+                          <span>{s?.subject?.code || s?.subject?.name || 'Unknown Subject'}</span>
+                          {s?.section?.name && (
+                            <span className="prescription-card-section">— {s.section.name}</span>
+                          )}
+                        </div>
+                        <div className="prescription-meta-badges">
+                          <span className="meta-pill">{subjectCredits} Units</span>
+                          <span className="meta-pill">{hoursPerMeeting}h / meeting</span>
+                          {labLabel && <span className="meta-pill lab-pill">🔬 {labLabel}</span>}
+                        </div>
+                      </div>
+
+                      <div className="prescription-reason-banner">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}>
+                          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                          <line x1="12" y1="9" x2="12" y2="13" />
+                          <line x1="12" y1="17" x2="12.01" y2="17" />
+                        </svg>
+                        <div>
+                          <strong>Reason: </strong>
+                          <span>{s?.reason || 'Insufficient slots or conflict'}</span>
+                        </div>
+                      </div>
+
+                      {details && (
+                        <div className="conflict-breakdown">
+                          {/* Faculty Evaluated */}
+                          {details.professors && details.professors.length > 0 && (
+                            <div>
+                              <div className="conflict-group-title">
+                                👨‍🏫 Evaluated Faculty ({details.professors.length})
+                              </div>
+                              <div className="conflict-chips-container">
+                                {details.professors.map((p, pIdx) => {
+                                  const isMax = p.status === 'MAX_UNITS';
+                                  return (
+                                    <div key={pIdx} className="conflict-chip">
+                                      <div className="conflict-chip-title">
+                                        <span>{p.name}</span>
+                                        <span className={`meta-pill ${isMax ? 'lab-pill' : ''}`}>
+                                          {p.currentUnits !== undefined && p.maxUnits !== undefined ? `${p.currentUnits}/${p.maxUnits} units` : (p.status || 'Assigned')}
+                                        </span>
+                                      </div>
+                                      <div className={`conflict-chip-status ${isMax ? '' : (p.conflicts?.length ? '' : 'available')}`}>
+                                        {p.message || (p.conflicts?.length ? p.conflicts.join('; ') : 'No teaching load issue, blocked by schedule/room collision')}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Rooms Checked */}
+                          {details.rooms && details.rooms.length > 0 && (
+                            <div>
+                              <div className="conflict-group-title">
+                                🚪 Rooms Evaluated ({details.rooms.length})
+                              </div>
+                              <div className="conflict-chips-container">
+                                {details.rooms.map((r, rIdx) => (
+                                  <div key={rIdx} className="conflict-chip">
+                                    <div className="conflict-chip-title">
+                                      <span>{r.name}</span>
+                                      <span className="meta-pill">{r.type || 'Room'}</span>
+                                    </div>
+                                    <div className="conflict-chip-status neutral">
+                                      {r.restrictedProfs?.length
+                                        ? `Restricted for ${r.restrictedProfs.join(', ')}`
+                                        : (r.busySummary?.length ? r.busySummary.join('; ') : 'Occupied during requested section/faculty time slots')}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Specific Collisions */}
+                          {details.specificCollisions && details.specificCollisions.length > 0 && (
+                            <div className="conflict-collisions-list">
+                              <strong>⏱️ Specific Slot Collisions Detected:</strong>
+                              <ul>
+                                {details.specificCollisions.slice(0, 4).map((col, cIdx) => (
+                                  <li key={cIdx}>{col}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Section Schedule Overlaps */}
+                          {details.sectionConflicts && details.sectionConflicts.length > 0 && (
+                            <div className="conflict-collisions-list">
+                              <strong>👥 Section {s?.section?.name || ''} Schedule Overlaps:</strong>
+                              <ul>
+                                {details.sectionConflicts.slice(0, 3).map((sc, scIdx) => (
+                                  <li key={scIdx}>{sc}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Actionable Suggestion */}
+                          {details.suggestion && (
+                            <div className="conflict-suggestion-alert">
+                              <span>💡</span>
+                              <span><strong>Recommendation:</strong> {details.suggestion}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="card-reason">
-                      Reason: {s?.reason || 'Insufficient slots or conflict'}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

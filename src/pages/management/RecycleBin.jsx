@@ -22,8 +22,8 @@ const RecycleBin = ({ onBack, user }) => {
   const handleRestore = async (item) => {
     try {
       await restoreFromTrash(item);
-      const itemName = item.data.name || item.data.code || item.originalId;
-      logActivity({ user, action: 'RESTORE_DATA', details: `Restored ${item.type}: ${itemName}` });
+      const itemName = item.data?.name || item.data?.code || item.data?.username || item.originalId;
+      logActivity({ user, action: LOG_ACTIONS.RESTORE_DATA, details: `Restored ${item.type}: ${itemName}` });
       toast.success(`${item.type.charAt(0).toUpperCase() + item.type.slice(1)} restored successfully!`);
     } catch (err) {
       console.error("Error restoring item:", err);
@@ -43,8 +43,8 @@ const RecycleBin = ({ onBack, user }) => {
     if (isConfirmed) {
       try {
         await deleteDoc(doc(db, 'trash', String(item.id)));
-        const itemName = item.data.name || item.data.code || item.originalId;
-        logActivity({ user, action: 'PERMANENT_DELETE', details: `Permanently deleted ${item.type}: ${itemName}` });
+        const itemName = item.data?.name || item.data?.code || item.data?.username || item.originalId;
+        logActivity({ user, action: LOG_ACTIONS.PERMANENT_DELETE, details: `Permanently deleted ${item.type}: ${itemName}` });
         toast.success('Item permanently deleted.');
       } catch (err) {
         console.error("Error deleting item:", err);

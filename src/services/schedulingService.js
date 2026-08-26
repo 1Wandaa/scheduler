@@ -17,9 +17,11 @@ import {
   slotsNeededFromIndex,
   getTimeSlotIndex,
   schedulesOverlap,
+  entitiesMatch,
   getEligibleRoomsTiered,
   isProfessorAllowedInRoom,
   isProfessorStageLocked,
+  getMeetingTimeLabel,
 } from '../utils/scheduleUtils';
 import { resolveUnscheduledClasses } from '../utils/scheduleAI';
 
@@ -152,7 +154,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   // 1. Group assignments by Section + Subject
   const groupsMap = new Map();
   for (const a of assignments) {
-    // Skip subjects that have no eligible professors (considered "unassigned" or not enrolled)
+    // Skip subjects that have no eligible professors (considered unassigned or not in active faculty filter)
     const profPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, a.subject, a.section, constraints);
     if (profPool.length === 0) continue;
 
@@ -171,7 +173,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     }
   }
 
- // Helper: compute a professor's remaining unit capacity from temp
+  // Helper: compute a professor's remaining unit capacity from temp
   const getProfRemainingCapacity = (professor) => {
     const profSchedules = temp.filter((s) => String(s.professor?.id) === String(professor.id));
     const uniqueLoad = new Map();
@@ -244,38 +246,59 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   // would re-enforce lab checks without the respectLabs constraint context,
   // causing false rejections (e.g. FT subjects blocked from all rooms).
   // Conflict checks (room/prof/section overlap) are handled by schedulesOverlap.
+  // Helper: check if a single slot is free for a given combo
   const isSlotFree = (room, professor, subject, section, day, timeSlot) => {
     const candidate = { room, professor, subject, section, day, timeSlot };
     // Check for time conflicts with already-scheduled classes
-    if (temp.some((s) => schedulesOverlap(candidate, s))) return false;
-    // Verify the time slot fits the meeting duration (already checked by caller,
-    // but needed for the flexible fallback where timeSlot varies)
+    if (temp.some((s) => schedulesOverlap(candidate, s, scheduleMode))) return false;
     const startIdx = getTimeSlotIndex(timeSlot, scheduleMode);
     if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting, scheduleMode) === 0) return false;
     if (subject?.code?.toUpperCase().startsWith('PE') && String(timeSlot.id) === '2') return false;
     return true;
   };
 
- // Helper: attempt to place a single group
+  // Helper: attempt to place a single group
   const tryPlaceGroup = async (group, roomPool, usePairsOnly) => {
     const { subject, section, count } = group;
     const rawProfPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, subject, section, constraints);
     const hasStage = rooms.some((r) => (r.name || '').toLowerCase().includes('stage'));
 
- // Sort professors by remaining capacity (most headroom first)
-    // This prevents near-maxed professors from "claiming" slots when a
-    // higher-capacity professor could take the subject instead.
+    if (rawProfPool.length === 0) {
+      return {
+        success: false,
+        reason: `No eligible faculty found specializing in "${subject?.code || 'this subject'}".`,
+        details: {
+          professors: [],
+          rooms: roomPool.map((r) => ({ id: r.id, name: r.name, type: r.type || 'Lecture' })),
+          suggestion: `Assign qualified faculty to teach ${subject?.code || 'this subject'} in Faculty Management.`
+        }
+      };
+    }
+
+    if (roomPool.length === 0) {
+      const labType = subject?.requiredLab ? 'Computer Lab' : subject?.isFoodLab ? 'Food Lab' : 'Standard Room';
+      return {
+        success: false,
+        reason: `No eligible rooms available for ${subject?.code || 'this subject'} (${labType} required).`,
+        details: {
+          professors: rawProfPool.map((p) => ({ id: p.id, name: p.name })),
+          rooms: [],
+          suggestion: `Ensure appropriate rooms (${labType}) are configured and available in Room Management.`
+        }
+      };
+    }
+
+    // Sort professors by remaining capacity (most headroom first)
     const profPool = [...rawProfPool].sort((a, b) => {
       const capA = getProfRemainingCapacity(a);
       const capB = getProfRemainingCapacity(b);
       return capB - capA; // descending: most remaining capacity first
     });
 
- // Diagnostic counters
     let profMaxUnitsReached = false;
     let anyProfEligibleForRooms = false;
     let profMaxUnitsCount = 0;
-    let totalProfsChecked = profPool.length;
+    const totalProfsChecked = profPool.length;
 
     for (const professor of profPool) {
       if (signal?.aborted) return { success: false };
@@ -330,11 +353,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
           if (!isStageLocked && isStage) continue;
         }
 
-
- // Professor-room compatibility check
-        // Skip rooms that this professor is not allowed to use (BSCS-exclusive,
-        // Speech Lab, Room 204 restrictions). Without this, the scheduler wastes
-        // attempts on combos that will always fail Firestore validation.
+        // Professor-room compatibility check
         if (!isProfessorAllowedInRoom(room, professor, subject, section, rooms)) continue;
 
         for (const timeSlot of ACTIVE_TIME_SLOTS) {
@@ -343,7 +362,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
           if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting, scheduleMode) === 0) continue;
 
           const isFree = (d) => isSlotFree(room, professor, subject, section, d, timeSlot);
-          // Only use days allowed in this schedule mode
           const modeAllowsDay = (d) => ACTIVE_DAYS.includes(d);
 
           // Try preferred day pairs for 2-meeting classes
@@ -409,12 +427,8 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         }
       }
 
- // FLEXIBLE TIME SLOT FALLBACK
+      // FLEXIBLE TIME SLOT FALLBACK
       // Each meeting can use a DIFFERENT time slot on different days.
-      // Only try this in non-pairs mode (Pass 2/3) to avoid slowing Pass 1.
-      // IMPORTANT: We validate all placements in-memory FIRST, then write to
-      // Firestore only after confirming all meetings can be placed. This
-      // prevents orphaned documents if only some meetings succeed.
       if (!usePairsOnly && count >= 2) {
         const placedMeetings = [];
         const usedDays = new Set();
@@ -438,7 +452,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
                 if (isSlotFree(room, professor, subject, section, day, ts)) {
                   const meeting = { room, professor, subject, section, day, timeSlot: ts };
                   placedMeetings.push(meeting);
-                  // Temporarily add to temp so next meetings see this as occupied
                   temp.push(meeting);
                   usedDays.add(day);
                   placed = true;
@@ -452,9 +465,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         }
 
         if (placedMeetings.length === count) {
-          // All meetings fit in-memory
-          
-          // FIX: Remove them from temp first so they don't conflict with themselves during validation
           for (const pm of placedMeetings) {
             const idx = temp.indexOf(pm);
             if (idx !== -1) temp.splice(idx, 1);
@@ -464,7 +474,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
           for (const sc of placedMeetings) {
             const w = await wrappedAddSchedule(sc);
             if (w?.ok === false) { allOk = false; break; }
-            // Push back to temp so the next meeting in this batch sees it
             temp.push(sc);
           }
           if (allOk) {
@@ -472,7 +481,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
             return { success: true };
           }
         }
-        // Rollback temp if flexible placement failed or Firestore writes failed
         for (const pm of placedMeetings) {
           const idx = temp.indexOf(pm);
           if (idx !== -1) temp.splice(idx, 1);
@@ -480,27 +488,141 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       }
     }
 
- // Detailed failure diagnostics
+    // =========================================================================
+    // POST-FAILURE DIAGNOSTICS (Only runs when placement fails)
+    // =========================================================================
+    const evaluatedProfessors = profPool.map((p) => {
+      const pScheds = temp.filter((s) => String(s.professor?.id) === String(p.id));
+      const uniqueL = new Map();
+      for (const s of pScheds) {
+        const k = `${s.subject?.id || 'x'}__${s.section?.id || 'x'}`;
+        if (!uniqueL.has(k)) {
+          const creds = Number(s.subject?.credits);
+          uniqueL.set(k, isNaN(creds) || s.subject?.credits === '' ? 3 : creds);
+        }
+      }
+      const curLoad = Array.from(uniqueL.values()).reduce((s, c) => s + c, 0);
+      const maxU = Number(p.maxUnits) || Number(p.maxHours) || 24;
+      const subCreds = Number(subject?.credits) || 3;
+      const isMaxReached = curLoad + subCreds > maxU + 0.01;
+
+      // Sample a few classes this professor is currently teaching
+      const sampleConflicts = pScheds.slice(0, 3).map((s) => {
+        const timeRange = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, scheduleMode) || s.timeSlot?.label || 'slot';
+        return `${s.day} (${timeRange}): ${s.subject?.code || 'Class'} (${s.section?.name || 'Section'}) in ${s.room?.name || 'Room'}`;
+      });
+
+      return {
+        id: p.id,
+        name: p.name,
+        currentUnits: curLoad,
+        maxUnits: maxU,
+        neededUnits: subCreds,
+        status: isMaxReached ? 'MAX_UNITS' : 'AVAILABLE',
+        message: isMaxReached ? `Max load reached (${curLoad}/${maxU} units, needs +${subCreds})` : null,
+        conflicts: sampleConflicts
+      };
+    });
+
+    const evaluatedRooms = roomPool.map((r) => {
+      const rScheds = temp.filter((s) => String(s.room?.id) === String(r.id));
+      const busySamples = rScheds.slice(0, 3).map((s) => {
+        const timeRange = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, scheduleMode) || s.timeSlot?.label || 'slot';
+        return `${s.day} (${timeRange}): Occupied by ${s.subject?.code || 'Class'} (${s.section?.name || 'Section'})`;
+      });
+      const restrictedFor = profPool.filter((p) => !isProfessorAllowedInRoom(r, p, subject, section, rooms)).map((p) => p.name);
+
+      return {
+        id: r.id,
+        name: r.name,
+        type: r.type || (r.hasComputers ? 'Computer Lab' : r.isFoodLab ? 'Food Lab' : 'Lecture'),
+        restrictedProfs: restrictedFor,
+        busySummary: busySamples
+      };
+    });
+
+    // Sample existing schedules of this section
+    const secScheds = section ? temp.filter((s) => String(s.section?.id) === String(section.id)) : [];
+    const sectionBusySlots = secScheds.slice(0, 4).map((s) => {
+      const timeRange = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, scheduleMode) || s.timeSlot?.label || 'slot';
+      return `${s.day} (${timeRange}): ${s.subject?.code || 'Class'} in ${s.room?.name || 'Room'}`;
+    });
+
+    const profNames = profPool.map((p) => p.name).join(', ');
+    const roomNames = roomPool.map((r) => r.name).join(', ');
+
     if (!anyProfEligibleForRooms && profMaxUnitsReached) {
-      return { success: false, reason: `All ${profMaxUnitsCount} eligible professor(s) reached their max units.` };
-    }
-    if (roomPool.length === 0) {
-      return { success: false, reason: 'No eligible rooms available for this subject/section.' };
-    }
-    if (profMaxUnitsCount > 0 && profMaxUnitsCount < totalProfsChecked) {
-      const availableProfs = totalProfsChecked - profMaxUnitsCount;
-      return { success: false, reason: `${profMaxUnitsCount} of ${totalProfsChecked} professors at max units; remaining ${availableProfs} professor(s) have no free slots across ${roomPool.length} room(s).` };
-    }
-    
-    if (!anyProfEligibleForRooms) {
-      return { success: false, reason: `No eligible rooms available for the ${totalProfsChecked} assigned professor(s).` };
+      const profLimitSummaries = evaluatedProfessors
+        .filter((p) => p.status === 'MAX_UNITS')
+        .map((p) => `${p.name} (${p.currentUnits}/${p.maxUnits} units)`)
+        .join(', ');
+      return {
+        success: false,
+        reason: `All eligible faculty reached max teaching load: ${profLimitSummaries}.`,
+        details: {
+          professors: evaluatedProfessors,
+          rooms: evaluatedRooms,
+          sectionConflicts: sectionBusySlots,
+          suggestion: `Increase maximum units for ${profNames} in Faculty Management or assign another qualified faculty member.`
+        }
+      };
     }
 
-    return { 
-      success: false, 
-      reason: lastValidationError 
-        ? `Validation Error: ${lastValidationError}`
-        : `No free time slots found across ${totalProfsChecked} professor(s) and ${roomPool.length} room(s).` 
+    if (profMaxUnitsCount > 0 && profMaxUnitsCount < totalProfsChecked) {
+      const maxedProfs = evaluatedProfessors
+        .filter((p) => p.status === 'MAX_UNITS')
+        .map((p) => `${p.name} (${p.currentUnits}/${p.maxUnits} units)`)
+        .join(', ');
+      const availableProfs = evaluatedProfessors
+        .filter((p) => p.status !== 'MAX_UNITS')
+        .map((p) => p.name)
+        .join(', ');
+
+      return {
+        success: false,
+        reason: `Max units reached for ${maxedProfs}; no conflict-free time slots found for ${availableProfs} across room(s): ${roomNames}.`,
+        details: {
+          professors: evaluatedProfessors,
+          rooms: evaluatedRooms,
+          sectionConflicts: sectionBusySlots,
+          suggestion: `Adjust schedules or room allocations for ${availableProfs} or increase load limits for ${maxedProfs}.`
+        }
+      };
+    }
+
+    if (!anyProfEligibleForRooms) {
+      return {
+        success: false,
+        reason: `Room restriction conflict: ${profNames} is not permitted in available room(s): ${roomNames}.`,
+        details: {
+          professors: evaluatedProfessors,
+          rooms: evaluatedRooms,
+          suggestion: `Adjust room restrictions or assign rooms designated for the department.`
+        }
+      };
+    }
+
+    if (lastValidationError) {
+      return {
+        success: false,
+        reason: `Validation Error: ${lastValidationError}`,
+        details: {
+          professors: evaluatedProfessors,
+          rooms: evaluatedRooms,
+          suggestion: 'Check manual validation rules.'
+        }
+      };
+    }
+
+    return {
+      success: false,
+      reason: `No conflict-free time slots found for ${profNames} across room(s): ${roomNames}.`,
+      details: {
+        professors: evaluatedProfessors,
+        rooms: evaluatedRooms,
+        sectionConflicts: sectionBusySlots,
+        suggestion: `Check for time slot overlaps between ${profNames}, section ${section?.name || 'classes'}, and rooms (${roomNames}).`
+      }
     };
   };
 
@@ -549,11 +671,16 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     } else {
       let reason = placed?.reason || 'No matching room and professor availability found.';
       if (constraints?.respectLabs && group.subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
-        reason = 'Requires computer lab.';
+        reason = `Requires computer lab, but room "${fixedRoom.name}" does not have computers.`;
       } else if (constraints?.respectLabs && group.subject?.isFoodLab && fixedRoom && !fixedRoom.isFoodLab) {
-        reason = 'Requires food lab.';
+        reason = `Requires food lab, but room "${fixedRoom.name}" is not a food laboratory.`;
       }
-      unscheduled.push({ subject: group.subject, section: group.section, reason });
+      unscheduled.push({
+        subject: group.subject,
+        section: group.section,
+        reason,
+        details: placed?.details || null
+      });
     }
     await reportProgress(3, i, remainingAfterPass2.length);
   }

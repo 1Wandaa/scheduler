@@ -14,7 +14,7 @@ import {
 import CustomSelect from '../CustomSelect/CustomSelect';
 import '../../styles/SchedulerForm.css';
 
-function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, validator, activeSemester, activeSchedules = [] }) {
+function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, validator, activeSemester, activeSchedules = [], onLogHistory }) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     subject: '',
@@ -225,17 +225,42 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
     if (allValid) {
       let hasAddError = false;
+      const successfullyAdded = [];
+
       for (const day of daysToSchedule) {
         const scheduleResult = validator.addSchedule(room, professor, subject, section, day, timeSlot);
         const addResult = await onSchedule(scheduleResult.schedule);
         if (addResult && addResult.ok === false) {
           hasAddError = true;
           allErrors.push(`Failed to save for ${day}: ${addResult.errors?.join(', ') || 'Unknown error'}`);
+        } else {
+          successfullyAdded.push({
+            subject: `${subject?.code || ''} ${subject?.name ? `— ${subject.name}` : ''}`.trim(),
+            section: section?.name || '',
+            professor: professor?.name || '',
+            room: room?.name || '',
+            day: day,
+            timeSlot: getMeetingTimeLabel(timeSlot, subject?.hoursPerMeeting, 'standard') || timeSlot?.label || formData.timeSlot
+          });
         }
       }
 
       if (hasAddError) {
         setValidation({ valid: false, errors: allErrors, warnings: allWarnings });
+        if (onLogHistory) {
+          onLogHistory({
+            engineMode: 'manual',
+            totalAttempted: daysToSchedule.length,
+            successCount: successfullyAdded.length,
+            errorCount: allErrors.length,
+            createdSchedules: successfullyAdded,
+            errors: allErrors.map((e) => ({
+              subject: subject?.code || subject?.name || 'Subject',
+              section: section?.name || 'Section',
+              reason: e
+            }))
+          });
+        }
       } else {
         setValidation({
           valid: true,
@@ -244,6 +269,16 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
           section: formData.section,
           professor: formData.professor
         });
+        if (onLogHistory) {
+          onLogHistory({
+            engineMode: 'manual',
+            totalAttempted: daysToSchedule.length,
+            successCount: successfullyAdded.length,
+            errorCount: 0,
+            createdSchedules: successfullyAdded,
+            errors: []
+          });
+        }
         setFormData({ subject: '', section: '', professor: '', room: '', day: [], timeSlot: '' });
       }
     } else {

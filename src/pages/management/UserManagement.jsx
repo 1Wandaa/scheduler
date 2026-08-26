@@ -2,11 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { db, firebaseConfig } from '../../config/firebase';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, onSnapshot, deleteDoc, doc, getDocs, writeBatch, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDocs, writeBatch, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import UserTable from '../../components/UserTable/UserTable';
 import { Icon, NAV_ICONS } from '../Dashboard/components/Icon';
+import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 // Mock data to initialize database
 const initialUsers = [
@@ -15,7 +16,7 @@ const initialUsers = [
   { id: 3, username: '@ryan', name: 'Ryan James Mora', role: 'Student' },
 ];
 
-const UserManagement = ({ onBack }) => {
+const UserManagement = ({ user, onBack }) => {
   const { confirm } = useGlobalDialog();
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,6 +91,11 @@ const UserManagement = ({ onBack }) => {
         });
         
         await batch.commit();
+        logActivity({
+          user,
+          action: LOG_ACTIONS.DELETE_USER,
+          details: `Deleted user: ${userToDelete?.name || userToDelete?.username || id} (${userToDelete?.role || 'User'})`
+        });
         toast.success('Profile Deleted. Remember to also delete their account in the Firebase Authentication Console!', { id: toastId, duration: 5000 });
       } catch (error) {
         console.error("Error deleting user: ", error);
@@ -155,6 +161,21 @@ const UserManagement = ({ onBack }) => {
         role: formData.role,
         password: formData.password
       });
+
+      if (editingUser) {
+        logActivity({
+          user,
+          action: LOG_ACTIONS.UPDATE_USER,
+          details: `Updated user: ${formData.name} (@${formData.username}) as ${formData.role}`
+        });
+      } else {
+        logActivity({
+          user,
+          action: LOG_ACTIONS.ADD_USER,
+          details: `Added new user: ${formData.name} (@${formData.username}) as ${formData.role}`
+        });
+      }
+
       toast.success('Saved!', { id: toastId });
       resetForm();
     } catch (err) {

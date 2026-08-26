@@ -3,8 +3,9 @@ import { db } from '../../config/firebase';
 import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
+import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
-function TermManagement({ availableSemesters, availableSchoolYears, onBack, publishedTerms = {}, setPublishedTerms }) {
+function TermManagement({ availableSemesters, availableSchoolYears, onBack, publishedTerms = {}, setPublishedTerms, user }) {
     const { confirm, prompt } = useGlobalDialog();
     const [isSaving, setIsSaving] = useState(false);
 
@@ -33,6 +34,11 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
                 const newPublishedTerms = { ...publishedTerms, [termKey]: !isCurrentlyPublished };
                 await handleUpdateSettings({ publishedTerms: newPublishedTerms });
                 if (setPublishedTerms) setPublishedTerms(newPublishedTerms);
+                logActivity({
+                    user,
+                    action: isCurrentlyPublished ? LOG_ACTIONS.UNPUBLISH_TERM : LOG_ACTIONS.PUBLISH_TERM,
+                    details: `${isCurrentlyPublished ? 'Unpublished' : 'Published'} schedules for ${publishSemester} (${publishYear})`
+                });
                 toast.success(`Schedule has been ${action.toLowerCase()}ed.`);
             } catch (e) {
                 console.error(e);
@@ -84,7 +90,11 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
         const toastId = toast.loading(`Adding ${typeName.toLowerCase()}...`);
         const updated = [...list, trimmed];
         await handleUpdateSettings({ [fieldName]: updated });
-        
+        logActivity({
+            user,
+            action: LOG_ACTIONS.ADD_TERM,
+            details: `Added new ${typeName.toLowerCase()}: "${trimmed}"`
+        });
         toast.success(`${typeName} "${trimmed}" added.`, { id: toastId });
     };
 
@@ -114,7 +124,11 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
         const toastId = toast.loading(`Updating ${typeName.toLowerCase()}...`);
         const updated = list.map(item => item === oldTerm ? trimmed : item);
         await handleUpdateSettings({ [fieldName]: updated });
-        
+        logActivity({
+            user,
+            action: LOG_ACTIONS.UPDATE_TERM,
+            details: `Updated ${typeName.toLowerCase()}: "${oldTerm}" to "${trimmed}"`
+        });
         toast.success(`${typeName} updated to "${trimmed}".`, { id: toastId });
     };
 
@@ -136,6 +150,11 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
             const toastId = toast.loading(`Deleting ${typeName.toLowerCase()}...`);
             const updated = list.filter(item => item !== term);
             await handleUpdateSettings({ [fieldName]: updated });
+            logActivity({
+                user,
+                action: LOG_ACTIONS.DELETE_TERM,
+                details: `Deleted ${typeName.toLowerCase()}: "${term}"`
+            });
             toast.success(`${typeName} deleted`, { id: toastId });
         }
     };

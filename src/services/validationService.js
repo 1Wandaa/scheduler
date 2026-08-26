@@ -16,6 +16,7 @@ import {
   getSectionDepartment,
   isRoomAllowedFor,
   isProfessorAllowedInRoom,
+  getMeetingTimeLabel,
 } from '../utils/scheduleUtils';
 import { generateConflictResolutions } from './conflictResolutionService';
 
@@ -123,9 +124,24 @@ export function validateScheduleEntry(
     activeSchedules,
     { excludeScheduleId }
   );
-  if (conflicts.room) errors.push(`Room "${room?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
-  if (conflicts.professor) errors.push(`Faculty "${professor?.name}" is already scheduled for ${day} (${timeSlot?.label}).`);
-  if (section?.id && conflicts.section) errors.push(`Section "${section?.name}" already has a class for ${day} (${timeSlot?.label}).`);
+  if (conflicts.room) {
+    const s = conflicts.room;
+    const timeRange = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, scheduleMode) || timeSlot?.label;
+    const occupant = `${s.subject?.code || 'a class'}${s.section?.name ? ` (${s.section.name})` : ''}${s.professor?.name ? ` taught by ${s.professor.name}` : ''}`;
+    errors.push(`Room "${room?.name}" is already occupied on ${day} (${timeRange}) by ${occupant}.`);
+  }
+  if (conflicts.professor) {
+    const s = conflicts.professor;
+    const timeRange = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, scheduleMode) || timeSlot?.label;
+    const teaching = `${s.subject?.code || 'a class'}${s.section?.name ? ` for ${s.section.name}` : ''}${s.room?.name ? ` in ${s.room.name}` : ''}`;
+    errors.push(`Faculty "${professor?.name}" is already scheduled on ${day} (${timeRange}) teaching ${teaching}.`);
+  }
+  if (section?.id && conflicts.section) {
+    const s = conflicts.section;
+    const timeRange = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, scheduleMode) || timeSlot?.label;
+    const session = `${s.subject?.code || 'a class'}${s.room?.name ? ` in ${s.room.name}` : ''}${s.professor?.name ? ` with ${s.professor.name}` : ''}`;
+    errors.push(`Section "${section?.name}" already has a class on ${day} (${timeRange}): ${session}.`);
+  }
   if (subject?.requiredLab && !room?.hasComputers) errors.push(`Subject "${subject?.code || 'selected'}" requires a computer laboratory, but room "${room?.name || 'selected'}" does not have computers.`);
   if (subject?.isFoodLab && !room?.isFoodLab) errors.push(`Subject "${subject?.code || 'selected'}" requires a food laboratory, but room "${room?.name || 'selected'}" is not a food laboratory.`);
 

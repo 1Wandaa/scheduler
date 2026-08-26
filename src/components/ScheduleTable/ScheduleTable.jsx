@@ -1,13 +1,103 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig } from '../../config/constants';
 import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange } from '../../utils/scheduleUtils';
 import '../../styles/ScheduleTable.css';
 
-function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SCHEDULE GRID", departments = [], scheduleMode, isDeleteMode, programName, semesterInfo }) {
+// Department color palette
+const DEPT_COLORS = {
+  BSCS: { bg: '#109EEF', text: '#030813' },
+  BSFT: { bg: '#16A34A', text: '#030813' },
+  BSOA: { bg: '#8B5CF6', text: '#FFFFFF' },
+  BAEL: { bg: '#EAB308', text: '#030813' },
+};
+const DEFAULT_DEPT_COLOR = { bg: '#109EEF', text: '#030813' };
+
+const DAY_COLORS = {
+  Monday: '#5645EE',
+  Tuesday: '#02B974',
+  Wednesday: '#F5A623',
+  Thursday: '#EF2A66',
+  Friday: '#0288d1',
+};
+
+const LOGO_SRC = '/logo.png?v=1';
+const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
+
+// Helper: Format professor name compactly
+function formatProfessorName(name) {
+  if (!name) return '—';
+  const clean = name.trim();
+  if (clean.includes(',')) {
+    const [surname, firstNames] = clean.split(',').map(s => s.trim());
+    const initial = firstNames ? firstNames[0].toUpperCase() : '';
+    return initial ? `${initial}. ${surname}` : surname;
+  }
+  const parts = clean.split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const initial = parts[0][0].toUpperCase();
+  const surname = parts.slice(1).join(' ');
+  return `${initial}. ${surname}`;
+}
+
+// Helper: Compute department color
+function computeDeptColor(schedule, departments = []) {
+  const sectionName = (schedule?.section?.name || '').toUpperCase();
+
+  if (departments && departments.length > 0) {
+    for (const d of departments) {
+      if (sectionName.includes((d.id || '').toUpperCase())) {
+        return { bg: d.color, text: '#FFFFFF' };
+      }
+    }
+  }
+
+  for (const dept of Object.keys(DEPT_COLORS)) {
+    if (sectionName.includes(dept)) {
+      return DEPT_COLORS[dept];
+    }
+  }
+
+  const subj = schedule?.subject;
+  if (subj) {
+    const depts = Array.isArray(subj.departments) ? subj.departments : (subj.department ? [subj.department] : []);
+    for (const d of depts) {
+      const upperD = String(d).toUpperCase();
+
+      if (departments && departments.length > 0) {
+        for (const dynDept of departments) {
+          if (upperD.includes((dynDept.id || '').toUpperCase())) {
+            return { bg: dynDept.color, text: '#FFFFFF' };
+          }
+        }
+      }
+
+      for (const dept of Object.keys(DEPT_COLORS)) {
+        if (upperD.includes(dept)) {
+          return DEPT_COLORS[dept];
+        }
+      }
+    }
+  }
+  return DEFAULT_DEPT_COLOR;
+}
+
+const ScheduleTable = React.memo(function ScheduleTable({
+  schedules = [],
+  onRemove,
+  onUpdateSchedule,
+  title = "ROOM SCHEDULE GRID",
+  departments = [],
+  scheduleMode,
+  isDeleteMode,
+  programName,
+  semesterInfo
+}) {
   const { confirm } = useGlobalDialog();
-  const getFullDepartmentName = () => {
+
+  // Full department title resolution
+  const fullDepartmentName = useMemo(() => {
     let deptAcronym = null;
     for (const s of schedules) {
       if (s.section?.name) {
@@ -42,28 +132,23 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         }
         return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
     }
-  };
+  }, [schedules, programName]);
 
   // Resolve time slots and days based on schedule mode
-  const config = getScheduleConfig(scheduleMode);
+  const config = useMemo(() => getScheduleConfig(scheduleMode), [scheduleMode]);
   const activeTimeSlots = config.timeSlots;
-  // Always show all 5 days in the viewer (user requirement)
   const displayDays = DAYS;
-  const LOGO_SRC = '/logo.png?v=1';
-  const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
   const [dragOverCell, setDragOverCell] = useState(null);
   const [draggingId, setDraggingId] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef(null);
-  const [, setIsMobile] = useState(window.innerWidth <= 768);
-  const viewMode = 'grid'; // Statically set to grid
   const [errorToast, setErrorToast] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
   const [fitScale, setFitScale] = useState(1);
   const [previewImage, setPreviewImage] = useState(null);
 
-  const showToast = (msg, isError = true) => {
+  const showToast = useCallback((msg, isError = true) => {
     if (isError) {
       setErrorToast(msg);
       setTimeout(() => setErrorToast(null), 5000);
@@ -71,9 +156,9 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       setSuccessToast(msg);
       setTimeout(() => setSuccessToast(null), 3000);
     }
-  };
+  }, []);
 
-  const handleDownloadImage = () => {
+  const handleDownloadImage = useCallback(() => {
     if (!previewImage) return;
     const link = document.createElement('a');
     link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_schedule.png`;
@@ -81,22 +166,126 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     link.click();
     setPreviewImage(null);
     showToast('Image saved successfully!', false);
-  };
+  }, [previewImage, title, showToast]);
+
+  // Optimized O(1) cell lookup map
+  const scheduleGridMap = useMemo(() => {
+    const map = new Map();
+    for (const s of schedules) {
+      if (!s.day || !s.timeSlot?.id) continue;
+      const key = `${s.day}-${s.timeSlot.id}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(s);
+    }
+    return map;
+  }, [schedules]);
+
+  // Pre-calculate cell span mapping & skipped multi-slot cells
+  const { cellSpanMap, skippedCellsSet } = useMemo(() => {
+    const spanMap = new Map();
+    const skipped = new Set();
+
+    activeTimeSlots.forEach((timeSlot, tIdx) => {
+      displayDays.forEach(day => {
+        const cellKey = `${day}-${timeSlot.id}`;
+        if (skipped.has(cellKey)) return;
+
+        const cellSchedules = scheduleGridMap.get(cellKey) || [];
+        let rowSpan = 1;
+        for (const s of cellSchedules) {
+          const range = getScheduleTimeRange(s, scheduleMode);
+          if (range.start > 0 && range.end > 0) {
+            const durationMins = range.end - range.start;
+            let needed = Math.ceil(durationMins / 30);
+            if (needed < 1) needed = 1;
+            if (needed > rowSpan) rowSpan = needed;
+          } else {
+            const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting, scheduleMode);
+            if (needed > rowSpan) rowSpan = needed;
+          }
+        }
+        spanMap.set(cellKey, rowSpan);
+        if (rowSpan > 1) {
+          for (let skip = 1; skip < rowSpan; skip++) {
+            const skipSlot = activeTimeSlots[tIdx + skip];
+            if (skipSlot) skipped.add(`${day}-${skipSlot.id}`);
+          }
+        }
+      });
+    });
+
+    return { cellSpanMap: spanMap, skippedCellsSet: skipped };
+  }, [activeTimeSlots, displayDays, scheduleGridMap, scheduleMode]);
+
+  // Department colors per schedule ID
+  const deptColorMap = useMemo(() => {
+    const map = new Map();
+    for (const s of schedules) {
+      if (!s.id) continue;
+      map.set(s.id, computeDeptColor(s, departments));
+    }
+    return map;
+  }, [schedules, departments]);
+
+  const getDeptColor = useCallback((schedule) => {
+    return deptColorMap.get(schedule?.id) || computeDeptColor(schedule, departments);
+  }, [deptColorMap, departments]);
+
+  // Summary unique subjects map
+  const { uniqueSubjectsList, totalUnits } = useMemo(() => {
+    const uniqueSubjectsMap = {};
+    let units = 0;
+
+    schedules.forEach(current => {
+      const subjId = current.subject?.id || current.id;
+      if (!uniqueSubjectsMap[subjId]) {
+        uniqueSubjectsMap[subjId] = {
+          ...current,
+          rooms: new Set([current.room?.name].filter(Boolean)),
+        };
+      } else {
+        if (current.room?.name) uniqueSubjectsMap[subjId].rooms.add(current.room.name);
+      }
+
+      const range = getScheduleTimeRange(current, scheduleMode);
+      if (range && range.start > 0 && range.end > 0) {
+        units += (range.end - range.start) / 60;
+      } else {
+        units += (Number(current.subject?.hoursPerMeeting) || 1.5);
+      }
+    });
+
+    const list = Object.values(uniqueSubjectsMap).map(s => ({
+      ...s,
+      roomNameList: Array.from(s.rooms).join(' / ') || 'TBA'
+    })).sort((a, b) => {
+      const codeA = (a.subject?.code || '').toString();
+      const codeB = (b.subject?.code || '').toString();
+      return codeA.localeCompare(codeB);
+    });
+
+    return { uniqueSubjectsList: list, totalUnits: units };
+  }, [schedules, scheduleMode]);
+
+  // Schedules grouped by day for mobile card view
+  const schedulesByDay = useMemo(() => {
+    return DAYS.reduce((acc, day) => {
+      acc[day] = schedules.filter(s => s.day === day).sort((a, b) => (a.timeSlot?.id ?? 0) - (b.timeSlot?.id ?? 0));
+      return acc;
+    }, {});
+  }, [schedules]);
 
   // Helper: prepare a clean, desktop-like clone of the schedule for export
-  const prepareExportClone = (clone, isPrint = true) => {
-    // Hide toolbar and remove buttons in the clone
+  const prepareExportClone = useCallback((clone, isPrint = true) => {
     const clonedToolbar = clone.querySelector('.schedule-toolbar');
     if (clonedToolbar) clonedToolbar.style.display = 'none';
 
-    // Force the doc-meta section visible (hidden by mobile media query)
     const docMeta = clone.querySelector('.schedule-doc-meta');
     if (docMeta) {
       docMeta.style.display = 'flex';
       docMeta.style.flex = '0 0 160px';
     }
 
-    // Force doc-logo to desktop size
     const docLogo = clone.querySelector('.schedule-doc-logo');
     if (docLogo) {
       docLogo.style.flex = '0 0 90px';
@@ -104,7 +293,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       if (logoImg) { logoImg.style.width = '58px'; logoImg.style.height = '58px'; }
     }
 
-    // Force doc-title to desktop size
     const docTitle = clone.querySelector('.schedule-doc-title');
     if (docTitle) {
       const h2 = docTitle.querySelector('h2');
@@ -113,7 +301,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       if (h3) h3.style.fontSize = '0.82rem';
     }
 
-    // Remove zoom / transform from the table (set by fitScale on mobile)
     const table = clone.querySelector('.schedule-table');
     if (table) {
       table.style.zoom = '1';
@@ -123,14 +310,10 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       table.style.width = '100%';
     }
 
-    // Force container padding to desktop style
     clone.style.padding = '1rem';
-
-    // Hide all remove buttons (the X to delete schedules)
     clone.querySelectorAll('.remove-btn').forEach(btn => btn.style.display = 'none');
 
     if (isPrint) {
-      // Shrink the summary table for export so it fits on one page
       const summaryContainer = clone.querySelector('.schedule-summary-container');
       if (summaryContainer) {
         summaryContainer.style.margin = '5px 0';
@@ -155,10 +338,9 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
           });
         }
 
-        // Also shrink the main schedule grid
         const scheduleTable = clone.querySelector('.schedule-table');
         if (scheduleTable) {
-          scheduleTable.style.fontSize = '0.7rem'; // scale down the font
+          scheduleTable.style.fontSize = '0.7rem';
           scheduleTable.querySelectorAll('th, td').forEach(cell => {
             cell.style.padding = '2px';
           });
@@ -171,25 +353,20 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       }
     }
 
-    // Hide card view if it leaked through, force table-wrapper visible
     const cardView = clone.querySelector('.schedule-card-view');
     if (cardView) cardView.style.display = 'none';
     const tableWrapper = clone.querySelector('.table-wrapper');
     if (tableWrapper) {
       tableWrapper.style.display = 'block';
       tableWrapper.style.overflow = 'visible';
-      tableWrapper.scrollLeft = 0; // Reset any horizontal scroll offset
+      tableWrapper.scrollLeft = 0;
     }
 
-    // Remove position:sticky from time-label cells and header - sticky
-    // positioning in an off-screen clone causes the time column to render
-    // on the wrong side (right instead of left) on mobile devices
     clone.querySelectorAll('.time-label').forEach(cell => {
       cell.style.position = 'static';
       cell.style.left = 'auto';
       cell.style.zIndex = 'auto';
     });
-    // Also fix the first <th> (Time Slot header) which has inline sticky styles
     const firstTh = clone.querySelector('.schedule-table th');
     if (firstTh) {
       firstTh.style.position = 'static';
@@ -197,33 +374,26 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       firstTh.style.zIndex = 'auto';
     }
 
-    // Hide fullscreen-related elements
     const floatingBtn = clone.querySelector('.floating-exit-btn');
     if (floatingBtn) floatingBtn.style.display = 'none';
     const rotateHint = clone.querySelector('.rotate-device-hint');
     if (rotateHint) rotateHint.style.display = 'none';
-  };
+  }, []);
 
-  const handleExportImage = async () => {
+  const handleExportImage = useCallback(async () => {
     if (!containerRef.current) return;
     try {
       showToast('Generating image, please wait...', false);
       const html2canvas = (await import('html2canvas')).default;
 
-      // Wait for React to re-render to grid mode
-      await new Promise(r => setTimeout(r, 500));
-
       const toolbar = containerRef.current.querySelector('.schedule-toolbar');
       if (toolbar) toolbar.style.display = 'none';
 
-      // Clone the container into a fixed-width off-screen element
       const clone = containerRef.current.cloneNode(true);
       const wrapper = document.createElement('div');
       wrapper.style.position = 'absolute';
       wrapper.style.top = '-10000px';
       wrapper.style.left = '-10000px';
-
-      // Match container width for exact layout instead of fixed 1100px
       wrapper.style.width = `${Math.max(containerRef.current.scrollWidth, 900)}px`;
       wrapper.style.height = 'auto';
       wrapper.style.backgroundColor = '#ffffff';
@@ -234,7 +404,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
-      // Apply desktop-like overrides to the clone, false means don't shrink fonts
       prepareExportClone(clone, false);
       clone.style.height = 'auto';
       clone.style.display = 'flex';
@@ -247,15 +416,14 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       const table = clone.querySelector('.schedule-table');
       if (table) table.style.height = 'auto';
 
-      // Wait for the browser to apply the new layout completely
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise(r => setTimeout(r, 100));
 
       const finalRect = wrapper.getBoundingClientRect();
       const finalWidth = finalRect.width;
       const finalHeight = finalRect.height;
 
       const canvas = await html2canvas(wrapper, {
-        scale: 3, // 3x gives HD clear resolution
+        scale: 3,
         useCORS: true,
         backgroundColor: '#ffffff',
         width: finalWidth,
@@ -268,22 +436,18 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       if (toolbar) toolbar.style.display = 'flex';
 
       const imgData = canvas.toDataURL('image/png');
-
       setPreviewImage(imgData);
     } catch (err) {
       console.error(err);
       showToast('Failed to export image.');
     }
-  };
+  }, [prepareExportClone, showToast]);
 
-  const handleExportPrint = async () => {
+  const handleExportPrint = useCallback(async () => {
     if (!containerRef.current) return;
     try {
       showToast('Preparing print, please wait...', false);
       const html2canvas = (await import('html2canvas')).default;
-
-      // Wait for React to re-render to grid mode
-      await new Promise(r => setTimeout(r, 500));
 
       const toolbar = containerRef.current.querySelector('.schedule-toolbar');
       if (toolbar) toolbar.style.display = 'none';
@@ -293,8 +457,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.style.position = 'absolute';
       wrapper.style.top = '-10000px';
       wrapper.style.left = '-10000px';
-
-      // Fixed width, let height be auto to capture full content without clipping
       wrapper.style.width = '1100px';
       wrapper.style.height = 'auto';
       wrapper.style.backgroundColor = '#ffffff';
@@ -305,7 +467,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
-      // Apply desktop-like overrides to the clone, true means shrink fonts for printing
       prepareExportClone(clone, true);
       clone.style.height = 'auto';
       clone.style.display = 'flex';
@@ -318,15 +479,14 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       const table = clone.querySelector('.schedule-table');
       if (table) table.style.height = 'auto';
 
-      // Wait for the browser to apply the new layout completely
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise(r => setTimeout(r, 100));
 
       const finalRect = wrapper.getBoundingClientRect();
       const finalWidth = finalRect.width;
       const finalHeight = finalRect.height;
 
       const canvas = await html2canvas(wrapper, {
-        scale: 3, // HD quality
+        scale: 3,
         useCORS: true,
         backgroundColor: '#ffffff',
         width: finalWidth,
@@ -339,7 +499,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       if (toolbar) toolbar.style.display = 'flex';
 
       const imgData = canvas.toDataURL('image/png');
-
       const iframe = document.createElement('iframe');
       iframe.style.position = 'fixed';
       iframe.style.top = '-10000px';
@@ -357,7 +516,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
                   * { margin: 0; padding: 0; box-sizing: border-box; }
                   html, body { width: 100%; height: 100%; background: #fff; overflow: hidden; }
                   body { display: flex; align-items: center; justify-content: center; }
-                  /* The image maintains aspect ratio to perfectly fit on a single page */
                   img { display: block; max-width: 100vw; max-height: 100vh; width: auto; height: auto; object-fit: contain; }
               </style>
           </head>
@@ -380,7 +538,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       console.error(err);
       showToast('Failed to print schedule.');
     }
-  };
+  }, [prepareExportClone, showToast]);
 
   useEffect(() => {
     const onExportImage = () => handleExportImage();
@@ -391,18 +549,7 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       window.removeEventListener('export-ordinary-image', onExportImage);
       window.removeEventListener('export-ordinary-print', onExportPrint);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, schedules, title]);
-
-
-  useEffect(() => {
-    const onResize = () => {
-      const mobile = window.innerWidth <= 768;
-      setIsMobile(mobile);
-    };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  }, [handleExportImage, handleExportPrint]);
 
   // Fullscreen: lock body scroll when fullscreen
   useEffect(() => {
@@ -410,86 +557,52 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     return () => { document.body.style.overflow = ''; };
   }, [isFullscreen]);
 
-  // Handle Fit Scale for Mobile Fullscreen & Grid View
+  // Fullscreen resize handler
   useEffect(() => {
+    if (!isFullscreen) return;
     const updateFitScale = () => {
-      if (isFullscreen) {
-        // In fullscreen, we want to scale the table to perfectly fit the screen (both width and height)
-        // maintaining its aspect ratio ("same square")
-        const padding = 32;
-        const availableWidth = window.innerWidth - padding;
-        const availableHeight = window.innerHeight - padding;
-
-        // The natural size of the table roughly (we can use scrollWidth/scrollHeight if containerRef is available)
-        // But since we need to set it, let's use fixed min dimensions or actual DOM rect
-        const tableEl = containerRef.current?.querySelector('.schedule-table');
-        const contentWidth = tableEl ? (tableEl.offsetWidth / (fitScale || 1)) : 680;
-        const contentHeight = tableEl ? (tableEl.offsetHeight / (fitScale || 1)) : 500;
-
-        const scaleX = availableWidth / Math.max(contentWidth, 680);
-        const scaleY = availableHeight / Math.max(contentHeight, 300);
-
-        const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
-
-        let scale;
-        if (isMobilePortrait) {
-          // On mobile portrait, avoid shrinking it to an unreadable tiny square.
-          // Force a minimum readable scale (e.g. 0.85) and let the user pan horizontally.
-          scale = Math.max(0.85, Math.min(scaleX, scaleY));
-        } else {
-          // For PC and landscape mobile, scale to perfectly fit one page
-          scale = Math.min(scaleX, scaleY);
-        }
-
-        setFitScale(scale);
-      } else {
-        // Standard grid view logic
-        const padding = 32;
-        const availableWidth = window.innerWidth - padding;
-        const minTableWidth = 680; // from CSS
-
-        if (availableWidth < minTableWidth && viewMode === 'grid') {
-          setFitScale(availableWidth / minTableWidth);
-        } else {
-          setFitScale(1);
-        }
-      }
+      const padding = 32;
+      const availableWidth = window.innerWidth - padding;
+      const availableHeight = window.innerHeight - padding;
+      const tableEl = containerRef.current?.querySelector('.schedule-table');
+      const contentWidth = tableEl ? (tableEl.offsetWidth / (fitScale || 1)) : 680;
+      const contentHeight = tableEl ? (tableEl.offsetHeight / (fitScale || 1)) : 500;
+      const scaleX = availableWidth / Math.max(contentWidth, 680);
+      const scaleY = availableHeight / Math.max(contentHeight, 300);
+      const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
+      const scale = isMobilePortrait ? Math.max(0.85, Math.min(scaleX, scaleY)) : Math.min(scaleX, scaleY);
+      setFitScale(scale);
     };
-
-    // Small delay to allow DOM to render before calculating height
-    setTimeout(updateFitScale, 50);
+    updateFitScale();
     window.addEventListener('resize', updateFitScale);
     return () => window.removeEventListener('resize', updateFitScale);
-  }, [isFullscreen, viewMode, activeTimeSlots.length]);
+  }, [isFullscreen, fitScale]);
 
-  // Listen to native fullscreen changes
+  // Native fullscreen changes listener
   useEffect(() => {
     const handleFullscreenChange = () => {
-      const isFS = !!document.fullscreenElement;
-      setIsFullscreen(isFS);
+      setIsFullscreen(!!document.fullscreenElement);
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement && !isFullscreen) {
       if (containerRef.current?.requestFullscreen) {
         containerRef.current.requestFullscreen().catch(err => {
-          console.error(`Error attempting to enable fullscreen: ${err.message}`);
-          setIsFullscreen(true); // Fallback if native fails
+          console.error(`Error enabling fullscreen: ${err.message}`);
+          setIsFullscreen(true);
         });
       } else if (containerRef.current?.webkitRequestFullscreen) {
         containerRef.current.webkitRequestFullscreen();
-        setIsFullscreen(true); // Fallback/state update for Safari
+        setIsFullscreen(true);
       } else {
-        setIsFullscreen(true); // fallback
+        setIsFullscreen(true);
       }
     } else {
       if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {
-          setIsFullscreen(false);
-        });
+        document.exitFullscreen().catch(() => setIsFullscreen(false));
       } else if (document.webkitExitFullscreen) {
         document.webkitExitFullscreen();
         setIsFullscreen(false);
@@ -497,31 +610,29 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         setIsFullscreen(false);
       }
     }
-  };
+  }, [isFullscreen]);
 
-  const handleDragStart = (e, schedule) => {
+  const handleDragStart = useCallback((e, schedule) => {
     e.dataTransfer.setData('scheduleId', schedule.id);
     e.dataTransfer.effectAllowed = 'move';
     setTimeout(() => {
       setDraggingId(schedule.id);
     }, 0);
-  };
+  }, []);
 
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     setDraggingId(null);
     setDragOverCell(null);
-  };
+  }, []);
 
-  const handleDragOver = (e, day, timeSlotId) => {
+  const handleDragOver = useCallback((e, day, timeSlotId) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     const cellKey = `${day}-${timeSlotId}`;
-    if (dragOverCell !== cellKey) setDragOverCell(cellKey);
-  };
+    setDragOverCell(prev => (prev === cellKey ? prev : cellKey));
+  }, []);
 
-
-
-  const handleDrop = async (e, day, timeSlotId) => {
+  const handleDrop = useCallback(async (e, day, timeSlotId) => {
     e.preventDefault();
     setDragOverCell(null);
     setDraggingId(null);
@@ -567,362 +678,28 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
     } else if (result && result.ok) {
       showToast('Schedule successfully updated.', false);
     }
-  };
+  }, [schedules, onUpdateSchedule, scheduleMode, showToast]);
 
-  // Group schedules by day for card view
-  const schedulesByDay = DAYS.reduce((acc, day) => {
-    acc[day] = schedules.filter(s => s.day === day).sort((a, b) => (a.timeSlot?.id ?? 0) - (b.timeSlot?.id ?? 0));
-    return acc;
-  }, {});
-
-  const DAY_COLORS = {
-    Monday: '#5645EE',
-    Tuesday: '#02B974',
-    Wednesday: '#F5A623',
-    Thursday: '#EF2A66',
-    Friday: '#0288d1',
-  };
-
-  // Department color mapping
-  const DEPT_COLORS = {
-    BSCS: { bg: '#109EEF', text: '#030813' },  // Blue (original)
-    BSFT: { bg: '#16A34A', text: '#030813' },  // Green
-    BSOA: { bg: '#8B5CF6', text: '#FFFFFF' },  // Purple
-    BAEL: { bg: '#EAB308', text: '#030813' },  // Yellow
-  };
-  const DEFAULT_DEPT_COLOR = { bg: '#109EEF', text: '#030813' };
-
-  const getDeptColor = (schedule) => {
-    // 1. Try to find a known department in the section name (e.g. "BSCS 1A", "BSOA-1B")
-    const sectionName = (schedule?.section?.name || '').toUpperCase();
-
-    // Check dynamic departments first
-    if (departments && departments.length > 0) {
-      for (const d of departments) {
-        if (sectionName.includes((d.id || '').toUpperCase())) {
-          return { bg: d.color, text: '#FFFFFF' };
-        }
-      }
-    }
-
-    for (const dept of Object.keys(DEPT_COLORS)) {
-      if (sectionName.includes(dept)) {
-        return DEPT_COLORS[dept];
-      }
-    }
-
-    // 2. Fallback: check subject.departments array or legacy subject.department string
-    const subj = schedule?.subject;
-    if (subj) {
-      const depts = Array.isArray(subj.departments) ? subj.departments : (subj.department ? [subj.department] : []);
-      for (const d of depts) {
-        const upperD = String(d).toUpperCase();
-
-        if (departments && departments.length > 0) {
-          for (const dynDept of departments) {
-            if (upperD.includes((dynDept.id || '').toUpperCase())) {
-              return { bg: dynDept.color, text: '#FFFFFF' };
-            }
-          }
-        }
-
-        for (const dept of Object.keys(DEPT_COLORS)) {
-          if (upperD.includes(dept)) {
-            return DEPT_COLORS[dept];
-          }
-        }
-      }
-    }
-    return DEFAULT_DEPT_COLOR;
-  };
-
-  // Group unique subjects for the summary table
-  const uniqueSubjectsMap = schedules.reduce((acc, current) => {
-    const subjId = current.subject?.id || current.id;
-    if (!acc[subjId]) {
-      acc[subjId] = {
-        ...current,
-        rooms: new Set([current.room?.name].filter(Boolean)),
-      };
-    } else {
-      if (current.room?.name) acc[subjId].rooms.add(current.room.name);
-    }
-    return acc;
-  }, {});
-
-  const uniqueSubjectsList = Object.values(uniqueSubjectsMap).map(s => ({
-    ...s,
-    roomNameList: Array.from(s.rooms).join(' / ') || 'TBA'
-  })).sort((a, b) => {
-    const codeA = (a.subject?.code || '').toString();
-    const codeB = (b.subject?.code || '').toString();
-    return codeA.localeCompare(codeB);
-  });
-
-  const totalUnits = schedules.reduce((sum, s) => {
-    const range = getScheduleTimeRange(s, scheduleMode);
-    if (range && range.start > 0 && range.end > 0) {
-      return sum + (range.end - range.start) / 60;
-    }
-    return sum + (Number(s.subject?.hoursPerMeeting) || 1.5);
-  }, 0);
-
-  // Determine the lunch break insertion index.
-  // We insert the break BEFORE the slot whose id equals config.lunchAfterId.
-  const lunchInsertIdx = activeTimeSlots.findIndex(ts => ts.id === config.lunchAfterId);
-
-  const GridView = () => {
-    const skippedCells = new Set();
-
-    return (
-      <div className="table-wrapper">
-        <table
-          className="schedule-table"
-          style={(isFullscreen ? fitScale !== 1 : (viewMode === 'grid' && fitScale < 1)) ? { zoom: fitScale } : {}}
-        >
-          <thead>
-            <tr>
-              <th className="sticky-col" style={{ width: '130px', minWidth: '130px', backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)', borderRight: '1px solid var(--border-color)' }}>Time Slot</th>
-              {displayDays.map(day => <th key={day} style={{ backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)' }}>{day}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {activeTimeSlots.map((timeSlot, tIdx) => {
-              const indexInSession = tIdx;
-
-              let isHourGroupHead = false;
-              let timeRowSpan = 1;
-              let hourLabel = '';
-
-              if (indexInSession % 2 === 0) {
-                const nextSlot = activeTimeSlots[tIdx + 1];
-                if (nextSlot) {
-                  isHourGroupHead = true;
-                  timeRowSpan = 2;
-                  hourLabel = `${timeSlot.label.split(' - ')[0]} - ${nextSlot.label.split(' - ')[1]}`;
-                } else {
-                  isHourGroupHead = true;
-                  timeRowSpan = 1;
-                  hourLabel = timeSlot.label;
-                }
-              } else {
-                isHourGroupHead = false;
-                timeRowSpan = 0;
-              }
-
-              return (
-                <React.Fragment key={timeSlot.id}>
-                  <tr className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
-                    {isHourGroupHead && (
-                      <td className="time-label sticky-col" rowSpan={timeRowSpan} style={{ borderRight: '1px solid var(--border-color)' }}>
-                        <strong>{hourLabel}</strong>
-                      </td>
-                    )}
-                    {displayDays.map((day, dayIdx) => {
-                      const cellKey = `${day}-${timeSlot.id}`;
-
-                      if (skippedCells.has(cellKey)) {
-                        return null;
-                      }
-
-                      const isDropTarget = dragOverCell === cellKey;
-                      const cellSchedules = schedules.filter(s => s.day === day && String(s.timeSlot?.id) === String(timeSlot.id));
-                      let rowSpan = 1;
-                      for (const s of cellSchedules) {
-                        const range = getScheduleTimeRange(s, scheduleMode);
-                        if (range.start > 0 && range.end > 0) {
-                          const durationMins = range.end - range.start;
-                          let needed = Math.ceil(durationMins / 30);
-                          if (needed < 1) needed = 1;
-                          if (needed > rowSpan) rowSpan = needed;
-                        } else {
-                          const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting, scheduleMode);
-                          if (needed > rowSpan) rowSpan = needed;
-                        }
-                      }
-                      if (rowSpan > 1) {
-                        for (let skip = 1; skip < rowSpan; skip++) {
-                          const skipSlot = activeTimeSlots[tIdx + skip];
-                          if (skipSlot) skippedCells.add(`${day}-${skipSlot.id}`);
-                        }
-                      }
-
-                      return (
-                        <td
-                          key={cellKey}
-                          rowSpan={rowSpan}
-                          className={`schedule-cell ${isDropTarget ? 'drag-over' : ''} ${cellSchedules.length > 0 ? 'has-schedule' : ''}`}
-                          onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
-                          onDrop={(e) => handleDrop(e, day, timeSlot.id)}
-                          style={
-                            cellSchedules.length > 0
-                              ? { backgroundColor: getDeptColor(cellSchedules[0]).bg, padding: 0 }
-                              : {}
-                          }
-                        >
-                          {cellSchedules.map((schedule) => {
-                            const deptColor = getDeptColor(schedule);
-                            return (
-                              <div
-                                key={schedule.id}
-                                className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''}`}
-                                draggable={!!onUpdateSchedule && isDeleteMode}
-                                onDragStart={(e) => handleDragStart(e, schedule)}
-                                onDragEnd={handleDragEnd}
-                                style={{ cursor: (onUpdateSchedule && isDeleteMode) ? 'grab' : 'default' }}
-                              >
-                                <div className="schedule-content" style={{ display: 'flex', flexDirection: 'column' }}>
-                                  <p className="subject" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0 }}>
-                                    {schedule.subject?.code ?? '—'}
-                                  </p>
-                                  <div className="details" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <p className="professor" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
-                                      {schedule.professor?.name ? (() => {
-                                        const name = schedule.professor.name.trim();
-                                        if (name.includes(',')) {
-                                          const [surname, firstNames] = name.split(',').map(s => s.trim());
-                                          const initial = firstNames ? firstNames[0].toUpperCase() : '';
-                                          return initial ? `${initial}. ${surname}` : surname;
-                                        } else {
-                                          const parts = name.split(/\s+/);
-                                          if (parts.length === 1) return parts[0];
-                                          const initial = parts[0][0].toUpperCase();
-                                          const surname = parts.slice(1).join(' ');
-                                          return `${initial}. ${surname}`;
-                                        }
-                                      })() : '—'}
-                                    </p>
-                                    <p className="room" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>{schedule.room?.name ?? '—'}</p>
-                                    {schedule.section && (
-                                      <p className="section" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>{schedule.section.name}</p>
-                                    )}
-                                  </div>
-                                </div>
-                                {onRemove && isDeleteMode && (
-                                  <button className="remove-btn" onClick={async (e) => {
-                                    e.stopPropagation();
-                                    const isConfirmed = await confirm({
-                                      title: 'Delete Schedule',
-                                      text: 'Are you sure you want to delete this schedule?',
-                                      icon: 'warning',
-                                      confirmButtonText: 'Delete',
-                                      isDestructive: true
-                                    });
-                                    if (isConfirmed) {
-                                      onRemove(schedule.id);
-                                    }
-                                  }} title="Remove schedule">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                </React.Fragment>
-              );
-            })}
-
-
-          </tbody>
-        </table>
-      </div>
-    );
-  };
-
-  const CardView = () => (
-    <div className="schedule-card-view">
-      {DAYS.map((day, dayIndex) => {
-        const daySched = schedulesByDay[day] || [];
-        return (
-          <div key={day} className="schedule-day-group" style={{ animationDelay: `${dayIndex * 0.05}s` }}>
-            <div className="schedule-day-header" style={{ borderLeftColor: DAY_COLORS[day] }}>
-              <span style={{ color: DAY_COLORS[day] }}>{day}</span>
-              <span className="schedule-day-count">{daySched.length} class{daySched.length !== 1 ? 'es' : ''}</span>
-            </div>
-            {daySched.length === 0 ? (
-              <div className="schedule-day-empty">No classes</div>
-            ) : (
-              daySched.map(schedule => {
-                const deptColor = getDeptColor(schedule);
-                return (
-                  <div key={schedule.id} className="schedule-card-item" style={{ borderLeftColor: deptColor.bg, backgroundColor: `${deptColor.bg}12` }}>
-                    <div className="schedule-card-time">
-                      {schedule.timeSlot?.customLabel || getMeetingTimeLabel(schedule.timeSlot, schedule.subject?.hoursPerMeeting) || schedule.timeSlot?.label || '—'}
-                    </div>
-                    <div className="schedule-card-body">
-                      <div className="schedule-card-subject">
-                        {schedule.subject?.code ?? '—'}
-                        {schedule.section && (
-                          <span className="schedule-card-section"> · {schedule.section.name}</span>
-                        )}
-                        {schedule.subject?.credits && (
-                          <span className="schedule-card-section"> ({schedule.subject.credits} Units)</span>
-                        )}
-                      </div>
-                      <div className="schedule-card-meta">
-                        <span>👤 {schedule.professor?.name ? (() => {
-                          const parts = schedule.professor.name.trim().split(/\s+/);
-                          if (parts.length === 1) return parts[0];
-                          return `${parts[0][0].toUpperCase()}.${parts[parts.length - 1]}`;
-                        })() : '—'}</span>
-                        <span>🏫 {schedule.room?.name ?? '—'}</span>
-                      </div>
-                    </div>
-                    {onRemove && isDeleteMode && (
-                      <button className="remove-btn" onClick={async (e) => {
-                        e.stopPropagation();
-                        const isConfirmed = await confirm({
-                          title: 'Delete Schedule',
-                          text: 'Are you sure you want to delete this schedule?',
-                          icon: 'warning',
-                          confirmButtonText: 'Delete',
-                          isDestructive: true
-                        });
-                        if (isConfirmed) {
-                          onRemove(schedule.id);
-                        }
-                      }} title="Remove schedule">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                      </button>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  const content = (
+  return (
     <div ref={containerRef} className={`schedule-table-container ${isFullscreen ? 'schedule-fullscreen' : ''}`}>
 
-      {/* Toolbar row */}
+      {/* Toolbar Row */}
       <div className="schedule-toolbar">
-        {/* View toggle removed */}
-
         <div style={{ marginLeft: 'auto' }}></div>
 
-        {/* Fullscreen toggle (grid view only) */}
-        {viewMode === 'grid' && (
-          <button
-            className="fullscreen-btn"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-          >
-            {isFullscreen ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" /></svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
-            )}
-            <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
-          </button>
-        )}
+        {/* Fullscreen Toggle Button */}
+        <button
+          className="fullscreen-btn"
+          onClick={toggleFullscreen}
+          title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+        >
+          {isFullscreen ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" /></svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
+          )}
+          <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+        </button>
       </div>
 
       {/* Header */}
@@ -949,12 +726,10 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         </div>
       </div>
 
-
-
       {/* Subject Summary Table */}
       <div className="schedule-summary-container" style={{ margin: '20px 0', padding: '0 10px', width: '100%', overflowX: 'auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#033279', textTransform: 'uppercase' }}>{getFullDepartmentName()}</h3>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#033279', textTransform: 'uppercase' }}>{fullDepartmentName}</h3>
           <h4 style={{ margin: '5px 0', fontSize: '0.9rem', color: '#000' }}>SCHEDULE OF CLASSES</h4>
           <p style={{ margin: 0, fontSize: '0.85rem', color: '#000' }}>{semesterInfo || 'First Semester, School Year 2026 - 2027'}</p>
         </div>
@@ -987,10 +762,121 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
         </table>
       </div>
 
-      {/* Content */}
-      {GridView()}
+      {/* Main Grid View */}
+      <div className="table-wrapper">
+        <table
+          className="schedule-table"
+          style={isFullscreen && fitScale !== 1 ? { transform: `scale(${fitScale})`, transformOrigin: 'top center' } : undefined}
+        >
+          <thead>
+            <tr>
+              <th className="sticky-col" style={{ width: '130px', minWidth: '130px', backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)', borderRight: '1px solid var(--border-color)' }}>Time Slot</th>
+              {displayDays.map(day => <th key={day} style={{ backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)' }}>{day}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {activeTimeSlots.map((timeSlot, tIdx) => {
+              const isHourGroupHead = tIdx % 2 === 0;
+              const nextSlot = activeTimeSlots[tIdx + 1];
+              const timeRowSpan = isHourGroupHead ? (nextSlot ? 2 : 1) : 0;
+              const hourLabel = isHourGroupHead
+                ? (nextSlot ? `${timeSlot.label.split(' - ')[0]} - ${nextSlot.label.split(' - ')[1]}` : timeSlot.label)
+                : '';
 
-      {/* Floating exit fullscreen button for presentation mode */}
+              return (
+                <tr key={timeSlot.id} className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
+                  {isHourGroupHead && (
+                    <td className="time-label sticky-col" rowSpan={timeRowSpan} style={{ borderRight: '1px solid var(--border-color)' }}>
+                      <strong>{hourLabel}</strong>
+                    </td>
+                  )}
+                  {displayDays.map(day => {
+                    const cellKey = `${day}-${timeSlot.id}`;
+
+                    if (skippedCellsSet.has(cellKey)) {
+                      return null;
+                    }
+
+                    const isDropTarget = dragOverCell === cellKey;
+                    const cellSchedules = scheduleGridMap.get(cellKey) || [];
+                    const rowSpan = cellSpanMap.get(cellKey) || 1;
+                    const primaryColor = cellSchedules.length > 0 ? getDeptColor(cellSchedules[0]) : null;
+
+                    return (
+                      <td
+                        key={cellKey}
+                        rowSpan={rowSpan}
+                        className={`schedule-cell ${isDropTarget ? 'drag-over' : ''} ${cellSchedules.length > 0 ? 'has-schedule' : ''}`}
+                        onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
+                        onDrop={(e) => handleDrop(e, day, timeSlot.id)}
+                        style={primaryColor ? { backgroundColor: primaryColor.bg, padding: 0 } : undefined}
+                      >
+                        {cellSchedules.map((schedule) => {
+                          const deptColor = getDeptColor(schedule);
+                          const profFormatted = formatProfessorName(schedule.professor?.name);
+
+                          return (
+                            <div
+                              key={schedule.id}
+                              className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''}`}
+                              draggable={!!onUpdateSchedule && isDeleteMode}
+                              onDragStart={(e) => handleDragStart(e, schedule)}
+                              onDragEnd={handleDragEnd}
+                              style={{ cursor: (onUpdateSchedule && isDeleteMode) ? 'grab' : 'default' }}
+                            >
+                              <div className="schedule-content" style={{ display: 'flex', flexDirection: 'column' }}>
+                                <p className="subject" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0 }}>
+                                  {schedule.subject?.code ?? '—'}
+                                </p>
+                                <div className="details" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <p className="professor" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
+                                    {profFormatted}
+                                  </p>
+                                  <p className="room" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
+                                    {schedule.room?.name ?? '—'}
+                                  </p>
+                                  {schedule.section && (
+                                    <p className="section" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
+                                      {schedule.section.name}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              {onRemove && isDeleteMode && (
+                                <button
+                                  className="remove-btn"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const isConfirmed = await confirm({
+                                      title: 'Delete Schedule',
+                                      text: 'Are you sure you want to delete this schedule?',
+                                      icon: 'warning',
+                                      confirmButtonText: 'Delete',
+                                      isDestructive: true
+                                    });
+                                    if (isConfirmed) {
+                                      onRemove(schedule.id);
+                                    }
+                                  }}
+                                  title="Remove schedule"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Floating Exit Fullscreen Button */}
       {isFullscreen && (
         <>
           <button
@@ -1007,14 +893,12 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" /></svg>
           </button>
 
-          {/* Rotate hint for mobile devices in portrait */}
           <div className="rotate-device-hint">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.34-11.14l1.5 1.5" /></svg>
             <span>Rotate for best view</span>
           </div>
         </>
       )}
-
 
       {/* Preview Modal */}
       {previewImage && createPortal(
@@ -1048,7 +932,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
           borderRadius: '12px',
           boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
           zIndex: 999999,
-
           display: 'flex',
           alignItems: 'flex-start',
           gap: '12px',
@@ -1078,8 +961,6 @@ function ScheduleTable({ schedules, onRemove, onUpdateSchedule, title = "ROOM SC
       )}
     </div>
   );
-
-  return content;
-}
+});
 
 export default ScheduleTable;

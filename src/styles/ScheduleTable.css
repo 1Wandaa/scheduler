@@ -354,6 +354,9 @@
   border: 1px solid var(--border-color);
   border-radius: 14px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  contain: layout paint;
+  overscroll-behavior: contain;
+  scroll-behavior: auto;
 }
 
 .schedule-table {
@@ -379,8 +382,6 @@
   letter-spacing: 0.06em;
   border-bottom: 1px solid #E2E8F0;
   border-right: 1px solid #E2E8F0;
-  
-  /* Prevent background transparency bleed */
   background-clip: padding-box;
 }
 
@@ -399,6 +400,13 @@
   border-bottom: none;
 }
 
+.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  transform: translateZ(0);
+}
+
 .time-label {
   background-color: #F8FAFC;
   font-weight: 700;
@@ -410,15 +418,18 @@
   vertical-align: middle;
   text-align: center;
   letter-spacing: 0.02em;
-  
-  /* Prevent background transparency bleed */
   background-clip: padding-box;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  transform: translateZ(0);
 }
 
 .schedule-cell {
   position: relative;
   padding: 0.5rem;
   height: 40px;
+  contain: layout style;
 }
 
 .schedule-cell.drag-over {

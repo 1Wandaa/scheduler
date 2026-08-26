@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { logActivity, LOG_ACTIONS } from '../../../utils/activityLogger';
 
-const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage }) => {
+const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user }) => {
     const [isExportOpen, setIsExportOpen] = useState(false);
 
     // Close export dropdown when clicking outside
@@ -78,6 +79,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage }) => {
                                 windowWidth: 1100
                             });
                             setPreviewImage(canvas.toDataURL('image/png'));
+                            logActivity({
+                                user,
+                                action: LOG_ACTIONS.EXPORT,
+                                details: 'Generated ISO format schedule preview image'
+                            });
                         } catch (error) {
                             console.error('Failed to save image:', error);
                             alert('Failed to generate preview. Please try again.');
@@ -137,6 +143,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage }) => {
                         `);
                         doc.close();
                         iframe.contentWindow.focus();
+                        logActivity({
+                            user,
+                            action: LOG_ACTIONS.EXPORT,
+                            details: 'Printed ISO format schedule document'
+                        });
                         setTimeout(() => {
                             iframe.contentWindow.print();
                             setTimeout(() => document.body.removeChild(iframe), 1000);
@@ -149,6 +160,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage }) => {
                     <button onClick={() => {
                         setIsExportOpen(false);
                         window.dispatchEvent(new Event('export-ordinary-image'));
+                        logActivity({
+                            user,
+                            action: LOG_ACTIONS.EXPORT,
+                            details: 'Exported ordinary grid schedule image'
+                        });
                     }} style={{ width: '100%', padding: '10px 16px', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-main)' }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                         Save Image
@@ -156,6 +172,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage }) => {
                     <button onClick={() => {
                         setIsExportOpen(false);
                         window.dispatchEvent(new Event('export-ordinary-print'));
+                        logActivity({
+                            user,
+                            action: LOG_ACTIONS.EXPORT,
+                            details: 'Printed ordinary grid schedule'
+                        });
                     }} style={{ width: '100%', padding: '10px 16px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-main)' }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                         Print Document

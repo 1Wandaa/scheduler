@@ -72,14 +72,19 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
         "5:00 - 6:00"    // index 11
     ];
 
-    const slotToRowMap = SLOT_TO_ROW;
-
-    const getClassForRow = (day, rowIndex) => {
-        return scheduleItems.find(s => {
-            if (s.day !== day || !s.timeSlot) return false;
-            return slotToRowMap[parseInt(s.timeSlot.id)] === rowIndex;
+    const scheduleRowMap = useMemo(() => {
+        const map = new Map();
+        scheduleItems.forEach(s => {
+            if (!s.day || !s.timeSlot) return;
+            const r = SLOT_TO_ROW[parseInt(s.timeSlot.id)];
+            if (r !== undefined) {
+                map.set(`${s.day}-${r}`, s);
+            }
         });
-    };
+        return map;
+    }, [scheduleItems]);
+
+    const getClassForRow = (day, rowIndex) => scheduleRowMap.get(`${day}-${rowIndex}`);
 
     const { skipCells, spanInfo } = useMemo(() => {
         const skip = new Set();
