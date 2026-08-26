@@ -22,12 +22,12 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     professor: '',
     room: '',
     day: [],
-    timeSlot: ''
+    timeSlot: {}
   });
 
   const [validation, setValidation] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [isTimeSlotOpen, setIsTimeSlotOpen] = useState(false);
+  const [openTimeSlotDay, setOpenTimeSlotDay] = useState(null);
   const dropdownRef = useRef(null);
 
   const parseTimeToMinutes = (timeStr) => {
@@ -49,7 +49,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsTimeSlotOpen(false);
+        setOpenTimeSlotDay(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -168,25 +168,42 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     const professor = professors.find(p => p.id === formData.professor);
     const room = rooms.find(r => r.id === formData.room);
 
-    // Determine if timeslot is standard or custom
-    let timeSlot = null;
-    if (formData.timeSlot) {
+    let allValid = true;
+    let allWarnings = [];
+    let allErrors = [];
+
+    const daysToSchedule = Array.isArray(formData.day)
+      ? formData.day.map(normalizeDay)
+      : [normalizeDay(formData.day)];
+
+    const resolvedSessions = [];
+
+    for (const day of daysToSchedule) {
+      const timeStr = typeof formData.timeSlot === 'object' ? formData.timeSlot[day] : formData.timeSlot;
+      
+      if (!timeStr) {
+        allValid = false;
+        allErrors.push(`Please select a time slot for ${day}.`);
+        continue;
+      }
+
+      let timeSlotObj = null;
       const eligibleSlots = subject
         ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, subject.hoursPerMeeting) > 0)
         : TIME_SLOTS;
 
       const cleanTimeStr = (str) => String(str || '').replace(/\s+/g, '').toUpperCase();
-      const targetStr = cleanTimeStr(formData.timeSlot);
+      const targetStr = cleanTimeStr(timeStr);
 
-      timeSlot = eligibleSlots.find(t =>
+      timeSlotObj = eligibleSlots.find(t =>
         cleanTimeStr(getMeetingTimeLabel(t, subject?.hoursPerMeeting)) === targetStr ||
         cleanTimeStr(t.label) === targetStr ||
         cleanTimeStr(t.time) === targetStr
       );
-      if (!timeSlot) timeSlot = TIME_SLOTS.find(t => String(t.id) === String(formData.timeSlot));
+      if (!timeSlotObj) timeSlotObj = TIME_SLOTS.find(t => String(t.id) === String(timeStr));
 
-      if (!timeSlot) {
-        const typedMins = parseTimeToMinutes(formData.timeSlot);
+      if (!timeSlotObj) {
+        const typedMins = parseTimeToMinutes(timeStr);
         if (typedMins !== null && eligibleSlots.length > 0) {
           let floorSlot = eligibleSlots[0];
           let maxStart = -1;
@@ -197,50 +214,47 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               floorSlot = s;
             }
           }
-          timeSlot = { ...floorSlot, customLabel: formData.timeSlot };
+          timeSlotObj = { ...floorSlot, customLabel: timeStr };
         } else if (eligibleSlots.length > 0) {
-          timeSlot = { ...eligibleSlots[0], customLabel: formData.timeSlot };
+          timeSlotObj = { ...eligibleSlots[0], customLabel: timeStr };
         }
       }
-    }
 
-    let allValid = true;
-    let allWarnings = [];
-    let allErrors = [];
+      if (!timeSlotObj) {
+        allValid = false;
+        allErrors.push(`Failed to resolve time slot for ${day}.`);
+        continue;
+      }
 
-    const daysToSchedule = Array.isArray(formData.day)
-      ? formData.day.map(normalizeDay)
-      : [normalizeDay(formData.day)];
-
-    // Validate all selected days first
-    for (const day of daysToSchedule) {
-      const result = validator.validateAssignment(room, professor, subject, section, day, timeSlot);
+      const result = validator.validateAssignment(room, professor, subject, section, day, timeSlotObj);
       if (!result.valid) {
         allValid = false;
         allErrors.push(`Failed for ${day}: ${result.errors.join(', ')}`);
       } else if (result.warnings) {
         allWarnings.push(...result.warnings.map(w => `${day}: ${w}`));
       }
+
+      resolvedSessions.push({ day, timeSlotObj, originalLabel: timeStr });
     }
 
     if (allValid) {
       let hasAddError = false;
       const successfullyAdded = [];
 
-      for (const day of daysToSchedule) {
-        const scheduleResult = validator.addSchedule(room, professor, subject, section, day, timeSlot);
+      for (const sess of resolvedSessions) {
+        const scheduleResult = validator.addSchedule(room, professor, subject, section, sess.day, sess.timeSlotObj);
         const addResult = await onSchedule(scheduleResult.schedule);
         if (addResult && addResult.ok === false) {
           hasAddError = true;
-          allErrors.push(`Failed to save for ${day}: ${addResult.errors?.join(', ') || 'Unknown error'}`);
+          allErrors.push(`Failed to save for ${sess.day}: ${addResult.errors?.join(', ') || 'Unknown error'}`);
         } else {
           successfullyAdded.push({
             subject: `${subject?.code || ''} ${subject?.name ? `— ${subject.name}` : ''}`.trim(),
             section: section?.name || '',
             professor: professor?.name || '',
             room: room?.name || '',
-            day: day,
-            timeSlot: getMeetingTimeLabel(timeSlot, subject?.hoursPerMeeting, 'standard') || timeSlot?.label || formData.timeSlot
+            day: sess.day,
+            timeSlot: getMeetingTimeLabel(sess.timeSlotObj, subject?.hoursPerMeeting, 'standard') || sess.timeSlotObj?.label || sess.originalLabel
           });
         }
       }
@@ -279,7 +293,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             errors: []
           });
         }
-        setFormData({ subject: '', section: '', professor: '', room: '', day: [], timeSlot: '' });
+        setFormData({ subject: '', section: '', professor: '', room: '', day: [], timeSlot: {} });
       }
     } else {
       setValidation({ valid: false, errors: allErrors, warnings: allWarnings });
@@ -367,20 +381,23 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, selectedSubject.hoursPerMeeting) > 0)
     : TIME_SLOTS;
 
-  let selectedTimeSlot = null;
-  if (formData.timeSlot) {
-    const cleanTimeStr = (str) => String(str || '').replace(/\s+/g, '').toUpperCase();
-    const targetStr = cleanTimeStr(formData.timeSlot);
+  const resolveTimeSlotForDay = (day) => {
+    if (!formData.timeSlot) return null;
+    const timeStr = typeof formData.timeSlot === 'object' ? formData.timeSlot[normalizeDay(day)] : formData.timeSlot;
+    if (!timeStr) return null;
 
-    selectedTimeSlot = eligibleTimeSlots.find(t =>
+    const cleanTimeStr = (str) => String(str || '').replace(/\s+/g, '').toUpperCase();
+    const targetStr = cleanTimeStr(timeStr);
+
+    let resolvedSlot = eligibleTimeSlots.find(t =>
       cleanTimeStr(getMeetingTimeLabel(t, selectedSubject?.hoursPerMeeting)) === targetStr ||
       cleanTimeStr(t.label) === targetStr ||
       cleanTimeStr(t.time) === targetStr
     );
-    if (!selectedTimeSlot) selectedTimeSlot = TIME_SLOTS.find(t => String(t.id) === String(formData.timeSlot));
+    if (!resolvedSlot) resolvedSlot = TIME_SLOTS.find(t => String(t.id) === String(timeStr));
 
-    if (!selectedTimeSlot) {
-      const typedMins = parseTimeToMinutes(formData.timeSlot);
+    if (!resolvedSlot) {
+      const typedMins = parseTimeToMinutes(timeStr);
       if (typedMins !== null && eligibleTimeSlots.length > 0) {
         let floorSlot = eligibleTimeSlots[0];
         let maxStart = -1;
@@ -391,12 +408,13 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             floorSlot = s;
           }
         }
-        selectedTimeSlot = { ...floorSlot, customLabel: formData.timeSlot };
+        resolvedSlot = { ...floorSlot, customLabel: timeStr };
       } else if (eligibleTimeSlots.length > 0) {
-        selectedTimeSlot = { ...eligibleTimeSlots[0], customLabel: formData.timeSlot };
+        resolvedSlot = { ...eligibleTimeSlots[0], customLabel: timeStr };
       }
     }
-  }
+    return resolvedSlot;
+  };
 
   const checkConflict = (overrides) => {
     if (loading) return false;
@@ -408,7 +426,6 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       professor: selectedProfessor,
       room: selectedRoom,
       day: formData.day,
-      timeSlot: selectedTimeSlot,
       ...overrides
     };
 
@@ -416,16 +433,18 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       ? candidateBase.day.map(normalizeDay).filter(Boolean)
       : (candidateBase.day ? [normalizeDay(candidateBase.day)] : []);
 
-    if (daysToCheck.length === 0 || !candidateBase.timeSlot) return false;
+    if (daysToCheck.length === 0) return false;
 
     // Specific check for professor dropdown
     if (overrides?.professor) {
       for (const d of daysToCheck) {
         if (!d) continue;
+        const timeSlot = resolveTimeSlotForDay(d);
+        if (!timeSlot) continue;
         const candidate = {
           professor: overrides.professor,
           day: d,
-          timeSlot: candidateBase.timeSlot,
+          timeSlot: timeSlot,
           subject: candidateBase.subject
         };
         const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
@@ -438,10 +457,12 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     if (overrides?.room) {
       for (const d of daysToCheck) {
         if (!d) continue;
+        const timeSlot = resolveTimeSlotForDay(d);
+        if (!timeSlot) continue;
         const candidate = {
           room: overrides.room,
           day: d,
-          timeSlot: candidateBase.timeSlot,
+          timeSlot: timeSlot,
           subject: candidateBase.subject
         };
         const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
@@ -455,14 +476,19 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       if (!candidateBase.room?.id && !candidateBase.professor?.id && !candidateBase.section?.id) {
         return false;
       }
-      const candidate = { ...candidateBase, day: normalizeDay(overrides.day) };
+      const dayStr = normalizeDay(overrides.day);
+      const timeSlot = resolveTimeSlotForDay(dayStr);
+      if (!timeSlot) return false;
+      const candidate = { ...candidateBase, day: dayStr, timeSlot };
       const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
       return !!(conf.room || conf.professor || conf.section);
     }
 
     for (const d of daysToCheck) {
       if (!d) continue;
-      const candidate = { ...candidateBase, day: d };
+      const timeSlot = resolveTimeSlotForDay(d);
+      if (!timeSlot) continue;
+      const candidate = { ...candidateBase, day: d, timeSlot };
       const conflicts = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
       if (conflicts.room || conflicts.professor || conflicts.section) {
         return true;
@@ -471,12 +497,18 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     return false;
   };
 
-  const getTimeSlotConflictTag = (slot) => {
+  const getTimeSlotConflictTag = (slot, specificDay) => {
     if (loading) return null;
     if (!selectedSubject || !activeSchedules) return null;
-    const daysToCheck = Array.isArray(formData.day)
-      ? formData.day.map(normalizeDay).filter(Boolean)
-      : (formData.day ? [normalizeDay(formData.day)] : []);
+    
+    let daysToCheck = [];
+    if (specificDay) {
+       daysToCheck = [normalizeDay(specificDay)];
+    } else {
+       daysToCheck = Array.isArray(formData.day)
+         ? formData.day.map(normalizeDay).filter(Boolean)
+         : (formData.day ? [normalizeDay(formData.day)] : []);
+    }
 
     if (daysToCheck.length === 0 || !slot) return null;
     if (!selectedRoom?.id && !selectedProfessor?.id && !selectedSection?.id) return null;
@@ -527,10 +559,9 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     return recs && recs.length > 0 ? recs[0] : null;
   }, [formData, subjects, sections, professors, rooms, activeSchedules, activeSemester]);
 
-  // Reactive Conflict Resolver: Computes instant alternatives when collision is detected
   const activeConflictData = useMemo(() => {
     if (loading) return null;
-    if (!selectedSubject || !selectedSection || !selectedProfessor || !selectedRoom || !selectedTimeSlot || !formData.day || (Array.isArray(formData.day) && formData.day.length === 0)) {
+    if (!selectedSubject || !selectedSection || !selectedProfessor || !selectedRoom || !formData.day || (Array.isArray(formData.day) && formData.day.length === 0)) {
       return null;
     }
     const daysToCheck = (Array.isArray(formData.day) ? formData.day : [formData.day])
@@ -543,13 +574,16 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     let combinedConflicts = { room: null, professor: null, section: null };
 
     for (const d of daysToCheck) {
+      const timeSlot = resolveTimeSlotForDay(d);
+      if (!timeSlot) continue;
+
       const cand = {
         subject: selectedSubject,
         section: selectedSection,
         professor: selectedProfessor,
         room: selectedRoom,
         day: d,
-        timeSlot: selectedTimeSlot
+        timeSlot: timeSlot
       };
       const conf = findScheduleConflicts(cand, activeSchedules, { scheduleMode: 'standard' });
       if (conf.room || conf.professor || conf.section) {
@@ -561,6 +595,10 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     }
 
     if (hasConflict) {
+      // In this advanced scenario with potential multiple slots, we'll pick the first conflicting slot for alternative searching.
+      const firstConflictingDay = daysToCheck.find(d => resolveTimeSlotForDay(d) !== null) || daysToCheck[0];
+      const fallbackSlot = resolveTimeSlotForDay(firstConflictingDay);
+
       const alts = findAlternativeSlots({
         subject: selectedSubject,
         section: selectedSection,
@@ -568,7 +606,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
         room: selectedRoom,
         days: daysToCheck,
         day: daysToCheck,
-        timeSlot: selectedTimeSlot
+        timeSlot: fallbackSlot
       }, activeSchedules, rooms, eligibleTimeSlots, 'standard');
 
       const dayLabel = daysToCheck.map(d => d.slice(0, 3)).join(' / ');
@@ -580,7 +618,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       };
     }
     return null;
-  }, [selectedSubject, selectedSection, selectedProfessor, selectedRoom, selectedTimeSlot, formData.day, activeSchedules, rooms, eligibleTimeSlots]);
+  }, [selectedSubject, selectedSection, selectedProfessor, selectedRoom, formData.day, formData.timeSlot, activeSchedules, rooms, eligibleTimeSlots]);
 
   const handleApplyAlternative = (alt) => {
     const daysToSet = alt.days
@@ -608,16 +646,22 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       ? daysToSet
       : (Array.isArray(formData.day) && formData.day.length > 0 ? formData.day.map(normalizeDay) : ['Monday']);
     const dayDisplay = rec.dayLabel || resolvedDays.map(d => d.slice(0, 3)).join(' / ');
+    const timeLabel = rec.timeSlot?.label || rec.timeSlot?.customLabel || '';
+    const timeSlotMapping = {};
+    resolvedDays.forEach(d => {
+      timeSlotMapping[d] = timeLabel;
+    });
+
     setFormData({
       subject: rec.subject?.id || '',
       section: rec.section?.id || '',
       professor: rec.professor?.id || '',
       room: rec.room?.id || '',
       day: resolvedDays,
-      timeSlot: rec.timeSlot?.label || rec.timeSlot?.customLabel || ''
+      timeSlot: timeSlotMapping
     });
-    setAppliedMessage(`✓ Auto-filled: ${dayDisplay} ${rec.timeSlot?.label} · ${rec.room?.name}`);
-    setIsTimeSlotOpen(false);
+    setAppliedMessage(`✓ Auto-filled: ${dayDisplay} ${timeLabel} · ${rec.room?.name}`);
+    setOpenTimeSlotDay(null);
     setValidation(null);
   };
 
@@ -803,120 +847,131 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             </div>
             {/* Hidden input to maintain HTML5 validation if needed */}
             <input type="hidden" name="day" value={Array.isArray(formData.day) ? formData.day.join(',') : formData.day} required={!formData.day || formData.day.length === 0} />
-          </div>
+            
+            {/* Time Slot Dropdowns per selected day */}
+            {formData.day.map(dayStr => {
+              const isDropdownOpen = openTimeSlotDay === dayStr;
+              const timeValue = formData.timeSlot[dayStr] || '';
+              return (
+              <div key={dayStr} className="form-group" style={{ gridColumn: '1 / -1', position: 'relative' }} ref={isDropdownOpen ? dropdownRef : null}>
+                <label>{dayStr} Time Slot</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    className="form-select"
+                    value={timeValue}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        timeSlot: { ...prev.timeSlot, [dayStr]: val }
+                      }));
+                      setOpenTimeSlotDay(dayStr);
+                    }}
+                    onFocus={() => setOpenTimeSlotDay(dayStr)}
+                    placeholder="Select or type a time..."
+                    required
+                    style={{ paddingRight: '30px', width: '100%' }}
+                    autoComplete="off"
+                  />
+                  <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </div>
+                </div>
 
-          <div className="form-group" ref={dropdownRef} style={{ position: 'relative' }}>
-            <label className="form-label">Time Slot *</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                className="form-select"
-                name="timeSlot"
-                value={formData.timeSlot}
-                onChange={(e) => {
-                  handleChange(e);
-                  setIsTimeSlotOpen(true);
-                }}
-                onFocus={() => setIsTimeSlotOpen(true)}
-                placeholder="Select or type a time..."
-                required
-                style={{ paddingRight: '30px', width: '100%' }}
-                autoComplete="off"
-              />
-              <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-              </div>
-            </div>
+                {isDropdownOpen && (
+                  <div className="custom-dropdown-menu" style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    maxHeight: '220px',
+                    overflowY: 'auto',
+                    backgroundColor: 'var(--bg-main)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    zIndex: 1000,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    {eligibleTimeSlots.map(slot => {
+                      const rangeLabel = selectedSubject
+                        ? getMeetingTimeLabel(slot, selectedSubject.hoursPerMeeting)
+                        : slot.label;
 
-            {isTimeSlotOpen && (
-              <div className="custom-dropdown-menu" style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                maxHeight: '220px',
-                overflowY: 'auto',
-                backgroundColor: 'var(--bg-main)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                marginTop: '4px',
-                zIndex: 100,
-                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                display: 'flex',
-                flexDirection: 'column'
-              }}>
-                {eligibleTimeSlots.map(slot => {
-                  const rangeLabel = selectedSubject
-                    ? getMeetingTimeLabel(slot, selectedSubject.hoursPerMeeting)
-                    : slot.label;
+                      if (timeValue && !rangeLabel.toLowerCase().includes(timeValue.toLowerCase())) {
+                        return null;
+                      }
 
-                  // Filter based on input
-                  if (formData.timeSlot && !rangeLabel.toLowerCase().includes(formData.timeSlot.toLowerCase())) {
-                    return null;
-                  }
+                      const isSelected = timeValue === rangeLabel;
+                      const conflictTag = getTimeSlotConflictTag(slot, dayStr);
 
-                  const isSelected = formData.timeSlot === rangeLabel;
-                  const conflictTag = getTimeSlotConflictTag(slot);
+                      return (
+                        <div
+                          key={slot.id}
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              timeSlot: { ...prev.timeSlot, [dayStr]: isSelected ? '' : rangeLabel }
+                            }));
+                            setOpenTimeSlotDay(null);
+                            setValidation(null);
+                          }}
+                          style={{
+                            padding: '10px 12px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid var(--border-color)',
+                            color: conflictTag ? '#dc2626' : 'var(--text-main)',
+                            backgroundColor: isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent',
+                            fontWeight: isSelected ? '600' : '400',
+                            fontSize: '0.9rem',
+                            transition: 'background-color 0.15s ease',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--table-header)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent'; }}
+                        >
+                          <span>{rangeLabel}</span>
+                          {conflictTag && (
+                            <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600 }}>
+                              {conflictTag}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
 
-                  return (
-                    <div
-                      key={slot.id}
-                      onClick={() => {
-                        setFormData(prev => ({ ...prev, timeSlot: isSelected ? '' : rangeLabel }));
-                        setIsTimeSlotOpen(false);
-                        setValidation(null);
-                      }}
-                      style={{
-                        padding: '10px 12px',
-                        cursor: 'pointer',
-                        borderBottom: '1px solid var(--border-color)',
-                        color: conflictTag ? '#dc2626' : 'var(--text-main)',
-                        backgroundColor: isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent',
-                        fontWeight: isSelected ? '600' : '400',
-                        fontSize: '0.9rem',
-                        transition: 'background-color 0.15s ease',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--table-header)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent'; }}
-                    >
-                      <span>{rangeLabel}</span>
-                      {conflictTag && (
-                        <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600 }}>
-                          {conflictTag}
-                        </span>
+                    {timeValue && !eligibleTimeSlots.some(slot => {
+                      const rangeLabel = selectedSubject ? getMeetingTimeLabel(slot, selectedSubject.hoursPerMeeting) : slot.label;
+                      return rangeLabel.toLowerCase() === timeValue.toLowerCase();
+                    }) && (
+                        <div
+                          onClick={() => {
+                            setOpenTimeSlotDay(null);
+                            setValidation(null);
+                          }}
+                          style={{
+                            padding: '12px',
+                            cursor: 'pointer',
+                            color: 'var(--accent-primary)',
+                            fontSize: '0.9rem',
+                            fontWeight: '600',
+                            backgroundColor: 'var(--bg-main)'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--table-header)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-main)'}
+                        >
+                          Use custom time "{timeValue}"
+                        </div>
                       )}
-                    </div>
-                  );
-                })}
-
-                {formData.timeSlot && !eligibleTimeSlots.some(slot => {
-                  const rangeLabel = selectedSubject ? getMeetingTimeLabel(slot, selectedSubject.hoursPerMeeting) : slot.label;
-                  return rangeLabel.toLowerCase() === formData.timeSlot.toLowerCase();
-                }) && (
-                    <div
-                      onClick={() => {
-                        setIsTimeSlotOpen(false);
-                        setValidation(null);
-                      }}
-                      style={{
-                        padding: '12px',
-                        cursor: 'pointer',
-                        color: 'var(--accent-primary)',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        backgroundColor: 'var(--bg-main)'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--table-header)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      + Use custom time: "{formData.timeSlot}"
-                    </div>
-                  )}
+                  </div>
+                )}
               </div>
-            )}
+              );
+            })}
           </div>
         </div>
 
