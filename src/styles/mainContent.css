@@ -7,24 +7,15 @@
   display: block;
   position: relative;
   z-index: 1;
-  /* Custom scrollbar */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(86, 69, 238, 0.2) transparent;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .main-content::-webkit-scrollbar {
-  width: 6px;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
-
-.main-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.main-content::-webkit-scrollbar-thumb {
-  background: rgba(86, 69, 238, 0.15);
-  border-radius: 100px;
-}
-
 
 .header-title {
   color: white;

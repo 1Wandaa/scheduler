@@ -85,3 +85,38 @@ canvas,
     transform: rotate(360deg);
   }
 }
+
+/* Hide scrollbars across all browsers while keeping scrolling fully functional */
+*,
+*::before,
+*::after,
+html,
+body,
+.main-content,
+.sidebar,
+.table-wrapper,
+.table-container,
+.modal-content,
+.schedule-summary-container,
+.day-selector {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar,
+*::before::-webkit-scrollbar,
+*::after::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.main-content::-webkit-scrollbar,
+.sidebar::-webkit-scrollbar,
+.table-wrapper::-webkit-scrollbar,
+.table-container::-webkit-scrollbar,
+.modal-content::-webkit-scrollbar,
+.schedule-summary-container::-webkit-scrollbar,
+.day-selector::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
