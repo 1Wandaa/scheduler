@@ -161,25 +161,23 @@ export function parseTimeToMinutes(timeStr) {
 export function entitiesMatch(a, b) {
   if (!a || !b) return false;
 
-  const keysA = new Set();
-  if (typeof a === 'string' || typeof a === 'number') {
-    const s = String(a).trim();
-    if (s) keysA.add(s.toLowerCase());
-  } else if (typeof a === 'object') {
-    if (a.id) keysA.add(String(a.id).trim().toLowerCase());
-    if (a.name) keysA.add(String(a.name).trim().toLowerCase());
-    if (a.code) keysA.add(String(a.code).trim().toLowerCase());
-  }
+  const getKeys = (item) => {
+    const keys = new Set();
+    if (typeof item === 'string' || typeof item === 'number') {
+      const s = String(item).trim();
+      if (s) keys.add(s.toLowerCase());
+    } else if (typeof item === 'object' && item) {
+      if (item.id && String(item.id).trim()) keys.add(String(item.id).trim().toLowerCase());
+      if (item.name && String(item.name).trim()) keys.add(String(item.name).trim().toLowerCase());
+      if (item.code && String(item.code).trim()) keys.add(String(item.code).trim().toLowerCase());
+    }
+    return keys;
+  };
 
-  const keysB = new Set();
-  if (typeof b === 'string' || typeof b === 'number') {
-    const s = String(b).trim();
-    if (s) keysB.add(s.toLowerCase());
-  } else if (typeof b === 'object') {
-    if (b.id) keysB.add(String(b.id).trim().toLowerCase());
-    if (b.name) keysB.add(String(b.name).trim().toLowerCase());
-    if (b.code) keysB.add(String(b.code).trim().toLowerCase());
-  }
+  const keysA = getKeys(a);
+  const keysB = getKeys(b);
+
+  if (keysA.size === 0 || keysB.size === 0) return false;
 
   for (const k of keysA) {
     if (keysB.has(k)) return true;
@@ -680,14 +678,15 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
       }
 
       if (allDaysClean) {
+        const timeLabel = getMeetingTimeLabel(candidate.timeSlot, candidate.subject?.hoursPerMeeting, scheduleMode) || candidate.timeSlot.label;
         alternatives.push({
           type: 'room',
           title: `Switch Room to ${r.name}`,
           room: r,
           days: candidateDays,
           day: candidateDays,
-          timeSlot: candidate.timeSlot,
-          description: `Room ${r.name} is available on ${dayLabel} at ${candidate.timeSlot.label || candidate.timeSlot.time || ''}.`
+          timeSlot: { ...candidate.timeSlot, label: timeLabel },
+          description: `Room ${r.name} is available on ${dayLabel} at ${timeLabel || candidate.timeSlot.time || ''}.`
         });
         if (alternatives.length >= 2) break;
       }
@@ -756,7 +755,7 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
         room: candidate.room,
         days: optionNorm,
         day: optionNorm,
-        timeSlot: candidate.timeSlot,
+        timeSlot: { ...candidate.timeSlot, label },
         description: `Everything is free on ${optLabel} at ${label}.`
       });
       if (alternatives.length >= 3) break;
@@ -922,11 +921,17 @@ export function getSmartScheduleRecommendations({
 
         for (const room of candRooms.slice(0, 5)) {
           if (!isProfessorAllowedInRoom(room, professor, subject, section, rooms)) continue;
+          if (subject.requiredLab && !room.hasComputers) continue;
+          if (subject.isFoodLab && !room.isFoodLab) continue;
 
           for (const pair of subjectDayOptions) {
             const pairNorm = pair.map(normalizeDay);
 
             for (const timeSlot of eligibleSlots) {
+              // Physical Education (PE) subjects cannot be scheduled in the first period (7:30 AM)
+              if (subject?.code?.toUpperCase().startsWith('PE') && String(timeSlot?.id) === '2') {
+                continue;
+              }
               // Verify ALL days in the pair are 100% free of conflicts
               let isPairConflictFree = true;
               for (const day of pairNorm) {

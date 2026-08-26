@@ -399,6 +399,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
   }
 
   const checkConflict = (overrides) => {
+    if (loading) return false;
     if (!selectedSubject || !activeSchedules) return false;
 
     const candidateBase = {
@@ -416,8 +417,47 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       : (candidateBase.day ? [normalizeDay(candidateBase.day)] : []);
 
     if (daysToCheck.length === 0 || !candidateBase.timeSlot) return false;
-    if (!candidateBase.room?.id && !candidateBase.professor?.id && !candidateBase.section?.id) {
+
+    // Specific check for professor dropdown
+    if (overrides?.professor) {
+      for (const d of daysToCheck) {
+        if (!d) continue;
+        const candidate = {
+          professor: overrides.professor,
+          day: d,
+          timeSlot: candidateBase.timeSlot,
+          subject: candidateBase.subject
+        };
+        const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
+        if (conf.professor) return true;
+      }
       return false;
+    }
+
+    // Specific check for room dropdown
+    if (overrides?.room) {
+      for (const d of daysToCheck) {
+        if (!d) continue;
+        const candidate = {
+          room: overrides.room,
+          day: d,
+          timeSlot: candidateBase.timeSlot,
+          subject: candidateBase.subject
+        };
+        const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
+        if (conf.room) return true;
+      }
+      return false;
+    }
+
+    // Specific check for day selector buttons
+    if (overrides?.day) {
+      if (!candidateBase.room?.id && !candidateBase.professor?.id && !candidateBase.section?.id) {
+        return false;
+      }
+      const candidate = { ...candidateBase, day: normalizeDay(overrides.day) };
+      const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
+      return !!(conf.room || conf.professor || conf.section);
     }
 
     for (const d of daysToCheck) {
@@ -432,6 +472,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
   };
 
   const getTimeSlotConflictTag = (slot) => {
+    if (loading) return null;
     if (!selectedSubject || !activeSchedules) return null;
     const daysToCheck = Array.isArray(formData.day)
       ? formData.day.map(normalizeDay).filter(Boolean)
@@ -488,6 +529,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
   // Reactive Conflict Resolver: Computes instant alternatives when collision is detected
   const activeConflictData = useMemo(() => {
+    if (loading) return null;
     if (!selectedSubject || !selectedSection || !selectedProfessor || !selectedRoom || !selectedTimeSlot || !formData.day || (Array.isArray(formData.day) && formData.day.length === 0)) {
       return null;
     }
@@ -554,6 +596,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       timeSlot: alt.timeSlot?.label || alt.timeSlot?.customLabel || prev.timeSlot
     }));
     setAppliedMessage(`✓ Conflict resolved: ${alt.title}`);
+    setIsTimeSlotOpen(false);
     setValidation(null);
   };
 
@@ -574,6 +617,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       timeSlot: rec.timeSlot?.label || rec.timeSlot?.customLabel || ''
     });
     setAppliedMessage(`✓ Auto-filled: ${dayDisplay} ${rec.timeSlot?.label} · ${rec.room?.name}`);
+    setIsTimeSlotOpen(false);
     setValidation(null);
   };
 
@@ -681,7 +725,8 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                 const isConflict = checkConflict({ professor });
                 return {
                   value: professor.id,
-                  label: `${professor.name} ${isConflict ? '(Occupied)' : ''}`
+                  label: professor.name,
+                  badge: isConflict ? '(Occupied)' : null
                 };
               })}
             />
@@ -707,9 +752,13 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   options: bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => {
                     const isConflict = checkConflict({ room });
                     const isNonLabForLabSubject = selectedSubject?.requiredLab && !room.hasComputers;
+                    let badge = null;
+                    if (isConflict) badge = '(In Use)';
+                    else if (isNonLabForLabSubject) badge = '(Not a Lab)';
                     return {
                       value: room.id,
-                      label: `${room.name}${room.hasComputers ? ' (Lab)' : ''} ${isConflict ? '(In Use)' : isNonLabForLabSubject ? '(Not a Lab)' : ''}`
+                      label: `${room.name}${room.hasComputers ? ' (Lab)' : ''}`,
+                      badge
                     };
                   })
                 }))}
@@ -727,7 +776,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   ? formData.day.map(normalizeDay)
                   : (formData.day ? [normalizeDay(formData.day)] : []);
                 const isActive = activeDays.includes(day);
-                const isConflict = checkConflict({ day });
+                const isConflict = isActive && checkConflict({ day });
                 return (
                   <button
                     key={day}

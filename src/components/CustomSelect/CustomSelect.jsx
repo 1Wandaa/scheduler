@@ -87,7 +87,10 @@ const CustomSelect = ({ options = [], value, onChange, placeholder = 'Select...'
                           borderBottom: '1px solid var(--border-color, #e2e8f0)',
                           backgroundColor: isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent',
                           fontWeight: isSelected ? '600' : '400',
-                          fontSize: '0.88rem'
+                          fontSize: '0.88rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
                         }}
                         onMouseEnter={(e) => {
                           if (!child.disabled) e.currentTarget.style.backgroundColor = 'var(--table-header, #f1f5f9)';
@@ -96,7 +99,12 @@ const CustomSelect = ({ options = [], value, onChange, placeholder = 'Select...'
                           e.currentTarget.style.backgroundColor = isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent';
                         }}
                       >
-                        {child.label}
+                        <span>{child.label}</span>
+                        {child.badge && (
+                          <span style={{ fontSize: '0.72rem', color: child.badgeColor || '#ef4444', fontWeight: 600, marginLeft: '8px' }}>
+                            {child.badge}
+                          </span>
+                        )}
                       </div>
                     );
                   })}
@@ -121,7 +129,10 @@ const CustomSelect = ({ options = [], value, onChange, placeholder = 'Select...'
                     borderBottom: '1px solid var(--border-color, #e2e8f0)',
                     backgroundColor: isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent',
                     fontWeight: isSelected ? '600' : '400',
-                    fontSize: '0.88rem'
+                    fontSize: '0.88rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
                   }}
                   onMouseEnter={(e) => {
                     if (!opt.disabled) e.currentTarget.style.backgroundColor = 'var(--table-header, #f1f5f9)';
@@ -130,7 +141,12 @@ const CustomSelect = ({ options = [], value, onChange, placeholder = 'Select...'
                     e.currentTarget.style.backgroundColor = isSelected ? 'var(--accent-primary-light, rgba(99,102,241,0.1))' : 'transparent';
                   }}
                 >
-                  {opt.label}
+                  <span>{opt.label}</span>
+                  {opt.badge && (
+                    <span style={{ fontSize: '0.72rem', color: opt.badgeColor || '#ef4444', fontWeight: 600, marginLeft: '8px' }}>
+                      {opt.badge}
+                    </span>
+                  )}
                 </div>
               );
             }

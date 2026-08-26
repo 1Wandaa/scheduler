@@ -17,6 +17,7 @@ import {
   isRoomAllowedFor,
   isProfessorAllowedInRoom,
   getMeetingTimeLabel,
+  entitiesMatch,
 } from '../utils/scheduleUtils';
 import { generateConflictResolutions } from './conflictResolutionService';
 
@@ -52,7 +53,11 @@ export function validateScheduleEntry(
   // Section enrollment check
   if (section && subject) {
     const sectionSubjects = section.subjects || [];
-    if (!sectionSubjects.includes(subject.id) && !sectionSubjects.includes(subject.code)) {
+    const isEnrolled = sectionSubjects.includes(subject.id) ||
+      (subject.code && sectionSubjects.includes(subject.code)) ||
+      (subject.name && sectionSubjects.includes(subject.name)) ||
+      sectionSubjects.some(s => entitiesMatch(s, subject));
+    if (!isEnrolled) {
       errors.push(`Section "${section.name}" is not enrolled in subject "${subject.code}".`);
     }
   }
@@ -122,7 +127,7 @@ export function validateScheduleEntry(
   const conflicts = findScheduleConflicts(
     { room, professor, subject, section, day, timeSlot },
     activeSchedules,
-    { excludeScheduleId }
+    { excludeScheduleId, scheduleMode }
   );
   if (conflicts.room) {
     const s = conflicts.room;

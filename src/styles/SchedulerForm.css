@@ -183,7 +183,19 @@
 .day-btn.active {
   background: var(--accent-primary);
   color: #fff;
-  border: none;
+  border: 1px solid var(--accent-primary);
+}
+
+.day-btn.active.has-conflict {
+  background: #e11d48;
+  color: #fff;
+  border: 1px solid #be123c;
+}
+
+.day-btn.has-conflict:not(.active) {
+  border-color: #fca5a5;
+  color: #e11d48;
+  background-color: #fff1f2;
 }
 
 .info-box.danger {
@@ -191,7 +203,7 @@
 }
 
 /* =========================================
-   AI CONFLICT RESOLVER BANNER (Option 3)
+   AI CONFLICT RESOLVER BANNER
    ========================================= */
 .ai-conflict-banner {
   background: linear-gradient(135deg, #fff1f2, #fef2f2);
@@ -278,12 +290,6 @@
 .ai-inline-chip-btn:hover {
   filter: brightness(1.1);
   transform: translateY(-1px);
-}
-
-.day-btn.has-conflict {
-  border-color: #fca5a5;
-  color: #e11d48;
-  background-color: #fff1f2;
 }
 
 /* =========================================

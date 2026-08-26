@@ -171,8 +171,8 @@ const Dashboard = ({ user, onLogout }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleAddSchedule = async (newSchedule) => {
-    const res = await addSchedule(newSchedule, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin);
+  const handleAddSchedule = async (newSchedule, scheduleMode = 'standard') => {
+    const res = await addSchedule(newSchedule, enrichedSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode);
     if (res?.ok !== false) {
       logActivity({
         user,
@@ -184,8 +184,8 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const handleUpdateSchedule = async (scheduleId, newDay, newTimeSlot) => {
-    const sched = schedules.find(s => s.id === scheduleId) || activeSchedules.find(s => s.id === scheduleId);
-    const res = await updateSchedule(scheduleId, newDay, newTimeSlot, schedules, activeSchedules, rooms, isAdmin);
+    const sched = schedules.find(s => s.id === scheduleId) || enrichedSchedules.find(s => s.id === scheduleId);
+    const res = await updateSchedule(scheduleId, newDay, newTimeSlot, schedules, enrichedSchedules, rooms, isAdmin);
     if (res?.ok !== false) {
       logActivity({
         user,
@@ -197,7 +197,7 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const handleRemoveSchedule = async (scheduleId) => {
-    const sched = schedules.find(s => s.id === scheduleId) || activeSchedules.find(s => s.id === scheduleId);
+    const sched = schedules.find(s => s.id === scheduleId) || enrichedSchedules.find(s => s.id === scheduleId);
     const res = await removeSchedule(scheduleId, isAdmin);
     if (res?.ok !== false) {
       logActivity({
@@ -222,7 +222,7 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const handleAddSchedulesBatch = async (newSchedules, scheduleMode) => {
-    const res = await addSchedulesBatch(newSchedules, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode);
+    const res = await addSchedulesBatch(newSchedules, enrichedSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode);
     if (res?.ok !== false) {
       logActivity({
         user,
@@ -248,11 +248,11 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   // Validator object (passed to child components)
-  const schedulerContext = { professors, rooms, subjects, sections, activeSchedules };
+  const schedulerContext = { professors, rooms, subjects, sections, activeSchedules: enrichedSchedules };
 
   const validator = {
-    validateAssignment: (room, professor, subject, section, day, timeSlot) =>
-      validateScheduleEntry({ room, professor, subject, section, day, timeSlot }, activeSchedules, rooms),
+    validateAssignment: (room, professor, subject, section, day, timeSlot, scheduleMode = 'standard') =>
+      validateScheduleEntry({ room, professor, subject, section, day, timeSlot, scheduleMode }, enrichedSchedules, rooms),
     addSchedule: (room, professor, subject, section, day, timeSlot) => ({
       schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear }
     }),
