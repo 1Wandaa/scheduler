@@ -1,4 +1,4 @@
-import { ROOM_TYPES } from './constants';
+import { ROOM_TYPES } from './constants.js';
 export const SEED_VERSION = 'capsu-v11';
 
 export const initialRooms = [];

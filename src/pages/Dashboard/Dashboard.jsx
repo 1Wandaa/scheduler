@@ -532,7 +532,7 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{  }}>
             {!isMobile && (
-              <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} activeSemester={activeSemester} activeSchedules={activeSchedules} />
+              <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} validator={validator} activeSemester={activeSemester} activeSchedules={enrichedSchedules} />
             )}
             <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onAutoScheduleBatch={handleAddSchedulesBatch} onLogHistory={handleLogHistory} />
           </div>
@@ -619,7 +619,7 @@ const Dashboard = ({ user, onLogout }) => {
               const res = await handleAddSchedule(sched);
               if (res && res.ok) setIsScheduleFormOpen(false);
               return res;
-            }} validator={validator} activeSemester={activeSemester} activeSchedules={activeSchedules} />
+            }} validator={validator} activeSemester={activeSemester} activeSchedules={enrichedSchedules} />
           </div>
         </div>
       )}

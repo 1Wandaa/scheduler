@@ -2,7 +2,7 @@
  * Shared scheduling utilities used by GA, Dashboard validation, AI, and AutoScheduler.
  */
 
-import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS, getSlotDurationHours, getScheduleConfig } from '../config/constants.js';
+import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS, getSlotDurationHours, getScheduleConfig, DAYS, FOUR_DAY_DAYS, PREFERRED_PAIRS_STANDARD, PREFERRED_PAIRS_FOUR_DAY } from '../config/constants.js';
 
 const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
 
@@ -157,8 +157,52 @@ export function parseTimeToMinutes(timeStr) {
   return hours * 60 + mins;
 }
 
+export function entitiesMatch(a, b) {
+  if (!a || !b) return false;
+
+  const keysA = new Set();
+  if (typeof a === 'string' || typeof a === 'number') {
+    const s = String(a).trim();
+    if (s) keysA.add(s.toLowerCase());
+  } else if (typeof a === 'object') {
+    if (a.id) keysA.add(String(a.id).trim().toLowerCase());
+    if (a.name) keysA.add(String(a.name).trim().toLowerCase());
+    if (a.code) keysA.add(String(a.code).trim().toLowerCase());
+  }
+
+  const keysB = new Set();
+  if (typeof b === 'string' || typeof b === 'number') {
+    const s = String(b).trim();
+    if (s) keysB.add(s.toLowerCase());
+  } else if (typeof b === 'object') {
+    if (b.id) keysB.add(String(b.id).trim().toLowerCase());
+    if (b.name) keysB.add(String(b.name).trim().toLowerCase());
+    if (b.code) keysB.add(String(b.code).trim().toLowerCase());
+  }
+
+  for (const k of keysA) {
+    if (keysB.has(k)) return true;
+  }
+  return false;
+}
+
 export function getScheduleTimeRange(schedule, scheduleMode) {
   if (!schedule) return { start: 0, end: 0 };
+
+  // 0. Direct string timeSlot support
+  if (typeof schedule.timeSlot === 'string') {
+    const parts = schedule.timeSlot.split('-');
+    if (parts.length === 2) {
+      const start = parseTimeToMinutes(parts[0].trim());
+      const end = parseTimeToMinutes(parts[1].trim());
+      if (start !== null && end !== null && start < end) return { start, end };
+    }
+    const start = parseTimeToMinutes(schedule.timeSlot);
+    if (start !== null) {
+      const duration = (schedule.subject?.hoursPerMeeting || 1.5) * 60;
+      return { start, end: start + duration };
+    }
+  }
 
   // 1. Custom label takes highest precedence
   if (schedule.timeSlot?.customLabel) {
@@ -188,16 +232,26 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
   const timeParts = (schedule.timeSlot?.time || '').split('-');
   if (timeParts.length === 2) {
     const start = parseTimeToMinutes(timeParts[0].trim());
-    const end = parseTimeToMinutes(timeParts[1].trim());
-    if (start !== null && end !== null && start < end) return { start, end };
+    let end = parseTimeToMinutes(timeParts[1].trim());
+    if (start !== null && end !== null && start < end) {
+      if (schedule.subject?.hoursPerMeeting) {
+        end = Math.max(end, start + schedule.subject.hoursPerMeeting * 60);
+      }
+      return { start, end };
+    }
   }
 
   // 4. Fallback to raw timeSlot.label
   const labelParts = (schedule.timeSlot?.label || '').split('-');
   if (labelParts.length === 2) {
     const start = parseTimeToMinutes(labelParts[0].trim());
-    const end = parseTimeToMinutes(labelParts[1].trim());
-    if (start !== null && end !== null && start < end) return { start, end };
+    let end = parseTimeToMinutes(labelParts[1].trim());
+    if (start !== null && end !== null && start < end) {
+      if (schedule.subject?.hoursPerMeeting) {
+        end = Math.max(end, start + schedule.subject.hoursPerMeeting * 60);
+      }
+      return { start, end };
+    }
   }
 
   return { start: 0, end: 0 };
@@ -229,10 +283,9 @@ export function schedulesOverlap(a, b, scheduleMode) {
   const sharesDay = daysA.some(dA => daysB.includes(dA));
   if (!sharesDay) return false;
 
-  let entityOverlap = false;
-  if (a.room?.id && b.room?.id && String(a.room.id) === String(b.room.id)) entityOverlap = true;
-  if (a.professor?.id && b.professor?.id && String(a.professor.id) === String(b.professor.id)) entityOverlap = true;
-  if (a.section?.id && b.section?.id && String(a.section.id) === String(b.section.id)) entityOverlap = true;
+  const entityOverlap = entitiesMatch(a.room, b.room) ||
+                        entitiesMatch(a.professor, b.professor) ||
+                        entitiesMatch(a.section, b.section);
 
   if (!entityOverlap) return false;
 
@@ -253,7 +306,7 @@ export function schedulesOverlap(a, b, scheduleMode) {
  * Check if a candidate placement conflicts with any existing schedules.
  * Returns { room, professor, section } conflict objects (first match each).
  */
-export function findScheduleConflicts(candidate, existingSchedules, { excludeScheduleId = null } = {}) {
+export function findScheduleConflicts(candidate, existingSchedules, { excludeScheduleId = null, scheduleMode = 'standard' } = {}) {
   const conflicts = { room: null, professor: null, section: null };
   const candidateEntry = {
     room: candidate.room,
@@ -266,18 +319,18 @@ export function findScheduleConflicts(candidate, existingSchedules, { excludeSch
 
   for (const s of existingSchedules) {
     if (excludeScheduleId && s.id === excludeScheduleId) continue;
-    if (!schedulesOverlap(candidateEntry, s)) continue;
+    if (!schedulesOverlap(candidateEntry, s, scheduleMode)) continue;
 
-    if (!conflicts.room && candidate.room?.id && s.room?.id && String(s.room.id) === String(candidate.room.id)) {
+    if (!conflicts.room && entitiesMatch(candidate.room, s.room)) {
       conflicts.room = s;
     }
-    if (!conflicts.professor && candidate.professor?.id && s.professor?.id && String(s.professor.id) === String(candidate.professor.id)) {
+    if (!conflicts.professor && entitiesMatch(candidate.professor, s.professor)) {
       conflicts.professor = s;
     }
-    if (!conflicts.section && candidate.section?.id && s.section?.id && String(s.section.id) === String(candidate.section.id)) {
+    if (!conflicts.section && entitiesMatch(candidate.section, s.section)) {
       conflicts.section = s;
     }
-    if (conflicts.room && conflicts.professor && (!candidate.section?.id || conflicts.section)) break;
+    if (conflicts.room && conflicts.professor && (!candidate.section || conflicts.section)) break;
   }
   return conflicts;
 }
@@ -602,11 +655,13 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
   const dayPairs = getStandardDayPairs(scheduleMode);
   const alternatives = [];
 
-  // Always resolve to a complete 2-day pair
-  const candidateDays = resolveToDayPair(candidate.days || candidate.day, scheduleMode);
+  const rawCandidateDays = candidate.days || (candidate.day ? (Array.isArray(candidate.day) ? candidate.day : [candidate.day]) : []);
+  const candidateDays = rawCandidateDays.length > 0
+    ? rawCandidateDays.map(normalizeDay).filter(Boolean)
+    : resolveToDayPair(candidate.day, scheduleMode);
   const dayLabel = candidateDays.map(d => d.slice(0, 3)).join(' / ');
 
-  // 1. Try alternative rooms across ALL 2 candidate days & timeSlot
+  // 1. Try alternative rooms across the candidate days & timeSlot
   if (candidate.timeSlot) {
     for (const r of (rooms || [])) {
       if (r.id === candidate.room?.id) continue;
@@ -616,7 +671,7 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
       let allDaysClean = true;
       for (const d of candidateDays) {
         const testCand = { ...candidate, day: d, room: r };
-        const conf = findScheduleConflicts(testCand, activeSchedules);
+        const conf = findScheduleConflicts(testCand, activeSchedules, { scheduleMode });
         if (conf.room || conf.professor || conf.section) {
           allDaysClean = false;
           break;
@@ -638,7 +693,7 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
     }
   }
 
-  // 2. Try alternative time slots on the SAME 2 candidate days with the same room
+  // 2. Try alternative time slots on the SAME candidate days with the same room
   if (candidate.room) {
     for (const ts of (eligibleTimeSlots || [])) {
       if (String(ts.id) === String(candidate.timeSlot?.id)) continue;
@@ -646,7 +701,7 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
       let allDaysClean = true;
       for (const d of candidateDays) {
         const testCand = { ...candidate, day: d, timeSlot: ts };
-        const conf = findScheduleConflicts(testCand, activeSchedules);
+        const conf = findScheduleConflicts(testCand, activeSchedules, { scheduleMode });
         if (conf.room || conf.professor || conf.section) {
           allDaysClean = false;
           break;
@@ -669,17 +724,22 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
     }
   }
 
-  // 3. Try alternative 2-Day Pairs
-  for (const pair of dayPairs) {
-    const pairNorm = pair.map(normalizeDay);
-    const isCurrentPair = candidateDays.length === pairNorm.length && candidateDays.every(d => pairNorm.includes(d));
-    if (isCurrentPair) continue;
+  // 3. Try alternative Day Options (single days for 1-day classes, day pairs for multi-day classes)
+  const isSingleDay = candidateDays.length === 1;
+  const dayOptionsToTry = isSingleDay
+    ? (scheduleMode === 'fourDay' ? FOUR_DAY_DAYS : DAYS).map(d => [d])
+    : dayPairs;
+
+  for (const optionDays of dayOptionsToTry) {
+    const optionNorm = optionDays.map(normalizeDay);
+    const isCurrent = candidateDays.length === optionNorm.length && candidateDays.every(d => optionNorm.includes(d));
+    if (isCurrent) continue;
     if (!candidate.room || !candidate.timeSlot) continue;
 
     let allDaysClean = true;
-    for (const d of pairNorm) {
+    for (const d of optionNorm) {
       const testCand = { ...candidate, day: d };
-      const conf = findScheduleConflicts(testCand, activeSchedules);
+      const conf = findScheduleConflicts(testCand, activeSchedules, { scheduleMode });
       if (conf.room || conf.professor || conf.section) {
         allDaysClean = false;
         break;
@@ -688,15 +748,15 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
 
     if (allDaysClean) {
       const label = getMeetingTimeLabel(candidate.timeSlot, candidate.subject.hoursPerMeeting, scheduleMode) || candidate.timeSlot.label;
-      const pairLabel = pairNorm.map(d => d.slice(0, 3)).join(' / ');
+      const optLabel = optionNorm.map(d => d.slice(0, 3)).join(' / ');
       alternatives.push({
         type: 'day',
-        title: `Switch Days to ${pairLabel}`,
+        title: `Switch Day${optionNorm.length > 1 ? 's' : ''} to ${optLabel}`,
         room: candidate.room,
-        days: pairNorm,
-        day: pairNorm,
+        days: optionNorm,
+        day: optionNorm,
         timeSlot: candidate.timeSlot,
-        description: `Everything is free on ${pairLabel} at ${label}.`
+        description: `Everything is free on ${optLabel} at ${label}.`
       });
       if (alternatives.length >= 3) break;
     }
@@ -750,7 +810,6 @@ export function getSmartScheduleRecommendations({
 }) {
   const activeSemesterSubjects = subjects.filter(s => !s.semester || s.semester === 'Both' || s.semester === activeSemester);
   const workloadMap = getProfessorWorkloadMap(professors, activeSchedules);
-  const dayPairs = getStandardDayPairs(scheduleMode);
   const slots = resolveSlots(scheduleMode);
 
   // Target subject candidate list
@@ -777,30 +836,49 @@ export function getSmartScheduleRecommendations({
 
   const recommendations = [];
 
-  // Determine target day pairs to test
-  let targetDayPairs = dayPairs;
-  if (formData.day && (Array.isArray(formData.day) ? formData.day.length > 0 : !!formData.day)) {
-    const userDays = (Array.isArray(formData.day) ? formData.day : [formData.day]).map(normalizeDay);
-    // Find matching pair or create candidate pair
-    const matchingPairs = dayPairs.filter(pair => pair.some(d => userDays.includes(d)));
-    if (matchingPairs.length > 0) {
-      targetDayPairs = matchingPairs;
-    } else if (userDays.length >= 2) {
-      targetDayPairs = [userDays.slice(0, 2)];
-    }
-  }
-
   for (const subject of candidateSubjects) {
-    // 1. Candidate sections
+    const targetDuration = Number(subject?.hoursPerMeeting) || 1.5;
+    const credits = Number(subject?.credits) || 3;
+    const meetingsNeeded = Math.max(1, Math.round(credits / targetDuration));
+
+    let subjectDayOptions = [];
+    if (formData.day && (Array.isArray(formData.day) ? formData.day.length > 0 : !!formData.day)) {
+      const userDays = (Array.isArray(formData.day) ? formData.day : [formData.day]).map(normalizeDay).filter(Boolean);
+      if (userDays.length > 0) {
+        subjectDayOptions = [userDays];
+      }
+    }
+
+    if (subjectDayOptions.length === 0) {
+      if (meetingsNeeded === 1) {
+        subjectDayOptions = (scheduleMode === 'fourDay' ? FOUR_DAY_DAYS : DAYS).map(d => [d]);
+      } else {
+        subjectDayOptions = scheduleMode === 'fourDay' ? PREFERRED_PAIRS_FOUR_DAY : PREFERRED_PAIRS_STANDARD;
+      }
+    }
+
+    // 1. Candidate sections (prioritize sections that have not yet been scheduled for this subject)
     let candSections = [];
     if (formData.section) {
       const foundSec = sections.find(s => s.id === formData.section);
       if (foundSec) candSections = [foundSec];
     } else {
-      candSections = (sections || []).filter(sec => {
+      const unscheduledSections = (sections || []).filter(sec => {
         const secSubs = sec.subjects || [];
-        return secSubs.includes(subject.id) || (subject.code && secSubs.includes(subject.code)) || (subject.name && secSubs.includes(subject.name));
+        const needsSubject = secSubs.includes(subject.id) || (subject.code && secSubs.includes(subject.code)) || (subject.name && secSubs.includes(subject.name));
+        if (!needsSubject) return false;
+        const alreadyScheduled = (activeSchedules || []).some(s =>
+          entitiesMatch(s.section, sec) && entitiesMatch(s.subject, subject)
+        );
+        return !alreadyScheduled;
       });
+
+      candSections = unscheduledSections.length > 0
+        ? unscheduledSections
+        : (sections || []).filter(sec => {
+            const secSubs = sec.subjects || [];
+            return secSubs.includes(subject.id) || (subject.code && secSubs.includes(subject.code)) || (subject.name && secSubs.includes(subject.name));
+          });
     }
     if (candSections.length === 0) continue;
 
@@ -844,11 +922,11 @@ export function getSmartScheduleRecommendations({
         for (const room of candRooms.slice(0, 5)) {
           if (!isProfessorAllowedInRoom(room, professor, subject, section, rooms)) continue;
 
-          for (const pair of targetDayPairs) {
+          for (const pair of subjectDayOptions) {
             const pairNorm = pair.map(normalizeDay);
 
             for (const timeSlot of eligibleSlots) {
-              // Verify BOTH days in the pair are 100% free of conflicts
+              // Verify ALL days in the pair are 100% free of conflicts
               let isPairConflictFree = true;
               for (const day of pairNorm) {
                 const candidate = {
@@ -859,7 +937,7 @@ export function getSmartScheduleRecommendations({
                   day,
                   timeSlot,
                 };
-                const conflicts = findScheduleConflicts(candidate, activeSchedules);
+                const conflicts = findScheduleConflicts(candidate, activeSchedules, { scheduleMode });
                 if (conflicts.room || conflicts.professor || conflicts.section) {
                   isPairConflictFree = false;
                   break;
