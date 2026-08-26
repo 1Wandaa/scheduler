@@ -256,8 +256,8 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     return (
         <div className="card" style={{ backgroundImage: 'none', backgroundColor: '#ffffff' }}>
 
-            {/* Sticky Wrapper for Header & Filters */}
-            <div className="sticky-mgmt-header" style={{ position: 'sticky', top: '0', zIndex: 40, backgroundColor: '#ffffff', paddingTop: '0px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', marginBottom: '20px' }}>
+            {/* Header & Filters */}
+            <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '20px' }}>
                 {/* Header Row: Title & Print Button separated from filters */}
                 <div className="mgmt-header no-print">
                     <div className="mgmt-header-left">
