@@ -348,15 +348,13 @@
 /* Grid Table */
 .table-wrapper {
   overflow-x: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   max-width: 100%;
   background: rgba(255, 255, 255, 0.97);
   border: 1px solid var(--border-color);
   border-radius: 14px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  contain: layout paint;
-  overscroll-behavior: contain;
-  scroll-behavior: auto;
 }
 
 .schedule-table {
@@ -429,7 +427,6 @@
   position: relative;
   padding: 0.5rem;
   height: 40px;
-  contain: layout style;
 }
 
 .schedule-cell.drag-over {
