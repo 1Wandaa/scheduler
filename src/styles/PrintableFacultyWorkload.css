@@ -330,3 +330,108 @@
     margin-top: 10px;
   }
 }
+
+/* ==========================================================================
+   DYNAMIC AUTO-SCALING TIERS (Ensures heavy workloads always fit on 1 page)
+   ========================================================================== */
+
+/* Tier 1: Normal (1 - 4 assignments) */
+.fw-density-normal .fw-schedule-table td {
+  height: 16.5px;
+}
+
+/* Tier 2: Compact (5 - 7 assignments) */
+.fw-density-compact {
+  font-size: 8pt;
+}
+.fw-density-compact .fw-header-logo img {
+  width: 44px;
+}
+.fw-density-compact .fw-table th,
+.fw-density-compact .fw-table td {
+  padding: 1.5px 2.5px;
+  font-size: 7pt;
+}
+.fw-density-compact .fw-schedule-table td {
+  height: 13.5px;
+}
+.fw-density-compact .fw-schedule-cell {
+  font-size: 6.2pt;
+}
+.fw-density-compact .fw-signatures {
+  margin-top: 6px;
+}
+
+/* Tier 3: Dense (8 - 10 assignments) */
+.fw-density-dense {
+  font-size: 7.5pt;
+}
+.fw-density-dense .fw-header-logo img {
+  width: 38px;
+}
+.fw-density-dense .fw-header-text h1 {
+  font-size: 9.5pt;
+}
+.fw-density-dense .fw-header-text h3 {
+  font-size: 9pt;
+}
+.fw-density-dense .fw-table th,
+.fw-density-dense .fw-table td {
+  padding: 1px 2px;
+  font-size: 6.5pt;
+}
+.fw-density-dense .fw-schedule-table th {
+  height: 16px;
+  font-size: 6.5pt;
+}
+.fw-density-dense .fw-schedule-table td {
+  height: 11.5px;
+}
+.fw-density-dense .fw-schedule-cell {
+  font-size: 5.6pt;
+  line-height: 1.05;
+}
+.fw-density-dense .fw-signatures {
+  margin-top: 4px;
+}
+.fw-density-dense .fw-signature-name {
+  margin-top: 8px;
+  font-size: 7.5pt;
+}
+
+/* Tier 4: Ultra Dense (11+ assignments) */
+.fw-density-ultra {
+  font-size: 7pt;
+}
+.fw-density-ultra .fw-header-logo img {
+  width: 32px;
+}
+.fw-density-ultra .fw-header-text h1 {
+  font-size: 9pt;
+}
+.fw-density-ultra .fw-header-text h3 {
+  font-size: 8.5pt;
+}
+.fw-density-ultra .fw-table th,
+.fw-density-ultra .fw-table td {
+  padding: 0.5px 1.5px;
+  font-size: 6pt;
+}
+.fw-density-ultra .fw-schedule-table th {
+  height: 14px;
+  font-size: 6pt;
+}
+.fw-density-ultra .fw-schedule-table td {
+  height: 9.5px;
+}
+.fw-density-ultra .fw-schedule-cell {
+  font-size: 5pt;
+  line-height: 1.0;
+}
+.fw-density-ultra .fw-signatures {
+  margin-top: 3px;
+}
+.fw-density-ultra .fw-signature-name {
+  margin-top: 6px;
+  font-size: 7pt;
+}

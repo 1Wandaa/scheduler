@@ -162,11 +162,20 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo, dep
 
     const profName = professor?.name || 'UNKNOWN PROFESSOR';
 
+    // Dynamic Density Detection for Auto-Fitting onto 1 Page
+    const assignmentCount = uniqueAssignments.length;
+    const densityClass = useMemo(() => {
+        if (assignmentCount <= 4) return 'fw-density-normal';
+        if (assignmentCount <= 7) return 'fw-density-compact';
+        if (assignmentCount <= 10) return 'fw-density-dense';
+        return 'fw-density-ultra';
+    }, [assignmentCount]);
+
     // Build 22 half-hour rows, but the Time column uses rowSpan=2 for hourly labels
     const totalRows = 22; // 11 hours × 2 half-hours
 
     return ReactDOM.createPortal(
-        <div className="faculty-workload-iso-document">
+        <div className={`faculty-workload-iso-document ${densityClass}`}>
             
             <table className="fw-header-table">
                 <tbody>
