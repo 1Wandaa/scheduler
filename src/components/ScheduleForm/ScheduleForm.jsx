@@ -627,14 +627,25 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     const resolvedDays = daysToSet.length > 0
       ? daysToSet
       : (Array.isArray(formData.day) && formData.day.length > 0 ? formData.day.map(normalizeDay) : [normalizeDay(formData.day)]);
-    setFormData(prev => ({
-      ...prev,
-      room: alt.room?.id || prev.room,
-      day: resolvedDays,
-      timeSlot: alt.timeSlot?.label || alt.timeSlot?.customLabel || prev.timeSlot
-    }));
+    
+    const timeLabel = alt.timeSlot?.label || alt.timeSlot?.customLabel;
+
+    setFormData(prev => {
+      const newTimeSlot = typeof prev.timeSlot === 'object' && prev.timeSlot !== null ? { ...prev.timeSlot } : {};
+      if (timeLabel) {
+        resolvedDays.forEach(d => {
+          newTimeSlot[d] = timeLabel;
+        });
+      }
+      return {
+        ...prev,
+        room: alt.room?.id || prev.room,
+        day: resolvedDays,
+        timeSlot: timeLabel ? newTimeSlot : prev.timeSlot
+      };
+    });
     setAppliedMessage(`✓ Conflict resolved: ${alt.title}`);
-    setIsTimeSlotOpen(false);
+    setOpenTimeSlotDay(null);
     setValidation(null);
   };
 
