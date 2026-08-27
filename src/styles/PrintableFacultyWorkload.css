@@ -1,0 +1,322 @@
+.faculty-workload-iso-document {
+  font-family: 'Times New Roman', Times, serif;
+  color: #000;
+  width: 100%;
+  max-width: 8.5in;
+  margin: 0 auto;
+  background: white;
+  padding: 0.25in 0.65in;
+  box-sizing: border-box;
+  font-size: 8.5pt;
+}
+
+/* Header Section */
+.fw-header-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 4px;
+}
+
+.fw-header-table td {
+  border: 1px solid #000;
+  padding: 2px 4px;
+  vertical-align: middle;
+}
+
+.fw-header-logo {
+  text-align: center;
+  width: 15%;
+}
+
+.fw-header-logo img {
+  width: 50px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.fw-header-text {
+  text-align: center;
+  width: 65%;
+}
+
+.fw-header-text h1 {
+  font-size: 11pt;
+  margin: 0;
+  font-weight: bold;
+}
+
+.fw-header-text h2 {
+  font-size: 9pt;
+  margin: 1px 0 0 0;
+  font-weight: normal;
+}
+
+.fw-header-text h3 {
+  font-size: 10pt;
+  margin: 2px 0 0 0;
+  font-weight: bold;
+}
+
+.fw-header-text p {
+  font-size: 8pt;
+  margin: 1px 0 0 0;
+}
+
+.fw-header-meta {
+  width: 20%;
+  font-size: 7.5pt;
+  vertical-align: top;
+}
+
+/* Faculty Info Section */
+.fw-faculty-info {
+  margin-bottom: 4px;
+}
+
+.fw-info-row {
+  display: flex;
+  margin-bottom: 1px;
+}
+
+.fw-info-label {
+  width: 150px;
+  font-size: 8.5pt;
+}
+
+.fw-info-value {
+  font-weight: bold;
+  border-bottom: 1px solid #000;
+  flex: 1;
+  text-transform: uppercase;
+  font-size: 8.5pt;
+}
+
+/* Teaching Assignment Table */
+.fw-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 4px;
+  text-align: center;
+  table-layout: fixed;
+}
+
+.fw-table th,
+.fw-table td {
+  border: 1px solid #000;
+  padding: 2px 3px;
+  vertical-align: middle;
+  font-size: 7.5pt;
+  box-sizing: border-box;
+}
+
+.fw-table th {
+  font-weight: bold;
+  font-size: 7.5pt;
+}
+
+.fw-table-title {
+  text-align: left;
+  font-weight: bold;
+  margin-bottom: 2px;
+  margin-top: 3px;
+  font-size: 8.5pt;
+}
+
+.fw-schedule-title {
+  text-align: center !important;
+}
+
+.fw-teaching-table th {
+  background-color: transparent;
+}
+
+.fw-teaching-total {
+  font-weight: bold;
+}
+
+/* Specific to Schedule Table — Square Grid Layout */
+.fw-schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 0 auto;
+}
+
+.fw-schedule-table th {
+  height: 20px;
+  font-size: 7.5pt;
+  background-color: #f4f4f4;
+  border: 1px solid #000;
+}
+
+.fw-schedule-table td {
+  height: 16.5px; /* 16.5px per half-hour -> 3hr is ~100px x 100px square */
+  padding: 1px 2px !important;
+  vertical-align: middle;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* Hide internal horizontal borders on empty half-hour slots */
+.fw-schedule-table tbody td {
+  border-top: none;
+  border-bottom: none;
+  border-left: 1px solid #000;
+  border-right: 1px solid #000;
+}
+
+/* Top border on each full-hour mark */
+.fw-schedule-table tbody tr:nth-child(odd) td {
+  border-top: 1px solid #000;
+}
+
+/* Bottom border on the last row */
+.fw-schedule-table tbody tr:last-child td {
+  border-bottom: 1px solid #000;
+}
+
+/* Schedule Cell Card (Square / Boxy Vertical Layout) */
+.fw-schedule-cell {
+  color: #000000 !important;
+  font-size: 6.8pt;
+  line-height: 1.15;
+  border: 1px solid #000 !important;
+  vertical-align: middle !important;
+  text-align: center;
+  padding: 2px !important;
+  box-sizing: border-box;
+}
+
+.fw-schedule-cell-item {
+  color: #000000 !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+
+.fw-schedule-cell-item strong,
+.fw-schedule-cell-item span {
+  color: #000000 !important;
+}
+
+.fw-schedule-cell-item strong {
+  font-weight: 700;
+  font-size: 7.2pt;
+}
+
+.fw-schedule-cell-item span {
+  font-size: 6.5pt;
+}
+
+.fw-schedule-cell-item + .fw-schedule-cell-item {
+  border-top: 1px dashed rgba(0, 0, 0, 0.4);
+  margin-top: 2px;
+  padding-top: 2px;
+}
+
+/* Signatures */
+.fw-signatures {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 0 10px;
+}
+
+.fw-signature-block {
+  text-align: left;
+  width: 40%;
+}
+
+.fw-signature-name {
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-top: 12px;
+  border-bottom: 1px solid #000;
+  text-align: center;
+  font-size: 8.5pt;
+}
+
+.fw-signature-title {
+  text-align: center;
+  margin-top: 1px;
+  font-size: 7.5pt;
+}
+
+@media screen {
+  .faculty-workload-iso-document {
+    display: none;
+  }
+}
+
+@media print {
+  @page {
+    size: portrait;
+    margin: 0mm !important;
+  }
+
+  /* Strip all watermarks, background images, and extra noise */
+  *,
+  *::before,
+  *::after {
+    background-image: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  body {
+    padding: 0.25in 0.6in !important;
+    margin: 0 !important;
+    background: white !important;
+    background-color: white !important;
+    background-image: none !important;
+  }
+
+  /* Hide the main app so it doesn't take up layout space */
+  #root {
+    display: none !important;
+  }
+
+  /*
+   * CRITICAL: PrintableSchedule.css sets "body * { visibility: hidden }"
+   * which hides ALL elements. We must explicitly override visibility
+   * for our document and ALL its children.
+   */
+  .faculty-workload-iso-document,
+  .faculty-workload-iso-document * {
+    visibility: visible !important;
+  }
+
+  .faculty-workload-iso-document {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 0.25in 0.6in !important;
+    box-sizing: border-box !important;
+    margin: 0 auto;
+    max-width: 100%;
+    font-size: 8.5pt;
+    background: white !important;
+    background-image: none !important;
+  }
+
+  /* Prevent page breaks inside tables and document */
+  .fw-table,
+  .faculty-workload-iso-document,
+  .fw-signatures {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .fw-signatures {
+    margin-top: 8px;
+  }
+
+  .fw-signature-name {
+    margin-top: 10px;
+  }
+}

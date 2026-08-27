@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import '../../styles/ProfessorWorkload.css';
+import PrintableFacultyWorkload from '../PrintableFacultyWorkload/PrintableFacultyWorkload';
 import { getScheduleTimeRange } from '../../utils/scheduleUtils';
 
 function ProfessorWorkload({ professors, schedules, departments = [] }) {
@@ -10,6 +11,24 @@ function ProfessorWorkload({ professors, schedules, departments = [] }) {
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [sortBy, setSortBy] = useState('name'); // 'name' or 'utilization'
   const [expandedProfs, setExpandedProfs] = useState(new Set());
+  const [printingProf, setPrintingProf] = useState(null);
+
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      setPrintingProf(null);
+      document.title = "SMARTSCHED";
+    };
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => window.removeEventListener('afterprint', handleAfterPrint);
+  }, []);
+
+  const handlePrint = (prof) => {
+    document.title = ""; // Strips "SMARTSCHED" from browser print header
+    setPrintingProf(prof);
+    setTimeout(() => {
+      window.print();
+    }, 200);
+  };
 
   const toggleExpanded = (profId) => {
     setExpandedProfs(prev => {
@@ -189,8 +208,19 @@ function ProfessorWorkload({ professors, schedules, departments = [] }) {
                     {prof.department}
                   </p>
                 </div>
-                <div className="pw-badge">
-                  {prof.utilization.toFixed(0)}%
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                  <div className="pw-badge">
+                    {prof.utilization.toFixed(0)}%
+                  </div>
+                  <button 
+                    className="pw-print-btn" 
+                    onClick={() => handlePrint(prof)}
+                    title="Print Workload"
+                    style={{ background: 'none', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-main)' }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Print
+                  </button>
                 </div>
               </div>
 
@@ -248,6 +278,14 @@ function ProfessorWorkload({ professors, schedules, departments = [] }) {
             </div>
           ))}
         </div>
+      )}
+      
+      {printingProf && (
+        <PrintableFacultyWorkload 
+          professor={printingProf} 
+          schedules={printingProf.profSchedules}
+          departments={departments}
+        />
       )}
     </div>
   );
