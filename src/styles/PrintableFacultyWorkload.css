@@ -8,6 +8,9 @@
   padding: 0.25in 0.65in;
   box-sizing: border-box;
   font-size: 8.5pt;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Header Section */
@@ -33,6 +36,8 @@
   height: auto;
   display: block;
   margin: 0 auto;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 .fw-header-text {
@@ -302,6 +307,11 @@
     font-size: 8.5pt;
     background: white !important;
     background-image: none !important;
+    text-rendering: optimizeLegibility !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
   }
 
   /* Prevent page breaks inside tables and document */
