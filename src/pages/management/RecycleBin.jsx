@@ -138,13 +138,15 @@ const RecycleBin = ({ onBack, user }) => {
                       <div style={{ fontWeight: '600', color: 'var(--text-main)' }}>
                         {item.data.name || item.data.code || item.originalId}
                       </div>
-                      {(item.data.department || item.data.capacity || item.data.credits || item.data.username || item.data.role) && (
+                      {item.data && Object.keys(item.data).length > 0 && (
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          {item.data.department && <span>Dept: {item.data.department}</span>}
-                          {item.data.capacity && <span>Cap: {item.data.capacity}</span>}
-                          {item.data.credits && <span>Units: {item.data.credits}</span>}
-                          {item.data.username && <span>Username: {item.data.username}</span>}
-                          {item.data.role && <span>Role: {item.data.role}</span>}
+                          {Object.entries(item.data)
+                            .filter(([key, value]) => !['name', 'code', 'id', 'createdAt', 'updatedAt'].includes(key) && value !== null && value !== undefined && typeof value !== 'object')
+                            .map(([key, value]) => (
+                              <span key={key}>
+                                <span style={{ textTransform: 'capitalize' }}>{key.replace(/([A-Z])/g, ' $1').trim()}</span>: {String(value)}
+                              </span>
+                            ))}
                         </div>
                       )}
                     </td>
