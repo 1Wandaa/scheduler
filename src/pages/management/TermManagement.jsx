@@ -72,7 +72,7 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
 
         const term = await prompt({
             title: `Add New ${typeName}`,
-            inputPlaceholder: isSem ? 'e.g. 1st Semester' : 'e.g. 2028-2029',
+            inputPlaceholder: isSem ? 'Enter semester name' : 'Enter school year',
             icon: isSem ? 'calendar' : 'calendar-range',
             confirmButtonText: 'Add'
         });

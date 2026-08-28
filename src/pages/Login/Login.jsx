@@ -379,7 +379,7 @@ const Login = ({ onLogin }) => {
           type="text"
           value={fullName}
           onChange={e => setFullName(e.target.value)}
-          placeholder="e.g. Ryan James Mora"
+          placeholder="Enter your full name"
         />
       </div>
 
@@ -395,7 +395,7 @@ const Login = ({ onLogin }) => {
             min="1"
             value={age}
             onChange={e => setAge(e.target.value)}
-            placeholder="e.g. 20"
+            placeholder="Age"
           />
         </div>
 
@@ -428,7 +428,7 @@ const Login = ({ onLogin }) => {
           type="text"
           value={username}
           onChange={e => setUsername(e.target.value)}
-          placeholder="e.g. rayenn2506"
+          placeholder="Choose a username"
         />
       </div>
 
@@ -504,7 +504,7 @@ const Login = ({ onLogin }) => {
           type="text"
           value={studentId}
           onChange={e => setStudentId(e.target.value)}
-          placeholder="e.g. 2023-131151"
+          placeholder="Enter your student ID"
         />
       </div>
 

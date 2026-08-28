@@ -302,7 +302,7 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
                 value={formData.id} 
                 onChange={e => setFormData({ ...formData, id: e.target.value })} 
                 disabled={editMode} 
-                placeholder="e.g. C01" 
+                placeholder="Enter course ID" 
               />
             </div>
 
@@ -312,7 +312,7 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
                 className="form-input" 
                 value={formData.code} 
                 onChange={e => setFormData({ ...formData, code: e.target.value })} 
-                placeholder="e.g. BSCS" 
+                placeholder="Enter course code" 
               />
             </div>
 
@@ -322,7 +322,7 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
                 className="form-input" 
                 value={formData.title} 
                 onChange={e => setFormData({ ...formData, title: e.target.value })} 
-                placeholder="e.g. Bachelor of Science in Computer Science" 
+                placeholder="Enter full course title" 
               />
             </div>
 

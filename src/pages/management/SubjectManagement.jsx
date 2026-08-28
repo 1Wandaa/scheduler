@@ -342,7 +342,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                 className="form-input" 
                 value={formData.code} 
                 onChange={e => setFormData({ ...formData, code: e.target.value })} 
-                placeholder="e.g. CS 101" 
+                placeholder="Enter subject code" 
               />
             </div>
 
@@ -352,7 +352,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                 className="form-input" 
                 value={formData.name} 
                 onChange={e => setFormData({ ...formData, name: e.target.value })} 
-                placeholder="e.g. Intro to Computer Programming" 
+                placeholder="Enter subject name" 
               />
             </div>
 

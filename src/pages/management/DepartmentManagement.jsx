@@ -256,7 +256,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
                 value={formData.id} 
                 onChange={e => setFormData({ ...formData, id: e.target.value })} 
                 disabled={editMode} 
-                placeholder="e.g. BSCS" 
+                placeholder="Enter department code" 
               />
               {!editMode && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px', display: 'block' }}>Used as unique identifier. Best to use the abbreviation.</span>}
             </div>
@@ -267,7 +267,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
                 className="form-input" 
                 value={formData.name} 
                 onChange={e => setFormData({ ...formData, name: e.target.value })} 
-                placeholder="e.g. Computer Science" 
+                placeholder="Enter department name" 
               />
             </div>
 

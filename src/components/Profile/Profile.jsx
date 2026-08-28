@@ -267,7 +267,7 @@ const Profile = ({ user, onBack, readOnly }) => {
                   {!isEditing ? (
                     <div className="read-only-value">{fullName}</div>
                   ) : (
-                    <input required type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="e.g. Juan Dela Cruz" />
+                    <input required type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Enter your full name" />
                   )}
                 </div>
 
@@ -276,7 +276,7 @@ const Profile = ({ user, onBack, readOnly }) => {
                   {!isEditing ? (
                     <div className="read-only-value">{age || '—'}</div>
                   ) : (
-                    <input required type="number" min="1" value={age} onChange={e => setAge(e.target.value)} placeholder="e.g. 20" />
+                    <input required type="number" min="1" value={age} onChange={e => setAge(e.target.value)} placeholder="Age" />
                   )}
                 </div>
 
@@ -311,7 +311,7 @@ const Profile = ({ user, onBack, readOnly }) => {
                   {!isEditing ? (
                     <div className="read-only-value">{studentId || '—'}</div>
                   ) : (
-                    <input required type="text" value={studentId} onChange={e => setStudentId(e.target.value)} placeholder="e.g. 2023-131151" />
+                    <input required type="text" value={studentId} onChange={e => setStudentId(e.target.value)} placeholder="Enter your student ID" />
                   )}
                 </div>
 
