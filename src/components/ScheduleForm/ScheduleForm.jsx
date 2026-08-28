@@ -745,9 +745,95 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               onChange={handleChange}
               placeholder="Select a subject..."
               required
-              options={[...eligibleSubjects]
-                .sort((a, b) => ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' }))
-                .map(subject => ({ value: subject.id, label: `${subject.code} - ${subject.name}` }))}
+              options={(() => {
+                const sorted = [...eligibleSubjects].sort((a, b) => 
+                  ((a.code || '').replace(/\s+/g, '').toUpperCase()).localeCompare(((b.code || '').replace(/\s+/g, '').toUpperCase()), undefined, { numeric: true, sensitivity: 'base' })
+                );
+
+                if (selectedSection) {
+                  const enrolledIds = selectedSection.subjects || [];
+                  const enrolled = [];
+                  const others = [];
+
+                  sorted.forEach(sub => {
+                    const isEnrolled = enrolledIds.includes(sub.id) ||
+                      (sub.code && enrolledIds.includes(sub.code)) ||
+                      (sub.name && enrolledIds.includes(sub.name));
+                    
+                    if (isEnrolled) {
+                      enrolled.push({
+                        value: sub.id,
+                        label: `${sub.code} - ${sub.name}`,
+                        badge: '✨ Enrolled',
+                        badgeColor: '#059669'
+                      });
+                    } else {
+                      others.push({
+                        value: sub.id,
+                        label: `${sub.code} - ${sub.name}`
+                      });
+                    }
+                  });
+
+                  const groups = [];
+                  if (enrolled.length > 0) {
+                    groups.push({
+                      label: `✨ Recommended for ${selectedSection.name}`,
+                      options: enrolled
+                    });
+                  }
+                  if (others.length > 0) {
+                    groups.push({
+                      label: 'Other Subjects',
+                      options: others
+                    });
+                  }
+                  return groups.length > 0 ? groups : sorted.map(s => ({ value: s.id, label: `${s.code} - ${s.name}` }));
+                }
+
+                if (selectedProfessor) {
+                  const specs = selectedProfessor.specialization || [];
+                  const specialized = [];
+                  const others = [];
+
+                  sorted.forEach(sub => {
+                    const isSpec = specs.includes(sub.id) ||
+                      (sub.code && specs.includes(sub.code)) ||
+                      (sub.name && specs.includes(sub.name));
+                    
+                    if (isSpec) {
+                      specialized.push({
+                        value: sub.id,
+                        label: `${sub.code} - ${sub.name}`,
+                        badge: '✨ Specialized',
+                        badgeColor: '#059669'
+                      });
+                    } else {
+                      others.push({
+                        value: sub.id,
+                        label: `${sub.code} - ${sub.name}`
+                      });
+                    }
+                  });
+
+                  const groups = [];
+                  if (specialized.length > 0) {
+                    groups.push({
+                      label: `✨ Specialization of Prof. ${selectedProfessor.name}`,
+                      options: specialized
+                    });
+                  }
+                  if (others.length > 0) {
+                    groups.push({
+                      label: 'Other Subjects',
+                      options: others
+                    });
+                  }
+                  return groups.length > 0 ? groups : sorted.map(s => ({ value: s.id, label: `${s.code} - ${s.name}` }));
+                }
+
+                return sorted.map(subject => ({ value: subject.id, label: `${subject.code} - ${subject.name}` }));
+              })()}
             />
           </div>
 
@@ -759,10 +845,94 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               onChange={handleChange}
               placeholder="Select a section..."
               required
-              options={eligibleSections ? [...eligibleSections].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(sec => ({
-                value: sec.id,
-                label: sec.name
-              })) : []}
+              options={(() => {
+                const sorted = eligibleSections ? [...eligibleSections].sort((a, b) => (a.name || '').localeCompare(b.name || '')) : [];
+
+                if (selectedSubject) {
+                  const matching = [];
+                  const others = [];
+
+                  sorted.forEach(sec => {
+                    const secSubjects = sec.subjects || [];
+                    const isEnrolled = secSubjects.includes(selectedSubject.id) ||
+                      (selectedSubject.code && secSubjects.includes(selectedSubject.code)) ||
+                      (selectedSubject.name && secSubjects.includes(selectedSubject.name));
+                    
+                    if (isEnrolled) {
+                      matching.push({
+                        value: sec.id,
+                        label: `${sec.name}${sec.program ? ` (${sec.program})` : ''}`,
+                        badge: '✨ Enrolled',
+                        badgeColor: '#059669'
+                      });
+                    } else {
+                      others.push({
+                        value: sec.id,
+                        label: `${sec.name}${sec.program ? ` (${sec.program})` : ''}`
+                      });
+                    }
+                  });
+
+                  const groups = [];
+                  if (matching.length > 0) {
+                    groups.push({
+                      label: `✨ Recommended for ${selectedSubject.code}`,
+                      options: matching
+                    });
+                  }
+                  if (others.length > 0) {
+                    groups.push({
+                      label: 'Other Sections',
+                      options: others
+                    });
+                  }
+                  return groups.length > 0 ? groups : sorted.map(s => ({ value: s.id, label: s.name }));
+                }
+
+                if (selectedProfessor) {
+                  const assigned = [];
+                  const others = [];
+
+                  sorted.forEach(sec => {
+                    const isAssigned = (selectedProfessor.assignedSections || []).includes(sec.id) ||
+                      (sec.name && (selectedProfessor.assignedSections || []).includes(sec.name));
+                    
+                    if (isAssigned) {
+                      assigned.push({
+                        value: sec.id,
+                        label: `${sec.name}${sec.program ? ` (${sec.program})` : ''}`,
+                        badge: '✨ Assigned',
+                        badgeColor: '#059669'
+                      });
+                    } else {
+                      others.push({
+                        value: sec.id,
+                        label: `${sec.name}${sec.program ? ` (${sec.program})` : ''}`
+                      });
+                    }
+                  });
+
+                  const groups = [];
+                  if (assigned.length > 0) {
+                    groups.push({
+                      label: `✨ Assigned Sections of Prof. ${selectedProfessor.name}`,
+                      options: assigned
+                    });
+                  }
+                  if (others.length > 0) {
+                    groups.push({
+                      label: 'Other Sections',
+                      options: others
+                    });
+                  }
+                  return groups.length > 0 ? groups : sorted.map(s => ({ value: s.id, label: s.name }));
+                }
+
+                return sorted.map(sec => ({
+                  value: sec.id,
+                  label: `${sec.name}${sec.program ? ` (${sec.program})` : ''}`
+                }));
+              })()}
             />
           </div>
         </div>
@@ -776,14 +946,103 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               onChange={handleChange}
               placeholder="Select a professor..."
               required
-              options={[...eligibleProfessors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(professor => {
-                const isConflict = checkConflict({ professor });
-                return {
-                  value: professor.id,
-                  label: professor.name,
-                  badge: isConflict ? '(Occupied)' : null
-                };
-              })}
+              options={(() => {
+                const sorted = [...eligibleProfessors].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+                if (selectedSubject) {
+                  const specialized = [];
+                  const others = [];
+
+                  sorted.forEach(professor => {
+                    const isConflict = checkConflict({ professor });
+                    const isSpec = professorMatchesSubject(professor, selectedSubject);
+
+                    if (isSpec) {
+                      specialized.push({
+                        value: professor.id,
+                        label: `${professor.name}${professor.department ? ` (${professor.department})` : ''}`,
+                        badge: isConflict ? '(Occupied)' : '✨ Specialized',
+                        badgeColor: isConflict ? '#ef4444' : '#059669'
+                      });
+                    } else {
+                      others.push({
+                        value: professor.id,
+                        label: `${professor.name}${professor.department ? ` (${professor.department})` : ''}`,
+                        badge: isConflict ? '(Occupied)' : null,
+                        badgeColor: isConflict ? '#ef4444' : null
+                      });
+                    }
+                  });
+
+                  const groups = [];
+                  if (specialized.length > 0) {
+                    groups.push({
+                      label: `✨ Recommended for ${selectedSubject.code}`,
+                      options: specialized
+                    });
+                  }
+                  if (others.length > 0) {
+                    groups.push({
+                      label: 'Other Faculty',
+                      options: others
+                    });
+                  }
+                  return groups.length > 0 ? groups : sorted.map(p => ({ value: p.id, label: p.name }));
+                }
+
+                if (selectedSection) {
+                  const sectionFaculty = [];
+                  const others = [];
+
+                  sorted.forEach(professor => {
+                    const isConflict = checkConflict({ professor });
+                    const isAdviser = selectedSection.adviser === professor.id || selectedSection.adviser === professor.name;
+                    const isAssigned = (professor.assignedSections || []).includes(selectedSection.id) ||
+                      (selectedSection.name && (professor.assignedSections || []).includes(selectedSection.name));
+                    
+                    if (isAdviser || isAssigned) {
+                      sectionFaculty.push({
+                        value: professor.id,
+                        label: `${professor.name}${professor.department ? ` (${professor.department})` : ''}`,
+                        badge: isConflict ? '(Occupied)' : isAdviser ? '✨ Adviser' : '✨ Assigned',
+                        badgeColor: isConflict ? '#ef4444' : '#059669'
+                      });
+                    } else {
+                      others.push({
+                        value: professor.id,
+                        label: `${professor.name}${professor.department ? ` (${professor.department})` : ''}`,
+                        badge: isConflict ? '(Occupied)' : null,
+                        badgeColor: isConflict ? '#ef4444' : null
+                      });
+                    }
+                  });
+
+                  const groups = [];
+                  if (sectionFaculty.length > 0) {
+                    groups.push({
+                      label: `✨ Recommended Faculty for ${selectedSection.name}`,
+                      options: sectionFaculty
+                    });
+                  }
+                  if (others.length > 0) {
+                    groups.push({
+                      label: 'Other Faculty',
+                      options: others
+                    });
+                  }
+                  return groups.length > 0 ? groups : sorted.map(p => ({ value: p.id, label: p.name }));
+                }
+
+                return sorted.map(professor => {
+                  const isConflict = checkConflict({ professor });
+                  return {
+                    value: professor.id,
+                    label: `${professor.name}${professor.department ? ` (${professor.department})` : ''}`,
+                    badge: isConflict ? '(Occupied)' : null,
+                    badgeColor: isConflict ? '#ef4444' : null
+                  };
+                });
+              })()}
             />
           </div>
 

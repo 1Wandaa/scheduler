@@ -599,16 +599,46 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                                 {details.professors.map((p, pIdx) => {
                                   const isMax = p.status === 'MAX_UNITS';
                                   return (
-                                    <div key={pIdx} className="conflict-chip">
-                                      <div className="conflict-chip-title">
-                                        <span>{p.name}</span>
-                                        <span className={`meta-pill ${isMax ? 'lab-pill' : ''}`}>
-                                          {p.currentUnits !== undefined && p.maxUnits !== undefined ? `${p.currentUnits}/${p.maxUnits} units` : (p.status || 'Assigned')}
+                                    <div key={pIdx} className="conflict-card-box">
+                                      <div className="conflict-card-header">
+                                        <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.9rem' }}>{p.name}</span>
+                                        <span className={`meta-pill ${isMax ? 'lab-pill' : ''}`} style={isMax ? { background: '#fee2e2', color: '#b91c1c', borderColor: '#fca5a5' } : {}}>
+                                          {p.currentUnits !== undefined && p.maxUnits !== undefined ? `Load: ${p.currentUnits}/${p.maxUnits} units` : (p.status || 'Assigned')}
                                         </span>
                                       </div>
-                                      <div className={`conflict-chip-status ${isMax ? '' : (p.conflicts?.length ? '' : 'available')}`}>
-                                        {p.message || (p.conflicts?.length ? p.conflicts.join('; ') : 'No teaching load issue, blocked by schedule/room collision')}
-                                      </div>
+                                      {isMax ? (
+                                        <div className="conflict-limit-warning">
+                                          ⚠️ Teaching load reached maximum ({p.currentUnits}/${p.maxUnits} units) — this class requires +{p.neededUnits || 3} units.
+                                        </div>
+                                      ) : p.conflicts && p.conflicts.length > 0 ? (
+                                        <div className="conflict-schedule-breakdown">
+                                          <div className="conflict-sub-label">Existing class commitments:</div>
+                                          <div className="conflict-timeline-list">
+                                            {p.conflicts.map((c, cIdx) => {
+                                              if (typeof c === 'object') {
+                                                return (
+                                                  <div key={cIdx} className="conflict-timeline-item">
+                                                    <span className="conflict-day-pill">{c.day}</span>
+                                                    <span className="conflict-time-badge">{c.time}</span>
+                                                    <span className="conflict-sub-name">{c.subjectCode}</span>
+                                                    {c.sectionName && <span className="conflict-section-badge">👥 {c.sectionName}</span>}
+                                                    {c.roomName && <span className="conflict-room-pill">📍 {c.roomName}</span>}
+                                                  </div>
+                                                );
+                                              }
+                                              return (
+                                                <div key={cIdx} className="conflict-timeline-item">
+                                                  <span>{c}</span>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="conflict-chip-status available">
+                                          ✓ Faculty has available hours, but room/section was occupied
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 })}
@@ -623,19 +653,51 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                                 🚪 Rooms Evaluated ({details.rooms.length})
                               </div>
                               <div className="conflict-chips-container">
-                                {details.rooms.map((r, rIdx) => (
-                                  <div key={rIdx} className="conflict-chip">
-                                    <div className="conflict-chip-title">
-                                      <span>{r.name}</span>
-                                      <span className="meta-pill">{r.type || 'Room'}</span>
+                                {details.rooms.map((r, rIdx) => {
+                                  const hasRestrictions = r.restrictedProfs?.length > 0;
+                                  const hasBusy = r.busySummary && r.busySummary.length > 0;
+                                  return (
+                                    <div key={rIdx} className="conflict-card-box">
+                                      <div className="conflict-card-header">
+                                        <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.9rem' }}>{r.name}</span>
+                                        <span className="meta-pill">{r.type || 'Room'}</span>
+                                      </div>
+                                      {hasRestrictions ? (
+                                        <div className="conflict-limit-warning">
+                                          🚫 Room restricted for: {r.restrictedProfs.join(', ')}
+                                        </div>
+                                      ) : hasBusy ? (
+                                        <div className="conflict-schedule-breakdown">
+                                          <div className="conflict-sub-label">Room occupied during:</div>
+                                          <div className="conflict-timeline-list">
+                                            {r.busySummary.map((b, bIdx) => {
+                                              if (typeof b === 'object') {
+                                                return (
+                                                  <div key={bIdx} className="conflict-timeline-item">
+                                                    <span className="conflict-day-pill">{b.day}</span>
+                                                    <span className="conflict-time-badge">{b.time}</span>
+                                                    <span className="conflict-sub-name">{b.subjectCode}</span>
+                                                    {b.sectionName && <span className="conflict-section-badge">👥 {b.sectionName}</span>}
+                                                    {b.profName && <span className="conflict-prof-pill">👤 {b.profName}</span>}
+                                                  </div>
+                                                );
+                                              }
+                                              return (
+                                                <div key={bIdx} className="conflict-timeline-item">
+                                                  <span>{b}</span>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="conflict-chip-status available">
+                                          ✓ Room is available during other hours
+                                        </div>
+                                      )}
                                     </div>
-                                    <div className="conflict-chip-status neutral">
-                                      {r.restrictedProfs?.length
-                                        ? `Restricted for ${r.restrictedProfs.join(', ')}`
-                                        : (r.busySummary?.length ? r.busySummary.join('; ') : 'Occupied during requested section/faculty time slots')}
-                                    </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -654,21 +716,41 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
                           {/* Section Schedule Overlaps */}
                           {details.sectionConflicts && details.sectionConflicts.length > 0 && (
-                            <div className="conflict-collisions-list">
-                              <strong>👥 Section {s?.section?.name || ''} Schedule Overlaps:</strong>
-                              <ul>
-                                {details.sectionConflicts.slice(0, 3).map((sc, scIdx) => (
-                                  <li key={scIdx}>{sc}</li>
-                                ))}
-                              </ul>
+                            <div>
+                              <div className="conflict-group-title">
+                                👥 Section {s?.section?.name || ''} Schedule Overlaps ({details.sectionConflicts.length})
+                              </div>
+                              <div className="conflict-timeline-list" style={{ marginTop: '6px' }}>
+                                {details.sectionConflicts.slice(0, 4).map((sc, scIdx) => {
+                                  if (typeof sc === 'object') {
+                                    return (
+                                      <div key={scIdx} className="conflict-timeline-item">
+                                        <span className="conflict-day-pill">{sc.day}</span>
+                                        <span className="conflict-time-badge">{sc.time}</span>
+                                        <span className="conflict-sub-name">{sc.subjectCode}</span>
+                                        {sc.roomName && <span className="conflict-room-pill">📍 {sc.roomName}</span>}
+                                        {sc.profName && <span className="conflict-prof-pill">👤 {sc.profName}</span>}
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div key={scIdx} className="conflict-timeline-item">
+                                      <span>{sc}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
                           )}
 
                           {/* Actionable Suggestion */}
                           {details.suggestion && (
                             <div className="conflict-suggestion-alert">
-                              <span>💡</span>
-                              <span><strong>Recommendation:</strong> {details.suggestion}</span>
+                              <span style={{ fontSize: '1.2rem' }}>💡</span>
+                              <div>
+                                <strong style={{ display: 'block', marginBottom: '2px' }}>How to resolve this:</strong>
+                                <span>{details.suggestion}</span>
+                              </div>
                             </div>
                           )}
                         </div>

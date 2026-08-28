@@ -267,9 +267,26 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
       </div>
 
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ width: '100%', maxWidth: '450px' }} onKeyDown={handleKeyDown}>
-            <h3>{editMode ? 'Edit Course' : 'Add New Course'}</h3>
+        <div className="modal-overlay" onClick={() => !isSaving && setShowModal(false)}>
+          <div 
+            className="modal-content" 
+            style={{ width: '100%', maxWidth: '450px' }} 
+            onClick={e => e.stopPropagation()}
+            onKeyDown={handleKeyDown}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                {editMode ? 'Edit Course' : 'Add New Course'}
+              </h3>
+              <button 
+                type="button"
+                onClick={() => !isSaving && setShowModal(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}
+                title="Close"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
             
             {error && (
               <div className="mgmt-modal-error">

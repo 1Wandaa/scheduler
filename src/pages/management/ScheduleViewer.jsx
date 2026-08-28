@@ -136,9 +136,14 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     // Compute unique year levels from sections for the selected department
     const availableYearLevels = React.useMemo(() => {
         if (viewType !== 'department' || !selectedId) return [];
+        const targetDept = String(selectedId).trim().toUpperCase();
         return [...new Set(
             sections
-                .filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()))
+                .filter(sec => {
+                    const secDept = (sec.program || sec.department || '').trim().toUpperCase();
+                    const secName = (sec.name || '').trim().toUpperCase();
+                    return secDept === targetDept || secName.startsWith(targetDept);
+                })
                 .map(sec => sec.yearLevel)
                 .filter(Boolean)
         )].sort((a, b) => a - b);
@@ -146,8 +151,11 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
 
     const deptSections = React.useMemo(() => {
         if (viewType !== 'department' || !selectedId) return [];
+        const targetDept = String(selectedId).trim().toUpperCase();
         return sections.filter(sec => {
-            const matchesDept = sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase());
+            const secDept = (sec.program || sec.department || '').trim().toUpperCase();
+            const secName = (sec.name || '').trim().toUpperCase();
+            const matchesDept = secDept === targetDept || secName.startsWith(targetDept);
             if (!matchesDept) return false;
             if (selectedYearLevel) return String(sec.yearLevel) === String(selectedYearLevel);
             return true;
@@ -159,13 +167,16 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
 
         return schedules.filter(s => {
             if (viewType === 'department') {
-                const subjDepts = Array.isArray(s.subject?.departments) ? s.subject.departments : (s.subject?.department ? [s.subject.department] : []);
-                const sectionDept = s.section?.name?.split(/\s+/)?.[0]?.toUpperCase() || '';
-                const matchesDept = subjDepts.includes(selectedId) || (s.professor?.department === selectedId) || sectionDept === selectedId;
-                if (!matchesDept) return false;
+                const targetDept = String(selectedId).trim().toUpperCase();
+                const sectionObj = sections.find(sec => s.section && String(sec.id) === String(s.section.id)) || s.section;
+                const secDept = (sectionObj?.program || sectionObj?.department || '').trim().toUpperCase();
+                const secName = (sectionObj?.name || '').trim().toUpperCase();
+
+                // A class on the department schedule belongs to this department's sections
+                const isDeptSection = secDept === targetDept || secName.startsWith(targetDept);
+                if (!isDeptSection) return false;
 
                 if (selectedYearLevel && !deptSectionId) {
-                    const sectionObj = sections.find(sec => s.section && String(sec.id) === String(s.section.id));
                     if (!sectionObj || String(sectionObj.yearLevel) !== String(selectedYearLevel)) return false;
                 }
 
@@ -409,6 +420,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 <ScheduleTable
                     schedules={filteredSchedules}
                     title={`${titlePrefix} SCHEDULE: ${titleName}`}
+                    targetDepartment={viewType === 'department' ? selectedId : ''}
                     onUpdateSchedule={isAdmin ? onUpdateSchedule : undefined}
                     onRemove={isAdmin ? onRemoveSchedule : undefined}
                     departments={departments}
@@ -416,10 +428,12 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     isDeleteMode={isDeleteMode}
                     programName={
                         viewType === 'department' && deptSectionId
-                            ? (sections.find(s => s.id === deptSectionId)?.program || '')
-                            : viewType === 'section' && selectedId
-                                ? (sections.find(s => s.id === selectedId)?.program || '')
-                                : ''
+                            ? (sections.find(s => s.id === deptSectionId)?.program || selectedId)
+                            : viewType === 'department'
+                                ? selectedId
+                                : viewType === 'section' && selectedId
+                                    ? (sections.find(s => s.id === selectedId)?.program || '')
+                                    : ''
                     }
                     semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "First Semester, School Year 2026 - 2027"}
                 />
@@ -436,10 +450,12 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 }
                 programName={
                     viewType === 'department' && deptSectionId
-                        ? (sections.find(s => s.id === deptSectionId)?.program || '')
-                        : viewType === 'section' && selectedId
-                            ? (sections.find(s => s.id === selectedId)?.program || '')
-                            : ''
+                        ? (sections.find(s => s.id === deptSectionId)?.program || selectedId)
+                        : viewType === 'department'
+                            ? selectedId
+                            : viewType === 'section' && selectedId
+                                ? (sections.find(s => s.id === selectedId)?.program || '')
+                                : ''
                 }
                 semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "2nd Sem 2025-2026"}
             />

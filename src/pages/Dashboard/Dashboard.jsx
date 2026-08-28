@@ -39,6 +39,7 @@ import CourseManagement from '../management/CourseManagement';
 import RoomAvailability from '../management/RoomAvailability';
 import FacultyAvailability from '../management/FacultyAvailability';
 import RecycleBin from '../management/RecycleBin';
+import DevTools from '../management/DevTools';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 import { Icon, NAV_ICONS } from './components/Icon';
@@ -332,17 +333,18 @@ const Dashboard = ({ user, onLogout }) => {
                 <NavItem label={`Manage Data ${isManageDataOpen ? '▾' : '▸'}`} iconPath={NAV_ICONS.manage} onClick={() => setIsManageDataOpen(o => !o)} />
                 {isManageDataOpen && (
                   <>
-                    <NavItem label="Faculty Profiles" iconPath={NAV_ICONS.faculty} active={activeTab === 'faculty'} onClick={() => handleTabClick('faculty')} indent />
                     <NavItem label="Departments" iconPath={NAV_ICONS.rooms} active={activeTab === 'departments'} onClick={() => handleTabClick('departments')} indent />
                     <NavItem label="Courses / Programs" iconPath={NAV_ICONS.subjects} active={activeTab === 'courses'} onClick={() => handleTabClick('courses')} indent />
-                    <NavItem label="Room List" iconPath={NAV_ICONS.rooms} active={activeTab === 'rooms'} onClick={() => handleTabClick('rooms')} indent />
-                    <NavItem label="Room Availability Matrix" iconPath={NAV_ICONS.rooms} active={activeTab === 'availability'} onClick={() => handleTabClick('availability')} indent />
-                    <NavItem label="Faculty Availability Matrix" iconPath={NAV_ICONS.faculty} active={activeTab === 'faculty-availability'} onClick={() => handleTabClick('faculty-availability')} indent />
-                    <NavItem label="Subject Constraints" iconPath={NAV_ICONS.subjects} active={activeTab === 'subjects'} onClick={() => handleTabClick('subjects')} indent />
+                    <NavItem label="Faculty Profiles" iconPath={NAV_ICONS.faculty} active={activeTab === 'faculty'} onClick={() => handleTabClick('faculty')} indent />
                     <NavItem label="Sections" iconPath={NAV_ICONS.sections} active={activeTab === 'sections'} onClick={() => handleTabClick('sections')} indent />
+                    <NavItem label="Subject Constraints" iconPath={NAV_ICONS.subjects} active={activeTab === 'subjects'} onClick={() => handleTabClick('subjects')} indent />
+                    <NavItem label="Room List" iconPath={NAV_ICONS.rooms} active={activeTab === 'rooms'} onClick={() => handleTabClick('rooms')} indent />
                     <NavItem label="Semesters & Years" iconPath={NAV_ICONS.calendar} active={activeTab === 'terms'} onClick={() => handleTabClick('terms')} indent />
+                    <NavItem label="Faculty Availability Matrix" iconPath={NAV_ICONS.faculty} active={activeTab === 'faculty-availability'} onClick={() => handleTabClick('faculty-availability')} indent />
+                    <NavItem label="Room Availability Matrix" iconPath={NAV_ICONS.rooms} active={activeTab === 'availability'} onClick={() => handleTabClick('availability')} indent />
                     <NavItem label="User Management" iconPath={NAV_ICONS.users} active={activeTab === 'users'} onClick={() => handleTabClick('users')} indent />
                     <NavItem label="Recycle Bin" iconPath="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" active={activeTab === 'recycle-bin'} onClick={() => handleTabClick('recycle-bin')} indent />
+                    <NavItem label="Developer Tools" iconPath="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" active={activeTab === 'dev-tools'} onClick={() => handleTabClick('dev-tools')} indent />
                   </>
                 )}
                 <NavItem label="Create Schedule" iconPath={NAV_ICONS.schedule} active={activeTab === 'schedule'} onClick={() => handleTabClick('schedule')} />
@@ -603,6 +605,7 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} />}
         {isAdmin && activeTab === 'recycle-bin' && <RecycleBin user={user} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'dev-tools' && <DevTools activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'activity-log' && (
           <ActivityLog
             onBack={() => setActiveTab('dashboard')}

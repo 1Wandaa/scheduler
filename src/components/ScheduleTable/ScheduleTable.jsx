@@ -92,47 +92,82 @@ const ScheduleTable = React.memo(function ScheduleTable({
   scheduleMode,
   isDeleteMode,
   programName,
+  targetDepartment,
   semesterInfo
 }) {
   const { confirm } = useGlobalDialog();
 
   // Full department title resolution
   const fullDepartmentName = useMemo(() => {
-    let deptAcronym = null;
-    for (const s of schedules) {
-      if (s.section?.name) {
-        const name = s.section.name.toUpperCase();
-        if (name.includes('BSCS')) deptAcronym = 'BSCS';
-        else if (name.includes('BAEL')) deptAcronym = 'BAEL';
-        else if (name.includes('BSOA')) deptAcronym = 'BSOA';
-        else if (name.includes('BSFT')) deptAcronym = 'BSFT';
-        if (deptAcronym) break;
+    // 1. Check explicit targetDepartment, programName, or title first
+    const candidateTexts = [
+      targetDepartment,
+      programName,
+      title
+    ].filter(Boolean).map(t => String(t).toUpperCase());
+
+    for (const text of candidateTexts) {
+      if (text.includes('BSCS') || text.includes('COMPUTER SCIENCE')) return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
+      if (text.includes('BAEL') || text.includes('ENGLISH LANGUAGE')) return 'BACHELOR OF ARTS IN ENGLISH LANGUAGE DEPARTMENT';
+      if (text.includes('BSOA') || text.includes('OFFICE ADMINISTRATION')) return 'BACHELOR OF SCIENCE IN OFFICE ADMINISTRATION DEPARTMENT';
+      if (text.includes('BSFT') || text.includes('FOOD TECHNOLOGY')) return 'BACHELOR OF SCIENCE IN FOOD TECHNOLOGY DEPARTMENT';
+
+      // Check against dynamic departments list
+      for (const d of (departments || [])) {
+        const dCode = (d.id || d.code || '').toUpperCase();
+        const dName = (d.name || d.fullName || '').toUpperCase();
+        if (dCode && (text === dCode || text.includes(` ${dCode}`) || text.includes(`:${dCode}`) || text.includes(`: ${dCode}`))) {
+          return dName.endsWith('DEPARTMENT') ? dName : `${dName} DEPARTMENT`;
+        }
       }
     }
 
-    const prog = (programName || '').toUpperCase();
-    if (!deptAcronym) {
-      if (prog.includes('COMPUTER SCIENCE') || prog.includes('BSCS')) deptAcronym = 'BSCS';
-      else if (prog.includes('ENGLISH LANGUAGE') || prog.includes('BAEL')) deptAcronym = 'BAEL';
-      else if (prog.includes('OFFICE ADMINISTRATION') || prog.includes('BSOA')) deptAcronym = 'BSOA';
-      else if (prog.includes('FOOD TECHNOLOGY') || prog.includes('BSFT')) deptAcronym = 'BSFT';
+    // 2. Fallback: Determine majority department among scheduled sections
+    const deptCounts = {};
+    for (const s of schedules) {
+      let code = null;
+      if (s.section?.name) {
+        const name = s.section.name.toUpperCase();
+        if (name.includes('BSCS')) code = 'BSCS';
+        else if (name.includes('BAEL')) code = 'BAEL';
+        else if (name.includes('BSOA')) code = 'BSOA';
+        else if (name.includes('BSFT')) code = 'BSFT';
+      }
+      if (!code && s.subject) {
+        const subDepts = Array.isArray(s.subject.departments) ? s.subject.departments : (s.subject.department ? [s.subject.department] : []);
+        if (subDepts.includes('BSCS')) code = 'BSCS';
+        else if (subDepts.includes('BAEL')) code = 'BAEL';
+        else if (subDepts.includes('BSOA')) code = 'BSOA';
+        else if (subDepts.includes('BSFT')) code = 'BSFT';
+      }
+      if (code) {
+        deptCounts[code] = (deptCounts[code] || 0) + 1;
+      }
     }
 
-    switch (deptAcronym) {
-      case 'BSCS': return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
-      case 'BAEL': return 'BACHELOR OF ARTS IN ENGLISH LANGUAGE DEPARTMENT';
-      case 'BSOA': return 'BACHELOR OF SCIENCE IN OFFICE ADMINISTRATION DEPARTMENT';
-      case 'BSFT': return 'BACHELOR OF SCIENCE IN FOOD TECHNOLOGY DEPARTMENT';
-      default:
-        if (programName) {
-          let formatted = programName.toUpperCase();
-          if (formatted.startsWith('BA ')) formatted = formatted.replace('BA ', 'BACHELOR OF ARTS IN ');
-          if (formatted.startsWith('BS ')) formatted = formatted.replace('BS ', 'BACHELOR OF SCIENCE IN ');
-          return `${formatted} DEPARTMENT`;
-        }
-        return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
+    let majorityDept = null;
+    let maxCount = 0;
+    for (const [d, count] of Object.entries(deptCounts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        majorityDept = d;
+      }
     }
-  }, [schedules, programName]);
+
+    if (majorityDept === 'BSCS') return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
+    if (majorityDept === 'BAEL') return 'BACHELOR OF ARTS IN ENGLISH LANGUAGE DEPARTMENT';
+    if (majorityDept === 'BSOA') return 'BACHELOR OF SCIENCE IN OFFICE ADMINISTRATION DEPARTMENT';
+    if (majorityDept === 'BSFT') return 'BACHELOR OF SCIENCE IN FOOD TECHNOLOGY DEPARTMENT';
+
+    if (programName) {
+      let formatted = programName.toUpperCase();
+      if (formatted.startsWith('BA ')) formatted = formatted.replace('BA ', 'BACHELOR OF ARTS IN ');
+      if (formatted.startsWith('BS ')) formatted = formatted.replace('BS ', 'BACHELOR OF SCIENCE IN ');
+      return formatted.endsWith('DEPARTMENT') ? formatted : `${formatted} DEPARTMENT`;
+    }
+
+    return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
+  }, [schedules, programName, targetDepartment, title, departments]);
 
   // Resolve time slots and days based on schedule mode
   const config = useMemo(() => getScheduleConfig(scheduleMode), [scheduleMode]);

@@ -44,6 +44,8 @@ html {
   font-family: 'Inter', Tahoma, Geneva, Verdana, sans-serif;
   height: 100dvh;
   color: var(--text-main);
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 body::before {
@@ -57,6 +59,8 @@ body::before {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 h1,

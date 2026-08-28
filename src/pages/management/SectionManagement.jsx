@@ -22,14 +22,25 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
     id: '', name: '', program: '', yearLevel: 1, subjects: [], adviser: ''
   });
 
-  // Memoize sorted professors for the adviser dropdown
+  // Memoize sorted professors for the adviser dropdown with recommendations
   const sortedProfessors = useMemo(() => {
-    return [...professors].sort((a, b) => {
+    const secDept = (formData.program || '').toUpperCase();
+    return [...professors].map(prof => {
+      const pDept = (prof.department || '').toUpperCase();
+      const isRecommended = Boolean(secDept && (pDept === secDept || secDept.includes(pDept) || pDept.includes(secDept)));
+      return {
+        ...prof,
+        isRecommended
+      };
+    }).sort((a, b) => {
+      if (a.isRecommended !== b.isRecommended) {
+        return a.isRecommended ? -1 : 1;
+      }
       const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
       const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
       return nameA.localeCompare(nameB);
     });
-  }, [professors]);
+  }, [professors, formData.program]);
 
   const handleOpenAdd = () => {
     setFormData({ id: '', name: '', program: '', yearLevel: 1, subjects: [], adviser: '' });
@@ -272,9 +283,26 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
       </div>
 
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ width: '500px' }} onKeyDown={handleKeyDown}>
-            <h3>{editMode ? 'Edit Section' : 'Add New Section'}</h3>
+        <div className="modal-overlay" onClick={() => !isSaving && setShowModal(false)}>
+          <div 
+            className="modal-content" 
+            style={{ width: '500px', maxWidth: '100%' }} 
+            onClick={e => e.stopPropagation()}
+            onKeyDown={handleKeyDown}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                {editMode ? 'Edit Section' : 'Add New Section'}
+              </h3>
+              <button 
+                type="button"
+                onClick={() => !isSaving && setShowModal(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}
+                title="Close"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
             {error && (
               <div className="mgmt-modal-error">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
@@ -323,7 +351,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
                 <option value="">No Adviser</option>
                 {sortedProfessors.map(prof => (
                   <option key={prof.id} value={prof.id}>
-                    {prof.name || `${prof.lastName || ''}, ${prof.firstName || ''}`}
+                    {prof.isRecommended ? '✨ ' : ''}{prof.name || `${prof.lastName || ''}, ${prof.firstName || ''}`}{prof.department ? ` (${prof.department})` : ''}{prof.isRecommended ? ' - Recommended' : ''}
                   </option>
                 ))}
               </select>
@@ -334,6 +362,10 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
               selectedSubjects={formData.subjects}
               departments={departments}
               onToggleSubject={handleSubjectToggle}
+              recommendedDepartment={formData.program}
+              yearLevel={formData.yearLevel}
+              contextType="section"
+              label="Enrolled Subjects"
             />
             <div className="mgmt-modal-actions">
               <button className="mgmt-cancel-btn" onClick={() => setShowModal(false)} disabled={isSaving}>Cancel</button>

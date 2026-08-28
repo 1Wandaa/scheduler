@@ -274,17 +274,21 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
   const filteredSections = useMemo(() => {
     const assignedSubjectIds = formData.specialization || [];
     const hasAssignedSubjects = assignedSubjectIds.length > 0;
+    const profDept = (formData.department || '').toUpperCase();
 
     return [...sections]
       .map(sec => {
         const allEnrolled = getSectionSubjects(sec);
         const matching = getFacultyMatchingSubjectsForSection(sec, assignedSubjectIds);
         const isEligible = hasAssignedSubjects && matching.length > 0;
+        const secDept = (sec.department || sec.program || '').toUpperCase();
+        const isRecommended = isEligible && Boolean(profDept && (secDept.includes(profDept) || profDept.includes(secDept)));
         return {
           ...sec,
           allEnrolled,
           matchingSubjects: matching,
           disabled: !isEligible,
+          isRecommended,
           disabledReason: !hasAssignedSubjects
             ? 'Select assigned subjects first'
             : 'Section is not enrolled in any of the faculty’s assigned subjects'
@@ -302,17 +306,34 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
         return nameMatch || deptMatch || subjectMatch;
       })
       .sort((a, b) => {
-        // Show eligible sections first
+        // Show eligible & recommended sections first
         if (a.disabled !== b.disabled) {
           return a.disabled ? 1 : -1;
         }
+        if (a.isRecommended !== b.isRecommended) {
+          return a.isRecommended ? -1 : 1;
+        }
         return (a.name || '').localeCompare(b.name || '');
       });
-  }, [sections, sectionSearchQuery, formData.specialization, subjects]);
+  }, [sections, sectionSearchQuery, formData.specialization, formData.department, subjects]);
 
   const sortedRooms = useMemo(() => {
-    return [...rooms].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [rooms]);
+    const profDept = (formData.department || '').toUpperCase();
+    return [...rooms].map(r => {
+      const rDept = (r.department || '').toUpperCase();
+      const rBuilding = (r.building || '').toUpperCase();
+      const isRecommended = Boolean(profDept && (rDept === profDept || rBuilding.includes(profDept) || profDept.includes(rDept)));
+      return {
+        ...r,
+        isRecommended
+      };
+    }).sort((a, b) => {
+      if (a.isRecommended !== b.isRecommended) {
+        return a.isRecommended ? -1 : 1;
+      }
+      return (a.name || '').localeCompare(b.name || '');
+    });
+  }, [rooms, formData.department]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -392,9 +413,26 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
       </div>
 
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ width: '500px' }} onKeyDown={handleKeyDown}>
-            <h3>{editMode ? 'Edit Faculty' : 'Add New Faculty'}</h3>
+        <div className="modal-overlay" onClick={() => !isSaving && setShowModal(false)}>
+          <div 
+            className="modal-content" 
+            style={{ width: '500px', maxWidth: '100%' }} 
+            onClick={e => e.stopPropagation()}
+            onKeyDown={handleKeyDown}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                {editMode ? 'Edit Faculty' : 'Add New Faculty'}
+              </h3>
+              <button 
+                type="button"
+                onClick={() => !isSaving && setShowModal(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}
+                title="Close"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
             {error && (
               <div className="mgmt-modal-error">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
@@ -480,7 +518,10 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
               subjects={subjects}
               activeSemester={activeSemester}
               selectedSubjects={formData.specialization || []}
+              departments={departments}
               onToggleSubject={handleSubjectToggle}
+              recommendedDepartment={formData.department}
+              contextType="faculty"
             />
 
             <div className="form-group" style={{ marginBottom: '25px' }}>
@@ -506,16 +547,24 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onRemove(); }}
                       style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
-
-
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                   </div>
                 )}
                 renderOption={(room) => (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{room.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{room.name}</span>
+                      {room.building && (
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({room.building})</span>
+                      )}
+                    </div>
+                    {room.isRecommended && (
+                      <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.15)', color: '#059669', fontWeight: '700', border: '1px solid rgba(16, 185, 129, 0.35)' }}>
+                        ✨ Recommended
+                      </span>
+                    )}
                   </div>
                 )}
               />
@@ -604,6 +653,11 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                               {sec.program}
                             </span>
                           )}
+                          {sec.isRecommended && (
+                            <span style={{ fontSize: '0.7rem', color: '#059669', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.35)', padding: '1px 6px', borderRadius: '8px', fontWeight: '700' }}>
+                              ✨ Recommended
+                            </span>
+                          )}
                         </div>
                         {!isEligible ? (
                           <span style={{ fontSize: '0.7rem', color: '#ef4444', background: '#fee2e2', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>
@@ -611,7 +665,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                           </span>
                         ) : (
                           <span style={{ fontSize: '0.7rem', color: '#059669', background: '#d1fae5', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>
-                            {matchingCodes.length} Matching Subject{matchingCodes.length > 1 ? 's' : ''}
+                            {matchingCodes.length} Matching Subject(s)
                           </span>
                         )}
                       </div>

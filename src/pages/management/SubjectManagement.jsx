@@ -23,7 +23,18 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, isFoodLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || (availableSemesters[0] || '') });
+    setFormData({
+      id: '',
+      code: '',
+      name: '',
+      departments: [],
+      credits: 3,
+      requiredLab: false,
+      isFoodLab: false,
+      hoursPerMeeting: 1.5,
+      category: 'Major',
+      semester: activeSemester || (availableSemesters[0] || '1st Semester')
+    });
     setEditMode(false);
     setError(null);
     setShowModal(true);
@@ -31,13 +42,27 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
   const handleOpenEdit = (subject) => {
     // Normalize: convert old single `department` string into `departments` array
-    const normalized = { ...subject };
-    if (!normalized.departments) {
-      normalized.departments = normalized.department ? [normalized.department] : [];
-    }
-    // Set category fallback for older data
-    normalized.category = normalized.category || 'Major';
-    normalized.semester = (normalized.semester && normalized.semester !== 'Both') ? normalized.semester : (normalized.category === 'Minor' ? 'Both' : (activeSemester || (availableSemesters[0] || '')));
+    const depts = Array.isArray(subject.departments) && subject.departments.length > 0
+      ? subject.departments
+      : (subject.department ? [subject.department] : []);
+
+    const cat = subject.category || 'Major';
+    const sem = (subject.semester && subject.semester !== 'Both')
+      ? subject.semester
+      : (cat === 'Minor' ? 'Both' : (activeSemester || (availableSemesters[0] || '1st Semester')));
+
+    const normalized = {
+      ...subject,
+      code: subject.code || '',
+      name: subject.name || '',
+      departments: depts,
+      category: cat,
+      semester: sem,
+      credits: subject.credits !== undefined ? Number(subject.credits) : 3,
+      hoursPerMeeting: subject.hoursPerMeeting !== undefined ? Number(subject.hoursPerMeeting) : 1.5,
+      requiredLab: Boolean(subject.requiredLab),
+      isFoodLab: Boolean(subject.isFoodLab),
+    };
 
     setFormData(normalized);
     setCurrentId(subject.id);
@@ -48,8 +73,15 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
   const handleSave = async () => {
     setError(null);
-    if (!formData.code || !formData.name) {
-      setError("Subject code and name are required.");
+    const code = (formData.code || '').trim();
+    const name = (formData.name || '').trim();
+
+    if (!code) {
+      setError("Subject code is required.");
+      return;
+    }
+    if (!name) {
+      setError("Subject name is required.");
       return;
     }
 
@@ -59,27 +91,44 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
     }
     
     const normalize = str => (str || '').replace(/\s+/g, '').toUpperCase();
-    const isDuplicate = subjects.some(s => s.id !== currentId && normalize(s.code) === normalize(formData.code));
+    const isDuplicate = subjects.some(s => String(s.id) !== String(currentId) && normalize(s.code) === normalize(code));
     
     if (isDuplicate) {
-      setError(`A subject with the code "${formData.code}" already exists.`);
+      setError(`A subject with the code "${code}" already exists.`);
       return;
     }
+
+    const payload = {
+      ...formData,
+      code,
+      name,
+      departments: formData.departments || [],
+      department: formData.departments?.[0] || (formData.category === 'Minor' ? 'SHARED' : ''),
+      category: formData.category || 'Major',
+      semester: formData.semester || activeSemester || '1st Semester',
+      credits: formData.credits === '' ? 3 : Number(formData.credits),
+      hoursPerMeeting: Number(formData.hoursPerMeeting) || 1.5,
+      requiredLab: Boolean(formData.requiredLab),
+      isFoodLab: Boolean(formData.isFoodLab),
+    };
 
     setIsSaving(true);
     try {
       if (editMode) {
-        await updateDoc(doc(db, 'subjects', currentId.toString()), formData);
-        logActivity({ user, action: LOG_ACTIONS.UPDATE_SUBJECT, details: `Updated subject: ${formData.code} - ${formData.name}` });
+        await updateDoc(doc(db, 'subjects', currentId.toString()), payload);
+        logActivity({ user, action: LOG_ACTIONS.UPDATE_SUBJECT, details: `Updated subject: ${payload.code} - ${payload.name}` });
+        toast.success(`Subject ${payload.code} updated successfully`);
       } else {
-        const newId = formData.id || `S${Date.now().toString().slice(-4)}`;
-        await addDoc(collection(db, 'subjects'), { ...formData, id: newId });
-        logActivity({ user, action: LOG_ACTIONS.ADD_SUBJECT, details: `Added new subject: ${formData.code} - ${formData.name} (${formData.credits} units)` });
+        const newId = payload.id || `S${Date.now().toString().slice(-4)}`;
+        await addDoc(collection(db, 'subjects'), { ...payload, id: newId });
+        logActivity({ user, action: LOG_ACTIONS.ADD_SUBJECT, details: `Added new subject: ${payload.code} - ${payload.name} (${payload.credits} units)` });
+        toast.success(`Subject ${payload.code} added successfully`);
       }
       setShowModal(false);
     } catch (err) {
       console.error("Error saving subject:", err);
       setError("Failed to save subject. Please try again.");
+      toast.error("Failed to save subject.");
     } finally {
       setIsSaving(false);
     }
@@ -259,30 +308,69 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       </div>
 
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ width: '450px' }} onKeyDown={handleKeyDown}>
-            <h3>{editMode ? 'Edit Subject' : 'Add New Subject'}</h3>
+        <div className="modal-overlay" onClick={() => !isSaving && setShowModal(false)}>
+          <div 
+            className="modal-content" 
+            style={{ width: '480px', maxWidth: '100%' }} 
+            onClick={e => e.stopPropagation()}
+            onKeyDown={handleKeyDown}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                {editMode ? 'Edit Subject' : 'Add New Subject'}
+              </h3>
+              <button 
+                type="button"
+                onClick={() => !isSaving && setShowModal(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}
+                title="Close"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+
             {error && (
               <div className="mgmt-modal-error">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                 {error}
               </div>
             )}
-            <div className="form-group"><label className="form-label">Subject Code</label><input className="form-input" value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. CS101" /></div>
-            <div className="form-group"><label className="form-label">Subject Name</label><input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Intro to Programming" /></div>
+
+            <div className="form-group">
+              <label className="form-label">Subject Code</label>
+              <input 
+                className="form-input" 
+                value={formData.code} 
+                onChange={e => setFormData({ ...formData, code: e.target.value })} 
+                placeholder="e.g. CS 101" 
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Subject Name</label>
+              <input 
+                className="form-input" 
+                value={formData.name} 
+                onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                placeholder="e.g. Intro to Computer Programming" 
+              />
+            </div>
 
             <div style={{ display: 'flex', gap: '15px' }}>
-              {/* Added Category Dropdown */}
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Category</label>
-                <select className="form-select" value={formData.category || 'Major'} onChange={e => {
-                  const newCategory = e.target.value;
-                  const updates = { category: newCategory };
-                  if (newCategory !== 'Minor' && formData.semester === 'Both') {
-                    updates.semester = activeSemester || availableSemesters[0] || '';
-                  }
-                  setFormData({ ...formData, ...updates });
-                }}>
+                <select 
+                  className="form-select" 
+                  value={formData.category || 'Major'} 
+                  onChange={e => {
+                    const newCategory = e.target.value;
+                    const updates = { category: newCategory };
+                    if (newCategory !== 'Minor' && formData.semester === 'Both') {
+                      updates.semester = activeSemester || availableSemesters[0] || '1st Semester';
+                    }
+                    setFormData({ ...formData, ...updates });
+                  }}
+                >
                   <option value="Major">Major Subject</option>
                   <option value="Minor">Minor Subject</option>
                 </select>
@@ -290,7 +378,11 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Semester</label>
-                <select className="form-select" value={formData.semester || (activeSemester || (availableSemesters[0] || ''))} onChange={e => setFormData({ ...formData, semester: e.target.value })}>
+                <select 
+                  className="form-select" 
+                  value={formData.semester || (activeSemester || (availableSemesters[0] || '1st Semester'))} 
+                  onChange={e => setFormData({ ...formData, semester: e.target.value })}
+                >
                   {availableSemesters.map(sem => (
                     <option key={sem} value={sem}>{sem}</option>
                   ))}
@@ -314,16 +406,29 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                   </label>
                 ))}
               </div>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '6px 0 0', fontWeight: '500' }}>Select all departments that offer this subject</p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '6px 0 0', fontWeight: '500' }}>
+                Select all departments that offer this subject
+              </p>
             </div>
+
             <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
               <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                 <label className="form-label">Total Units (Credits)</label>
-                <input type="number" className="form-input" value={formData.credits === undefined ? 3 : formData.credits} onChange={e => setFormData({ ...formData, credits: e.target.value === '' ? '' : Number(e.target.value) })} />
+                <input 
+                  type="number" 
+                  step="any"
+                  className="form-input" 
+                  value={formData.credits === undefined ? '' : formData.credits} 
+                  onChange={e => setFormData({ ...formData, credits: e.target.value === '' ? '' : Number(e.target.value) })} 
+                />
               </div>
               <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                 <label className="form-label">Hours per Meeting</label>
-                <select className="form-select" value={formData.hoursPerMeeting || 1.5} onChange={e => setFormData({ ...formData, hoursPerMeeting: Number(e.target.value) })}>
+                <select 
+                  className="form-select" 
+                  value={formData.hoursPerMeeting || 1.5} 
+                  onChange={e => setFormData({ ...formData, hoursPerMeeting: Number(e.target.value) })}
+                >
                   <option value={1}>1.0 Hours</option>
                   <option value={1.5}>1.5 Hours</option>
                   <option value={2}>2.0 Hours</option>
@@ -334,14 +439,42 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                 </select>
               </div>
             </div>
+
             <div style={{ marginBottom: '25px', padding: '14px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input type="checkbox" checked={formData.requiredLab} onChange={e => setFormData({ ...formData, requiredLab: e.target.checked, isFoodLab: e.target.checked ? false : formData.isFoodLab })} style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} /> Requires Computer Laboratory
+                <input 
+                  type="checkbox" 
+                  checked={Boolean(formData.requiredLab)} 
+                  onChange={e => {
+                    const checked = e.target.checked;
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      requiredLab: checked, 
+                      isFoodLab: checked ? false : prev.isFoodLab 
+                    }));
+                  }} 
+                  style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} 
+                /> 
+                Requires Computer Laboratory
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input type="checkbox" checked={formData.isFoodLab} onChange={e => setFormData({ ...formData, isFoodLab: e.target.checked, requiredLab: e.target.checked ? false : formData.requiredLab })} style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} /> Requires Food Laboratory
+                <input 
+                  type="checkbox" 
+                  checked={Boolean(formData.isFoodLab)} 
+                  onChange={e => {
+                    const checked = e.target.checked;
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      isFoodLab: checked, 
+                      requiredLab: checked ? false : prev.requiredLab 
+                    }));
+                  }} 
+                  style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} 
+                /> 
+                Requires Food Laboratory
               </label>
             </div>
+
             <div className="mgmt-modal-actions">
               <button className="mgmt-cancel-btn" onClick={() => setShowModal(false)} disabled={isSaving}>Cancel</button>
               <button className="btn" onClick={handleSave} disabled={isSaving}>

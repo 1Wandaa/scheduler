@@ -260,8 +260,12 @@ const UserManagement = ({ user, onBack }) => {
       </div>
 
       {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ width: '100%', maxWidth: '500px' }}>
+        <div className="modal-overlay" onClick={resetForm}>
+          <div 
+            className="modal-content" 
+            style={{ width: '100%', maxWidth: '500px' }}
+            onClick={e => e.stopPropagation()}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Icon d={NAV_ICONS.users} size={20} />
