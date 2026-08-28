@@ -757,7 +757,6 @@
 .sidebar-toggle-btn,
 .mobile-menu-btn {
   transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
 }
 
 .sidebar-toggle-btn:active,

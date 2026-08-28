@@ -486,7 +486,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                 ⚠️ Data Issues ({result.prescriptions.filter(p => p.isDataIssue).length})
               </h3>
               <p className="section-description">
-                These subjects cannot be scheduled due to missing data (e.g., no eligible professors or rooms). Please fix these in Management before running again.
+                These subjects are missing required data (like a professor or a room). Fix them in Management before running again.
               </p>
               <div className="card-list">
                 {result.prescriptions.filter(p => p.isDataIssue).map((p, idx) => (
@@ -550,7 +550,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                 ⚠️ Could Not Schedule ({result.unscheduled.length})
               </h3>
               <p className="section-description">
-                The following classes could not be scheduled due to specific resource constraints, room occupancies, or faculty workload limits.
+                These classes couldn't be scheduled. Check the details below to see what's blocking each one.
               </p>
               <div className="card-list">
                 {result.unscheduled.map((s, idx) => {
@@ -583,7 +583,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                         </svg>
                         <div>
                           <strong>Reason: </strong>
-                          <span>{s?.reason || 'Insufficient slots or conflict'}</span>
+                          <span>{s?.reason || 'No open slot found'}</span>
                         </div>
                       </div>
 
@@ -593,7 +593,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                           {details.professors && details.professors.length > 0 && (
                             <div>
                               <div className="conflict-group-title">
-                                👨‍🏫 Evaluated Faculty ({details.professors.length})
+                                👨‍🏫 Faculty Checked ({details.professors.length})
                               </div>
                               <div className="conflict-chips-container">
                                 {details.professors.map((p, pIdx) => {
@@ -608,11 +608,11 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                                       </div>
                                       {isMax ? (
                                         <div className="conflict-limit-warning">
-                                          ⚠️ Teaching load reached maximum ({p.currentUnits}/${p.maxUnits} units) — this class requires +{p.neededUnits || 3} units.
+                                          ⚠️ At full load ({p.currentUnits}/{p.maxUnits} units) — needs +{p.neededUnits || 3} more units.
                                         </div>
                                       ) : p.conflicts && p.conflicts.length > 0 ? (
                                         <div className="conflict-schedule-breakdown">
-                                          <div className="conflict-sub-label">Existing class commitments:</div>
+                                          <div className="conflict-sub-label">Already teaching:</div>
                                           <div className="conflict-timeline-list">
                                             {p.conflicts.map((c, cIdx) => {
                                               if (typeof c === 'object') {
@@ -636,7 +636,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                                         </div>
                                       ) : (
                                         <div className="conflict-chip-status available">
-                                          ✓ Faculty has available hours, but room/section was occupied
+                                          ✓ This faculty is free, but all rooms are taken during their open hours
                                         </div>
                                       )}
                                     </div>
@@ -650,7 +650,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                           {details.rooms && details.rooms.length > 0 && (
                             <div>
                               <div className="conflict-group-title">
-                                🚪 Rooms Evaluated ({details.rooms.length})
+                                🚪 Rooms Checked ({details.rooms.length})
                               </div>
                               <div className="conflict-chips-container">
                                 {details.rooms.map((r, rIdx) => {
@@ -664,11 +664,11 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                                       </div>
                                       {hasRestrictions ? (
                                         <div className="conflict-limit-warning">
-                                          🚫 Room restricted for: {r.restrictedProfs.join(', ')}
+                                          🚫 Off-limits for: {r.restrictedProfs.join(', ')}
                                         </div>
                                       ) : hasBusy ? (
                                         <div className="conflict-schedule-breakdown">
-                                          <div className="conflict-sub-label">Room occupied during:</div>
+                                          <div className="conflict-sub-label">Already in use:</div>
                                           <div className="conflict-timeline-list">
                                             {r.busySummary.map((b, bIdx) => {
                                               if (typeof b === 'object') {
@@ -692,7 +692,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                                         </div>
                                       ) : (
                                         <div className="conflict-chip-status available">
-                                          ✓ Room is available during other hours
+                                          ✓ Room is empty — but faculty or section is busy during all its open hours
                                         </div>
                                       )}
                                     </div>
@@ -705,7 +705,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                           {/* Specific Collisions */}
                           {details.specificCollisions && details.specificCollisions.length > 0 && (
                             <div className="conflict-collisions-list">
-                              <strong>⏱️ Specific Slot Collisions Detected:</strong>
+                              <strong>⏱️ Time Slot Conflicts:</strong>
                               <ul>
                                 {details.specificCollisions.slice(0, 4).map((col, cIdx) => (
                                   <li key={cIdx}>{col}</li>
@@ -718,7 +718,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                           {details.sectionConflicts && details.sectionConflicts.length > 0 && (
                             <div>
                               <div className="conflict-group-title">
-                                👥 Section {s?.section?.name || ''} Schedule Overlaps ({details.sectionConflicts.length})
+                                👥 {s?.section?.name || ''} Already Has Classes ({details.sectionConflicts.length})
                               </div>
                               <div className="conflict-timeline-list" style={{ marginTop: '6px' }}>
                                 {details.sectionConflicts.slice(0, 4).map((sc, scIdx) => {

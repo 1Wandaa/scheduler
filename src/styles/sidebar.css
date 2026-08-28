@@ -20,14 +20,12 @@
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
   z-index: 10;
   overflow-y: auto;
-  scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
   border-right: 1px solid rgba(86, 69, 238, 0.15);
   position: sticky;
   top: 0;
-  will-change: transform;
   transform: translateZ(0);
 }
 

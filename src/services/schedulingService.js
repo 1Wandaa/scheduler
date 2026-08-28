@@ -266,11 +266,11 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     if (rawProfPool.length === 0) {
       return {
         success: false,
-        reason: `No eligible faculty found specializing in "${subject?.code || 'this subject'}".`,
+        reason: `No faculty assigned to teach ${subject?.code || 'this subject'}.`,
         details: {
           professors: [],
           rooms: roomPool.map((r) => ({ id: r.id, name: r.name, type: r.type || 'Lecture' })),
-          suggestion: `Assign qualified faculty to teach ${subject?.code || 'this subject'} in Faculty Management.`
+          suggestion: `Go to Faculty Management and assign someone to teach ${subject?.code || 'this subject'}.`
         }
       };
     }
@@ -279,11 +279,11 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       const labType = subject?.requiredLab ? 'Computer Lab' : subject?.isFoodLab ? 'Food Lab' : 'Standard Room';
       return {
         success: false,
-        reason: `No eligible rooms available for ${subject?.code || 'this subject'} (${labType} required).`,
+        reason: `No ${labType.toLowerCase()} available for ${subject?.code || 'this subject'}.`,
         details: {
           professors: rawProfPool.map((p) => ({ id: p.id, name: p.name })),
           rooms: [],
-          suggestion: `Ensure appropriate rooms (${labType}) are configured and available in Room Management.`
+          suggestion: `Add a ${labType.toLowerCase()} in Room Management or check if existing ones are set up correctly.`
         }
       };
     }
@@ -580,14 +580,22 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         .filter((p) => p.status === 'MAX_UNITS')
         .map((p) => `${p.name} (${p.currentUnits}/${p.maxUnits} units)`)
         .join(', ');
+      // Build a short summary of what each maxed professor is currently teaching
+      const teachingSummary = evaluatedProfessors
+        .filter((p) => p.status === 'MAX_UNITS' && p.conflicts?.length > 0)
+        .map((p) => {
+          const classes = p.conflicts.slice(0, 2).map(c => `${c.subjectCode} in ${c.roomName} (${c.day} ${c.time})`).join('; ');
+          return `${p.name} is teaching ${classes}`;
+        })
+        .join('. ');
       return {
         success: false,
-        reason: `Teaching Load Limit: All eligible faculty have reached maximum units (${profLimitSummaries}).`,
+        reason: `All available faculty are at full load (${profLimitSummaries}).${teachingSummary ? ' Currently: ' + teachingSummary + '.' : ''}`,
         details: {
           professors: evaluatedProfessors,
           rooms: evaluatedRooms,
           sectionConflicts: sectionBusySlots,
-          suggestion: `Increase maximum teaching load for ${profNames} in Faculty Management, or assign another qualified faculty member.`
+          suggestion: `Raise the max load for ${profNames} in Faculty Management, or assign a different faculty member.`
         }
       };
     }
@@ -601,15 +609,23 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         .filter((p) => p.status !== 'MAX_UNITS')
         .map((p) => p.name)
         .join(', ');
+      // Build details of busy professors
+      const busyProfDetails = evaluatedProfessors
+        .filter((p) => p.status !== 'MAX_UNITS' && p.conflicts?.length > 0)
+        .map((p) => {
+          const classes = p.conflicts.slice(0, 2).map(c => `${c.subjectCode} in ${c.roomName} (${c.day} ${c.time})`).join('; ');
+          return `${p.name} is teaching ${classes}`;
+        })
+        .join('. ');
 
       return {
         success: false,
-        reason: `Schedule & Load Conflict: ${maxedProfs} reached max load, and ${availableProfs} is fully occupied across room(s): ${roomNames}.`,
+        reason: `${maxedProfs} hit their max load, and ${availableProfs} has no open time slots in ${roomNames}.${busyProfDetails ? ' Currently: ' + busyProfDetails + '.' : ''}`,
         details: {
           professors: evaluatedProfessors,
           rooms: evaluatedRooms,
           sectionConflicts: sectionBusySlots,
-          suggestion: `Free up conflicting time slots for ${availableProfs} or increase load limits for ${maxedProfs}.`
+          suggestion: `Clear up some time slots for ${availableProfs}, or raise load limits for ${maxedProfs}.`
         }
       };
     }
@@ -617,11 +633,11 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     if (!anyProfEligibleForRooms) {
       return {
         success: false,
-        reason: `Room Restriction: ${profNames} is not permitted in room(s): ${roomNames}.`,
+        reason: `${profNames} can't use ${roomNames} — room is restricted to other departments.`,
         details: {
           professors: evaluatedProfessors,
           rooms: evaluatedRooms,
-          suggestion: `Adjust room department permissions in Room Management or add shared rooms.`
+          suggestion: `Update room permissions in Room Management, or add a shared room.`
         }
       };
     }
@@ -629,11 +645,11 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     if (lastValidationError) {
       return {
         success: false,
-        reason: `Validation Rule Conflict: ${lastValidationError}`,
+        reason: `Blocked by a scheduling rule: ${lastValidationError}`,
         details: {
           professors: evaluatedProfessors,
           rooms: evaluatedRooms,
-          suggestion: 'Check constraint settings and manual validation rules.'
+          suggestion: 'Check your constraint settings and try adjusting the rules.'
         }
       };
     }
@@ -641,26 +657,42 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     // Check if room occupancy is the main bottleneck
     const totalRoomSlotsOccupied = evaluatedRooms.reduce((acc, r) => acc + (r.busySummary?.length || 0), 0);
     if (roomPool.length === 1 && totalRoomSlotsOccupied >= 2) {
+      // Show who's using the room
+      const roomOccupants = evaluatedRooms
+        .filter((r) => r.busySummary?.length > 0)
+        .map((r) => {
+          const slots = r.busySummary.slice(0, 3).map(b => `${b.profName || 'someone'} teaches ${b.subjectCode} on ${b.day} ${b.time}`).join('; ');
+          return `${r.name}: ${slots}`;
+        })
+        .join('. ');
       return {
         success: false,
-        reason: `Room Bottleneck: Room "${roomNames}" is fully booked during the available time slots for Section ${section?.name || ''} and Prof. ${profNames}.`,
+        reason: `"${roomNames}" is fully booked — no open slots left for ${section?.name || 'this section'} and ${profNames}.${roomOccupants ? ' Currently used by: ' + roomOccupants + '.' : ''}`,
         details: {
           professors: evaluatedProfessors,
           rooms: evaluatedRooms,
           sectionConflicts: sectionBusySlots,
-          suggestion: `Add an additional ${subject?.isFoodLab ? 'Food Lab' : subject?.requiredLab ? 'Computer Lab' : 'room'} or adjust conflicting class times in "${roomNames}".`
+          suggestion: `Add another ${subject?.isFoodLab ? 'food lab' : subject?.requiredLab ? 'computer lab' : 'room'}, or move some classes out of "${roomNames}".`
         }
       };
     }
 
+    // Build summary of who's busy where
+    const collisionSummary = evaluatedProfessors
+      .filter((p) => p.conflicts?.length > 0)
+      .map((p) => {
+        const classes = p.conflicts.slice(0, 2).map(c => `${c.subjectCode} in ${c.roomName} (${c.day} ${c.time})`).join('; ');
+        return `${p.name} is teaching ${classes}`;
+      })
+      .join('. ');
     return {
       success: false,
-      reason: `Schedule Collision: Prof. ${profNames} and Room ${roomNames} have overlapping classes during Section ${section?.name || ''}'s available periods.`,
+      reason: `${profNames} and ${roomNames} are both busy during ${section?.name || 'this section'}'s free periods.${collisionSummary ? ' Currently: ' + collisionSummary + '.' : ''}`,
       details: {
         professors: evaluatedProfessors,
         rooms: evaluatedRooms,
         sectionConflicts: sectionBusySlots,
-        suggestion: `Review the conflicting schedules listed below and adjust meeting days or times.`
+        suggestion: `Try changing the meeting days or times for the conflicting classes listed below.`
       }
     };
   };
@@ -708,11 +740,11 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     if (placed?.success) {
       placedKeys.add(groupKey);
     } else {
-      let reason = placed?.reason || 'No matching room and professor availability found.';
+      let reason = placed?.reason || 'No open time slot found for any available faculty and room.';
       if (constraints?.respectLabs && group.subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
-        reason = `Requires computer lab, but room "${fixedRoom.name}" does not have computers.`;
+        reason = `This subject needs a computer lab, but "${fixedRoom.name}" doesn't have computers.`;
       } else if (constraints?.respectLabs && group.subject?.isFoodLab && fixedRoom && !fixedRoom.isFoodLab) {
-        reason = `Requires food lab, but room "${fixedRoom.name}" is not a food laboratory.`;
+        reason = `This subject needs a food lab, but "${fixedRoom.name}" isn't one.`;
       }
       unscheduled.push({
         subject: group.subject,
