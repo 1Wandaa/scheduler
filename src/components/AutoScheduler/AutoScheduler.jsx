@@ -89,6 +89,10 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     if (abortRef.current) {
       abortRef.current.abort();
     }
+    setResult({ schedule: [], unscheduled: [], prescriptions: [], error: 'Cancelled by user.', mode: engineMode });
+    setLoading(false);
+    setAiStatus('');
+    setProgress({ percent: 0, placed: 0, total: 0, pass: 0 });
   };
 
   // Run the Targeted Heuristic Engine (Greedy)
@@ -108,36 +112,22 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           setAiStatus('🧠 AI analyzing professor-subject compatibility...');
           aiProfessorMap = await suggestProfessorMatches(professors, activeSemesterSubjects, sections, schedules);
           // Check if cancelled during AI call
-          if (controller.signal.aborted) {
-            setResult({ schedule: [], unscheduled: [], prescriptions: [], error: 'Cancelled by user.', mode: engineMode });
-            abortRef.current = null;
-            setLoading(false);
-            return;
-          }
+          if (controller.signal.aborted) return;
+          
           if (aiProfessorMap) {
             setAiStatus('✅ AI matching complete — starting targeted engine with optimized assignments');
           } else {
             setAiStatus('⚠️ AI matching returned no results — using default matching');
           }
         } catch (aiError) {
-          if (controller.signal.aborted) {
-            setResult({ schedule: [], unscheduled: [], prescriptions: [], error: 'Cancelled by user.', mode: engineMode });
-            abortRef.current = null;
-            setLoading(false);
-            return;
-          }
+          if (controller.signal.aborted) return;
           console.warn('[AI] Pre-processing failed:', aiError);
           setAiStatus('⚠️ AI unavailable — using default matching');
         }
       }
 
       // Check again before starting scheduler
-      if (controller.signal.aborted) {
-        setResult({ schedule: [], unscheduled: [], prescriptions: [], error: 'Cancelled by user.', mode: engineMode });
-        abortRef.current = null;
-        setLoading(false);
-        return;
-      }
+      if (controller.signal.aborted) return;
 
       const constraints = { respectLabs, preventDoubleBooking, aiProfessorMap, scheduleMode };
       const schedulerOptions = {
@@ -200,10 +190,17 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       }
 
     } catch (e) {
-      setResult({ schedule: [], unscheduled: [], prescriptions: [], error: e.message, mode: engineMode });
+      if (!controller.signal.aborted) {
+        setResult({ schedule: [], unscheduled: [], prescriptions: [], error: e.message, mode: engineMode });
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+        }
+        setLoading(false);
+      }
     }
-    abortRef.current = null;
-    setLoading(false);
   };
 
 
