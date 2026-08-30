@@ -156,6 +156,116 @@
 }
 
 /* =========================================
+   ROLE SELECTOR (SIGN UP)
+   ========================================= */
+.role-selector-container {
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+.role-selector-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 8px;
+  letter-spacing: 0.01em;
+}
+
+.role-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.role-option-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: rgba(248, 250, 252, 0.85);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  position: relative;
+  outline: none;
+}
+
+.role-option-card:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  transform: translateY(-1px);
+}
+
+.role-option-card.selected {
+  border-color: var(--accent-primary, #5645EE);
+  background: rgba(86, 69, 238, 0.06);
+  box-shadow: 0 0 0 3px rgba(86, 69, 238, 0.15);
+}
+
+.role-option-card.selected.admin {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.06);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.role-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #e2e8f0;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.role-option-card.selected .role-icon {
+  background: var(--accent-primary, #5645EE);
+  color: #fff;
+}
+
+.role-option-card.selected.admin .role-icon {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+}
+
+.role-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.role-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.role-option-card.selected .role-title {
+  color: var(--accent-primary, #5645EE);
+}
+
+.role-option-card.selected.admin .role-title {
+  color: #dc2626;
+}
+
+.role-desc {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =========================================
    FORM INPUT GROUPS (ENHANCED)
    ========================================= */
 .input-group {

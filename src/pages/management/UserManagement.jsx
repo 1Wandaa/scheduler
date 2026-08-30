@@ -24,7 +24,7 @@ const UserManagement = ({ user, onBack }) => {
   const [activeTab, setActiveTab] = useState('staff'); // 'staff' or 'student'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [formData, setFormData] = useState({ name: '', username: '', role: 'Faculty', password: '' });
+  const [formData, setFormData] = useState({ name: '', username: '', role: 'Admin', password: '' });
 
   useEffect(() => {
     const initializeUsers = async () => {
@@ -48,7 +48,7 @@ const UserManagement = ({ user, onBack }) => {
     const query = searchQuery.toLowerCase();
     return users.filter(u => {
       // Tab filter
-      const isStudent = u.role.toLowerCase() === 'student';
+      const isStudent = (u.role || '').toLowerCase() === 'student' || (u.role || '').toLowerCase() === 'user';
       if (activeTab === 'staff' && isStudent) return false;
       if (activeTab === 'student' && !isStudent) return false;
 
@@ -105,7 +105,7 @@ const UserManagement = ({ user, onBack }) => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', username: '', role: 'Faculty', password: '' });
+    setFormData({ name: '', username: '', role: 'Admin', password: '' });
     setEditingUser(null);
     setIsModalOpen(false);
   };
@@ -119,7 +119,7 @@ const UserManagement = ({ user, onBack }) => {
     setFormData({ 
       name: user.name || '', 
       username: user.username || '', 
-      role: user.role || 'Faculty', 
+      role: user.role || 'Admin', 
       password: user.password || '' 
     });
     setEditingUser(user);
@@ -225,7 +225,7 @@ const UserManagement = ({ user, onBack }) => {
               color: activeTab === 'staff' ? 'var(--accent-primary)' : 'var(--text-muted)',
               borderBottom: activeTab === 'staff' ? '2px solid var(--accent-primary)' : 'none'
             }}>
-            Admins & Staff
+            Administrators & Staff
           </div>
           <div 
             onClick={() => setActiveTab('student')}
@@ -236,7 +236,7 @@ const UserManagement = ({ user, onBack }) => {
               color: activeTab === 'student' ? 'var(--accent-primary)' : 'var(--text-muted)',
               borderBottom: activeTab === 'student' ? '2px solid var(--accent-primary)' : 'none'
             }}>
-            Students
+            Users & Students
           </div>
         </div>
 
@@ -317,6 +317,7 @@ const UserManagement = ({ user, onBack }) => {
                     onChange={e => setFormData({ ...formData, role: e.target.value })}
                   >
                     <option value="Admin">Admin</option>
+                    <option value="User">User</option>
                     <option value="Department Head">Department Head</option>
                     <option value="Faculty">Faculty</option>
                     <option value="Student">Student</option>

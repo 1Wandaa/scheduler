@@ -58,6 +58,7 @@ const Login = ({ onLogin }) => {
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
   const [isSignUp, setIsSignUp] = useState(false);
+  const [signUpRole, setSignUpRole] = useState('User'); // 'User' | 'Admin'
 
   // Login fields
   const [username, setUsername] = useState('');
@@ -129,6 +130,64 @@ const Login = ({ onLogin }) => {
       const dummyEmail = `${cleanUsername}@gmail.com`;
 
       if (isSignUp) {
+        if (signUpRole === 'Admin') {
+          if (!fullName.trim()) {
+            setError('Full name is required.');
+            setLoading(false);
+            return;
+          }
+          if (!username.trim()) {
+            setError('Username is required.');
+            setLoading(false);
+            return;
+          }
+          if (!password.trim() || password.length < 6) {
+            setError('Password must be at least 6 characters.');
+            setLoading(false);
+            return;
+          }
+
+          // Check if username already exists in Firestore (case-insensitive)
+          const existingDoc = await findUserDocument(username);
+          if (existingDoc) {
+            setError('That username is already taken in our database. Please choose another.');
+            setLoading(false);
+            return;
+          }
+
+          // 1. Create user identity in Firebase Auth
+          const userCredential = await createUserWithEmailAndPassword(auth, dummyEmail, password);
+
+          // 2. Save Admin user to Firestore using auth UID
+          await setDoc(doc(db, 'users', userCredential.user.uid), {
+            username: cleanUsername,
+            name: fullName.trim(),
+            age: parseInt(age) || null,
+            gender: gender || null,
+            role: 'Admin',
+          });
+
+          // 3. Prevent auto-login by signing out immediately
+          await signOut(auth);
+
+          // 4. Switch to login view and show success message
+          setIsSignUp(false);
+          setSignUpStep(1);
+          setUsername('');
+          setPassword('');
+          setFullName('');
+          setAge('');
+          setGender('');
+          setStudentId('');
+          setDepartment('');
+          setYearLevel('');
+          setSection('');
+          setSuccessMsg('Admin account created successfully! You can now log in.');
+          setLoading(false);
+          return;
+        }
+
+        // USER / STUDENT SIGNUP FLOW
         // Validate step 2 fields
         if (!age || parseInt(age) <= 0) {
           setError('Please enter a valid age.');
@@ -184,10 +243,10 @@ const Login = ({ onLogin }) => {
         // 2. Save user to Firestore using auth UID as doc ID (enables secure Firestore rules)
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           username: cleanUsername,
-          name: fullName,
+          name: fullName.trim(),
           age: parseInt(age) || null,
           gender: gender,
-          role: 'Student',
+          role: 'User',
           studentId: studentId.trim(),
           department: department,
           program: derivedProgram,
@@ -210,7 +269,7 @@ const Login = ({ onLogin }) => {
         setDepartment('');
         setYearLevel('');
         setSection('');
-        setSuccessMsg('Account created successfully! You can now log in.');
+        setSuccessMsg('User account created successfully! You can now log in.');
         setLoading(false);
 
       } else {
@@ -332,7 +391,7 @@ const Login = ({ onLogin }) => {
     setLoading(false);
   };
 
-  // Validate step 1 before moving to step 2
+  // Validate step 1 before moving to step 2 (for User role)
   const canProceedToStep2 = fullName.trim() && age && gender && username.trim() && password.trim() && password.length >= 6;
 
   const handleNextStep = () => {
@@ -362,13 +421,64 @@ const Login = ({ onLogin }) => {
 
   const renderSignUpStep1 = () => (
     <>
-      <div className="signup-step-indicator">
-        <div className="step-dot active">1</div>
-        <div className="step-line"></div>
-        <div className="step-dot">2</div>
-      </div>
-      <p className="step-label">Personal &amp; Account Information</p>
+      {/* Role Selection */}
+      <div className="role-selector-container">
+        <label className="role-selector-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          Select Role
+        </label>
+        <div className="role-options-grid">
+          <button
+            type="button"
+            className={`role-option-card ${signUpRole === 'User' ? 'selected' : ''}`}
+            onClick={() => { setSignUpRole('User'); setSignUpStep(1); setError(''); }}
+          >
+            <div className="role-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </div>
+            <div className="role-text">
+              <span className="role-title">User</span>
+              <span className="role-desc">View schedules</span>
+            </div>
+          </button>
 
+          <button
+            type="button"
+            className={`role-option-card admin ${signUpRole === 'Admin' ? 'selected' : ''}`}
+            onClick={() => { setSignUpRole('Admin'); setSignUpStep(1); setError(''); }}
+          >
+            <div className="role-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <div className="role-text">
+              <span className="role-title">Admin</span>
+              <span className="role-desc">Full access</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {signUpRole === 'User' ? (
+        <>
+          <div className="signup-step-indicator">
+            <div className="step-dot active">1</div>
+            <div className="step-line"></div>
+            <div className="step-dot">2</div>
+          </div>
+          <p className="step-label">Personal &amp; Account Information</p>
+        </>
+      ) : (
+        <p className="step-label" style={{ marginBottom: '14px' }}>Administrator Account Details</p>
+      )}
+
+      {/* Full Name */}
       <div className="input-group">
         <label>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
@@ -383,14 +493,15 @@ const Login = ({ onLogin }) => {
         />
       </div>
 
+      {/* Age & Gender */}
       <div className="signup-row">
         <div className="input-group" style={{ flex: 1 }}>
           <label>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-            Age
+            Age {signUpRole === 'Admin' && <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(Optional)</span>}
           </label>
           <input
-            required
+            required={signUpRole === 'User'}
             type="number"
             min="1"
             value={age}
@@ -402,15 +513,15 @@ const Login = ({ onLogin }) => {
         <div className="input-group" style={{ flex: 1 }}>
           <label>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-            Gender
+            Gender {signUpRole === 'Admin' && <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>(Optional)</span>}
           </label>
           <select
-            required
+            required={signUpRole === 'User'}
             value={gender}
             onChange={e => setGender(e.target.value)}
             style={{ color: !gender ? '#757575' : 'inherit' }}
           >
-            <option value="" disabled hidden>Select Gender</option>
+            <option value="" disabled={signUpRole === 'User'} hidden={signUpRole === 'User'}>Select Gender</option>
             <option value="Male" style={{ color: '#000' }}>Male</option>
             <option value="Female" style={{ color: '#000' }}>Female</option>
             <option value="Other" style={{ color: '#000' }}>Other</option>
@@ -418,6 +529,7 @@ const Login = ({ onLogin }) => {
         </div>
       </div>
 
+      {/* Username */}
       <div className="input-group">
         <label>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><circle cx="12" cy="12" r="4"></circle><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path></svg>
@@ -432,6 +544,7 @@ const Login = ({ onLogin }) => {
         />
       </div>
 
+      {/* Password */}
       <div className="input-group">
         <label>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
@@ -471,16 +584,37 @@ const Login = ({ onLogin }) => {
         )}
       </div>
 
-      <button
-        type="button"
-        className="btn-login"
-        style={{ marginTop: '10px' }}
-        onClick={handleNextStep}
-        disabled={!canProceedToStep2}
-      >
-        Next — Academic Info
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '8px', verticalAlign: 'middle' }}><path d="m9 18 6-6-6-6" /></svg>
-      </button>
+      {signUpRole === 'Admin' ? (
+        <button
+          type="submit"
+          className="btn-login"
+          style={{ marginTop: '10px', background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}
+          disabled={loading || !fullName.trim() || !username.trim() || !password.trim() || password.length < 6}
+        >
+          {loading ? (
+            <>
+              <span className="btn-spinner"></span>
+              Creating Admin Account...
+            </>
+          ) : (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+              Create Admin Account
+            </>
+          )}
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="btn-login"
+          style={{ marginTop: '10px' }}
+          onClick={handleNextStep}
+          disabled={!canProceedToStep2}
+        >
+          Next — Academic Info
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '8px', verticalAlign: 'middle' }}><path d="m9 18 6-6-6-6" /></svg>
+        </button>
+      )}
     </>
   );
 
@@ -597,7 +731,7 @@ const Login = ({ onLogin }) => {
               Creating Account...
             </>
           ) : (
-            'Create Account'
+            'Create User Account'
           )}
         </button>
       </div>
@@ -635,7 +769,11 @@ const Login = ({ onLogin }) => {
           {isSignUp ? (
             <>
               <h2 className="login-card-title">Create Account</h2>
-              <p className="login-card-subtitle">Register as a student to get started</p>
+              <p className="login-card-subtitle">
+                {signUpRole === 'Admin' 
+                  ? 'Register as an Administrator for full system access' 
+                  : 'Register as a User to view schedules & classes'}
+              </p>
             </>
           ) : (
             <div style={{ height: '12px' }}></div>
@@ -754,6 +892,7 @@ const Login = ({ onLogin }) => {
               onClick={() => {
                 setIsSignUp(!isSignUp);
                 setError('');
+                setSignUpRole('User');
                 setSignUpStep(1);
                 setFullName('');
                 setAge('');
