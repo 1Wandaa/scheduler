@@ -436,6 +436,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                                     : ''
                     }
                     semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "First Semester, School Year 2026 - 2027"}
+                    user={user}
                 />
             </div>
 

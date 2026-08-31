@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig } from '../../config/constants';
 import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange } from '../../utils/scheduleUtils';
+import { exportGridToWord, exportGridToExcel } from '../../utils/scheduleExportUtils';
 import '../../styles/ScheduleTable.css';
 
 // Department color palette
@@ -93,7 +94,8 @@ const ScheduleTable = React.memo(function ScheduleTable({
   isDeleteMode,
   programName,
   targetDepartment,
-  semesterInfo
+  semesterInfo,
+  user
 }) {
   const { confirm } = useGlobalDialog();
 
@@ -578,13 +580,21 @@ const ScheduleTable = React.memo(function ScheduleTable({
   useEffect(() => {
     const onExportImage = () => handleExportImage();
     const onExportPrint = () => handleExportPrint();
+    const onExportWord = () => exportGridToWord(containerRef.current, user);
+    const onExportExcel = () => exportGridToExcel(containerRef.current, user);
+
     window.addEventListener('export-ordinary-image', onExportImage);
     window.addEventListener('export-ordinary-print', onExportPrint);
+    window.addEventListener('export-ordinary-word', onExportWord);
+    window.addEventListener('export-ordinary-excel', onExportExcel);
+
     return () => {
       window.removeEventListener('export-ordinary-image', onExportImage);
       window.removeEventListener('export-ordinary-print', onExportPrint);
+      window.removeEventListener('export-ordinary-word', onExportWord);
+      window.removeEventListener('export-ordinary-excel', onExportExcel);
     };
-  }, [handleExportImage, handleExportPrint]);
+  }, [handleExportImage, handleExportPrint, user]);
 
   // Fullscreen: lock body scroll when fullscreen
   useEffect(() => {

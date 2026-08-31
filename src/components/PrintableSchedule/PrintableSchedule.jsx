@@ -65,11 +65,11 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
         "10:00 - 11:00", // index 3
         "11:00 - 12:00", // index 4
         "12:00 - 1:00",  // index 5
-        "1:00 - 2:00",   // index 7
-        "2:00 - 3:00",   // index 8
-        "3:00 - 4:00",   // index 9
-        "4:00 - 5:00",   // index 10
-        "5:00 - 6:00"    // index 11
+        "1:00 - 2:00",   // index 6
+        "2:00 - 3:00",   // index 7
+        "3:00 - 4:00",   // index 8
+        "4:00 - 5:00",   // index 9
+        "5:00 - 6:00"    // index 10
     ];
 
     const scheduleRowMap = useMemo(() => {
@@ -160,7 +160,6 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
                 </thead>
                 <tbody>
                     {fixedTimeSlots.map((timeLabel, index) => {
-
                         return (
                             <tr key={timeLabel}>
                                 <td className="time-cell bold">{timeLabel}</td>
