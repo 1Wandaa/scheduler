@@ -80,14 +80,20 @@ export function useAuthUser() {
           const emailPrefix = firebaseUser.email ? firebaseUser.email.split('@')[0] : 'user';
           let targetDoc = null;
 
-          // 1. Try direct fetch by UID first (standard for all registered accounts)
-          try {
-            const uidSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
-            if (uidSnap.exists()) {
-              targetDoc = uidSnap;
+          // 1. Try direct fetch by UID first (with retries to handle any replication or creation latency)
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              const uidSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
+              if (uidSnap.exists()) {
+                targetDoc = uidSnap;
+                break;
+              }
+            } catch (uidErr) {
+              console.warn('Direct UID fetch in auth observer failed:', uidErr);
             }
-          } catch (uidErr) {
-            console.warn('Direct UID fetch in auth observer failed:', uidErr);
+            if (attempt < 2) {
+              await new Promise((resolve) => setTimeout(resolve, 300));
+            }
           }
 
           // 2. Fallback to username search if UID lookup returned nothing
@@ -98,25 +104,44 @@ export function useAuthUser() {
               searchTargets.push(storedUsername);
             }
 
-            const q = query(collection(db, 'users'), where('username', 'in', searchTargets));
-            const fetchPromise = getDocs(q);
-            const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('Firestore request timed out')), PROFILE_FETCH_TIMEOUT);
-            });
+            for (let attempt = 0; attempt < 3; attempt++) {
+              try {
+                const q = query(collection(db, 'users'), where('username', 'in', searchTargets));
+                const fetchPromise = getDocs(q);
+                const timeoutPromise = new Promise((_, reject) => {
+                  setTimeout(() => reject(new Error('Firestore request timed out')), PROFILE_FETCH_TIMEOUT);
+                });
 
-            const snapshot = await Promise.race([fetchPromise, timeoutPromise]);
+                const snapshot = await Promise.race([fetchPromise, timeoutPromise]);
 
-            if (!snapshot.empty) {
-              targetDoc = snapshot.docs[0];
-              if (storedUsername) {
-                const exactMatches = snapshot.docs.filter((d) => d.data().username === storedUsername);
-                if (exactMatches.length > 0) {
-                  const adminMatch = exactMatches.find((d) => {
-                    const role = d.data().role || '';
-                    return role === 'Admin' || role === 'Department Head';
+                if (!snapshot.empty) {
+                  const cleanEmailPrefix = emailPrefix.replace(/^@+/, '').toLowerCase().trim();
+                  const cleanStored = (storedUsername || '').replace(/^@+/, '').toLowerCase().trim();
+
+                  const matchingDocs = snapshot.docs.filter((d) => {
+                    const u = (d.data().username || '').replace(/^@+/, '').toLowerCase().trim();
+                    return u === cleanEmailPrefix || (cleanStored && u === cleanStored);
                   });
-                  targetDoc = adminMatch || exactMatches[0];
+
+                  const pool = matchingDocs.length > 0 ? matchingDocs : snapshot.docs;
+
+                  // 1. Prefer doc with matching auth UID
+                  const uidMatch = pool.find((d) => d.id === firebaseUser.uid || d.data().id === firebaseUser.uid);
+
+                  // 2. Prefer Admin / Staff role if duplicates exist
+                  const adminMatch = pool.find((d) => {
+                    const role = (d.data().role || '').toLowerCase();
+                    return role === 'admin' || role === 'department head' || role === 'faculty';
+                  });
+
+                  targetDoc = uidMatch || adminMatch || pool[0];
+                  break;
                 }
+              } catch (qErr) {
+                console.warn('Username query in auth observer failed:', qErr);
+              }
+              if (attempt < 2) {
+                await new Promise((resolve) => setTimeout(resolve, 300));
               }
             }
           }
@@ -125,24 +150,44 @@ export function useAuthUser() {
             const userData = targetDoc.data();
             setUser({
               ...userData,
+              id: targetDoc.id,
               name: userData.name || emailPrefix,
               role: userData.role || 'User',
               username: userData.username || emailPrefix,
             });
           } else {
-            // Auth exists but no Firestore profile - create one
-            const newProfile = { username: emailPrefix, name: emailPrefix, role: 'Student' };
-            await setDoc(doc(db, 'users', firebaseUser.uid), newProfile);
-            setUser(newProfile);
+            // Check if this is a Google provider login needing an initial profile
+            const isGoogleUser = firebaseUser.providerData?.some((p) => p.providerId === 'google.com');
+            if (isGoogleUser) {
+              const newProfile = {
+                id: firebaseUser.uid,
+                username: firebaseUser.email || emailPrefix,
+                name: firebaseUser.displayName || emailPrefix,
+                role: 'Student'
+              };
+              await setDoc(doc(db, 'users', firebaseUser.uid), newProfile, { merge: true });
+              setUser(newProfile);
+            } else {
+              // For password auth where doc might still be writing, set safe state without overwriting Firestore
+              const stored = localStorage.getItem('smartsched_username') || emailPrefix;
+              setUser({
+                id: firebaseUser.uid,
+                name: firebaseUser.displayName || stored,
+                username: stored,
+                role: 'User',
+                email: firebaseUser.email,
+              });
+            }
           }
         } catch (error) {
           console.error('Error restoring session:', error);
           const emailPrefix = firebaseUser.email ? firebaseUser.email.split('@')[0] : 'User';
           const stored = localStorage.getItem('smartsched_username') || emailPrefix;
           setUser({
+            id: firebaseUser.uid,
             name: firebaseUser.displayName || stored,
             username: stored,
-            role: 'Student',
+            role: 'User',
             email: firebaseUser.email,
           });
         }

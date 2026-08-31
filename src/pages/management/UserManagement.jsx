@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { db, firebaseConfig } from '../../config/firebase';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, onSnapshot, doc, getDocs, writeBatch, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDocs, writeBatch, setDoc, query, where } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import UserTable from '../../components/UserTable/UserTable';
@@ -25,6 +25,8 @@ const UserManagement = ({ user, onBack }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({ name: '', username: '', role: 'Admin', password: '' });
+  const [isSaving, setIsSaving] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     const initializeUsers = async () => {
@@ -105,6 +107,7 @@ const UserManagement = ({ user, onBack }) => {
   };
 
   const resetForm = () => {
+    if (isSaving) return;
     setFormData({ name: '', username: '', role: 'Admin', password: '' });
     setEditingUser(null);
     setIsModalOpen(false);
@@ -127,59 +130,117 @@ const UserManagement = ({ user, onBack }) => {
   };
 
   const handleSaveUser = async () => {
-    if (!formData.name || !formData.username || !formData.role || !formData.password) {
-      toast.warning('Please fill in all fields.');
+    if (isSubmittingRef.current || isSaving) return;
+
+    if (!formData.name?.trim() || !formData.username?.trim() || !formData.role?.trim() || (!editingUser && !formData.password?.trim())) {
+      toast.warning('Please fill in all required fields.');
       return;
     }
-    let id = editingUser ? editingUser.id : null;
+
+    if (!editingUser && formData.password.trim().length < 6) {
+      toast.warning('Password must be at least 6 characters.');
+      return;
+    }
+
+    isSubmittingRef.current = true;
+    setIsSaving(true);
+    let secondaryApp = null;
+    const toastId = toast.loading(editingUser ? 'Updating user...' : 'Saving user...');
+
     try {
-      const toastId = toast.loading('Saving user...');
+      let id = editingUser ? editingUser.id : null;
+      const cleanUsername = formData.username.replace('@', '').toLowerCase().trim();
+      const dummyEmail = `${cleanUsername}@gmail.com`;
+
+      const allUsersSnap = await getDocs(collection(db, 'users'));
 
       if (!editingUser) {
-        // Adding a new user
-        const cleanUsername = formData.username.replace('@', '').toLowerCase();
-        const dummyEmail = `${cleanUsername}@gmail.com`;
-        
-        // We use a secondary app so we don't accidentally log out the admin
-        const secondaryApp = initializeApp(firebaseConfig, `SecondaryApp_${Date.now()}`);
+        // Pre-check if username already exists in Firestore (thorough case & @ check)
+        const duplicate = allUsersSnap.docs.find(d => {
+          const docU = (d.data().username || '').replace(/^@+/, '').toLowerCase().trim();
+          return docU === cleanUsername;
+        });
+        if (duplicate) {
+          const existingRole = duplicate.data().role || 'User';
+          throw new Error(`The username '${formData.username}' is already registered as '${existingRole}'. Please use a different username or edit the existing account.`);
+        }
+
+        // Adding a new user via collision-proof secondary app name
+        const secondaryAppName = `SecondaryApp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
         const secondaryAuth = getAuth(secondaryApp);
         
         try {
-          const userCredential = await createUserWithEmailAndPassword(secondaryAuth, dummyEmail, formData.password);
+          const userCredential = await createUserWithEmailAndPassword(secondaryAuth, dummyEmail, formData.password.trim());
           id = userCredential.user.uid;
         } catch (authErr) {
-          await deleteApp(secondaryApp);
           throw new Error("Failed to create auth account: " + authErr.message);
         }
-        await deleteApp(secondaryApp);
+      } else {
+        // Check if new username conflicts with a different user
+        const duplicate = allUsersSnap.docs.find(d => {
+          if (d.id === editingUser.id) return false;
+          const docU = (d.data().username || '').replace(/^@+/, '').toLowerCase().trim();
+          return docU === cleanUsername;
+        });
+        if (duplicate) {
+          throw new Error(`The username '${formData.username}' is already in use by another account.`);
+        }
       }
 
       await setDoc(doc(db, 'users', id), {
         id,
-        name: formData.name,
-        username: formData.username,
+        name: formData.name.trim(),
+        username: formData.username.trim(),
         role: formData.role,
         password: formData.password
+      }, { merge: true });
+
+      // If any legacy duplicate documents exist with the same clean username, sync their role too
+      const otherDuplicates = allUsersSnap.docs.filter(d => {
+        if (d.id === id) return false;
+        const docU = (d.data().username || '').replace(/^@+/, '').toLowerCase().trim();
+        return docU === cleanUsername;
       });
+      for (const dupDoc of otherDuplicates) {
+        await setDoc(doc(db, 'users', dupDoc.id), {
+          role: formData.role,
+          name: formData.name.trim(),
+          username: formData.username.trim()
+        }, { merge: true });
+      }
 
       if (editingUser) {
         logActivity({
           user,
           action: LOG_ACTIONS.UPDATE_USER,
-          details: `Updated user: ${formData.name} (@${formData.username}) as ${formData.role}`
+          details: `Updated user: ${formData.name.trim()} (${formData.username.trim()}) as ${formData.role}`
         });
       } else {
         logActivity({
           user,
           action: LOG_ACTIONS.ADD_USER,
-          details: `Added new user: ${formData.name} (@${formData.username}) as ${formData.role}`
+          details: `Added new user: ${formData.name.trim()} (${formData.username.trim()}) as ${formData.role}`
         });
       }
 
       toast.success('Saved!', { id: toastId });
-      resetForm();
+      setFormData({ name: '', username: '', role: 'Admin', password: '' });
+      setEditingUser(null);
+      setIsModalOpen(false);
     } catch (err) {
-      toast.error(err.message);
+      console.error("Error saving user: ", err);
+      toast.error(err.message, { id: toastId });
+    } finally {
+      if (secondaryApp) {
+        try {
+          await deleteApp(secondaryApp);
+        } catch (delErr) {
+          console.warn('Error deleting secondary app:', delErr);
+        }
+      }
+      setIsSaving(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -342,11 +403,29 @@ const UserManagement = ({ user, onBack }) => {
             </div>
 
             <div className="mgmt-modal-actions">
-              <button onClick={resetForm} className="mgmt-cancel-btn">
+              <button 
+                type="button"
+                onClick={resetForm} 
+                className="mgmt-cancel-btn"
+                disabled={isSaving}
+              >
                 Cancel
               </button>
-              <button onClick={handleSaveUser} className="btn">
-                {editingUser ? 'Update User' : 'Save User'}
+              <button 
+                type="button"
+                onClick={handleSaveUser} 
+                className="btn"
+                disabled={isSaving}
+                style={{ opacity: isSaving ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              >
+                {isSaving ? (
+                  <>
+                    <span className="btn-spinner" style={{ width: '14px', height: '14px' }}></span>
+                    {editingUser ? 'Updating...' : 'Saving...'}
+                  </>
+                ) : (
+                  editingUser ? 'Update User' : 'Save User'
+                )}
               </button>
             </div>
           </div>

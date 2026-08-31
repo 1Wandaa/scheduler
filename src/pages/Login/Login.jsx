@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { auth, db } from '../../config/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import React, { useState, useEffect, useRef } from 'react';
+import { auth, db, firebaseConfig } from '../../config/firebase';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, getDoc, setDoc, doc, onSnapshot } from 'firebase/firestore';
 
 // Department → Program mapping (must match the 'program' field stored in Firestore sections)
@@ -26,9 +27,9 @@ const YEAR_LEVELS = [
   { value: 4, label: '4th Year' },
 ];
 
-const findUserDocument = async (rawUsername) => {
+const findUserDocument = async (rawUsername, targetUid = null) => {
   if (!rawUsername) return undefined;
-  const cleanU = rawUsername.replace('@', '').toLowerCase().trim();
+  const cleanU = rawUsername.replace(/^@+/, '').toLowerCase().trim();
   
   // Try common variations via indexed query (max 10 'in' values)
   const variations = Array.from(new Set([
@@ -45,12 +46,37 @@ const findUserDocument = async (rawUsername) => {
   const q = query(collection(db, 'users'), where('username', 'in', variations));
   const snap = await getDocs(q);
   
-  const match = snap.docs.find(d => {
-    const docU = d.data().username || '';
-    return docU.replace('@', '').toLowerCase().trim() === cleanU;
+  let matches = snap.docs.filter(d => {
+    const docU = (d.data().username || '').replace(/^@+/, '').toLowerCase().trim();
+    return docU === cleanU;
   });
 
-  return match || undefined;
+  if (matches.length === 0) {
+    // Broader fallback
+    const allSnap = await getDocs(collection(db, 'users'));
+    matches = allSnap.docs.filter(d => {
+      const docU = (d.data().username || '').replace(/^@+/, '').toLowerCase().trim();
+      return docU === cleanU;
+    });
+  }
+
+  if (matches.length === 0) return undefined;
+
+  // 1. If targetUid is provided, prioritize the document matching this Auth UID
+  if (targetUid) {
+    const uidMatch = matches.find(d => d.id === targetUid || d.data().id === targetUid);
+    if (uidMatch) return uidMatch;
+  }
+
+  // 2. Prioritize Admin / Staff role if duplicates exist with different roles
+  const adminMatch = matches.find(d => {
+    const role = (d.data().role || '').toLowerCase();
+    return role === 'admin' || role === 'department head' || role === 'faculty';
+  });
+
+  if (adminMatch) return adminMatch;
+
+  return matches[0];
 };
 
 const Login = ({ onLogin }) => {
@@ -84,6 +110,7 @@ const Login = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [signUpStep, setSignUpStep] = useState(1); // 1 = personal, 2 = academic
+  const isSubmittingRef = useRef(false);
 
   // Real-time listener for sections from Firestore
   useEffect(() => {
@@ -121,29 +148,31 @@ const Login = ({ onLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setError('');
     setSuccessMsg('');
     setLoading(true);
 
+    let secondaryApp = null;
     try {
-      const cleanUsername = username.replace('@', '').toLowerCase();
+      const cleanUsername = username.replace('@', '').toLowerCase().trim();
       const dummyEmail = `${cleanUsername}@gmail.com`;
 
       if (isSignUp) {
-        if (signUpRole === 'Admin') {
+        const selectedRole = signUpRole === 'Admin' ? 'Admin' : 'User';
+
+        if (selectedRole === 'Admin') {
           if (!fullName.trim()) {
             setError('Full name is required.');
-            setLoading(false);
             return;
           }
           if (!username.trim()) {
             setError('Username is required.');
-            setLoading(false);
             return;
           }
           if (!password.trim() || password.length < 6) {
             setError('Password must be at least 6 characters.');
-            setLoading(false);
             return;
           }
 
@@ -151,15 +180,20 @@ const Login = ({ onLogin }) => {
           const existingDoc = await findUserDocument(username);
           if (existingDoc) {
             setError('That username is already taken in our database. Please choose another.');
-            setLoading(false);
             return;
           }
 
-          // 1. Create user identity in Firebase Auth
-          const userCredential = await createUserWithEmailAndPassword(auth, dummyEmail, password);
+          // Use a secondary Firebase app so we do not trigger onAuthStateChanged
+          // on the primary auth instance before writing the Firestore document.
+          const secondaryAppName = `SecondaryApp_signup_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+          const secondaryAuth = getAuth(secondaryApp);
 
-          // 2. Save Admin user to Firestore using auth UID
+          const userCredential = await createUserWithEmailAndPassword(secondaryAuth, dummyEmail, password);
+
+          // Save Admin user to Firestore using auth UID
           await setDoc(doc(db, 'users', userCredential.user.uid), {
+            id: userCredential.user.uid,
             username: cleanUsername,
             name: fullName.trim(),
             age: parseInt(age) || null,
@@ -167,10 +201,7 @@ const Login = ({ onLogin }) => {
             role: 'Admin',
           });
 
-          // 3. Prevent auto-login by signing out immediately
-          await signOut(auth);
-
-          // 4. Switch to login view and show success message
+          // Switch to login view and show success message
           setIsSignUp(false);
           setSignUpStep(1);
           setUsername('');
@@ -183,7 +214,6 @@ const Login = ({ onLogin }) => {
           setYearLevel('');
           setSection('');
           setSuccessMsg('Admin account created successfully! You can now log in.');
-          setLoading(false);
           return;
         }
 
@@ -191,57 +221,54 @@ const Login = ({ onLogin }) => {
         // Validate step 2 fields
         if (!age || parseInt(age) <= 0) {
           setError('Please enter a valid age.');
-          setLoading(false);
           return;
         }
         if (!gender) {
           setError('Please select a gender.');
-          setLoading(false);
           return;
         }
         if (!studentId.trim()) {
           setError('Student ID is required.');
-          setLoading(false);
           return;
         }
         if (!department) {
           setError('Please select a department.');
-          setLoading(false);
           return;
         }
         if (!yearLevel) {
           setError('Please select a year level.');
-          setLoading(false);
           return;
         }
         if (!section) {
           setError('Please select a section.');
-          setLoading(false);
           return;
         }
 
-        // 0. Check if username already exists in Firestore (case-insensitive)
+        // Check if username already exists in Firestore (case-insensitive)
         const existingDoc = await findUserDocument(username);
         if (existingDoc) {
           setError('That username is already taken in our database. Please choose another.');
-          setLoading(false);
           return;
         }
 
-        // 0.5. Check if Student ID already exists
+        // Check if Student ID already exists
         const studentIdQuery = query(collection(db, 'users'), where('studentId', '==', studentId.trim()));
         const studentIdSnap = await getDocs(studentIdQuery);
         if (!studentIdSnap.empty) {
           setError('An account with this Student ID already exists.');
-          setLoading(false);
           return;
         }
 
-        // 1. Create user identity in Firebase Auth
-        const userCredential = await createUserWithEmailAndPassword(auth, dummyEmail, password);
+        // Use a secondary Firebase app for clean sign-up without observer clobbering
+        const secondaryAppName = `SecondaryApp_signup_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+        const secondaryAuth = getAuth(secondaryApp);
 
-        // 2. Save user to Firestore using auth UID as doc ID (enables secure Firestore rules)
+        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, dummyEmail, password);
+
+        // Save user to Firestore using auth UID as doc ID
         await setDoc(doc(db, 'users', userCredential.user.uid), {
+          id: userCredential.user.uid,
           username: cleanUsername,
           name: fullName.trim(),
           age: parseInt(age) || null,
@@ -254,10 +281,7 @@ const Login = ({ onLogin }) => {
           section: section,
         });
 
-        // 3. Prevent auto-login by signing out immediately
-        await signOut(auth);
-        
-        // 4. Switch to login view and show success message
+        // Switch to login view and show success message
         setIsSignUp(false);
         setSignUpStep(1);
         setUsername('');
@@ -270,43 +294,45 @@ const Login = ({ onLogin }) => {
         setYearLevel('');
         setSection('');
         setSuccessMsg('User account created successfully! You can now log in.');
-        setLoading(false);
 
       } else {
-        // LOGIN FLOW (Existing)
+        // LOGIN FLOW
         let firestoreUserDoc = null;
 
-        // Authenticate via Firebase Auth only - no plaintext password fallback
+        // Authenticate via Firebase Auth
         const userCredential = await signInWithEmailAndPassword(auth, dummyEmail, password);
 
-        // After successful auth, fetch the user doc directly by UID first
+        // After successful auth, fetch user doc by UID first (with short retry for replication lag)
         if (userCredential?.user?.uid) {
-          try {
-            const userDocSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
-            if (userDocSnap.exists()) {
-              firestoreUserDoc = userDocSnap;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              const userDocSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
+              if (userDocSnap.exists()) {
+                firestoreUserDoc = userDocSnap;
+                break;
+              }
+            } catch (fetchErr) {
+              console.warn('Could not fetch user by uid:', fetchErr);
             }
-          } catch (fetchErr) {
-            console.warn('Could not fetch user by uid:', fetchErr);
+            if (attempt < 2) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
           }
         }
 
         // Fallback to username query if not found by UID
         if (!firestoreUserDoc) {
-          firestoreUserDoc = await findUserDocument(username);
+          for (let attempt = 0; attempt < 3; attempt++) {
+            firestoreUserDoc = await findUserDocument(username, userCredential?.user?.uid);
+            if (firestoreUserDoc) break;
+            if (attempt < 2) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
+          }
         }
 
         if (!firestoreUserDoc) {
-          // Edge case: They have an Auth account but no Firestore doc.
-          // Create the profile with Student role (admin must be granted manually).
-          const newProfile = {
-            username: cleanUsername,
-            name: cleanUsername,
-            role: 'Student'
-          };
-          await setDoc(doc(db, 'users', auth.currentUser.uid), newProfile);
-          onLogin(newProfile);
-          setLoading(false);
+          setError('Account profile not found in database. Please contact the administrator.');
           return;
         }
 
@@ -327,8 +353,17 @@ const Login = ({ onLogin }) => {
       } else {
         setError(`Failed to ${isSignUp ? 'sign up' : 'log in'}: ` + err.message);
       }
+    } finally {
+      if (secondaryApp) {
+        try {
+          await deleteApp(secondaryApp);
+        } catch (delErr) {
+          console.warn('Error deleting secondary app:', delErr);
+        }
+      }
+      setLoading(false);
+      isSubmittingRef.current = false;
     }
-    setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
