@@ -439,7 +439,6 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                 {error}
               </div>
             )}
-            <div className="form-group"><label className="form-label">Faculty ID</label><input className="form-input" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} disabled={editMode} placeholder="Enter faculty ID" /></div>
 
             <div style={{ display: 'flex', gap: '15px' }}>
               <div className="form-group" style={{ flex: 1 }}>
