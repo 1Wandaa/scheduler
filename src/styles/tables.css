@@ -31,8 +31,20 @@
 
 
 
+.data-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+  background-color: rgba(86, 69, 238, 0.05);
+}
+
 .data-table tbody tr:nth-child(even) {
   background: rgba(248, 250, 252, 0.5);
+}
+
+.data-table tbody tr:nth-child(even):hover {
+  background-color: rgba(86, 69, 238, 0.06);
 }
 
 /* Extended stagger (10 rows instead of 5) */
@@ -46,7 +58,6 @@
 .data-table tbody tr:nth-child(8) { animation-delay: 0.24s; }
 .data-table tbody tr:nth-child(9) { animation-delay: 0.27s; }
 .data-table tbody tr:nth-child(10) { animation-delay: 0.30s; }
-
 
 .data-table td {
   color: var(--text-main);
@@ -79,8 +90,14 @@
 
 .table-actions .btn-edit,
 .table-actions .btn-delete {
-  opacity: 0.7;
+  opacity: 0.85;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
 
+.table-actions .btn-edit:hover,
+.table-actions .btn-delete:hover {
+  opacity: 1;
+  transform: scale(1.08);
 }
 
 

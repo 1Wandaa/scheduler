@@ -15,30 +15,70 @@
 @import './management.css';
 @import './dashboard-widgets.css';
 
-/* Disable all animations and transitions globally to reduce lag */
-*,
-*::before,
-*::after {
-  animation: none !important;
-  transition: none !important;
+/* Global Smooth Navigation & HD Interaction System */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
 }
 
-/* Force HD Rendering for all content */
-body,
-html {
+body {
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
   text-rendering: optimizeLegibility !important;
 }
 
+/* Smooth transitions for interactive elements */
+button,
+a,
+input,
+select,
+textarea,
+.nav-item,
+.card,
+.kpi-tile,
+.btn,
+.mgmt-filter-pill,
+.mgmt-badge,
+.schedule-card {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Page / Tab Smooth Entrance */
+.main-content > div,
+.mgmt-container,
+.schedule-viewer-container {
+  animation: tabEntrance 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes tabEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* HD Graphics, SVGs & High-DPI Image Rendering */
 img,
-svg,
 video,
 canvas,
 *[style*="background-image"] {
   image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
   image-rendering: high-quality;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+svg {
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
 }
 
 /* Logo specific animations and hovers */

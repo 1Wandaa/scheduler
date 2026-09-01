@@ -4,9 +4,9 @@
 .dialog-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.25);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background-color: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -14,24 +14,31 @@
   padding: 1.5rem;
   opacity: 1;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  animation: fadeIn 0.18s ease-out;
 }
 
 .dialog-overlay.closing {
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
 }
 
 .dialog-content {
   background: #ffffff;
   border-radius: 16px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.15), 0 10px 15px -6px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 320px;
+  max-width: 340px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   opacity: 1;
+  animation: popIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dialog-content.closing {
+  transform: scale(0.95);
+  opacity: 0;
+  transition: all 0.15s ease-out;
 }
 
 .dialog-header {
