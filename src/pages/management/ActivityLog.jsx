@@ -238,56 +238,6 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
     }
   };
 
-  // Export to CSV
-  const handleExportCSV = () => {
-    if (filteredLogs.length === 0) {
-      toast.warning('No logs to export');
-      return;
-    }
-    const headers = ['Timestamp', 'Full Date', 'Action Code', 'Action Label', 'Username', 'User Role', 'Details', 'Metadata'];
-    const rows = filteredLogs.map(l => {
-      const fullDate = formatFullDate(l.timestamp);
-      const actionLabel = ACTION_LABELS[l.action] || l.action;
-      const metaStr = l.meta ? JSON.stringify(l.meta).replace(/"/g, '""') : '';
-      const detailsClean = (l.details || '').replace(/"/g, '""');
-      return [
-        `"${l.timestamp?.toDate ? l.timestamp.toDate().toISOString() : (l.clientTimestamp || '')}"`,
-        `"${fullDate}"`,
-        `"${l.action || ''}"`,
-        `"${actionLabel}"`,
-        `"${l.username || ''}"`,
-        `"${l.userRole || ''}"`,
-        `"${detailsClean}"`,
-        `"${metaStr}"`,
-      ].join(',');
-    });
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `activity_logs_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success(`Exported ${filteredLogs.length} activity logs to CSV`);
-  };
-
-  // Export to JSON
-  const handleExportJSON = () => {
-    if (filteredLogs.length === 0) {
-      toast.warning('No logs to export');
-      return;
-    }
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(filteredLogs, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `activity_logs_${new Date().toISOString().slice(0, 10)}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    toast.success(`Exported ${filteredLogs.length} activity logs to JSON`);
-  };
 
   // Stats
   const stats = useMemo(() => {
@@ -339,42 +289,8 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
             </div>
           </div>
 
-          {/* Action Buttons: Export & Clear */}
+          {/* Action Buttons: Clear */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
-              className="btn btn-sm"
-              onClick={handleExportCSV}
-              disabled={filteredLogs.length === 0}
-              style={{
-                background: 'var(--bg-main)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-main)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-              title="Download filtered logs as CSV"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-              Export CSV
-            </button>
-            <button
-              className="btn btn-sm"
-              onClick={handleExportJSON}
-              disabled={filteredLogs.length === 0}
-              style={{
-                background: 'var(--bg-main)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-main)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-              title="Download filtered logs as JSON"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              JSON
-            </button>
             <button
               className="btn btn-sm"
               onClick={handleClearAll}
