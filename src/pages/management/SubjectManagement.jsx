@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, getDeptColor } from '../../config/constants';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
+import { detectLabRequirement, suggestDepartmentFromCode } from '../../utils/subjectLabDetector';
 
 const SubjectManagement = ({ subjects, professors, sections, schedules, availableSemesters = [], activeSemester, departments = [], onBack, user }) => {
   const { confirm } = useGlobalDialog();
@@ -18,25 +19,132 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [userLabModified, setUserLabModified] = useState(false);
+  const [autoSelectedDept, setAutoSelectedDept] = useState(null);
+  const [autoDetectedReason, setAutoDetectedReason] = useState(null);
   const [formData, setFormData] = useState({
     id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, isFoodLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || (availableSemesters[0] || '')
   });
 
+  const handleCodeChange = (newCode) => {
+    const suggestedDept = suggestDepartmentFromCode(newCode);
+
+    setFormData(prev => {
+      let nextDepts = [...(prev.departments || [])];
+
+      // If we previously auto-selected a department, remove it if newCode suggests a different department or nothing
+      if (autoSelectedDept && autoSelectedDept !== suggestedDept) {
+        nextDepts = nextDepts.filter(d => d !== autoSelectedDept);
+      }
+
+      // If newCode suggests a department, add it to nextDepts if not present
+      if (suggestedDept) {
+        if (!nextDepts.includes(suggestedDept)) {
+          nextDepts = [...nextDepts, suggestedDept];
+        }
+        setAutoSelectedDept(suggestedDept);
+      } else {
+        setAutoSelectedDept(null);
+      }
+
+      const nextForm = {
+        ...prev,
+        code: newCode,
+        departments: nextDepts
+      };
+
+      setUserLabModified(false);
+
+      // If code was cleared and no departments remain, reset lab options
+      if (!newCode.trim() && nextDepts.length === 0) {
+        setAutoDetectedReason(null);
+        return {
+          ...nextForm,
+          requiredLab: false,
+          isFoodLab: false
+        };
+      }
+
+      const detection = detectLabRequirement(nextForm, subjects);
+      setAutoDetectedReason(detection.reason);
+      return {
+        ...nextForm,
+        requiredLab: detection.requiredLab,
+        isFoodLab: detection.isFoodLab
+      };
+    });
+  };
+
+  const handleNameChange = (newName) => {
+    setFormData(prev => {
+      const nextForm = { ...prev, name: newName };
+      if (!userLabModified) {
+        if (!nextForm.code?.trim() && (!nextForm.departments || nextForm.departments.length === 0) && !newName.trim()) {
+          setAutoDetectedReason(null);
+          return {
+            ...nextForm,
+            requiredLab: false,
+            isFoodLab: false
+          };
+        }
+        const detection = detectLabRequirement(nextForm, subjects);
+        setAutoDetectedReason(detection.reason);
+        return {
+          ...nextForm,
+          requiredLab: detection.requiredLab,
+          isFoodLab: detection.isFoodLab
+        };
+      }
+      return nextForm;
+    });
+  };
+
+  const handleCategoryChange = (newCategory) => {
+    setFormData(prev => {
+      const updates = { category: newCategory };
+      if (newCategory !== 'Minor' && prev.semester === 'Both') {
+        updates.semester = activeSemester || availableSemesters[0] || '1st Semester';
+      }
+      const nextForm = { ...prev, ...updates };
+
+      if (!userLabModified) {
+        const detection = detectLabRequirement(nextForm, subjects);
+        setAutoDetectedReason(detection.reason);
+        return {
+          ...nextForm,
+          requiredLab: detection.requiredLab,
+          isFoodLab: detection.isFoodLab
+        };
+      }
+      return nextForm;
+    });
+  };
+
   const handleOpenAdd = () => {
+    const defaultDepts = (departmentFilter !== 'All' && departmentFilter !== 'Minor') ? [departmentFilter] : [];
+    const defaultCategory = departmentFilter === 'Minor' ? 'Minor' : 'Major';
+    const detection = detectLabRequirement({
+      category: defaultCategory,
+      departments: defaultDepts
+    }, subjects);
+
     setFormData({
       id: '',
       code: '',
       name: '',
-      departments: [],
+      departments: defaultDepts,
       credits: 3,
-      requiredLab: false,
-      isFoodLab: false,
+      requiredLab: detection.requiredLab,
+      isFoodLab: detection.isFoodLab,
       hoursPerMeeting: 1.5,
-      category: 'Major',
+      category: defaultCategory,
       semester: activeSemester || (availableSemesters[0] || '1st Semester')
     });
     setEditMode(false);
     setError(null);
+    setUserLabModified(false);
+    setAutoSelectedDept(defaultDepts.length === 1 ? defaultDepts[0] : null);
+    setAutoDetectedReason(detection.reason);
     setShowModal(true);
   };
 
@@ -68,6 +176,9 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
     setCurrentId(subject.id);
     setEditMode(true);
     setError(null);
+    setUserLabModified(true);
+    setAutoSelectedDept(null);
+    setAutoDetectedReason(null);
     setShowModal(true);
   };
 
@@ -157,13 +268,33 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
   };
 
   const handleDeptToggle = (dept) => {
+    setAutoSelectedDept(null);
     setFormData(prev => {
       const current = prev.departments || [];
-      if (current.includes(dept)) {
-        return { ...prev, departments: current.filter(d => d !== dept) };
-      } else {
-        return { ...prev, departments: [...current, dept] };
+      const updated = current.includes(dept)
+        ? current.filter(d => d !== dept)
+        : [...current, dept];
+      const nextForm = { ...prev, departments: updated };
+
+      if (!userLabModified) {
+        if (!nextForm.code?.trim() && updated.length === 0) {
+          setAutoDetectedReason(null);
+          return {
+            ...nextForm,
+            requiredLab: false,
+            isFoodLab: false
+          };
+        }
+        const detection = detectLabRequirement(nextForm, subjects);
+        setAutoDetectedReason(detection.reason);
+        return {
+          ...nextForm,
+          requiredLab: detection.requiredLab,
+          isFoodLab: detection.isFoodLab
+        };
       }
+
+      return nextForm;
     });
   };
 
@@ -341,7 +472,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               <input 
                 className="form-input" 
                 value={formData.code} 
-                onChange={e => setFormData({ ...formData, code: e.target.value })} 
+                onChange={e => handleCodeChange(e.target.value)} 
                 placeholder="Enter subject code" 
               />
             </div>
@@ -351,7 +482,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               <input 
                 className="form-input" 
                 value={formData.name} 
-                onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                onChange={e => handleNameChange(e.target.value)} 
                 placeholder="Enter subject name" 
               />
             </div>
@@ -362,14 +493,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                 <select 
                   className="form-select" 
                   value={formData.category || 'Major'} 
-                  onChange={e => {
-                    const newCategory = e.target.value;
-                    const updates = { category: newCategory };
-                    if (newCategory !== 'Minor' && formData.semester === 'Both') {
-                      updates.semester = activeSemester || availableSemesters[0] || '1st Semester';
-                    }
-                    setFormData({ ...formData, ...updates });
-                  }}
+                  onChange={e => handleCategoryChange(e.target.value)} 
                 >
                   <option value="Major">Major Subject</option>
                   <option value="Minor">Minor Subject</option>
@@ -419,7 +543,12 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                   step="any"
                   className="form-input" 
                   value={formData.credits === undefined ? '' : formData.credits} 
-                  onChange={e => setFormData({ ...formData, credits: e.target.value === '' ? '' : Number(e.target.value) })} 
+                  onChange={e => {
+                    const newCredits = e.target.value === '' ? '' : Number(e.target.value);
+                    const nextForm = { ...formData, credits: newCredits };
+                    setFormData(nextForm);
+                    runAutoDetectLab(nextForm, userLabModified);
+                  }} 
                 />
               </div>
               <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
@@ -447,6 +576,8 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                   checked={Boolean(formData.requiredLab)} 
                   onChange={e => {
                     const checked = e.target.checked;
+                    setUserLabModified(true);
+                    setAutoDetectedReason(null);
                     setFormData(prev => ({ 
                       ...prev, 
                       requiredLab: checked, 
@@ -463,6 +594,8 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                   checked={Boolean(formData.isFoodLab)} 
                   onChange={e => {
                     const checked = e.target.checked;
+                    setUserLabModified(true);
+                    setAutoDetectedReason(null);
                     setFormData(prev => ({ 
                       ...prev, 
                       isFoodLab: checked, 
@@ -473,6 +606,57 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                 /> 
                 Requires Food Laboratory
               </label>
+
+              {autoDetectedReason && !userLabModified && (
+                <div style={{
+                  marginTop: '4px',
+                  padding: '6px 10px',
+                  background: formData.isFoodLab ? 'rgba(234, 179, 8, 0.12)' : 'rgba(16, 158, 239, 0.12)',
+                  borderRadius: '6px',
+                  border: `1px solid ${formData.isFoodLab ? 'rgba(234, 179, 8, 0.3)' : 'rgba(16, 158, 239, 0.3)'}`,
+                  color: formData.isFoodLab ? '#b45309' : '#0284c7',
+                  fontSize: '0.78rem',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+                  </svg>
+                  <span>Auto-detected: {autoDetectedReason}</span>
+                </div>
+              )}
+
+              {userLabModified && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserLabModified(false);
+                      const detection = detectLabRequirement(formData, subjects);
+                      setFormData(prev => ({
+                        ...prev,
+                        requiredLab: detection.requiredLab,
+                        isFoodLab: detection.isFoodLab
+                      }));
+                      setAutoDetectedReason(detection.reason);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent-primary)',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      padding: '2px 4px',
+                      textDecoration: 'underline',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Re-check laboratory requirement
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="mgmt-modal-actions">
