@@ -500,33 +500,47 @@
 
 .remove-btn {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  background-color: rgba(255, 255, 255, 0.95);
-  color: #e11d48;
-  border: 1px solid rgba(225, 29, 72, 0.2);
+  top: 5px;
+  right: 5px;
+  background-color: #ffffff;
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
   border-radius: 50%;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
   z-index: 10;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .remove-btn:hover {
-  background-color: #fee2e2;
-  transform: scale(1.1);
+  background-color: #ef4444;
+  color: #ffffff;
+  border-color: #dc2626;
+  transform: scale(1.12);
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.35);
+}
+
+.remove-btn:active {
+  transform: scale(0.94);
 }
 
 .remove-btn svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  transition: transform 0.2s ease;
 }
+
+.remove-btn:hover svg {
+  transform: scale(1.05);
+}
+
 
 
 /* Card View (Mobile-first list) */
