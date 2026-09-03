@@ -39,6 +39,7 @@ import CourseManagement from '../management/CourseManagement';
 import RoomAvailability from '../management/RoomAvailability';
 import FacultyAvailability from '../management/FacultyAvailability';
 import RecycleBin from '../management/RecycleBin';
+import AssignmentHub from '../management/AssignmentHub';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 import { Icon, NAV_ICONS } from './components/Icon';
@@ -334,6 +335,7 @@ const Dashboard = ({ user, onLogout }) => {
                   <>
                     <NavItem label="Departments" iconPath={NAV_ICONS.rooms} active={activeTab === 'departments'} onClick={() => handleTabClick('departments')} indent />
                     <NavItem label="Courses / Programs" iconPath={NAV_ICONS.subjects} active={activeTab === 'courses'} onClick={() => handleTabClick('courses')} indent />
+                    <NavItem label="Assignments Hub" iconPath="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" active={activeTab === 'assignments'} onClick={() => handleTabClick('assignments')} indent />
                     <NavItem label="Faculty Profiles" iconPath={NAV_ICONS.faculty} active={activeTab === 'faculty'} onClick={() => handleTabClick('faculty')} indent />
                     <NavItem label="Sections" iconPath={NAV_ICONS.sections} active={activeTab === 'sections'} onClick={() => handleTabClick('sections')} indent />
                     <NavItem label="Subject Constraints" iconPath={NAV_ICONS.subjects} active={activeTab === 'subjects'} onClick={() => handleTabClick('subjects')} indent />
@@ -597,10 +599,11 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'faculty-availability' && <FacultyAvailability professors={professors} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'departments' && <DepartmentManagement departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'courses' && <CourseManagement courses={courses} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} professors={professors} sections={sections} schedules={displaySchedules} availableSemesters={availableSemesters} activeSemester={activeSemester} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'assignments' && <AssignmentHub sections={sections} professors={professors} subjects={subjects} departments={departments} courses={courses} activeSemester={activeSemester} user={user} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
+        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} professors={professors} sections={sections} schedules={displaySchedules} availableSemesters={availableSemesters} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
         {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} user={user} />}
-        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} />}
+        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
         {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} />}
         {isAdmin && activeTab === 'recycle-bin' && <RecycleBin user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'activity-log' && (

@@ -340,10 +340,31 @@ export function findScheduleConflicts(candidate, existingSchedules, { excludeSch
  */
 export function getEligibleProfessors(professors, subject, section) {
   if (!subject) return [];
-  let pool = professors.filter(p => professorMatchesSubject(p, subject));
-
   const sectionId = section?.id;
   const sectionName = section?.name;
+  const subCode = subject.code || subject.id;
+
+  // 1. Highest Priority: Specific instructor assigned for this subject in this section
+  if (section?.subjectInstructors) {
+    const assignedProfId = section.subjectInstructors[subCode] || section.subjectInstructors[subject.id];
+    if (assignedProfId) {
+      const explicitProf = professors.find(p => p.id === assignedProfId);
+      if (explicitProf) return [explicitProf];
+    }
+  }
+
+  // 2. Second Priority: Professor whose sectionSubjectMap explicitly includes this subject for this section
+  if (sectionId || sectionName) {
+    const mappedProf = professors.find(p => {
+      const hasSec = (p.assignedSections || []).includes(sectionId) || (sectionName && (p.assignedSections || []).includes(sectionName));
+      if (!hasSec) return false;
+      const subs = (p.sectionSubjectMap && (p.sectionSubjectMap[sectionId] || (sectionName && p.sectionSubjectMap[sectionName]))) || [];
+      return subs.some(s => s === subCode || s === subject.id || s === subject.name);
+    });
+    if (mappedProf) return [mappedProf];
+  }
+
+  let pool = professors.filter(p => professorMatchesSubject(p, subject));
 
   if (sectionId || sectionName) {
     pool = pool.filter(p => {

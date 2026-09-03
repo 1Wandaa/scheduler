@@ -1,15 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
 import SubjectTable, { getSubjectDepts } from '../../components/SubjectTable/SubjectTable';
-import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { deleteSubjectCascade } from '../../services/cascadeDeleteService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, getDeptColor } from '../../config/constants';
+import AutocompleteMultiSelect from '../../components/AutocompleteMultiSelect/AutocompleteMultiSelect';
+import QuickCreateModal from '../../components/QuickCreateModal/QuickCreateModal';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 import { detectLabRequirement, suggestDepartmentFromCode } from '../../utils/subjectLabDetector';
 
-const SubjectManagement = ({ subjects, professors, sections, schedules, availableSemesters = [], activeSemester, departments = [], onBack, user }) => {
+const SubjectManagement = ({ subjects, professors, sections, schedules, availableSemesters = [], activeSemester, departments = [], courses = [], onBack, user, onNavigateToHub }) => {
   const { confirm } = useGlobalDialog();
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -22,6 +24,13 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
   const [userLabModified, setUserLabModified] = useState(false);
   const [autoSelectedDept, setAutoSelectedDept] = useState(null);
   const [autoDetectedReason, setAutoDetectedReason] = useState(null);
+
+  // States for cross-entity assignments
+  const [enrolledSections, setEnrolledSections] = useState([]);
+  const [assignedProfessors, setAssignedProfessors] = useState([]);
+  const [sectionSearchQuery, setSectionSearchQuery] = useState('');
+  const [facultySearchQuery, setFacultySearchQuery] = useState('');
+  const [quickCreateState, setQuickCreateState] = useState({ isOpen: false, type: 'section' });
   const [formData, setFormData] = useState({
     id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, isFoodLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || (availableSemesters[0] || '')
   });
@@ -140,6 +149,8 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       category: defaultCategory,
       semester: activeSemester || (availableSemesters[0] || '1st Semester')
     });
+    setEnrolledSections([]);
+    setAssignedProfessors([]);
     setEditMode(false);
     setError(null);
     setUserLabModified(false);
@@ -172,6 +183,16 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       isFoodLab: Boolean(subject.isFoodLab),
     };
 
+    const initialSections = sections.filter(s => 
+      (s.subjects || []).some(sub => sub === subject.id || sub === subject.code || sub === subject.name)
+    ).map(s => s.id);
+
+    const initialProfs = professors.filter(p => 
+      (p.specialization || []).some(sub => sub === subject.id || sub === subject.code || sub === subject.name)
+    ).map(p => p.id);
+
+    setEnrolledSections(initialSections);
+    setAssignedProfessors(initialProfs);
     setFormData(normalized);
     setCurrentId(subject.id);
     setEditMode(true);
@@ -180,6 +201,14 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
     setAutoSelectedDept(null);
     setAutoDetectedReason(null);
     setShowModal(true);
+  };
+
+  const handleQuickCreateSuccess = (newItem, type) => {
+    if (type === 'section') {
+      setEnrolledSections(prev => [...prev, newItem.id]);
+    } else if (type === 'faculty') {
+      setAssignedProfessors(prev => [...prev, newItem.id]);
+    }
   };
 
   const handleSave = async () => {
@@ -225,17 +254,59 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
     setIsSaving(true);
     try {
+      const batch = writeBatch(db);
+      const subId = currentId || payload.id || `S${Date.now().toString().slice(-4)}`;
+      const docPayload = { ...payload, id: subId };
+
       if (editMode) {
-        await updateDoc(doc(db, 'subjects', currentId.toString()), payload);
+        batch.update(doc(db, 'subjects', currentId.toString()), docPayload);
         logActivity({ user, action: LOG_ACTIONS.UPDATE_SUBJECT, details: `Updated subject: ${payload.code} - ${payload.name}` });
-        toast.success(`Subject ${payload.code} updated successfully`);
       } else {
-        const newId = payload.id || `S${Date.now().toString().slice(-4)}`;
-        await addDoc(collection(db, 'subjects'), { ...payload, id: newId });
+        const newDocRef = doc(collection(db, 'subjects'));
+        batch.set(newDocRef, docPayload);
         logActivity({ user, action: LOG_ACTIONS.ADD_SUBJECT, details: `Added new subject: ${payload.code} - ${payload.name} (${payload.credits} units)` });
-        toast.success(`Subject ${payload.code} added successfully`);
       }
+
+      // 1. Sync sections: update enrolled sections
+      sections.forEach(sec => {
+        const wasEnrolled = (sec.subjects || []).some(s => s === currentId || s === subId || s === code || (editMode && s === formData.code));
+        const isNowEnrolled = enrolledSections.includes(sec.id) || enrolledSections.includes(sec.name);
+
+        if (!wasEnrolled && isNowEnrolled) {
+          const updated = [...(sec.subjects || []), code];
+          batch.update(doc(db, 'sections', String(sec.id)), { subjects: updated });
+        } else if (wasEnrolled && !isNowEnrolled) {
+          const nameStr = formData.name || '';
+          const updated = (sec.subjects || []).filter(s => s !== currentId && s !== subId && s !== code && s !== formData.code && s !== nameStr);
+          const updatedInstructors = { ...(sec.subjectInstructors || {}) };
+          delete updatedInstructors[currentId];
+          delete updatedInstructors[subId];
+          delete updatedInstructors[code];
+          if (formData.code) delete updatedInstructors[formData.code];
+          batch.update(doc(db, 'sections', String(sec.id)), {
+            subjects: updated,
+            subjectInstructors: updatedInstructors
+          });
+        }
+      });
+
+      // 2. Sync professors: update specializations
+      professors.forEach(prof => {
+        const wasAssigned = (prof.specialization || []).some(s => s === currentId || s === subId || s === code || (editMode && s === formData.code));
+        const isNowAssigned = assignedProfessors.includes(prof.id);
+
+        if (!wasAssigned && isNowAssigned) {
+          const updated = [...(prof.specialization || []), code];
+          batch.update(doc(db, 'professors', String(prof.id)), { specialization: updated });
+        } else if (wasAssigned && !isNowAssigned) {
+          const updated = (prof.specialization || []).filter(s => s !== currentId && s !== subId && s !== code && s !== formData.code);
+          batch.update(doc(db, 'professors', String(prof.id)), { specialization: updated });
+        }
+      });
+
+      await batch.commit();
       setShowModal(false);
+      toast.success(`Subject ${payload.code} saved successfully!`);
     } catch (err) {
       console.error("Error saving subject:", err);
       setError("Failed to save subject. Please try again.");
@@ -350,7 +421,18 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               <p>Manage courses and their scheduling constraints</p>
             </div>
           </div>
-          <button className="btn" onClick={handleOpenAdd}>+ Add Subject</button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {onNavigateToHub && (
+              <button 
+                className="btn" 
+                onClick={onNavigateToHub}
+                style={{ background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-color)', boxShadow: 'none' }}
+              >
+                ⇄ Assignments Hub
+              </button>
+            )}
+            <button className="btn" onClick={handleOpenAdd}>+ Add Subject</button>
+          </div>
         </div>
 
         {/* Department Filter and Search Bar */}
@@ -659,6 +741,152 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               )}
             </div>
 
+            {/* Cross-Entity: Enrolled Sections */}
+            <div className="form-group" style={{ marginBottom: '22px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>Enrolled Sections</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setQuickCreateState({ isOpen: true, type: 'section' })}
+                    style={{
+                      background: 'rgba(86, 69, 238, 0.1)',
+                      border: '1px solid rgba(86, 69, 238, 0.3)',
+                      color: 'var(--accent-primary, #5645ee)',
+                      borderRadius: '6px',
+                      padding: '2px 8px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    + Quick Add Section
+                  </button>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: '600' }}>
+                    {enrolledSections.length} section(s) enrolled
+                  </span>
+                </div>
+              </div>
+
+              <AutocompleteMultiSelect
+                allOptions={sections}
+                options={sections.filter(s => !sectionSearchQuery.trim() || s.name.toLowerCase().includes(sectionSearchQuery.toLowerCase()))}
+                selectedIds={enrolledSections}
+                onToggle={(secId) => {
+                  setEnrolledSections(prev => 
+                    prev.includes(secId) ? prev.filter(id => id !== secId) : [...prev, secId]
+                  );
+                }}
+                placeholder="Search section to enroll..."
+                searchQuery={sectionSearchQuery}
+                setSearchQuery={setSectionSearchQuery}
+                noOptionsMessage={sections.length === 0 ? "No sections available." : "No sections match your search."}
+                renderChip={(sec, onRemove) => (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '4px 10px', borderRadius: '16px',
+                    background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)',
+                    fontSize: '0.8rem', fontWeight: '600', color: '#10b981'
+                  }}>
+                    <span>{sec.name}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                      style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                )}
+                renderOption={(sec) => (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{sec.name}</span>
+                      {sec.program && (
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({sec.program} - Year {sec.yearLevel})</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              />
+            </div>
+
+            {/* Cross-Entity: Assigned Faculty */}
+            <div className="form-group" style={{ marginBottom: '22px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>Assigned Faculty (Specialization)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setQuickCreateState({ isOpen: true, type: 'faculty' })}
+                    style={{
+                      background: 'rgba(86, 69, 238, 0.1)',
+                      border: '1px solid rgba(86, 69, 238, 0.3)',
+                      color: 'var(--accent-primary, #5645ee)',
+                      borderRadius: '6px',
+                      padding: '2px 8px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    + Quick Add Faculty
+                  </button>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: '600' }}>
+                    {assignedProfessors.length} faculty assigned
+                  </span>
+                </div>
+              </div>
+
+              <AutocompleteMultiSelect
+                allOptions={professors}
+                options={professors.filter(p => !facultySearchQuery.trim() || (p.name || '').toLowerCase().includes(facultySearchQuery.toLowerCase()))}
+                selectedIds={assignedProfessors}
+                onToggle={(profId) => {
+                  setAssignedProfessors(prev => 
+                    prev.includes(profId) ? prev.filter(id => id !== profId) : [...prev, profId]
+                  );
+                }}
+                placeholder="Search faculty name..."
+                searchQuery={facultySearchQuery}
+                setSearchQuery={setFacultySearchQuery}
+                noOptionsMessage={professors.length === 0 ? "No faculty available." : "No faculty match your search."}
+                renderChip={(prof, onRemove) => (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '4px 10px', borderRadius: '16px',
+                    background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)',
+                    fontSize: '0.8rem', fontWeight: '600', color: '#3b82f6'
+                  }}>
+                    <span>{prof.name || `${prof.lastName}, ${prof.firstName}`}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                      style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                )}
+                renderOption={(prof) => (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: '600', color: 'var(--accent-dark)' }}>{prof.name || `${prof.lastName}, ${prof.firstName}`}</span>
+                      {prof.department && (
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({prof.department})</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              />
+            </div>
+
             <div className="mgmt-modal-actions">
               <button className="mgmt-cancel-btn" onClick={() => setShowModal(false)} disabled={isSaving}>Cancel</button>
               <button className="btn" onClick={handleSave} disabled={isSaving}>
@@ -736,6 +964,21 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
           </div>
         </div>
       )}
+
+      {/* Quick Create Modal */}
+      <QuickCreateModal
+        isOpen={quickCreateState.isOpen}
+        type={quickCreateState.type}
+        onClose={() => setQuickCreateState({ isOpen: false, type: 'section' })}
+        departments={departments}
+        courses={courses}
+        subjects={subjects}
+        sections={sections}
+        professors={professors}
+        user={user}
+        activeSemester={activeSemester}
+        onSuccess={handleQuickCreateSuccess}
+      />
     </>
   );
 };
