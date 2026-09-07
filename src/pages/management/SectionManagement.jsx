@@ -1,13 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
-import { deleteSectionCascade } from '../../services/cascadeDeleteService';
+import { deleteSectionCascade, deleteSectionBatchCascade } from '../../services/cascadeDeleteService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, PROGRAM_DEPARTMENTS, getDeptColor } from '../../config/constants';
 import SectionTable from '../../components/SectionTable/SectionTable';
+import BatchActionBar from '../../components/common/BatchActionBar';
 import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
 import QuickCreateModal from '../../components/QuickCreateModal/QuickCreateModal';
+import CustomSelect from '../../components/CustomSelect/CustomSelect';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 const SectionManagement = ({ sections, professors, schedules, subjects, activeSemester, departments = [], courses = [], user, onBack, onNavigateToHub }) => {
@@ -19,18 +21,16 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectionMode, setSelectionMode] = useState(false);
 
-  // Map of subjectIdOrCode -> assigned professorId
-  const [subjectInstructorMap, setSubjectInstructorMap] = useState({});
-  const [quickCreateState, setQuickCreateState] = useState({ isOpen: false, type: 'subject' });
 
   const [formData, setFormData] = useState({
     id: '', name: '', program: '', yearLevel: 1, subjects: []
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', name: '', program: '', yearLevel: 1, subjects: [] });
-    setSubjectInstructorMap({});
+    setFormData({ id: '', name: '', program: '', yearLevel: 1 });
     setEditMode(false);
     setError(null);
     setShowModal(true);
@@ -40,44 +40,9 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
     setFormData({ ...section });
     setCurrentId(section.id);
 
-    // Initialize instructors assigned to this section's subjects
-    const initialMap = { ...(section.subjectInstructors || {}) };
-    (section.subjects || []).forEach(subRef => {
-      const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef };
-      const subKey = sub.code || sub.id;
-
-      // If not already in subjectInstructors, fallback to professor's sectionSubjectMap or specialization
-      if (!initialMap[subRef] && !initialMap[subKey] && !initialMap[sub.id]) {
-        const assignedProf = professors.find(p => {
-          const hasSection = (p.assignedSections || []).includes(section.id) || (p.assignedSections || []).includes(section.name);
-          if (!hasSection) return false;
-          if (p.sectionSubjectMap && (p.sectionSubjectMap[section.id] || p.sectionSubjectMap[section.name])) {
-            const mappedSubs = p.sectionSubjectMap[section.id] || p.sectionSubjectMap[section.name] || [];
-            return mappedSubs.some(s => s === sub.id || s === sub.code || s === sub.name);
-          }
-          return (p.specialization || []).some(sp => sp === sub.id || sp === sub.code || sp === sub.name);
-        });
-        if (assignedProf) {
-          initialMap[subRef] = assignedProf.id;
-        }
-      }
-    });
-    setSubjectInstructorMap(initialMap);
-
     setEditMode(true);
     setError(null);
     setShowModal(true);
-  };
-
-  const handleQuickCreateSuccess = (newItem, type) => {
-    if (type === 'subject') {
-      setFormData(prev => ({
-        ...prev,
-        subjects: [...(prev.subjects || []), newItem.id]
-      }));
-    } else if (type === 'faculty') {
-      toast.info(`Faculty ${newItem.name} added! You can now assign them to enrolled subjects.`);
-    }
   };
 
   const handleSave = async () => {
@@ -95,26 +60,12 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
       return;
     }
 
-    if (!formData.subjects || formData.subjects.length === 0) {
-      const isConfirmed = await confirm({
-        title: 'No Subjects Enrolled',
-        text: 'Are you sure you want to create a section with no subjects?',
-        icon: 'warning',
-        confirmButtonText: 'Yes, save it'
-      });
-      if (!isConfirmed) return;
-    }
+
 
     setIsSaving(true);
     try {
       const batch = writeBatch(db);
       const secId = currentId || formData.id || `SEC${Date.now().toString().slice(-4)}`;
-      const secPayload = { 
-        ...formData, 
-        id: secId,
-        subjectInstructors: subjectInstructorMap || {}
-      };
-
       if (editMode) {
         batch.update(doc(db, 'sections', currentId.toString()), secPayload);
         logActivity({
@@ -128,56 +79,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
         logActivity({
           user,
           action: LOG_ACTIONS.ADD_SECTION,
-          details: `Added new section: ${formData.name} (${formData.program}) with ${formData.subjects?.length || 0} enrolled subjects`
-        });
-      }
-
-      // Sync professors assigned to this section's subjects
-      // 1. Group by professor: profId -> list of subject codes/ids
-      const assignedProfMap = {};
-      Object.entries(subjectInstructorMap).forEach(([subRef, pId]) => {
-        if (pId && (formData.subjects || []).includes(subRef)) {
-          if (!assignedProfMap[pId]) assignedProfMap[pId] = [];
-          assignedProfMap[pId].push(subRef);
-        }
-      });
-
-      // 2. Add section and subject to assigned professors
-      Object.entries(assignedProfMap).forEach(([pId, subRefs]) => {
-        const prof = professors.find(p => p.id === pId);
-        if (prof) {
-          const currentSecs = prof.assignedSections || [];
-          const updatedSecs = currentSecs.includes(secId) || (formData.name && currentSecs.includes(formData.name))
-            ? currentSecs
-            : [...currentSecs, secId];
-
-          const currentSpecs = prof.specialization || [];
-          let updatedSpecs = [...currentSpecs];
-          subRefs.forEach(subRef => {
-            const subObj = subjects.find(s => s.id === subRef || s.code === subRef);
-            const codeOrId = subObj?.code || subObj?.id || subRef;
-            if (!updatedSpecs.includes(codeOrId) && (!subObj || !updatedSpecs.includes(subObj.id))) {
-              updatedSpecs.push(codeOrId);
-            }
-          });
-
-          batch.update(doc(db, 'professors', String(prof.id)), {
-            assignedSections: updatedSecs,
-            specialization: updatedSpecs
-          });
-        }
-      });
-
-      // 3. For professors who were previously assigned to this section but are no longer assigned to any subject here
-      if (editMode) {
-        professors.forEach(prof => {
-          const hadSec = (prof.assignedSections || []).includes(currentId) || (prof.assignedSections || []).includes(formData.name);
-          if (hadSec && !assignedProfMap[prof.id]) {
-            const newSecs = (prof.assignedSections || []).filter(s => s !== currentId && s !== formData.name);
-            batch.update(doc(db, 'professors', String(prof.id)), {
-              assignedSections: newSecs
-            });
-          }
+          details: `Added new section: ${formData.name} (${formData.program})`
         });
       }
 
@@ -205,6 +107,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
       try {
         const sectionToDelete = sections.find(s => String(s.id) === String(id));
         await deleteSectionCascade(sectionToDelete, professors, schedules);
+        setSelectedIds(prev => prev.filter(item => item !== id));
         logActivity({
           user,
           action: LOG_ACTIONS.DELETE_SECTION,
@@ -218,6 +121,96 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
     }
   };
 
+  const handleToggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = (idsInGroup) => {
+    const allInGroupSelected = idsInGroup.length > 0 && idsInGroup.every(id => selectedIds.includes(id));
+    if (allInGroupSelected) {
+      setSelectedIds(prev => prev.filter(id => !idsInGroup.includes(id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...idsInGroup])));
+    }
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedIds(filteredSections.map(s => s.id));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  const handleExitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  };
+
+  const handleDeleteSelected = async () => {
+    const selectedInView = selectedIds.filter(id => filteredSections.some(s => s.id === id));
+    if (selectedInView.length === 0) return;
+    const count = selectedInView.length;
+
+    const isConfirmed = await confirm({
+      title: `Delete ${count} Section${count > 1 ? 's' : ''}?`,
+      text: `Are you sure you want to delete ${count} selected section${count > 1 ? 's' : ''}? Their assigned schedules will be removed and records moved to the Recycle Bin.`,
+      icon: 'warning',
+      confirmButtonText: `Delete ${count} Selected`,
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Deleting ${count} section${count > 1 ? 's' : ''}...`);
+      try {
+        const sectionsToDelete = sections.filter(s => selectedInView.includes(s.id));
+        await deleteSectionBatchCascade(sectionsToDelete, professors, schedules);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_DELETE_SECTIONS,
+          details: `Batch deleted ${count} sections: ${sectionsToDelete.map(s => s.name || s.id).join(', ')}`
+        });
+        toast.success(`Successfully deleted ${count} section${count > 1 ? 's' : ''}`, { id: toastId });
+        setSelectedIds(prev => prev.filter(id => !selectedInView.includes(id)));
+      } catch (err) {
+        console.error("Error batch deleting sections:", err);
+        toast.error('Failed to delete selected sections', { id: toastId });
+      }
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    const count = filteredSections.length;
+    if (count === 0) return;
+
+    const isConfirmed = await confirm({
+      title: `Delete All ${count} Sections?`,
+      text: `Are you sure you want to delete ALL ${count} sections in this view? Their assigned schedules will be removed and records moved to the Recycle Bin.`,
+      icon: 'warning',
+      confirmButtonText: 'Delete All',
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Deleting all ${count} sections...`);
+      try {
+        await deleteSectionBatchCascade(filteredSections, professors, schedules);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_DELETE_SECTIONS,
+          details: `Deleted all ${count} sections in view (${departmentFilter})`
+        });
+        toast.success(`Successfully deleted all ${count} sections`, { id: toastId });
+        setSelectedIds([]);
+      } catch (err) {
+        console.error("Error deleting all sections:", err);
+        toast.error('Failed to delete sections', { id: toastId });
+      }
+    }
+  };
+
   const handleSubjectToggle = (subjectId) => {
     setFormData(prev => {
       const current = prev.subjects || [];
@@ -227,24 +220,36 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
 
       if (Array.isArray(subjectId)) {
         const targetTokens = subjectId.flatMap(id => {
-          const sObj = subjects.find(s => s.id === id || s.code === id || s.name === id);
+          const sObj = subjects.find(s => 
+            String(s.id).toLowerCase() === String(id).toLowerCase() || 
+            String(s.code).toLowerCase() === String(id).toLowerCase() || 
+            String(s.name).toLowerCase() === String(id).toLowerCase()
+          );
           return sObj ? [sObj.id, sObj.code, sObj.name].filter(Boolean) : [id];
-        });
+        }).map(t => String(t).toLowerCase());
 
         const allPresent = subjectId.every(id => {
-          const sObj = subjects.find(s => s.id === id || s.code === id || s.name === id);
+          const sObj = subjects.find(s => 
+            String(s.id).toLowerCase() === String(id).toLowerCase() || 
+            String(s.code).toLowerCase() === String(id).toLowerCase() || 
+            String(s.name).toLowerCase() === String(id).toLowerCase()
+          );
           const tokens = sObj ? [sObj.id, sObj.code, sObj.name].filter(Boolean) : [id];
-          return current.some(c => tokens.includes(c));
+          return current.some(c => tokens.map(t => String(t).toLowerCase()).includes(String(c).toLowerCase()));
         });
 
         if (allPresent) {
-          return { ...prev, subjects: current.filter(c => !targetTokens.includes(c)) };
+          return { ...prev, subjects: current.filter(c => !targetTokens.includes(String(c).toLowerCase())) };
         } else {
           const toAdd = [];
           subjectId.forEach(id => {
-            const sObj = subjects.find(s => s.id === id || s.code === id || s.name === id);
+            const sObj = subjects.find(s => 
+              String(s.id).toLowerCase() === String(id).toLowerCase() || 
+              String(s.code).toLowerCase() === String(id).toLowerCase() || 
+              String(s.name).toLowerCase() === String(id).toLowerCase()
+            );
             const tokens = sObj ? [sObj.id, sObj.code, sObj.name].filter(Boolean) : [id];
-            if (!current.some(c => tokens.includes(c))) {
+            if (!current.some(c => tokens.map(t => String(t).toLowerCase()).includes(String(c).toLowerCase()))) {
               toAdd.push(sObj?.id || id);
             }
           });
@@ -252,14 +257,36 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
         }
       }
 
-      const subObj = subjects.find(s => s.id === subjectId || s.code === subjectId || s.name === subjectId);
-      const tokens = subObj ? [subObj.id, subObj.code, subObj.name].filter(Boolean) : [subjectId];
-      const isPresent = current.some(c => tokens.includes(c));
+      const searchKey = typeof subjectId === 'object' && subjectId !== null
+        ? (subjectId.id || subjectId.code || subjectId.name)
+        : subjectId;
+
+      const subObj = subjects.find(s => 
+        String(s.id).toLowerCase() === String(searchKey).toLowerCase() || 
+        String(s.code).toLowerCase() === String(searchKey).toLowerCase() || 
+        String(s.name).toLowerCase() === String(searchKey).toLowerCase()
+      );
+
+      const tokensSet = new Set();
+      if (typeof subjectId === 'object' && subjectId !== null) {
+        if (subjectId.id) tokensSet.add(String(subjectId.id).toLowerCase());
+        if (subjectId.code) tokensSet.add(String(subjectId.code).toLowerCase());
+        if (subjectId.name) tokensSet.add(String(subjectId.name).toLowerCase());
+      }
+      if (subObj) {
+        if (subObj.id) tokensSet.add(String(subObj.id).toLowerCase());
+        if (subObj.code) tokensSet.add(String(subObj.code).toLowerCase());
+        if (subObj.name) tokensSet.add(String(subObj.name).toLowerCase());
+      }
+      if (searchKey) tokensSet.add(String(searchKey).toLowerCase());
+
+      const tokens = Array.from(tokensSet);
+      const isPresent = current.some(c => tokens.includes(String(c).toLowerCase()));
 
       if (isPresent) {
-        return { ...prev, subjects: current.filter(c => !tokens.includes(c)) };
+        return { ...prev, subjects: current.filter(c => !tokens.includes(String(c).toLowerCase())) };
       } else {
-        return { ...prev, subjects: [...current, subObj?.id || subjectId] };
+        return { ...prev, subjects: [...current, subObj?.id || searchKey] };
       }
     });
   };
@@ -367,6 +394,14 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
                 ⇄ Assignments Hub
               </button>
             )}
+            <button
+              className={`select-mode-btn${selectionMode ? ' active' : ''}`}
+              onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
+              title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              {selectionMode ? 'Cancel' : 'Select'}
+            </button>
             <button className="btn" onClick={handleOpenAdd}>+ Add Section</button>
           </div>
         </div>
@@ -406,6 +441,19 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
           </div>
         </div>
 
+        {selectionMode && (
+          <BatchActionBar
+            selectedCount={selectedIds.filter(id => filteredSections.some(s => s.id === id)).length}
+            totalCount={filteredSections.length}
+            itemName="section"
+            onSelectAll={handleSelectAllFiltered}
+            onDeselectAll={handleDeselectAll}
+            onDeleteSelected={handleDeleteSelected}
+            onDeleteAll={handleDeleteAll}
+            onExitSelectionMode={handleExitSelectionMode}
+          />
+        )}
+
         {/* Render sections grouped by their Department */}
         {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => {
           if (departmentFilter !== 'All' && departmentFilter !== dept) return null;
@@ -435,6 +483,9 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
               professors={professors}
               departments={departments}
               courses={courses}
+              selectedIds={selectionMode ? selectedIds : []}
+              onToggleSelect={selectionMode ? handleToggleSelect : undefined}
+              onToggleSelectAll={selectionMode ? handleToggleSelectAll : undefined}
             />
           );
         })}
@@ -455,6 +506,9 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
             professors={professors}
             departments={departments}
             courses={courses}
+            selectedIds={selectionMode ? selectedIds : []}
+            onToggleSelect={selectionMode ? handleToggleSelect : undefined}
+            onToggleSelectAll={selectionMode ? handleToggleSelectAll : undefined}
           />
         )}
 
@@ -526,186 +580,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
                 <option value={4}>4th Year</option>
               </select>
             </div>
-
-            {/* Unmatched / Legacy Subjects Alert Banner */}
-            {orphanSubjects.length > 0 && (
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1.5px solid rgba(239, 68, 68, 0.35)',
-                borderRadius: '8px',
-                padding: '10px 14px',
-                marginBottom: '14px',
-                gap: '12px',
-                flexWrap: 'wrap'
-              }}>
-                <div style={{ fontSize: '0.82rem', color: '#b91c1c' }}>
-                  <strong>⚠️ Legacy / Unmatched Subject(s) Detected:</strong>{' '}
-                  <span style={{ fontWeight: 700 }}>{orphanSubjects.join(', ')}</span>
-                  <div style={{ fontSize: '0.74rem', opacity: 0.85, marginTop: '2px' }}>
-                    These subject references exist in this section but are not in your active subjects list. Click to remove them.
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleRemoveOrphanSubjects}
-                  style={{
-                    background: '#dc2626',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '6px 12px',
-                    fontSize: '0.78rem',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)'
-                  }}
-                >
-                  🗑️ Remove {orphanSubjects.join(', ')}
-                </button>
-              </div>
-            )}
-
-            <SubjectSelector
-              subjects={subjects}
-              activeSemester={activeSemester}
-              selectedSubjects={formData.subjects}
-              departments={departments}
-              onToggleSubject={handleSubjectToggle}
-              recommendedDepartment={formData.program}
-              yearLevel={formData.yearLevel}
-              contextType="section"
-              label="Enrolled Subjects"
-              onQuickAdd={() => setQuickCreateState({ isOpen: true, type: 'subject' })}
-            />
-
-            {/* Subject-Specific Instructor Assignment */}
-            {formData.subjects && formData.subjects.length > 0 && (
-              <div style={{
-                marginTop: '14px',
-                marginBottom: '20px',
-                padding: '14px',
-                background: 'var(--bg-main, #f8fafc)',
-                borderRadius: '10px',
-                border: '1px solid var(--border-color, #e2e8f0)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #1e293b)' }}>
-                    Assign Faculty Instructors to Enrolled Subjects:
-                  </span>
-                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={handleAutoAssignTeachers}
-                      style={{
-                        background: 'linear-gradient(135deg, #10b981, #059669)',
-                        border: 'none',
-                        color: '#ffffff',
-                        borderRadius: '6px',
-                        padding: '4px 10px',
-                        fontSize: '0.75rem',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)'
-                      }}
-                      title="Automatically match specialized instructors with lowest workload"
-                    >
-                      ⚡ Auto-Assign Teachers
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuickCreateState({ isOpen: true, type: 'faculty' })}
-                      style={{
-                        background: 'rgba(86, 69, 238, 0.1)',
-                        border: '1px solid rgba(86, 69, 238, 0.3)',
-                        color: 'var(--accent-primary, #5645ee)',
-                        borderRadius: '6px',
-                        padding: '4px 8px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      + Quick Add Faculty
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {formData.subjects.map(subRef => {
-                    const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef, name: subRef };
-                    const currentProfId = subjectInstructorMap[subRef] || '';
-
-                    // Prioritize professors specialized in this subject
-                    const specProfs = professors.filter(p => (p.specialization || []).some(sp => sp === sub.id || sp === sub.code || sp === sub.name));
-
-                    return (
-                      <div key={subRef} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '12px',
-                        padding: '8px 12px',
-                        background: 'var(--bg-surface, #ffffff)',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-color, #e2e8f0)',
-                        flexWrap: 'wrap'
-                      }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: '120px' }}>
-                          <span style={{ fontWeight: '700', fontSize: '0.85rem', color: 'var(--accent-dark, #0f172a)' }}>{sub.code}</span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)' }}>{sub.name}</span>
-                        </div>
-
-                        <div style={{ flex: 1, minWidth: '220px' }}>
-                          <select
-                            className="form-select"
-                            style={{ padding: '6px 10px', fontSize: '0.82rem', width: '100%', margin: 0 }}
-                            value={currentProfId}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setSubjectInstructorMap(prev => ({
-                                ...prev,
-                                [subRef]: val
-                              }));
-                            }}
-                          >
-                            <option value="">No Instructor Assigned</option>
-                            {specProfs.length > 0 && (
-                              <optgroup label="Specialized in this subject">
-                                {specProfs.map(p => (
-                                  <option key={p.id} value={p.id}>
-                                    ✨ {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
-                                  </option>
-                                ))}
-                              </optgroup>
-                            )}
-                            <optgroup label="All Faculty Members">
-                              {professors.filter(p => !specProfs.some(sp => sp.id === p.id)).map(p => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
-                                </option>
-                              ))}
-                            </optgroup>
-                          </select>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
+            
             <div className="mgmt-modal-actions">
               <button className="mgmt-cancel-btn" onClick={() => setShowModal(false)} disabled={isSaving}>Cancel</button>
               <button className="btn" onClick={handleSave} disabled={isSaving}>
@@ -715,21 +590,6 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
           </div>
         </div>
       )}
-
-      {/* Quick Create Modal */}
-      <QuickCreateModal
-        isOpen={quickCreateState.isOpen}
-        type={quickCreateState.type}
-        onClose={() => setQuickCreateState({ isOpen: false, type: 'subject' })}
-        departments={departments}
-        courses={courses}
-        subjects={subjects}
-        sections={sections}
-        professors={professors}
-        user={user}
-        activeSemester={activeSemester}
-        onSuccess={handleQuickCreateSuccess}
-      />
     </>
   );
 };

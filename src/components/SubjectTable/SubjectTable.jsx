@@ -9,8 +9,18 @@ export const getSubjectDepts = (subject) => {
   return [];
 };
 
-const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, onViewDetails, departments = [] }) => {
+const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, onViewDetails, departments = [], selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
   if (!subjectList || subjectList.length === 0) return null;
+
+  const allSelected = subjectList.length > 0 && subjectList.every(s => selectedIds.includes(s.id));
+  const someSelected = subjectList.some(s => selectedIds.includes(s.id)) && !allSelected;
+  const headerCheckboxRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected]);
 
   return (
     <div style={{ marginBottom: '30px' }}>
@@ -40,6 +50,18 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
         <table className="data-table">
           <thead>
             <tr>
+              {onToggleSelect && (
+                <th className="table-checkbox-col">
+                  <input
+                    type="checkbox"
+                    ref={headerCheckboxRef}
+                    className="data-checkbox"
+                    checked={allSelected}
+                    onChange={() => onToggleSelectAll && onToggleSelectAll(subjectList.map(s => s.id))}
+                    title={allSelected ? "Deselect all in group" : "Select all in group"}
+                  />
+                </th>
+              )}
               <th>Code</th>
               <th>Name</th>
               <th>Semester</th>
@@ -51,8 +73,21 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
             </tr>
           </thead>
           <tbody>
-            {subjectList.map(s => (
-              <tr key={s.id}>
+            {subjectList.map(s => {
+              const isSelected = selectedIds.includes(s.id);
+              return (
+                <tr key={s.id} className={isSelected ? 'table-row-selected' : ''}>
+                  {onToggleSelect && (
+                    <td className="table-checkbox-col">
+                      <input
+                        type="checkbox"
+                        className="data-checkbox"
+                        checked={isSelected}
+                        onChange={() => onToggleSelect(s.id)}
+                        aria-label={`Select ${s.code}`}
+                      />
+                    </td>
+                  )}
                 <td><strong style={{ color: titleColor }}>{s.code}</strong></td>
                 <td style={{ fontWeight: '500' }}>{s.name}</td>
                 <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>
@@ -95,8 +130,9 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
                   <button className="btn-delete" onClick={() => onDelete(s.id)}>Delete</button>
                 </td>
               </tr>
-            ))}
-          </tbody>
+            );
+          })}
+        </tbody>
         </table>
       </div>
     </div>

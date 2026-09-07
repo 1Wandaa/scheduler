@@ -1,6 +1,16 @@
 import React from 'react';
 
-const RoomTable = ({ roomList, onEdit, onDelete }) => {
+const RoomTable = ({ roomList, onEdit, onDelete, selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
+  const allSelected = roomList.length > 0 && roomList.every(r => selectedIds.includes(r.id));
+  const someSelected = roomList.some(r => selectedIds.includes(r.id)) && !allSelected;
+  const headerCheckboxRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected]);
+
   const getRoomTypeBadge = (room) => {
     let bg = 'var(--success-bg)';
     let color = 'var(--success)';
@@ -76,6 +86,18 @@ const RoomTable = ({ roomList, onEdit, onDelete }) => {
       <table className="data-table">
         <thead>
           <tr>
+            {onToggleSelect && (
+              <th className="table-checkbox-col">
+                <input
+                  type="checkbox"
+                  ref={headerCheckboxRef}
+                  className="data-checkbox"
+                  checked={allSelected}
+                  onChange={() => onToggleSelectAll && onToggleSelectAll(roomList.map(r => r.id))}
+                  title={allSelected ? "Deselect all" : "Select all in view"}
+                />
+              </th>
+            )}
             <th>Name</th>
             <th>Dept Owner</th>
             <th>Building</th>
@@ -84,9 +106,22 @@ const RoomTable = ({ roomList, onEdit, onDelete }) => {
           </tr>
         </thead>
         <tbody>
-          {roomList.map(r => (
-            <tr key={r.id}>
-              <td><strong style={{ color: 'var(--text-main)' }}>{r.name}</strong></td>
+          {roomList.map(r => {
+            const isSelected = selectedIds.includes(r.id);
+            return (
+              <tr key={r.id} className={isSelected ? 'table-row-selected' : ''}>
+                {onToggleSelect && (
+                  <td className="table-checkbox-col">
+                    <input
+                      type="checkbox"
+                      className="data-checkbox"
+                      checked={isSelected}
+                      onChange={() => onToggleSelect(r.id)}
+                      aria-label={`Select ${r.name}`}
+                    />
+                  </td>
+                )}
+                <td><strong style={{ color: 'var(--text-main)' }}>{r.name}</strong></td>
               <td>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: '4px',
@@ -117,7 +152,8 @@ const RoomTable = ({ roomList, onEdit, onDelete }) => {
                 <button className="btn-delete" onClick={() => onDelete(r.id)}>Delete</button>
               </td>
             </tr>
-          ))}
+          );
+        })}
         </tbody>
       </table>
     </div>

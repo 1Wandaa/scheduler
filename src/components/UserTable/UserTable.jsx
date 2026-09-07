@@ -29,12 +29,34 @@ const renderRoleBadge = (role) => {
     return <span style={badgeStyle}>{icon}{role}</span>;
 };
 
-const UserTable = ({ users, onDeleteUser, onEditUser }) => {
+const UserTable = ({ users, onDeleteUser, onEditUser, selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
+    const allSelected = users.length > 0 && users.every(u => selectedIds.includes(u.id));
+    const someSelected = users.some(u => selectedIds.includes(u.id)) && !allSelected;
+    const headerCheckboxRef = React.useRef(null);
+
+    React.useEffect(() => {
+        if (headerCheckboxRef.current) {
+            headerCheckboxRef.current.indeterminate = someSelected;
+        }
+    }, [someSelected]);
+
     return (
         <div className="table-responsive">
             <table className="data-table">
                 <thead>
                     <tr>
+                        {onToggleSelect && (
+                            <th className="table-checkbox-col">
+                                <input
+                                    type="checkbox"
+                                    ref={headerCheckboxRef}
+                                    className="data-checkbox"
+                                    checked={allSelected}
+                                    onChange={() => onToggleSelectAll && onToggleSelectAll(users.map(u => u.id))}
+                                    title={allSelected ? "Deselect all" : "Select all in view"}
+                                />
+                            </th>
+                        )}
                         <th>User</th>
                         <th>Full Name</th>
                         <th>Role</th>
@@ -44,11 +66,24 @@ const UserTable = ({ users, onDeleteUser, onEditUser }) => {
                 <tbody>
                     {users.length === 0 ? (
                         <tr>
-                            <td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No users found.</td>
+                            <td colSpan={onToggleSelect ? 5 : 4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No users found.</td>
                         </tr>
                     ) : (
-                        users.map(u => (
-                            <tr key={u.id}>
+                        users.map(u => {
+                            const isSelected = selectedIds.includes(u.id);
+                            return (
+                            <tr key={u.id} className={isSelected ? 'table-row-selected' : ''}>
+                                {onToggleSelect && (
+                                    <td className="table-checkbox-col">
+                                        <input
+                                            type="checkbox"
+                                            className="data-checkbox"
+                                            checked={isSelected}
+                                            onChange={() => onToggleSelect(u.id)}
+                                            aria-label={`Select ${u.name || u.username}`}
+                                        />
+                                    </td>
+                                )}
                                 <td>
                                     <span style={{ color: 'var(--accent-primary)', fontWeight: '600', fontSize: '0.85rem', letterSpacing: '0.3px' }}>
                                         {u.username}
@@ -65,8 +100,9 @@ const UserTable = ({ users, onDeleteUser, onEditUser }) => {
                                     </button>
                                 </td>
                             </tr>
-                        ))
-                    )}
+                         );
+                        })
+                     )}
                 </tbody>
             </table>
         </div>

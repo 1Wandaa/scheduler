@@ -1,14 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
-import { collection, addDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
-import { deleteFacultyCascade } from '../../services/cascadeDeleteService';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { deleteFacultyCascade, deleteFacultyBatchCascade } from '../../services/cascadeDeleteService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, getDeptColor } from '../../config/constants';
 import FacultyTable from '../../components/FacultyTable/FacultyTable';
-import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
+import BatchActionBar from '../../components/common/BatchActionBar';
 import AutocompleteMultiSelect from '../../components/AutocompleteMultiSelect/AutocompleteMultiSelect';
-import QuickCreateModal from '../../components/QuickCreateModal/QuickCreateModal';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], schedules = [], activeSemester, departments = [], courses = [], onBack, user, onNavigateToHub }) => {
@@ -19,182 +18,46 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
   const [currentId, setCurrentId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [roomSearchQuery, setRoomSearchQuery] = useState('');
-  const [sectionSearchQuery, setSectionSearchQuery] = useState('');
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectionMode, setSelectionMode] = useState(false);
 
-  // Map of sectionId -> array of subject codes/ids assigned to that section for this faculty
-  const [sectionSubjectMap, setSectionSubjectMap] = useState({});
-  const [quickCreateState, setQuickCreateState] = useState({ isOpen: false, type: 'subject' });
 
   const [formData, setFormData] = useState({
-    id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: [], assignedSections: []
+    id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, preferredRooms: []
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, specialization: [], preferredRooms: [], assignedSections: [] });
-    setSectionSubjectMap({});
+    setFormData({ id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, preferredRooms: [] });
     setEditMode(false);
     setError(null);
-    setSectionSearchQuery('');
     setShowModal(true);
   };
 
-  const getSectionSubjects = (sec) => {
-    if (!sec || !sec.subjects || !Array.isArray(sec.subjects)) return [];
-    return (sec.subjects || []).map(subRef => {
-      return subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef, name: subRef };
-    });
-  };
 
-  const getFacultyMatchingSubjectsForSection = (sec, specialization) => {
-    if (!sec || !specialization || specialization.length === 0) return [];
-    const secSubjs = getSectionSubjects(sec);
-    return secSubjs.filter(sub =>
-      specialization.includes(sub.id) ||
-      specialization.includes(sub.code) ||
-      specialization.includes(sub.name)
-    );
-  };
 
-  const handleSubjectToggle = (subjectId) => {
-    if (subjectId === 'CLEAR_ALL') {
-      setFormData(prev => ({ ...prev, specialization: [] }));
-      setSectionSubjectMap({});
-      return;
-    }
 
-    if (Array.isArray(subjectId)) {
-      setFormData(prev => {
-        const current = prev.specialization || [];
-        const allPresent = subjectId.every(id => current.includes(id));
-        const nextSpecs = allPresent
-          ? current.filter(id => !subjectId.includes(id))
-          : [...current, ...subjectId.filter(id => !current.includes(id))];
-        return { ...prev, specialization: nextSpecs };
-      });
-      return;
-    }
-
-    // SubjectSelector single subjectId
-    const subject = subjects.find(s => s.id === subjectId);
-    if (!subject) return;
-
-    setFormData(prev => {
-      const current = prev.specialization || [];
-      const isChecked = current.includes(subject.id) || current.includes(subject.code) || current.includes(subject.name);
-      const newSpecialization = isChecked
-        ? current.filter(s => s !== subject.id && s !== subject.code && s !== subject.name)
-        : [...current, subject.id];
-
-      // Update sectionSubjectMap to prune any removed subject
-      if (isChecked) {
-        setSectionSubjectMap(prevMap => {
-          const nextMap = { ...prevMap };
-          Object.keys(nextMap).forEach(secKey => {
-            nextMap[secKey] = (nextMap[secKey] || []).filter(
-              s => s !== subject.id && s !== subject.code && s !== subject.name
-            );
-          });
-          return nextMap;
-        });
-      }
-
-      return {
-        ...prev,
-        specialization: newSpecialization
-      };
-    });
-  };
 
   const handleRoomToggle = (room) => {
+    const roomId = typeof room === 'object' && room !== null ? (room.id || room.name) : room;
+    const roomName = typeof room === 'object' && room !== null ? room.name : null;
+    const tokens = [roomId, roomName].filter(Boolean).map(t => String(t).toLowerCase());
+
     setFormData(prev => {
       const current = prev.preferredRooms || [];
-      const isChecked = current.includes(room.id) || current.includes(room.name);
+      const isChecked = current.some(r => tokens.includes(String(r).toLowerCase()));
       if (isChecked) {
-        return { ...prev, preferredRooms: current.filter(r => r !== room.id && r !== room.name) };
+        return { ...prev, preferredRooms: current.filter(r => !tokens.includes(String(r).toLowerCase())) };
       } else {
-        return { ...prev, preferredRooms: [...current, room.id] };
+        return { ...prev, preferredRooms: [...current, roomId] };
       }
     });
   };
 
-  const handleSectionToggle = (sec) => {
-    const current = formData.assignedSections || [];
-    const isChecked = current.includes(sec.id) || current.includes(sec.name);
-    if (isChecked) {
-      setFormData(prev => ({
-        ...prev,
-        assignedSections: (prev.assignedSections || []).filter(s => s !== sec.id && s !== sec.name)
-      }));
-      setSectionSubjectMap(prev => {
-        const next = { ...prev };
-        delete next[sec.id];
-        delete next[sec.name];
-        return next;
-      });
-      return;
-    }
 
-    const assignedSubjectIds = formData.specialization || [];
-    if (assignedSubjectIds.length === 0) {
-      toast.warning("Please select the faculty's Assigned Subjects first before assigning sections.");
-      return;
-    }
 
-    // Default to existing enrolled matching subjects, or if none, pre-select the first assigned subject
-    const matching = getFacultyMatchingSubjectsForSection(sec, assignedSubjectIds);
-    let initialSubs = matching.map(m => m.code || m.id);
-    if (initialSubs.length === 0 && assignedSubjectIds.length === 1) {
-      const firstSub = subjects.find(s => s.id === assignedSubjectIds[0] || s.code === assignedSubjectIds[0]);
-      initialSubs = [firstSub?.code || firstSub?.id || assignedSubjectIds[0]];
-    }
 
-    setFormData(prev => ({
-      ...prev,
-      assignedSections: [...(prev.assignedSections || []), sec.id]
-    }));
-
-    setSectionSubjectMap(prev => ({
-      ...prev,
-      [sec.id]: initialSubs
-    }));
-  };
-
-  const handleToggleSubjectForSection = (secId, subjectRef) => {
-    setSectionSubjectMap(prev => {
-      const currentList = prev[secId] || [];
-      const exists = currentList.includes(subjectRef);
-      const updated = exists 
-        ? currentList.filter(s => s !== subjectRef) 
-        : [...currentList, subjectRef];
-      return {
-        ...prev,
-        [secId]: updated
-      };
-    });
-  };
-
-  const handleQuickCreateSuccess = (newItem, type) => {
-    if (type === 'subject') {
-      setFormData(prev => ({
-        ...prev,
-        specialization: [...(prev.specialization || []), newItem.id]
-      }));
-    } else if (type === 'section') {
-      setFormData(prev => ({
-        ...prev,
-        assignedSections: [...(prev.assignedSections || []), newItem.id]
-      }));
-      if (formData.specialization && formData.specialization.length > 0) {
-        const firstSub = subjects.find(s => s.id === formData.specialization[0] || s.code === formData.specialization[0]) || { code: formData.specialization[0] };
-        setSectionSubjectMap(prev => ({
-          ...prev,
-          [newItem.id]: [firstSub.code || firstSub.id]
-        }));
-      }
-    }
-  };
 
   const handleOpenEdit = (prof) => {
     let fName = prof.firstName || '';
@@ -219,38 +82,15 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
         }
       }
     }
-
-    const assignedSecs = prof.assignedSections || [];
-    const initialMap = { ...(prof.sectionSubjectMap || {}) };
-    assignedSecs.forEach(secId => {
-      const sec = sections.find(s => s.id === secId || s.name === secId);
-      if (sec && (!initialMap[sec.id] || initialMap[sec.id].length === 0)) {
-        if (sec.subjectInstructors) {
-          const explicitSubs = Object.entries(sec.subjectInstructors)
-            .filter(([subRef, pId]) => pId === prof.id)
-            .map(([subRef]) => subRef);
-          if (explicitSubs.length > 0) {
-            initialMap[sec.id] = explicitSubs;
-            return;
-          }
-        }
-        const matching = getFacultyMatchingSubjectsForSection(sec, prof.specialization || []);
-        initialMap[sec.id] = matching.map(m => m.code || m.id);
-      }
-    });
-
     setFormData({
       ...prof,
       firstName: fName,
       lastName: lName,
-      preferredRooms: prof.preferredRooms || [],
-      assignedSections: assignedSecs
+      preferredRooms: prof.preferredRooms || []
     });
-    setSectionSubjectMap(initialMap);
     setCurrentId(prof.id);
     setEditMode(true);
     setError(null);
-    setSectionSearchQuery('');
     setShowModal(true);
   };
 
@@ -282,33 +122,9 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
       return;
     }
 
-    if (formData.assignedSections && formData.assignedSections.length > 0) {
-      if (!formData.specialization || formData.specialization.length === 0) {
-        setError("Cannot assign sections without selecting assigned subjects. Please select assigned subjects first.");
-        return;
-      }
-
-      // Check that each assigned section has at least one subject selected
-      const missingSubjects = (formData.assignedSections || []).filter(secId => {
-        const sec = sections.find(s => s.id === secId || s.name === secId);
-        const list = sec ? (sectionSubjectMap[sec.id] || sectionSubjectMap[sec.name] || []) : [];
-        return list.length === 0;
-      });
-
-      if (missingSubjects.length > 0) {
-        const names = missingSubjects.map(secId => {
-          const sec = sections.find(s => s.id === secId || s.name === secId);
-          return sec ? sec.name : secId;
-        }).join(', ');
-        setError(`Please select which subject(s) this faculty member teaches for: ${names}`);
-        return;
-      }
-    }
-
     const dataToSave = { 
       ...formData, 
-      name: combinedName,
-      sectionSubjectMap: sectionSubjectMap || {}
+      name: combinedName
     };
 
     setIsSaving(true);
@@ -324,40 +140,6 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
         batch.set(newDocRef, { ...dataToSave, id: profId });
         logActivity({ user, action: LOG_ACTIONS.ADD_FACULTY, details: `Added new faculty: ${combinedName} (${formData.department})` });
       }
-
-      // Auto-enroll sections ONLY in the specific subjects chosen for each section
-      const assignedSecs = formData.assignedSections || [];
-      assignedSecs.forEach(secId => {
-        const sec = sections.find(s => s.id === secId || s.name === secId);
-        if (sec) {
-          const assignedSubjs = sectionSubjectMap[sec.id] || [];
-          const currentSubjs = sec.subjects || [];
-          let updatedSubjs = [...currentSubjs];
-          let hasChanges = false;
-          const updatedSubjectInstructors = { ...(sec.subjectInstructors || {}) };
-
-          assignedSubjs.forEach(subRef => {
-            const subObj = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef);
-            const valToAdd = subObj?.code || subObj?.id || subRef;
-            const isAlreadyIn = updatedSubjs.some(existing => 
-              existing === valToAdd || (subObj && (existing === subObj.id || existing === subObj.code))
-            );
-            if (!isAlreadyIn) {
-              updatedSubjs.push(valToAdd);
-              hasChanges = true;
-            }
-            updatedSubjectInstructors[valToAdd] = profId;
-            hasChanges = true;
-          });
-
-          if (hasChanges) {
-            batch.update(doc(db, 'sections', String(sec.id)), { 
-              subjects: updatedSubjs,
-              subjectInstructors: updatedSubjectInstructors
-            });
-          }
-        }
-      });
 
       await batch.commit();
       setShowModal(false);
@@ -383,11 +165,102 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
       try {
         const prof = professors.find(p => String(p.id) === String(id));
         await deleteFacultyCascade(prof, schedules);
+        setSelectedIds(prev => prev.filter(item => item !== id));
         logActivity({ user, action: LOG_ACTIONS.DELETE_FACULTY, details: `Deleted faculty: ${prof?.name || id}` });
         toast.success('Faculty deleted successfully');
       } catch (err) {
         console.error("Error deleting faculty:", err);
         toast.error('Failed to delete faculty');
+      }
+    }
+  };
+
+  const handleToggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = (idsInView) => {
+    const allInViewSelected = idsInView.length > 0 && idsInView.every(id => selectedIds.includes(id));
+    if (allInViewSelected) {
+      setSelectedIds(prev => prev.filter(id => !idsInView.includes(id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...idsInView])));
+    }
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedIds(filteredProfessors.map(p => p.id));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  const handleExitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  };
+
+  const handleDeleteSelected = async () => {
+    const selectedInView = selectedIds.filter(id => filteredProfessors.some(p => p.id === id));
+    if (selectedInView.length === 0) return;
+    const count = selectedInView.length;
+
+    const isConfirmed = await confirm({
+      title: `Delete ${count} Faculty Member${count > 1 ? 's' : ''}?`,
+      text: `Are you sure you want to delete ${count} selected faculty member${count > 1 ? 's' : ''}? Their assigned schedules will be removed and records moved to the Recycle Bin.`,
+      icon: 'warning',
+      confirmButtonText: `Delete ${count} Selected`,
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Deleting ${count} faculty member${count > 1 ? 's' : ''}...`);
+      try {
+        const profsToDelete = professors.filter(p => selectedInView.includes(p.id));
+        await deleteFacultyBatchCascade(profsToDelete, schedules);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_DELETE_FACULTY,
+          details: `Batch deleted ${count} faculty: ${profsToDelete.map(p => p.name || p.id).join(', ')}`
+        });
+        toast.success(`Successfully deleted ${count} faculty member${count > 1 ? 's' : ''}`, { id: toastId });
+        setSelectedIds(prev => prev.filter(id => !selectedInView.includes(id)));
+      } catch (err) {
+        console.error("Error batch deleting faculty:", err);
+        toast.error('Failed to delete selected faculty', { id: toastId });
+      }
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    const count = filteredProfessors.length;
+    if (count === 0) return;
+
+    const isConfirmed = await confirm({
+      title: `Delete All ${count} Faculty Members?`,
+      text: `Are you sure you want to delete ALL ${count} faculty members in this view? Their assigned schedules will be removed and records moved to the Recycle Bin.`,
+      icon: 'warning',
+      confirmButtonText: 'Delete All',
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Deleting all ${count} faculty members...`);
+      try {
+        await deleteFacultyBatchCascade(filteredProfessors, schedules);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_DELETE_FACULTY,
+          details: `Deleted all ${count} faculty in view (${departmentFilter})`
+        });
+        toast.success(`Successfully deleted all ${count} faculty members`, { id: toastId });
+        setSelectedIds([]);
+      } catch (err) {
+        console.error("Error deleting all faculty:", err);
+        toast.error('Failed to delete faculty', { id: toastId });
       }
     }
   };
@@ -413,48 +286,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
       .sort((a, b) => a.formattedName.localeCompare(b.formattedName));
   }, [professors, departmentFilter, searchQuery]);
 
-  const filteredSections = useMemo(() => {
-    const assignedSubjectIds = formData.specialization || [];
-    const hasAssignedSubjects = assignedSubjectIds.length > 0;
-    const profDept = (formData.department || '').toUpperCase();
 
-    return [...sections]
-      .map(sec => {
-        const allEnrolled = getSectionSubjects(sec);
-        const matching = getFacultyMatchingSubjectsForSection(sec, assignedSubjectIds);
-        const secDept = (sec.department || sec.program || '').toUpperCase();
-        const isRecommended = Boolean(profDept && (secDept.includes(profDept) || profDept.includes(secDept)));
-        return {
-          ...sec,
-          allEnrolled,
-          matchingSubjects: matching,
-          disabled: !hasAssignedSubjects,
-          isRecommended,
-          disabledReason: !hasAssignedSubjects ? 'Select assigned subjects first' : ''
-        };
-      })
-      .filter(sec => {
-        if (!sectionSearchQuery.trim()) return true;
-        const q = sectionSearchQuery.toLowerCase();
-        const nameMatch = (sec.name || '').toLowerCase().includes(q);
-        const deptMatch = (sec.department || sec.program || '').toLowerCase().includes(q);
-        const subjectMatch = sec.allEnrolled.some(s =>
-          (s.code || '').toLowerCase().includes(q) ||
-          (s.name || '').toLowerCase().includes(q)
-        );
-        return nameMatch || deptMatch || subjectMatch;
-      })
-      .sort((a, b) => {
-        // Show eligible & recommended sections first
-        if (a.disabled !== b.disabled) {
-          return a.disabled ? 1 : -1;
-        }
-        if (a.isRecommended !== b.isRecommended) {
-          return a.isRecommended ? -1 : 1;
-        }
-        return (a.name || '').localeCompare(b.name || '');
-      });
-  }, [sections, sectionSearchQuery, formData.specialization, formData.department, subjects]);
 
   const sortedRooms = useMemo(() => {
     const profDept = (formData.department || '').toUpperCase();
@@ -514,6 +346,14 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                   ⇄ Assignments Hub
                 </button>
               )}
+              <button
+                className={`select-mode-btn${selectionMode ? ' active' : ''}`}
+                onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
+                title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                {selectionMode ? 'Cancel' : 'Select'}
+              </button>
               <button className="btn" onClick={handleOpenAdd}>+ Add Faculty</button>
             </div>
           </div>
@@ -559,7 +399,30 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
           </div>
         </div>
 
-        <FacultyTable facultyList={filteredProfessors} subjects={subjects} schedules={schedules} departments={departments} onEdit={handleOpenEdit} onDelete={handleDelete} />
+        {selectionMode && (
+          <BatchActionBar
+            selectedCount={selectedIds.filter(id => filteredProfessors.some(p => p.id === id)).length}
+            totalCount={filteredProfessors.length}
+            itemName="faculty"
+            onSelectAll={handleSelectAllFiltered}
+            onDeselectAll={handleDeselectAll}
+            onDeleteSelected={handleDeleteSelected}
+            onDeleteAll={handleDeleteAll}
+            onExitSelectionMode={handleExitSelectionMode}
+          />
+        )}
+
+        <FacultyTable
+          facultyList={filteredProfessors}
+          subjects={subjects}
+          schedules={schedules}
+          departments={departments}
+          onEdit={handleOpenEdit}
+          onDelete={handleDelete}
+          selectedIds={selectionMode ? selectedIds : []}
+          onToggleSelect={selectionMode ? handleToggleSelect : undefined}
+          onToggleSelectAll={selectionMode ? handleToggleSelectAll : undefined}
+        />
       </div>
 
       {showModal && (
@@ -662,17 +525,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
               </div>
             </div>
 
-            <SubjectSelector
-              label="Assigned Subjects"
-              subjects={subjects}
-              activeSemester={activeSemester}
-              selectedSubjects={formData.specialization || []}
-              departments={departments}
-              onToggleSubject={handleSubjectToggle}
-              recommendedDepartment={formData.department}
-              contextType="faculty"
-              onQuickAdd={() => setQuickCreateState({ isOpen: true, type: 'subject' })}
-            />
+
 
             <div className="form-group" style={{ marginBottom: '25px' }}>
               <label className="form-label">Preferred Rooms</label>
@@ -720,270 +573,6 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
               />
             </div>
 
-            <div className="form-group" style={{ marginBottom: '25px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label className="form-label" style={{ marginBottom: 0 }}>Assigned Sections</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setQuickCreateState({ isOpen: true, type: 'section' })}
-                    style={{
-                      background: 'rgba(86, 69, 238, 0.1)',
-                      border: '1px solid rgba(86, 69, 238, 0.3)',
-                      color: 'var(--accent-primary, #5645ee)',
-                      borderRadius: '6px',
-                      padding: '2px 8px',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    + Quick Add Section
-                  </button>
-                  {formData.specialization && formData.specialization.length > 0 && (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: '600' }}>
-                      {filteredSections.filter(s => !s.disabled).length} eligible section(s)
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {(!formData.specialization || formData.specialization.length === 0) && (
-                <div style={{
-                  fontSize: '0.78rem', color: 'var(--warning)',
-                  background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.25)',
-                  padding: '8px 12px', borderRadius: '6px', marginBottom: '10px',
-                  display: 'flex', alignItems: 'center', gap: '6px'
-                }}>
-                  <span>⚠️</span>
-                  <span>Please select at least one <strong>Assigned Subject</strong> above first to view and assign eligible sections.</span>
-                </div>
-              )}
-
-              <AutocompleteMultiSelect
-                allOptions={sections}
-                options={filteredSections}
-                selectedIds={formData.assignedSections || []}
-                onToggle={handleSectionToggle}
-                placeholder={(!formData.specialization || formData.specialization.length === 0) ? "Select subjects first..." : "Search section name or enrolled subject..."}
-                searchQuery={sectionSearchQuery}
-                setSearchQuery={setSectionSearchQuery}
-                noOptionsMessage={
-                  sections.length === 0
-                    ? "No sections available."
-                    : (!formData.specialization || formData.specialization.length === 0)
-                      ? "Select assigned subjects first to see eligible sections."
-                      : "No sections match your search."
-                }
-                renderChip={(sec, onRemove) => {
-                  const assignedSubs = sectionSubjectMap[sec.id] || [];
-                  const subLabels = assignedSubs.join(', ');
-
-                  return (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      padding: '4px 10px', borderRadius: '16px',
-                      background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)',
-                      fontSize: '0.8rem', fontWeight: '600', color: '#10b981'
-                    }}>
-                      <span>{sec.name}</span>
-                      {subLabels && (
-                        <span style={{ fontSize: '0.72rem', opacity: 0.85, fontWeight: '500', color: '#047857' }}>
-                          ({subLabels})
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); onRemove(); }}
-                        style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7, marginLeft: '2px' }}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                      </button>
-                    </div>
-                  );
-                }}
-                renderOption={(sec) => {
-                  const isEligible = !sec.disabled;
-                  const matchingCodes = (sec.matchingSubjects || []).map(s => s.code || s.name);
-                  const otherEnrolledCodes = (sec.allEnrolled || [])
-                    .filter(s => !matchingCodes.includes(s.code || s.name))
-                    .map(s => s.code || s.name);
-
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%', padding: '2px 0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontWeight: '700', color: isEligible ? 'var(--accent-dark)' : 'var(--text-muted)', fontSize: '0.9rem' }}>
-                            {sec.name}
-                          </span>
-                          {sec.program && (
-                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', background: 'var(--bg-main)', padding: '1px 6px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
-                              {sec.program}
-                            </span>
-                          )}
-                          {sec.isRecommended && (
-                            <span style={{ fontSize: '0.7rem', color: '#059669', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.35)', padding: '1px 6px', borderRadius: '8px', fontWeight: '700' }}>
-                              ✨ Recommended
-                            </span>
-                          )}
-                        </div>
-                        {matchingCodes.length > 0 ? (
-                          <span style={{ fontSize: '0.7rem', color: '#059669', background: '#d1fae5', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>
-                            {matchingCodes.length} Enrolled Match
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '0.7rem', color: '#b45309', background: 'rgba(234, 179, 8, 0.15)', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>
-                            Can assign & auto-enroll
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Enrolled Subjects List */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '600' }}>Enrolled:</span>
-                        {sec.allEnrolled && sec.allEnrolled.length > 0 ? (
-                          <>
-                            {matchingCodes.map(code => (
-                              <span key={code} style={{
-                                fontSize: '0.7rem', fontWeight: '700',
-                                background: 'rgba(16, 185, 129, 0.15)', color: '#059669',
-                                border: '1px solid rgba(16, 185, 129, 0.3)',
-                                padding: '1px 6px', borderRadius: '4px'
-                              }}>
-                                ✓ {code}
-                              </span>
-                            ))}
-                            {otherEnrolledCodes.slice(0, 4).map(code => (
-                              <span key={code} style={{
-                                fontSize: '0.7rem', fontWeight: '500',
-                                background: 'var(--bg-main)', color: 'var(--text-muted)',
-                                border: '1px solid var(--border-color)',
-                                padding: '1px 5px', borderRadius: '4px', opacity: 0.8
-                              }}>
-                                {code}
-                              </span>
-                            ))}
-                            {otherEnrolledCodes.length > 4 && (
-                              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                                +{otherEnrolledCodes.length - 4} more
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            No subjects enrolled yet
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                }}
-              />
-
-              {/* Section-Specific Subject Assignment Matrix */}
-              {formData.assignedSections && formData.assignedSections.length > 0 && formData.specialization && formData.specialization.length > 0 && (
-                <div style={{
-                  marginTop: '16px',
-                  padding: '14px',
-                  background: 'var(--bg-main, #f8fafc)',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border-color, #e2e8f0)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main, #1e293b)' }}>
-                      Subjects Taught for Each Assigned Section:
-                    </span>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)' }}>
-                      Click to choose which subject(s) this faculty member teaches
-                    </span>
-                  </div>
-
-                  {formData.assignedSections.map(secId => {
-                    const sec = sections.find(s => s.id === secId || s.name === secId) || { id: secId, name: secId };
-                    const selectedSubsForSec = sectionSubjectMap[sec.id] || [];
-                    const specSubjects = (formData.specialization || []).map(specId => {
-                      return subjects.find(s => s.id === specId || s.code === specId || s.name === specId) || { id: specId, code: specId, name: specId };
-                    });
-
-                    return (
-                      <div key={sec.id} style={{
-                        padding: '10px 14px',
-                        background: 'var(--bg-surface, #ffffff)',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-color, #e2e8f0)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontWeight: '700', fontSize: '0.88rem', color: 'var(--accent-dark, #0f172a)' }}>
-                            {sec.name}
-                          </span>
-                          {selectedSubsForSec.length === 0 ? (
-                            <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: '600' }}>
-                              ⚠️ Must assign at least 1 subject
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: '600' }}>
-                              {selectedSubsForSec.length} subject(s) selected
-                            </span>
-                          )}
-                        </div>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {specSubjects.map(sub => {
-                            const subKey = sub.code || sub.id;
-                            const isChecked = selectedSubsForSec.includes(subKey) || selectedSubsForSec.includes(sub.id) || selectedSubsForSec.includes(sub.code);
-                            const isAlreadyEnrolled = (sec.subjects || []).some(s => s === sub.id || s === sub.code || s === sub.name);
-
-                            return (
-                              <button
-                                key={sub.id || sub.code}
-                                type="button"
-                                onClick={() => handleToggleSubjectForSection(sec.id, subKey)}
-                                style={{
-                                  padding: '5px 12px',
-                                  borderRadius: '16px',
-                                  fontSize: '0.78rem',
-                                  fontWeight: '600',
-                                  cursor: 'pointer',
-                                  border: isChecked ? '1px solid var(--accent-primary, #5645ee)' : '1px solid var(--border-color, #cbd5e1)',
-                                  background: isChecked ? 'rgba(86, 69, 238, 0.12)' : 'var(--bg-main, #f8fafc)',
-                                  color: isChecked ? 'var(--accent-primary, #5645ee)' : 'var(--text-muted, #64748b)',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  transition: 'all 0.15s'
-                                }}
-                              >
-                                <span>{isChecked ? '✓' : '+'}</span>
-                                <span>{sub.code || sub.name}</span>
-                                {isChecked && !isAlreadyEnrolled && (
-                                  <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '6px', background: 'rgba(234, 179, 8, 0.2)', color: '#b45309' }}>
-                                    Auto-enrolls
-                                  </span>
-                                )}
-                                {isChecked && isAlreadyEnrolled && (
-                                  <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.15)', color: '#059669' }}>
-                                    Enrolled
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
 
             <div className="mgmt-modal-actions">
               <button className="mgmt-cancel-btn" onClick={() => setShowModal(false)} disabled={isSaving}>Cancel</button>
@@ -995,20 +584,6 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
         </div>
       )}
 
-      {/* Quick Create Modal */}
-      <QuickCreateModal
-        isOpen={quickCreateState.isOpen}
-        type={quickCreateState.type}
-        onClose={() => setQuickCreateState({ isOpen: false, type: 'subject' })}
-        departments={departments}
-        courses={courses}
-        subjects={subjects}
-        sections={sections}
-        professors={professors}
-        user={user}
-        activeSemester={activeSemester}
-        onSuccess={handleQuickCreateSuccess}
-      />
     </>
   );
 };

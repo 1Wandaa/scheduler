@@ -131,3 +131,228 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* ─── Checkbox Styling ─── */
+.table-checkbox-col {
+  width: 44px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  padding-left: 14px !important;
+  padding-right: 8px !important;
+}
+
+.data-checkbox {
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  cursor: pointer;
+  accent-color: var(--accent-primary, #5645ee);
+  vertical-align: middle;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.data-checkbox:hover {
+  transform: scale(1.1);
+  filter: brightness(1.1);
+}
+
+.data-checkbox:indeterminate {
+  accent-color: var(--accent-primary, #5645ee);
+  opacity: 0.85;
+}
+
+/* ─── Batch Action Bar ─── */
+.batch-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  animation: batchBarFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s ease;
+}
+
+.batch-action-bar.active {
+  border-color: rgba(86, 69, 238, 0.3);
+  background: linear-gradient(135deg, rgba(86, 69, 238, 0.04), rgba(124, 58, 237, 0.02));
+  box-shadow: 0 4px 20px rgba(86, 69, 238, 0.08);
+}
+
+@keyframes batchBarFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.batch-action-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.batch-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(86, 69, 238, 0.12);
+  color: var(--accent-primary, #5645ee);
+  border: 1px solid rgba(86, 69, 238, 0.25);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.batch-count-badge strong {
+  font-weight: 800;
+}
+
+.batch-total-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 500;
+}
+
+.batch-selection-toggles {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.batch-action-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.batch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border: none;
+  outline: none;
+}
+
+.batch-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.batch-btn-text {
+  background: transparent;
+  color: var(--accent-primary, #5645ee);
+  padding: 4px 8px;
+}
+
+.batch-btn-text:hover {
+  text-decoration: underline;
+  background: rgba(86, 69, 238, 0.08);
+}
+
+.batch-btn-text.text-muted {
+  color: var(--text-muted, #64748b);
+}
+
+.batch-btn-text.text-muted:hover {
+  color: var(--text-main, #1e293b);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.batch-btn-danger {
+  background: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.batch-btn-danger:hover {
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.batch-btn-danger:active {
+  transform: translateY(0);
+}
+
+.batch-btn-outline-danger {
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.batch-btn-outline-danger:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: #ef4444;
+}
+
+.batch-btn-success {
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.batch-btn-success:hover {
+  background: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
+}
+
+.batch-btn-ghost {
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+}
+
+.batch-btn-ghost:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-main, #1e293b);
+  border-color: var(--text-muted, #94a3b8);
+}
+
+/* ─── Select Mode Toggle Button ─── */
+.select-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  background: var(--bg-main, #f8fafc);
+  color: var(--text-main, #1e293b);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+}
+
+.select-mode-btn:hover {
+  background: rgba(86, 69, 238, 0.06);
+  border-color: rgba(86, 69, 238, 0.3);
+  color: var(--accent-primary, #5645ee);
+}
+
+.select-mode-btn.active {
+  background: rgba(86, 69, 238, 0.1);
+  color: var(--accent-primary, #5645ee);
+  border-color: rgba(86, 69, 238, 0.4);
+}

@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { deleteCourseBatch } from '../../services/cascadeDeleteService';
+import BatchActionBar from '../../components/common/BatchActionBar';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
@@ -14,6 +16,8 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectionMode, setSelectionMode] = useState(false);
 
   const [formData, setFormData] = useState({
     id: '',
@@ -101,12 +105,103 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
     if (isConfirmed) {
       try {
         await deleteDoc(doc(db, 'courses', id.toString()));
+        setSelectedIds(prev => prev.filter(item => item !== id));
         const course = courses.find(c => String(c.id) === String(id));
         logActivity({ user, action: LOG_ACTIONS.DELETE_COURSE, details: `Deleted course: ${course?.code || id}` });
         toast.success('Course deleted successfully');
       } catch (err) {
         console.error("Error deleting course:", err);
         toast.error('Failed to delete course');
+      }
+    }
+  };
+
+  const handleToggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    const allInViewSelected = filteredCourses.length > 0 && filteredCourses.every(c => selectedIds.includes(c.id));
+    if (allInViewSelected) {
+      setSelectedIds(prev => prev.filter(id => !filteredCourses.some(c => c.id === id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...filteredCourses.map(c => c.id)])));
+    }
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedIds(filteredCourses.map(c => c.id));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  const handleExitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  };
+
+  const handleDeleteSelected = async () => {
+    const selectedInView = selectedIds.filter(id => filteredCourses.some(c => c.id === id));
+    if (selectedInView.length === 0) return;
+    const count = selectedInView.length;
+
+    const isConfirmed = await confirm({
+      title: `Delete ${count} Course${count > 1 ? 's' : ''}?`,
+      text: `Are you sure you want to delete ${count} selected courses? This action cannot be undone.`,
+      icon: 'warning',
+      confirmButtonText: `Delete ${count} Selected`,
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Deleting ${count} courses...`);
+      try {
+        const coursesToDelete = courses.filter(c => selectedInView.includes(c.id));
+        await deleteCourseBatch(coursesToDelete);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_DELETE_COURSES,
+          details: `Batch deleted ${count} courses: ${coursesToDelete.map(c => c.code || c.id).join(', ')}`
+        });
+        toast.success(`Successfully deleted ${count} courses`, { id: toastId });
+        setSelectedIds(prev => prev.filter(id => !selectedInView.includes(id)));
+      } catch (err) {
+        console.error("Error batch deleting courses:", err);
+        toast.error('Failed to delete selected courses', { id: toastId });
+      }
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    const count = filteredCourses.length;
+    if (count === 0) return;
+
+    const isConfirmed = await confirm({
+      title: `Delete All ${count} Courses?`,
+      text: `Are you sure you want to delete ALL ${count} courses matching your view? This action cannot be undone.`,
+      icon: 'warning',
+      confirmButtonText: 'Delete All',
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Deleting all ${count} courses...`);
+      try {
+        await deleteCourseBatch(filteredCourses);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_DELETE_COURSES,
+          details: `Deleted all ${count} courses in view`
+        });
+        toast.success(`Successfully deleted all ${count} courses`, { id: toastId });
+        setSelectedIds([]);
+      } catch (err) {
+        console.error("Error deleting all courses:", err);
+        toast.error('Failed to delete courses', { id: toastId });
       }
     }
   };
@@ -158,7 +253,17 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
               <p>Configure academic courses</p>
             </div>
           </div>
-          <button className="btn" onClick={handleOpenAdd}>+ Add Course</button>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button
+                className={`select-mode-btn${selectionMode ? ' active' : ''}`}
+                onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
+                title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                {selectionMode ? 'Cancel' : 'Select'}
+              </button>
+              <button className="btn" onClick={handleOpenAdd}>+ Add Course</button>
+            </div>
         </div>
 
         <div className="mgmt-toolbar">
@@ -201,12 +306,36 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table className="data-table" style={{ minWidth: '700px' }}>
+        {selectionMode && (
+          <BatchActionBar
+            selectedCount={selectedIds.filter(id => filteredCourses.some(c => c.id === id)).length}
+            totalCount={filteredCourses.length}
+            itemName="course"
+            onSelectAll={handleSelectAllFiltered}
+            onDeselectAll={handleDeselectAll}
+            onDeleteSelected={handleDeleteSelected}
+            onDeleteAll={handleDeleteAll}
+            onExitSelectionMode={handleExitSelectionMode}
+          />
+        )}
+
+        <div className="table-responsive">
+          <table className="data-table">
             <thead>
               <tr>
-                <th>Code</th>
-                <th>Title</th>
+                {selectionMode && (
+                  <th className="table-checkbox-col">
+                    <input
+                      type="checkbox"
+                      className="data-checkbox"
+                      checked={filteredCourses.length > 0 && filteredCourses.every(c => selectedIds.includes(c.id))}
+                      onChange={handleToggleSelectAll}
+                      title="Select/Deselect all"
+                    />
+                  </th>
+                )}
+                <th>Program Code</th>
+                <th>Program Title</th>
                 <th>Department</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
@@ -214,13 +343,26 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
             <tbody>
               {filteredCourses.length === 0 ? (
                 <tr>
-                  <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                    No courses found.
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    No programs found matching the filter.
                   </td>
                 </tr>
               ) : (
-                filteredCourses.map(course => (
-                  <tr key={course.id}>
+                filteredCourses.map(course => {
+                  const isSelected = selectionMode && selectedIds.includes(course.id);
+                  return (
+                  <tr key={course.id} className={isSelected ? 'table-row-selected' : ''}>
+                    {selectionMode && (
+                      <td className="table-checkbox-col">
+                        <input
+                          type="checkbox"
+                          className="data-checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(course.id)}
+                          aria-label={`Select ${course.code}`}
+                        />
+                      </td>
+                    )}
                     <td>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -259,8 +401,9 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })
+            )}
             </tbody>
           </table>
         </div>

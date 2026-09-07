@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { deleteDepartmentBatch } from '../../services/cascadeDeleteService';
+import BatchActionBar from '../../components/common/BatchActionBar';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
@@ -13,6 +15,8 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectionMode, setSelectionMode] = useState(false);
 
   const [formData, setFormData] = useState({
     id: '',
@@ -93,12 +97,103 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
     if (isConfirmed) {
       try {
         await deleteDoc(doc(db, 'departments', id.toString()));
+        setSelectedIds(prev => prev.filter(item => item !== id));
         const dept = departments.find(d => String(d.id) === String(id));
         logActivity({ user, action: LOG_ACTIONS.DELETE_DEPARTMENT, details: `Deleted department: ${dept?.name || id}` });
         toast.success('Department deleted successfully');
       } catch (err) {
         console.error("Error deleting department:", err);
         toast.error('Failed to delete department');
+      }
+    }
+  };
+
+  const handleToggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    const allInViewSelected = filteredDepartments.length > 0 && filteredDepartments.every(d => selectedIds.includes(d.id));
+    if (allInViewSelected) {
+      setSelectedIds(prev => prev.filter(id => !filteredDepartments.some(d => d.id === id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...filteredDepartments.map(d => d.id)])));
+    }
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedIds(filteredDepartments.map(d => d.id));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  const handleExitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  };
+
+  const handleDeleteSelected = async () => {
+    const selectedInView = selectedIds.filter(id => filteredDepartments.some(d => d.id === id));
+    if (selectedInView.length === 0) return;
+    const count = selectedInView.length;
+
+    const isConfirmed = await confirm({
+      title: `Delete ${count} Department${count > 1 ? 's' : ''}?`,
+      text: `Are you sure you want to delete ${count} selected departments? This action cannot be undone.`,
+      icon: 'warning',
+      confirmButtonText: `Delete ${count} Selected`,
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Deleting ${count} departments...`);
+      try {
+        const deptsToDelete = departments.filter(d => selectedInView.includes(d.id));
+        await deleteDepartmentBatch(deptsToDelete);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_DELETE_DEPARTMENTS,
+          details: `Batch deleted ${count} departments: ${deptsToDelete.map(d => d.name || d.id).join(', ')}`
+        });
+        toast.success(`Successfully deleted ${count} departments`, { id: toastId });
+        setSelectedIds(prev => prev.filter(id => !selectedInView.includes(id)));
+      } catch (err) {
+        console.error("Error batch deleting departments:", err);
+        toast.error('Failed to delete selected departments', { id: toastId });
+      }
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    const count = filteredDepartments.length;
+    if (count === 0) return;
+
+    const isConfirmed = await confirm({
+      title: `Delete All ${count} Departments?`,
+      text: `Are you sure you want to delete ALL ${count} departments in this view? This action cannot be undone.`,
+      icon: 'warning',
+      confirmButtonText: 'Delete All',
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Deleting all ${count} departments...`);
+      try {
+        await deleteDepartmentBatch(filteredDepartments);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_DELETE_DEPARTMENTS,
+          details: `Deleted all ${count} departments in view`
+        });
+        toast.success(`Successfully deleted all ${count} departments`, { id: toastId });
+        setSelectedIds([]);
+      } catch (err) {
+        console.error("Error deleting all departments:", err);
+        toast.error('Failed to delete departments', { id: toastId });
       }
     }
   };
@@ -139,7 +234,17 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
               <p>Configure academic departments</p>
             </div>
           </div>
-          <button className="btn" onClick={handleOpenAdd}>+ Add Department</button>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button
+                className={`select-mode-btn${selectionMode ? ' active' : ''}`}
+                onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
+                title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                {selectionMode ? 'Cancel' : 'Select'}
+              </button>
+              <button className="btn" onClick={handleOpenAdd}>+ Add Department</button>
+            </div>
         </div>
 
         <div className="mgmt-toolbar">
@@ -157,12 +262,36 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table className="data-table" style={{ minWidth: '600px' }}>
+        {selectionMode && (
+          <BatchActionBar
+            selectedCount={selectedIds.filter(id => filteredDepartments.some(d => d.id === id)).length}
+            totalCount={filteredDepartments.length}
+            itemName="department"
+            onSelectAll={handleSelectAllFiltered}
+            onDeselectAll={handleDeselectAll}
+            onDeleteSelected={handleDeleteSelected}
+            onDeleteAll={handleDeleteAll}
+            onExitSelectionMode={handleExitSelectionMode}
+          />
+        )}
+
+        <div className="table-responsive">
+          <table className="data-table">
             <thead>
               <tr>
-                <th>ID / Code</th>
-                <th>Name</th>
+                {selectionMode && (
+                  <th className="table-checkbox-col">
+                    <input
+                      type="checkbox"
+                      className="data-checkbox"
+                      checked={filteredDepartments.length > 0 && filteredDepartments.every(d => selectedIds.includes(d.id))}
+                      onChange={handleToggleSelectAll}
+                      title="Select/Deselect all"
+                    />
+                  </th>
+                )}
+                <th>Code</th>
+                <th>Department Name</th>
                 <th>Color</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
@@ -170,13 +299,26 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
             <tbody>
               {filteredDepartments.length === 0 ? (
                 <tr>
-                  <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                    No departments found.
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    No departments found matching the filter.
                   </td>
                 </tr>
               ) : (
-                filteredDepartments.map(dept => (
-                  <tr key={dept.id}>
+                filteredDepartments.map(dept => {
+                  const isSelected = selectionMode && selectedIds.includes(dept.id);
+                  return (
+                  <tr key={dept.id} className={isSelected ? 'table-row-selected' : ''}>
+                    {selectionMode && (
+                      <td className="table-checkbox-col">
+                        <input
+                          type="checkbox"
+                          className="data-checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(dept.id)}
+                          aria-label={`Select ${dept.name}`}
+                        />
+                      </td>
+                    )}
                     <td>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -213,8 +355,9 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })
+            )}
             </tbody>
           </table>
         </div>

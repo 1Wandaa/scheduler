@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../config/firebase';
-import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { restoreFromTrash } from '../../services/restoreService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
+import BatchActionBar from '../../components/common/BatchActionBar';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 const RecycleBin = ({ onBack, user }) => {
   const { confirm } = useGlobalDialog();
   const [trashItems, setTrashItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectionMode, setSelectionMode] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'trash'), (snap) => {
@@ -19,15 +22,63 @@ const RecycleBin = ({ onBack, user }) => {
     return () => unsub();
   }, []);
 
+  const handleToggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    const allSelected = trashItems.length > 0 && trashItems.every(item => selectedIds.includes(item.id));
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(trashItems.map(item => item.id));
+    }
+  };
+
   const handleRestore = async (item) => {
     try {
       await restoreFromTrash(item);
+      setSelectedIds(prev => prev.filter(id => id !== item.id));
       const itemName = item.data?.name || item.data?.code || item.data?.username || item.originalId;
       logActivity({ user, action: LOG_ACTIONS.RESTORE_DATA, details: `Restored ${item.type}: ${itemName}` });
       toast.success(`${item.type.charAt(0).toUpperCase() + item.type.slice(1)} restored successfully!`);
     } catch (err) {
       console.error("Error restoring item:", err);
       toast.error('Failed to restore item.');
+    }
+  };
+
+  const handleRestoreSelected = async () => {
+    const selectedItems = trashItems.filter(item => selectedIds.includes(item.id));
+    if (selectedItems.length === 0) return;
+    const count = selectedItems.length;
+
+    const isConfirmed = await confirm({
+      title: `Restore ${count} Item${count > 1 ? 's' : ''}?`,
+      text: `Are you sure you want to restore ${count} selected item${count > 1 ? 's' : ''}?`,
+      icon: 'info',
+      confirmButtonText: `Restore ${count} Selected`,
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Restoring ${count} items...`);
+      try {
+        for (const item of selectedItems) {
+          await restoreFromTrash(item);
+        }
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_RESTORE_DATA,
+          details: `Batch restored ${count} items from trash`
+        });
+        toast.success(`Successfully restored ${count} item${count > 1 ? 's' : ''}`, { id: toastId });
+        setSelectedIds([]);
+      } catch (err) {
+        console.error("Error restoring items:", err);
+        toast.error('Failed to restore some items.', { id: toastId });
+      }
     }
   };
 
@@ -43,12 +94,82 @@ const RecycleBin = ({ onBack, user }) => {
     if (isConfirmed) {
       try {
         await deleteDoc(doc(db, 'trash', String(item.id)));
+        setSelectedIds(prev => prev.filter(id => id !== item.id));
         const itemName = item.data?.name || item.data?.code || item.data?.username || item.originalId;
         logActivity({ user, action: LOG_ACTIONS.PERMANENT_DELETE, details: `Permanently deleted ${item.type}: ${itemName}` });
         toast.success('Item permanently deleted.');
       } catch (err) {
         console.error("Error deleting item:", err);
         toast.error('Failed to delete item permanently.');
+      }
+    }
+  };
+
+  const handlePermanentDeleteSelected = async () => {
+    const selectedItems = trashItems.filter(item => selectedIds.includes(item.id));
+    if (selectedItems.length === 0) return;
+    const count = selectedItems.length;
+
+    const isConfirmed = await confirm({
+      title: `Permanently Delete ${count} Item${count > 1 ? 's' : ''}?`,
+      text: `This action cannot be undone. Are you sure you want to permanently delete ${count} item${count > 1 ? 's' : ''}?`,
+      icon: 'warning',
+      confirmButtonText: 'Delete Forever',
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Permanently deleting ${count} items...`);
+      try {
+        const batch = writeBatch(db);
+        selectedItems.forEach(item => {
+          batch.delete(doc(db, 'trash', String(item.id)));
+        });
+        await batch.commit();
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_PERMANENT_DELETE,
+          details: `Permanently deleted ${count} items from trash`
+        });
+        toast.success(`Permanently deleted ${count} item${count > 1 ? 's' : ''}`, { id: toastId });
+        setSelectedIds([]);
+      } catch (err) {
+        console.error("Error deleting items:", err);
+        toast.error('Failed to delete items permanently.', { id: toastId });
+      }
+    }
+  };
+
+  const handleEmptyTrash = async () => {
+    const count = trashItems.length;
+    if (count === 0) return;
+
+    const isConfirmed = await confirm({
+      title: 'Empty Recycle Bin?',
+      text: `This action cannot be undone. Are you sure you want to permanently delete all ${count} items in the Recycle Bin?`,
+      icon: 'warning',
+      confirmButtonText: 'Empty Trash Forever',
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading('Emptying Recycle Bin...');
+      try {
+        const batch = writeBatch(db);
+        trashItems.forEach(item => {
+          batch.delete(doc(db, 'trash', String(item.id)));
+        });
+        await batch.commit();
+        logActivity({
+          user,
+          action: LOG_ACTIONS.EMPTY_RECYCLE_BIN,
+          details: `Emptied Recycle Bin (${count} items)`
+        });
+        toast.success('Recycle Bin emptied.', { id: toastId });
+        setSelectedIds([]);
+      } catch (err) {
+        console.error("Error emptying trash:", err);
+        toast.error('Failed to empty Recycle Bin.', { id: toastId });
       }
     }
   };
@@ -94,6 +215,18 @@ const RecycleBin = ({ onBack, user }) => {
             <p>Restore or permanently delete removed items</p>
           </div>
         </div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {trashItems.length > 0 && (
+            <button
+              className={`select-mode-btn${selectionMode ? ' active' : ''}`}
+              onClick={() => { if (selectionMode) { setSelectionMode(false); setSelectedIds([]); } else { setSelectionMode(true); } }}
+              title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              {selectionMode ? 'Cancel' : 'Select'}
+            </button>
+          )}
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', paddingRight: '5px' }}>
@@ -106,20 +239,69 @@ const RecycleBin = ({ onBack, user }) => {
             <p style={{ margin: 0, fontSize: '0.9rem', maxWidth: '300px' }}>Deleted items will appear here and can be restored at any time.</p>
           </div>
         ) : (
-          <div className="table-responsive">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Type</th>
-                  <th>Item Details</th>
-                  <th>Deleted At</th>
-                  <th>Cascaded Impact</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trashItems.map(item => (
-                  <tr key={item.id}>
+          <>
+            {selectionMode && (
+              <BatchActionBar
+                selectedCount={selectedIds.length}
+                totalCount={trashItems.length}
+                itemName="trashed item"
+                onSelectAll={handleToggleSelectAll}
+                onDeselectAll={() => setSelectedIds([])}
+                onDeleteSelected={handlePermanentDeleteSelected}
+                onDeleteAll={handleEmptyTrash}
+                onExitSelectionMode={() => { setSelectionMode(false); setSelectedIds([]); }}
+                extraActions={selectedIds.length > 0 ? (
+                  <button
+                    type="button"
+                    className="batch-btn batch-btn-success"
+                    onClick={handleRestoreSelected}
+                    title={`Restore ${selectedIds.length} items`}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                    <span>Restore Selected ({selectedIds.length})</span>
+                  </button>
+                ) : null}
+              />
+            )}
+
+            <div className="table-responsive">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    {selectionMode && (
+                      <th className="table-checkbox-col">
+                        <input
+                          type="checkbox"
+                          className="data-checkbox"
+                          checked={trashItems.length > 0 && trashItems.every(item => selectedIds.includes(item.id))}
+                          onChange={handleToggleSelectAll}
+                          title="Select/Deselect all"
+                        />
+                      </th>
+                    )}
+                    <th>Type</th>
+                    <th>Item Details</th>
+                    <th>Deleted At</th>
+                    <th>Cascaded Impact</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trashItems.map(item => {
+                    const isSelected = selectionMode && selectedIds.includes(item.id);
+                    return (
+                    <tr key={item.id} className={isSelected ? 'table-row-selected' : ''}>
+                      {selectionMode && (
+                        <td className="table-checkbox-col">
+                          <input
+                            type="checkbox"
+                            className="data-checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelect(item.id)}
+                            aria-label={`Select ${item.type}`}
+                          />
+                        </td>
+                      )}
                     <td>
                       <span style={{ 
                         background: `${getTypeColor(item.type)}20`, 
@@ -183,11 +365,13 @@ const RecycleBin = ({ onBack, user }) => {
                         </button>
                       </div>
                     </td>
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

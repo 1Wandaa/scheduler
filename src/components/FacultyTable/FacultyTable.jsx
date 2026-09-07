@@ -1,7 +1,17 @@
 import React from 'react';
 import { getDeptColor } from '../../config/constants';
 
-const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments = [], onEdit, onDelete }) => {
+const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments = [], onEdit, onDelete, selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
+  const allSelected = facultyList.length > 0 && facultyList.every(p => selectedIds.includes(p.id));
+  const someSelected = facultyList.some(p => selectedIds.includes(p.id)) && !allSelected;
+  const headerCheckboxRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected]);
+
   if (!facultyList || facultyList.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-main)' }}>
@@ -16,6 +26,18 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments 
       <table className="data-table">
         <thead>
           <tr>
+            {onToggleSelect && (
+              <th className="table-checkbox-col">
+                <input
+                  type="checkbox"
+                  ref={headerCheckboxRef}
+                  className="data-checkbox"
+                  checked={allSelected}
+                  onChange={() => onToggleSelectAll && onToggleSelectAll(facultyList.map(p => p.id))}
+                  title={allSelected ? "Deselect all" : "Select all in view"}
+                />
+              </th>
+            )}
             <th>Name</th>
             <th>Department</th>
             <th>Units</th>
@@ -61,8 +83,21 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments 
               statusBg = 'var(--warning-bg)';
             }
 
+            const isSelected = selectedIds.includes(p.id);
+
             return (
-              <tr key={p.id}>
+              <tr key={p.id} className={isSelected ? 'table-row-selected' : ''}>
+                {onToggleSelect && (
+                  <td className="table-checkbox-col">
+                    <input
+                      type="checkbox"
+                      className="data-checkbox"
+                      checked={isSelected}
+                      onChange={() => onToggleSelect(p.id)}
+                      aria-label={`Select ${p.formattedName}`}
+                    />
+                  </td>
+                )}
                 <td><strong style={{ color: 'var(--text-main)' }}>{p.formattedName}</strong></td>
                 <td>
                   {(() => {

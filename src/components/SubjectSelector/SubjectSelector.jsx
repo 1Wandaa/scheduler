@@ -20,24 +20,6 @@ function resolveDeptCode(val) {
   return upper;
 }
 
-/**
- * Detects the year level of a subject based on its subject code pattern or yearLevel field.
- * (e.g. CS 101 -> 1, CS 201 -> 2, CS 301 -> 3, CS 401 -> 4)
- */
-export function getSubjectYearLevel(sub) {
-  if (sub.yearLevel) return Number(sub.yearLevel);
-  const code = (sub.code || '').trim();
-  // Standard PH academic numbering: 3-digit number where 1st digit is year (1xx=1, 2xx=2, 3xx=3, 4xx=4)
-  const match = code.match(/\b[A-Za-z]+\s*([1-4])\d\d/i);
-  if (match) return Number(match[1]);
-  // Secondary fallback: check first single digit 1-4
-  const numMatch = code.match(/(\d)/);
-  if (numMatch && ['1', '2', '3', '4'].includes(numMatch[1])) {
-    return Number(numMatch[1]);
-  }
-  return null;
-}
-
 const SubjectSelector = ({ 
   subjects, 
   activeSemester, 
@@ -52,55 +34,42 @@ const SubjectSelector = ({
 }) => {
   const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
   const [subjectModalFilter, setSubjectModalFilter] = useState('All');
-  const [showAllSemesters, setShowAllSemesters] = useState(false);
   const [showSelectedList, setShowSelectedList] = useState(true);
 
   const targetDept = useMemo(() => resolveDeptCode(recommendedDepartment), [recommendedDepartment]);
 
-  // Compute subjects annotated with recommendation status and year level
+  // Compute subjects annotated with recommendation status
   const annotatedSubjects = useMemo(() => {
     return subjects.map(sub => {
       const depts = getSubjectDepts(sub);
       const isDeptMatch = targetDept ? depts.includes(targetDept) : false;
       const isMinorMatch = sub.category === 'Minor';
-      const subYear = getSubjectYearLevel(sub);
-      const isYearMatch = yearLevel ? subYear === Number(yearLevel) : true;
       
-      const isRecommended = Boolean(targetDept && (isDeptMatch || isMinorMatch) && (!yearLevel || isYearMatch || isMinorMatch));
+      const isRecommended = Boolean(targetDept && (isDeptMatch || isMinorMatch));
       let recommendationReason = '';
-      if (isDeptMatch && isYearMatch) recommendationReason = `${targetDept} Year ${yearLevel} Curriculum`;
-      else if (isDeptMatch) recommendationReason = `${targetDept} Curriculum`;
+      if (isDeptMatch) recommendationReason = `${targetDept} Curriculum`;
       else if (isMinorMatch) recommendationReason = 'General Education';
 
       return {
         ...sub,
-        yearLevel: subYear,
         isRecommended,
         recommendationReason
       };
     });
-  }, [subjects, targetDept, yearLevel]);
+  }, [subjects, targetDept]);
 
   // Filter subjects based on active semester and department/year filters
   const filteredOptions = useMemo(() => {
     let filtered = annotatedSubjects;
     
     // 1. Filter by semester
-    if (!showAllSemesters) {
+    if (activeSemester) {
       filtered = filtered.filter(sub => !sub.semester || sub.semester === 'Both' || sub.semester === activeSemester);
     }
 
-    // 2. Filter by category, year level, or department
+    // 2. Filter by category or department
     if (subjectModalFilter === 'Recommended') {
       filtered = filtered.filter(s => s.isRecommended);
-    } else if (subjectModalFilter === 'Year1') {
-      filtered = filtered.filter(s => s.yearLevel === 1);
-    } else if (subjectModalFilter === 'Year2') {
-      filtered = filtered.filter(s => s.yearLevel === 2);
-    } else if (subjectModalFilter === 'Year3') {
-      filtered = filtered.filter(s => s.yearLevel === 3);
-    } else if (subjectModalFilter === 'Year4') {
-      filtered = filtered.filter(s => s.yearLevel === 4);
     } else if (subjectModalFilter === 'Minor') {
       filtered = filtered.filter(s => s.category === 'Minor');
     } else if (subjectModalFilter !== 'All') {
@@ -119,24 +88,21 @@ const SubjectSelector = ({
       );
     }
 
-    // 4. Sort: Recommended subjects first, then by year level, then code
+    // 4. Sort: Recommended subjects first, then by code
     return filtered.sort((a, b) => {
       if (a.isRecommended !== b.isRecommended) {
         return a.isRecommended ? -1 : 1;
-      }
-      if (a.yearLevel && b.yearLevel && a.yearLevel !== b.yearLevel) {
-        return a.yearLevel - b.yearLevel;
       }
       const codeA = (a.code || '').replace(/\s+/g, '').toUpperCase();
       const codeB = (b.code || '').replace(/\s+/g, '').toUpperCase();
       return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [annotatedSubjects, subjectSearchQuery, subjectModalFilter, activeSemester, showAllSemesters]);
+  }, [annotatedSubjects, subjectSearchQuery, subjectModalFilter, activeSemester]);
 
   // Recommended subjects for this context
   const recommendedList = useMemo(() => {
-    return annotatedSubjects.filter(s => s.isRecommended && (showAllSemesters || !s.semester || s.semester === 'Both' || s.semester === activeSemester));
-  }, [annotatedSubjects, showAllSemesters, activeSemester]);
+    return annotatedSubjects.filter(s => s.isRecommended && (!activeSemester || !s.semester || s.semester === 'Both' || s.semester === activeSemester));
+  }, [annotatedSubjects, activeSemester]);
 
   // Map selected subjects to full subject objects (including unmatched/legacy IDs)
   const selectedSubjectObjects = useMemo(() => {
@@ -183,10 +149,8 @@ const SubjectSelector = ({
 
   // Batch Deselect Visible
   const handleBatchDeselect = (items) => {
-    const idsToRemove = items.map(s => s.id);
-    // Remove these IDs from selected
-    const remaining = selectedSubjects.filter(id => !idsToRemove.includes(id));
-    onToggleSubject(remaining);
+    const idsToRemove = items.map(s => s.id || s.code);
+    onToggleSubject(idsToRemove);
   };
 
   // Clear All
@@ -431,7 +395,7 @@ const SubjectSelector = ({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onToggleSubject(sub.id || sub.code);
+                      onToggleSubject(sub);
                     }}
                     style={{
                       background: 'none',
@@ -458,45 +422,7 @@ const SubjectSelector = ({
         </div>
       )}
 
-      {/* Smart 1-Click Year Banner for Sections */}
-      {contextType === 'section' && yearLevel && targetDept && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          background: 'linear-gradient(135deg, rgba(86, 69, 238, 0.08), rgba(59, 130, 246, 0.08))',
-          border: '1px solid rgba(86, 69, 238, 0.25)',
-          borderRadius: '8px',
-          padding: '8px 12px',
-          marginBottom: '10px',
-          gap: '8px',
-          flexWrap: 'wrap'
-        }}>
-          <span style={{ fontSize: '0.78rem', color: 'var(--accent-dark)', fontWeight: '600' }}>
-            💡 Standard <strong>Year {yearLevel} {targetDept}</strong> Curriculum: <strong>{recommendedList.length} subject(s)</strong> available for {activeSemester || 'this term'}.
-          </span>
-          {!allRecommendedSelected && (
-            <button
-              type="button"
-              onClick={handleSelectAllRecommended}
-              style={{
-                background: 'var(--accent-primary, #5645ee)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '4px 10px',
-                fontSize: '0.75rem',
-                fontWeight: '700',
-                cursor: 'pointer'
-              }}
-            >
-              ⚡ Enroll Year {yearLevel} Curriculum
-            </button>
-          )}
-        </div>
-      )}
-      
-      {/* Quick Filter Pills (Year Levels, Recommended, Department) */}
+      {/* Quick Filter Pills (Recommended, Department) */}
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
         {targetDept && (
           <button
@@ -537,33 +463,6 @@ const SubjectSelector = ({
           All
         </button>
 
-        {/* Year Level Pills */}
-        {[1, 2, 3, 4].map(yr => {
-          const key = `Year${yr}`;
-          const isSelected = subjectModalFilter === key;
-          const yrCount = annotatedSubjects.filter(s => s.yearLevel === yr && (showAllSemesters || !s.semester || s.semester === 'Both' || s.semester === activeSemester)).length;
-
-          return (
-            <button
-              key={key}
-              onClick={() => setSubjectModalFilter(key)}
-              type="button"
-              style={{
-                padding: '3px 10px',
-                borderRadius: '16px',
-                border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                background: isSelected ? 'rgba(86, 69, 238, 0.15)' : 'transparent',
-                color: isSelected ? 'var(--accent-primary)' : 'var(--text-muted)',
-                cursor: 'pointer',
-                fontSize: '0.74rem',
-                fontWeight: isSelected ? '700' : '600',
-              }}
-            >
-              {yr}{yr === 1 ? 'st' : yr === 2 ? 'nd' : yr === 3 ? 'rd' : 'th'} Year ({yrCount})
-            </button>
-          );
-        })}
-
         <button
           onClick={() => setSubjectModalFilter('Minor')}
           type="button"
@@ -581,26 +480,13 @@ const SubjectSelector = ({
           Gen Ed / Minor
         </button>
       </div>
-      
-      {/* Toggles */}
-      <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginBottom: '8px' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '500', userSelect: 'none' }}>
-          <input 
-            type="checkbox" 
-            checked={showAllSemesters}
-            onChange={(e) => setShowAllSemesters(e.target.checked)}
-            style={{ accentColor: 'var(--accent-primary)', width: '14px', height: '14px', margin: 0 }}
-          />
-          Show Off-Semester Subjects
-        </label>
-      </div>
 
       <AutocompleteMultiSelect
         inputId="subject-autocomplete"
         allOptions={annotatedSubjects}
         options={filteredOptions}
         selectedIds={selectedSubjects}
-        onToggle={(sub) => onToggleSubject(typeof sub === 'object' && sub !== null ? (sub.id || sub.code) : sub)}
+        onToggle={(sub) => onToggleSubject(sub)}
         onBatchSelect={handleBatchSelect}
         onBatchDeselect={handleBatchDeselect}
         placeholder="Search subject code or title... (Use ↑↓ arrows and Enter)"

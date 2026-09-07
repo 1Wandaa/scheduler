@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
-import { deleteRoomCascade } from '../../services/cascadeDeleteService';
+import { deleteRoomCascade, deleteRoomBatchCascade } from '../../services/cascadeDeleteService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { ROOM_TYPES, BUILDINGS, DEPARTMENTS, getDeptColor } from '../../config/constants';
 import RoomTable from '../../components/RoomTable/RoomTable';
+import BatchActionBar from '../../components/common/BatchActionBar';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack, user }) => {
@@ -18,6 +19,8 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
   const [filterBuilding, setFilterBuilding] = useState('');
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectionMode, setSelectionMode] = useState(false);
 
   const [formData, setFormData] = useState({
     id: '', name: '', type: ROOM_TYPES.LECTURE, hasComputers: false, isFoodLab: false, building: '', department: 'SHARED'
@@ -101,11 +104,102 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
       try {
         const roomToDelete = rooms.find(r => String(r.id) === String(id));
         await deleteRoomCascade(roomToDelete, professors, schedules);
+        setSelectedIds(prev => prev.filter(item => item !== id));
         logActivity({ user, action: LOG_ACTIONS.DELETE_ROOM, details: `Deleted room: ${roomToDelete?.name || id}` });
         toast.success('Room deleted successfully');
       } catch (err) {
         console.error("Error deleting room:", err);
         toast.error('Failed to delete room');
+      }
+    }
+  };
+
+  const handleToggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = (idsInView) => {
+    const allInViewSelected = idsInView.length > 0 && idsInView.every(id => selectedIds.includes(id));
+    if (allInViewSelected) {
+      setSelectedIds(prev => prev.filter(id => !idsInView.includes(id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...idsInView])));
+    }
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedIds(filteredRooms.map(r => r.id));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  const handleExitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  };
+
+  const handleDeleteSelected = async () => {
+    const selectedInView = selectedIds.filter(id => filteredRooms.some(r => r.id === id));
+    if (selectedInView.length === 0) return;
+    const count = selectedInView.length;
+
+    const isConfirmed = await confirm({
+      title: `Delete ${count} Room${count > 1 ? 's' : ''}?`,
+      text: `Are you sure you want to delete ${count} selected room${count > 1 ? 's' : ''}? Their assigned schedules will be removed and records moved to the Recycle Bin.`,
+      icon: 'warning',
+      confirmButtonText: `Delete ${count} Selected`,
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Deleting ${count} room${count > 1 ? 's' : ''}...`);
+      try {
+        const roomsToDelete = rooms.filter(r => selectedInView.includes(r.id));
+        await deleteRoomBatchCascade(roomsToDelete, professors, schedules);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_DELETE_ROOMS,
+          details: `Batch deleted ${count} rooms: ${roomsToDelete.map(r => r.name || r.id).join(', ')}`
+        });
+        toast.success(`Successfully deleted ${count} room${count > 1 ? 's' : ''}`, { id: toastId });
+        setSelectedIds(prev => prev.filter(id => !selectedInView.includes(id)));
+      } catch (err) {
+        console.error("Error batch deleting rooms:", err);
+        toast.error('Failed to delete selected rooms', { id: toastId });
+      }
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    const count = filteredRooms.length;
+    if (count === 0) return;
+
+    const isConfirmed = await confirm({
+      title: `Delete All ${count} Rooms?`,
+      text: `Are you sure you want to delete ALL ${count} rooms in this view? Their assigned schedules will be removed and records moved to the Recycle Bin.`,
+      icon: 'warning',
+      confirmButtonText: 'Delete All',
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Deleting all ${count} rooms...`);
+      try {
+        await deleteRoomBatchCascade(filteredRooms, professors, schedules);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_DELETE_ROOMS,
+          details: `Deleted all ${count} rooms in view`
+        });
+        toast.success(`Successfully deleted all ${count} rooms`, { id: toastId });
+        setSelectedIds([]);
+      } catch (err) {
+        console.error("Error deleting all rooms:", err);
+        toast.error('Failed to delete rooms', { id: toastId });
       }
     }
   };
@@ -151,7 +245,17 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
                 <p>Configure campus facilities</p>
               </div>
             </div>
-            <button className="btn" onClick={handleOpenAdd}>+ Add Room</button>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button
+                className={`select-mode-btn${selectionMode ? ' active' : ''}`}
+                onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
+                title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                {selectionMode ? 'Cancel' : 'Select'}
+              </button>
+              <button className="btn" onClick={handleOpenAdd}>+ Add Room</button>
+            </div>
           </div>
 
           <div className="mgmt-toolbar">
@@ -206,7 +310,27 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
           </div>
         </div>
 
-        <RoomTable roomList={filteredRooms} onEdit={handleOpenEdit} onDelete={handleDelete} />
+        {selectionMode && (
+          <BatchActionBar
+            selectedCount={selectedIds.filter(id => filteredRooms.some(r => r.id === id)).length}
+            totalCount={filteredRooms.length}
+            itemName="room"
+            onSelectAll={handleSelectAllFiltered}
+            onDeselectAll={handleDeselectAll}
+            onDeleteSelected={handleDeleteSelected}
+            onDeleteAll={handleDeleteAll}
+            onExitSelectionMode={handleExitSelectionMode}
+          />
+        )}
+
+        <RoomTable
+          roomList={filteredRooms}
+          onEdit={handleOpenEdit}
+          onDelete={handleDelete}
+          selectedIds={selectionMode ? selectedIds : []}
+          onToggleSelect={selectionMode ? handleToggleSelect : undefined}
+          onToggleSelectAll={selectionMode ? handleToggleSelectAll : undefined}
+        />
       </div>
 
       {showModal && (

@@ -1,8 +1,18 @@
 import React from 'react';
 import { PROGRAM_DEPARTMENTS } from '../../config/constants';
 
-const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, subjects = [], professors = [], departments = [], courses = [] }) => {
+const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, subjects = [], professors = [], departments = [], courses = [], selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
   if (!sectionList || sectionList.length === 0) return null;
+
+  const allSelected = sectionList.length > 0 && sectionList.every(sec => selectedIds.includes(sec.id));
+  const someSelected = sectionList.some(sec => selectedIds.includes(sec.id)) && !allSelected;
+  const headerCheckboxRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected]);
 
   const getSubjectName = (subId) => {
     const s = subjects.find(sub => sub.id === subId || sub.code === subId);
@@ -37,6 +47,18 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
         <table className="data-table">
           <thead>
             <tr>
+              {onToggleSelect && (
+                <th className="table-checkbox-col">
+                  <input
+                    type="checkbox"
+                    ref={headerCheckboxRef}
+                    className="data-checkbox"
+                    checked={allSelected}
+                    onChange={() => onToggleSelectAll && onToggleSelectAll(sectionList.map(s => s.id))}
+                    title={allSelected ? "Deselect all in group" : "Select all in group"}
+                  />
+                </th>
+              )}
               <th style={{ textAlign: 'center' }}>Section Name</th>
               <th style={{ textAlign: 'center' }}>Program</th>
               <th style={{ textAlign: 'center' }}>Year</th>
@@ -54,8 +76,21 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
                 return (p.assignedSections || []).includes(sec.id) || (p.assignedSections || []).includes(sec.name);
               });
 
+              const isSelected = selectedIds.includes(sec.id);
+
               return (
-                <tr key={sec.id}>
+                <tr key={sec.id} className={isSelected ? 'table-row-selected' : ''}>
+                  {onToggleSelect && (
+                    <td className="table-checkbox-col">
+                      <input
+                        type="checkbox"
+                        className="data-checkbox"
+                        checked={isSelected}
+                        onChange={() => onToggleSelect(sec.id)}
+                        aria-label={`Select ${sec.name}`}
+                      />
+                    </td>
+                  )}
                   <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                     <strong style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{sec.name}</strong>
                   </td>

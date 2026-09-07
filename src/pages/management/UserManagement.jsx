@@ -6,6 +6,8 @@ import { collection, onSnapshot, doc, getDocs, writeBatch, setDoc, query, where 
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import UserTable from '../../components/UserTable/UserTable';
+import BatchActionBar from '../../components/common/BatchActionBar';
+import { deleteUserBatch } from '../../services/cascadeDeleteService';
 import { Icon, NAV_ICONS } from '../Dashboard/components/Icon';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
@@ -26,6 +28,8 @@ const UserManagement = ({ user, onBack }) => {
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({ name: '', username: '', role: 'Admin', password: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectionMode, setSelectionMode] = useState(false);
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
@@ -93,6 +97,7 @@ const UserManagement = ({ user, onBack }) => {
         });
         
         await batch.commit();
+        setSelectedIds(prev => prev.filter(item => item !== id));
         logActivity({
           user,
           action: LOG_ACTIONS.DELETE_USER,
@@ -102,6 +107,96 @@ const UserManagement = ({ user, onBack }) => {
       } catch (error) {
         console.error("Error deleting user: ", error);
         toast.error(error.message, { id: toastId });
+      }
+    }
+  };
+
+  const handleToggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = (idsInView) => {
+    const allInViewSelected = idsInView.length > 0 && idsInView.every(id => selectedIds.includes(id));
+    if (allInViewSelected) {
+      setSelectedIds(prev => prev.filter(id => !idsInView.includes(id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...idsInView])));
+    }
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedIds(filteredUsers.map(u => u.id));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  const handleExitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  };
+
+  const handleDeleteSelected = async () => {
+    const selectedInView = selectedIds.filter(id => filteredUsers.some(u => u.id === id));
+    if (selectedInView.length === 0) return;
+    const count = selectedInView.length;
+
+    const isConfirmed = await confirm({
+      title: `Delete ${count} User${count > 1 ? 's' : ''}?`,
+      text: `Are you sure you want to delete ${count} selected users? Their profiles will be moved to the Recycle Bin. Remember to also delete their accounts from Firebase Authentication if needed.`,
+      icon: 'warning',
+      confirmButtonText: `Delete ${count} Selected`,
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Deleting ${count} users...`);
+      try {
+        const usersToDelete = users.filter(u => selectedInView.includes(u.id));
+        await deleteUserBatch(usersToDelete);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_DELETE_USERS,
+          details: `Batch deleted ${count} users: ${usersToDelete.map(u => u.name || u.username || u.id).join(', ')}`
+        });
+        toast.success(`Successfully deleted ${count} users`, { id: toastId });
+        setSelectedIds(prev => prev.filter(id => !selectedInView.includes(id)));
+      } catch (error) {
+        console.error("Error batch deleting users: ", error);
+        toast.error('Failed to delete selected users', { id: toastId });
+      }
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    const count = filteredUsers.length;
+    if (count === 0) return;
+
+    const isConfirmed = await confirm({
+      title: `Delete All ${count} Users?`,
+      text: `Are you sure you want to delete ALL ${count} users matching your current filter?`,
+      icon: 'warning',
+      confirmButtonText: 'Delete All',
+      isDestructive: true
+    });
+
+    if (isConfirmed) {
+      const toastId = toast.loading(`Deleting all ${count} users...`);
+      try {
+        await deleteUserBatch(filteredUsers);
+        logActivity({
+          user,
+          action: LOG_ACTIONS.BATCH_DELETE_USERS,
+          details: `Deleted all ${count} users in view (${activeTab})`
+        });
+        toast.success(`Successfully deleted all ${count} users`, { id: toastId });
+        setSelectedIds([]);
+      } catch (error) {
+        console.error("Error deleting all users: ", error);
+        toast.error('Failed to delete users', { id: toastId });
       }
     }
   };
@@ -269,10 +364,20 @@ const UserManagement = ({ user, onBack }) => {
               <p>Manage system users and permissions</p>
             </div>
           </div>
-          <button className="btn" onClick={handleOpenAdd}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
-            Add User
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button
+              className={`select-mode-btn${selectionMode ? ' active' : ''}`}
+              onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
+              title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              {selectionMode ? 'Cancel' : 'Select'}
+            </button>
+            <button className="btn" onClick={handleOpenAdd}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
+              Add User
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -316,8 +421,28 @@ const UserManagement = ({ user, onBack }) => {
             />
           </div>
         </div>
+        {selectionMode && (
+          <BatchActionBar
+            selectedCount={selectedIds.filter(id => filteredUsers.some(u => u.id === id)).length}
+            totalCount={filteredUsers.length}
+            itemName="user"
+            onSelectAll={handleSelectAllFiltered}
+            onDeselectAll={handleDeselectAll}
+            onDeleteSelected={handleDeleteSelected}
+            onDeleteAll={handleDeleteAll}
+            onExitSelectionMode={handleExitSelectionMode}
+          />
+        )}
+
         {/* --- DATA TABLE --- */}
-        <UserTable users={filteredUsers} onDeleteUser={handleDeleteUser} onEditUser={handleOpenEdit} />
+        <UserTable
+          users={filteredUsers}
+          onDeleteUser={handleDeleteUser}
+          onEditUser={handleOpenEdit}
+          selectedIds={selectionMode ? selectedIds : []}
+          onToggleSelect={selectionMode ? handleToggleSelect : undefined}
+          onToggleSelectAll={selectionMode ? handleToggleSelectAll : undefined}
+        />
       </div>
 
       {isModalOpen && (
