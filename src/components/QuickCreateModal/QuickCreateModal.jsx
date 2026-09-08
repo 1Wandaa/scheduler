@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { db } from '../../config/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -252,7 +253,9 @@ const QuickCreateModal = ({
 
   const availableDepts = departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
 
-  return (
+  if (!isOpen) return null;
+
+  return ReactDOM.createPortal(
     <div className="quick-modal-overlay" onClick={onClose}>
       <div className="quick-modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="quick-modal-header">
@@ -521,7 +524,8 @@ const QuickCreateModal = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
