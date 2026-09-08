@@ -749,9 +749,8 @@
   bottom: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(15, 12, 41, 0.75);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(15, 12, 41, 0.9);
+  /* backdrop-filter removed for scroll performance */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -781,6 +780,10 @@
   box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: rgba(86, 69, 238, 0.15) transparent;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  will-change: transform, scroll-position;
 }
 
 .modal-content::-webkit-scrollbar {
@@ -853,12 +856,6 @@
   cursor: not-allowed;
 }
 
-/* =========================================
-   SIDEBAR LOGO BREATHING GLOW
-   ========================================= */
-.sidebar img[alt="CAPSU Logo"] {
-}
-
 
 
 /* =========================================
@@ -874,9 +871,6 @@
   transform: scale(0.9);
 }
 
-.sidebar-toggle-btn svg,
-.mobile-menu-btn svg {
-}
 
 
 /* =========================================
@@ -1146,9 +1140,6 @@
   /* Apply entrance animation */
 }
 
-/* Hide animation overrides sweetalert's default */
-.swal2-container.swal2-backdrop-hide .minimal-swal {
-}
 
 .minimal-title {
   font-family: 'Poppins', sans-serif !important;
@@ -1195,8 +1186,6 @@
   padding: 12px 16px !important;
 }
 
-.swal2-container.swal2-backdrop-hide .minimal-toast {
-}
 
 @media (max-width: 768px) {
   .bottom-nav {

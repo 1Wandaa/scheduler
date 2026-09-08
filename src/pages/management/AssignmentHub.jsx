@@ -1,5 +1,6 @@
 // src/pages/management/AssignmentHub.jsx
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { db } from '../../config/firebase';
 import { doc, writeBatch } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -1279,25 +1280,27 @@ const AssignmentHub = ({
 
                         return (
                           <div key={subRef} className="hub-mapping-row" style={isOrphan ? { background: 'rgba(239, 68, 68, 0.06)', borderLeft: '3px solid #dc2626' } : undefined}>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontWeight: '700', fontSize: '0.82rem', color: isOrphan ? '#dc2626' : 'var(--accent-dark)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                              <span style={{ fontWeight: '700', fontSize: '0.82rem', color: isOrphan ? '#dc2626' : 'var(--accent-dark)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {isOrphan ? `⚠️ ${sub.code}` : sub.code}
                               </span>
-                              <span style={{ fontSize: '0.72rem', color: isOrphan ? '#b91c1c' : 'var(--text-muted)' }}>
+                              <span style={{ fontSize: '0.72rem', color: isOrphan ? '#b91c1c' : 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {isOrphan ? 'Legacy / Unmatched ID' : sub.name}
                               </span>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, maxWidth: '240px', justifyContent: 'flex-end' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '260px', flexShrink: 0 }}>
                               {!isOrphan ? (
-                                <InlineInstructorSelect
-                                  section={sec}
-                                  subRef={subRef}
-                                  assignedProf={assignedProf}
-                                  onAssign={handleAssignInstructorInline}
-                                  getSubjectProfessors={getSubjectProfessors}
-                                />
-                              ) : null}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <InlineInstructorSelect
+                                    section={sec}
+                                    subRef={subRef}
+                                    assignedProf={assignedProf}
+                                    onAssign={handleAssignInstructorInline}
+                                    getSubjectProfessors={getSubjectProfessors}
+                                  />
+                                </div>
+                              ) : <div style={{ flex: 1 }}></div>}
 
                               <button
                                 type="button"
@@ -1558,19 +1561,19 @@ const AssignmentHub = ({
       )}
 
       {/* --- IN-DEPTH CONFIGURATION MODAL --- */}
-      {editingEntity && (
+      {editingEntity && ReactDOM.createPortal(
         <div className="modal-overlay" onClick={() => !isSaving && setEditingEntity(null)}>
-          <div className="modal-content" style={{ width: '650px', maxHeight: '88vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
-              <div>
-                <h3 style={{ margin: 0, color: 'var(--accent-primary)', fontSize: '1.2rem' }}>
-                  Configure {editingEntity.type === 'section' ? `Section: ${editingEntity.item.name}` : editingEntity.type === 'faculty' ? `Faculty: ${editingEntity.item.name}` : `Subject: ${editingEntity.item.code}`}
-                </h3>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Manage cross-entity assignments and save changes atomically
-                </p>
-              </div>
-              <button onClick={() => !isSaving && setEditingEntity(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '5px' }}>
+          <div className="modal-content" style={{ width: '600px', maxWidth: '100%' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                Configure {editingEntity.type === 'section' ? `Section: ${editingEntity.item.name}` : editingEntity.type === 'faculty' ? `Faculty: ${editingEntity.item.name}` : `Subject: ${editingEntity.item.code}`}
+              </h3>
+              <button
+                type="button"
+                onClick={() => !isSaving && setEditingEntity(null)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}
+                title="Close"
+              >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
@@ -1579,7 +1582,7 @@ const AssignmentHub = ({
             {editingEntity.type === 'section' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Enrolled Subjects</label>
+                  <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: '8px', display: 'block' }}>Enrolled Subjects</label>
                   <AutocompleteMultiSelect
                     allOptions={subjects}
                     options={subjects}
@@ -1598,14 +1601,14 @@ const AssignmentHub = ({
                 {stagedAssignedSubjects.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="form-label" style={{ marginBottom: 0 }}>Assigned Instructor per Subject</label>
+                      <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: 0 }}>Assigned Instructor per Subject</label>
                       <button
                         type="button"
                         onClick={handleAutoAssignStagedTeachers}
                         className="hub-quick-btn"
                         style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#059669', borderColor: 'rgba(16, 185, 129, 0.3)' }}
                       >
-                        ⚡ Auto-Assign Teachers
+                        <span style={{ color: '#f59e0b' }}>⚡</span> Auto-Assign Teachers
                       </button>
                     </div>
                     {stagedAssignedSubjects.map(subRef => {
@@ -1617,7 +1620,7 @@ const AssignmentHub = ({
                       return (
                         <div key={subRef} className="hub-mapping-row">
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>{sub.code}</span>
+                            <span style={{ fontWeight: '700', fontSize: '0.85rem', color: 'var(--accent-dark)' }}>{sub.code}</span>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{sub.name}</span>
                           </div>
                           <select
@@ -1663,7 +1666,7 @@ const AssignmentHub = ({
             {editingEntity.type === 'faculty' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Specialization Subjects</label>
+                  <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: '8px', display: 'block' }}>Specialization Subjects</label>
                   <AutocompleteMultiSelect
                     allOptions={subjects}
                     options={subjects}
@@ -1680,7 +1683,7 @@ const AssignmentHub = ({
                 </div>
 
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Assigned Sections</label>
+                  <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: '8px', display: 'block' }}>Assigned Sections</label>
                   <AutocompleteMultiSelect
                     allOptions={sections}
                     options={sections}
@@ -1698,7 +1701,7 @@ const AssignmentHub = ({
 
                 {stagedAssignedSections.length > 0 && stagedAssignedSubjects.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <label className="form-label" style={{ marginBottom: 0 }}>Choose Specific Subject(s) Taught per Section</label>
+                    <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: 0 }}>Choose Specific Subject(s) Taught per Section</label>
                     {stagedAssignedSections.map(secId => {
                       const sec = sections.find(s => s.id === secId || s.name === secId) || { id: secId, name: secId };
                       const chosenSubs = stagedFacultyMap[sec.id] || [];
@@ -1753,7 +1756,7 @@ const AssignmentHub = ({
             {editingEntity.type === 'subject' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Enrolled Sections</label>
+                  <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: '8px', display: 'block' }}>Enrolled Sections</label>
                   <AutocompleteMultiSelect
                     allOptions={sections}
                     options={sections}
@@ -1770,7 +1773,7 @@ const AssignmentHub = ({
                 </div>
 
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Specialized Faculty</label>
+                  <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: '8px', display: 'block' }}>Specialized Faculty</label>
                   <AutocompleteMultiSelect
                     allOptions={professors}
                     options={professors}
@@ -1799,7 +1802,8 @@ const AssignmentHub = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Quick Create Modal */}
