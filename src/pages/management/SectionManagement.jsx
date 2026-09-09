@@ -62,10 +62,18 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
 
 
 
+    const secPayload = {
+      id: currentId || formData.id || `SEC${Date.now().toString().slice(-4)}`,
+      name: formData.name.trim(),
+      program: formData.program,
+      yearLevel: formData.yearLevel || 1,
+      subjects: formData.subjects || [],
+    };
+
     setIsSaving(true);
     try {
       const batch = writeBatch(db);
-      const secId = currentId || formData.id || `SEC${Date.now().toString().slice(-4)}`;
+      const secId = secPayload.id;
       if (editMode) {
         batch.update(doc(db, 'sections', currentId.toString()), secPayload);
         logActivity({
@@ -74,7 +82,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
           details: `Updated section: ${formData.name} (${formData.program})`
         });
       } else {
-        const newDocRef = doc(collection(db, 'sections'));
+        const newDocRef = doc(db, 'sections', secId);
         batch.set(newDocRef, secPayload);
         logActivity({
           user,
@@ -356,6 +364,39 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
       });
   }, [sections, searchQuery]);
 
+  const handleNameChange = (e) => {
+    const newName = e.target.value;
+    const updates = { name: newName };
+
+    // Auto-detect program/department from section name
+    const programCodes = courses.length > 0 
+      ? courses.map(c => c.code) 
+      : (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS);
+
+    const sortedCodes = [...programCodes].sort((a, b) => b.length - a.length);
+    const cleanName = newName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    for (const code of sortedCodes) {
+      const cleanCode = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (cleanCode && cleanName.startsWith(cleanCode)) {
+        updates.program = code;
+
+        // Auto-detect year level: extract the first digit after the program code
+        const afterCode = cleanName.slice(cleanCode.length);
+        const yearMatch = afterCode.match(/^(\d)/);
+        if (yearMatch) {
+          const year = parseInt(yearMatch[1], 10);
+          if (year >= 1 && year <= 6) {
+            updates.yearLevel = year;
+          }
+        }
+        break;
+      }
+    }
+
+    setFormData(prev => ({ ...prev, ...updates }));
+  };
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       if (e.target.tagName === 'BUTTON' || e.target.tagName === 'TEXTAREA') return;
@@ -552,7 +593,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                 Section Name
               </label>
-              <input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Enter section name" />
+              <input className="form-input" value={formData.name} onChange={handleNameChange} placeholder="Enter section name" />
             </div>
             <div className="form-group">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
-import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
 import { deleteRoomCascade, deleteRoomBatchCascade } from '../../services/cascadeDeleteService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
@@ -80,7 +80,7 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
         logActivity({ user, action: LOG_ACTIONS.UPDATE_ROOM, details: `Updated room: ${formData.name}` });
       } else {
         const newId = formData.id || `R${Date.now().toString().slice(-4)}`;
-        await addDoc(collection(db, 'rooms'), { ...payload, id: newId });
+        await setDoc(doc(db, 'rooms', newId), { ...payload, id: newId });
         logActivity({ user, action: LOG_ACTIONS.ADD_ROOM, details: `Added new room: ${formData.name} (${formData.type})` });
       }
       setShowModal(false);

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { db } from '../../config/firebase';
-import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
 import { deleteDepartmentBatch } from '../../services/cascadeDeleteService';
 import BatchActionBar from '../../components/common/BatchActionBar';
 import { toast } from 'sonner';
@@ -73,7 +73,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
         logActivity({ user, action: LOG_ACTIONS.UPDATE_DEPARTMENT, details: `Updated department: ${formData.name}` });
       } else {
         const newId = formData.id.trim() || `D${Date.now().toString().slice(-4)}`;
-        await addDoc(collection(db, 'departments'), { ...payload, id: newId });
+        await setDoc(doc(db, 'departments', newId), { ...payload, id: newId });
         logActivity({ user, action: LOG_ACTIONS.ADD_DEPARTMENT, details: `Added new department: ${formData.name}` });
       }
       setShowModal(false);

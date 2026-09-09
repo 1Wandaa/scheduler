@@ -245,7 +245,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
         batch.update(doc(db, 'subjects', currentId.toString()), docPayload);
         logActivity({ user, action: LOG_ACTIONS.UPDATE_SUBJECT, details: `Updated subject: ${payload.code} - ${payload.name}` });
       } else {
-        const newDocRef = doc(collection(db, 'subjects'));
+        const newDocRef = doc(db, 'subjects', subId);
         batch.set(newDocRef, docPayload);
         logActivity({ user, action: LOG_ACTIONS.ADD_SUBJECT, details: `Added new subject: ${payload.code} - ${payload.name} (${payload.credits} units)` });
       }

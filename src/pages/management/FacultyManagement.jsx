@@ -136,7 +136,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
         batch.update(doc(db, 'professors', currentId.toString()), dataToSave);
         logActivity({ user, action: LOG_ACTIONS.UPDATE_FACULTY, details: `Updated faculty: ${combinedName}` });
       } else {
-        const newDocRef = doc(collection(db, 'professors'));
+        const newDocRef = doc(db, 'professors', profId);
         batch.set(newDocRef, { ...dataToSave, id: profId });
         logActivity({ user, action: LOG_ACTIONS.ADD_FACULTY, details: `Added new faculty: ${combinedName} (${formData.department})` });
       }
