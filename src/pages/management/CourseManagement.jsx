@@ -6,6 +6,7 @@ import BatchActionBar from '../../components/common/BatchActionBar';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
+import { getColorNameAndCode } from '../../utils/colorUtils';
 
 const CourseManagement = ({ courses, departments, onBack, user }) => {
   const { confirm } = useGlobalDialog();
@@ -46,31 +47,52 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
     setShowModal(true);
   };
 
+  const trimmedId = (formData.id || '').trim();
+  const trimmedCode = (formData.code || '').trim();
+  const trimmedTitle = (formData.title || '').trim();
+
+  const isIdDuplicate = !editMode && trimmedId && courses.some(c =>
+    c.id && String(c.id).trim().toLowerCase() === trimmedId.toLowerCase()
+  );
+
+  const isCodeDuplicate = trimmedCode && courses.some(c =>
+    (!editMode || c.id !== currentId) &&
+    (c.code || '').trim().toLowerCase() === trimmedCode.toLowerCase()
+  );
+
+  const isTitleDuplicate = trimmedTitle && courses.some(c =>
+    (!editMode || c.id !== currentId) &&
+    (c.title || '').trim().toLowerCase() === trimmedTitle.toLowerCase()
+  );
+
   const handleSave = async () => {
     setError(null);
-    if (!formData.code.trim()) {
+    if (!trimmedCode) {
       setError('Course code is required.');
       return;
     }
-    if (!formData.title.trim()) {
+    if (!trimmedTitle) {
       setError('Course title is required.');
       return;
     }
     
-    // Check for duplicates based on code
-    const duplicate = courses.find(c => 
-      c.code.toLowerCase() === formData.code.trim().toLowerCase() && 
-      (editMode ? c.id !== currentId : true)
-    );
-    
-    if (duplicate) {
-      setError(`A course with code "${formData.code.trim()}" already exists.`);
+    // Check for duplicates
+    if (isIdDuplicate) {
+      setError(`A course with ID "${trimmedId}" already exists.`);
+      return;
+    }
+    if (isCodeDuplicate) {
+      setError(`A course with code "${trimmedCode}" already exists.`);
+      return;
+    }
+    if (isTitleDuplicate) {
+      setError(`A course with title "${trimmedTitle}" already exists.`);
       return;
     }
 
     const payload = {
-      code: formData.code.trim(),
-      title: formData.title.trim(),
+      code: trimmedCode,
+      title: trimmedTitle,
       departmentId: formData.departmentId,
     };
     
@@ -208,11 +230,13 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
 
   const filteredCourses = useMemo(() => {
     return courses.filter(c => {
-      const matchesSearch = c.code.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            c.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = (c.code || '').toLowerCase().includes(query) || 
+                            (c.title || '').toLowerCase().includes(query) ||
+                            (c.id && String(c.id).toLowerCase().includes(query));
       const matchesDept = departmentFilter === 'All' ? true : c.departmentId === departmentFilter;
       return matchesSearch && matchesDept;
-    }).sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' }));
+    }).sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
   }, [courses, searchQuery, departmentFilter]);
 
   const handleKeyDown = (e) => {
@@ -441,39 +465,84 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
             <div className="form-group">
               <label className="form-label">Course ID / Internal Code</label>
               <input 
-                className="form-input" 
+                className={`form-input${isIdDuplicate ? ' mgmt-input-duplicate' : ''}`}
                 value={formData.id} 
                 onChange={e => setFormData({ ...formData, id: e.target.value })} 
                 disabled={editMode} 
                 placeholder="Enter course ID" 
               />
+              {isIdDuplicate && (
+                <div className="mgmt-field-duplicate-msg">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  Already exists: A course with ID "{trimmedId}" is already registered.
+                </div>
+              )}
             </div>
 
             <div className="form-group">
               <label className="form-label">Course Code</label>
               <input 
-                className="form-input" 
+                className={`form-input${isCodeDuplicate ? ' mgmt-input-duplicate' : ''}`}
                 value={formData.code} 
                 onChange={e => setFormData({ ...formData, code: e.target.value })} 
                 placeholder="Enter course code" 
               />
+              {isCodeDuplicate && (
+                <div className="mgmt-field-duplicate-msg">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  Already exists: A course with code "{trimmedCode}" is already registered.
+                </div>
+              )}
             </div>
 
             <div className="form-group">
               <label className="form-label">Full Title</label>
               <input 
-                className="form-input" 
+                className={`form-input${isTitleDuplicate ? ' mgmt-input-duplicate' : ''}`}
                 value={formData.title} 
                 onChange={e => setFormData({ ...formData, title: e.target.value })} 
                 placeholder="Enter full course title" 
               />
+              {isTitleDuplicate && (
+                <div className="mgmt-field-duplicate-msg">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  Already exists: A course with title "{trimmedTitle}" is already registered.
+                </div>
+              )}
             </div>
 
             <div className="form-group">
               <label className="form-label">Department Owner</label>
               <select className="form-select" value={formData.departmentId} onChange={e => setFormData({ ...formData, departmentId: e.target.value })}>
-                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                {departments.map(d => {
+                  const colorInfo = getColorNameAndCode(d.color || getDeptColor(d.id));
+                  return (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.id}) — {colorInfo.name} ({colorInfo.hex})
+                    </option>
+                  );
+                })}
               </select>
+              {(() => {
+                const selectedDept = departments.find(d => d.id === formData.departmentId);
+                if (!selectedDept) return null;
+                const colorInfo = getColorNameAndCode(selectedDept.color || getDeptColor(selectedDept.id));
+                return (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    marginTop: '8px', padding: '6px 12px', borderRadius: '8px',
+                    background: `${colorInfo.hex}15`, border: `1px solid ${colorInfo.hex}40`
+                  }}>
+                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: colorInfo.hex, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }}></div>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontWeight: 600 }}>
+                      Department Color: {colorInfo.name}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace', fontWeight: 700, marginLeft: 'auto' }}>
+                      {colorInfo.hex}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="mgmt-modal-actions">

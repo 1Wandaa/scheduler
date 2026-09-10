@@ -11,6 +11,7 @@ import AutocompleteMultiSelect from '../../components/AutocompleteMultiSelect/Au
 import QuickCreateModal from '../../components/QuickCreateModal/QuickCreateModal';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 import { detectLabRequirement, suggestDepartmentFromCode } from '../../utils/subjectLabDetector';
+import { getColorNameAndCode } from '../../utils/colorUtils';
 
 const SubjectManagement = ({ subjects, professors, sections, schedules, availableSemesters = [], activeSemester, departments = [], courses = [], onBack, user, onNavigateToHub }) => {
   const { confirm } = useGlobalDialog();
@@ -194,10 +195,29 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
     // Left empty since quick creating cross-entity is removed from this form
   };
 
+  const normalizeSubject = str => (str || '').replace(/\s+/g, '').toUpperCase();
+  const trimmedCode = (formData.code || '').trim();
+  const trimmedName = (formData.name || '').trim();
+  const trimmedId = (formData.id || '').trim();
+
+  const isCodeDuplicate = trimmedCode && subjects.some(s =>
+    (!editMode || String(s.id) !== String(currentId)) &&
+    normalizeSubject(s.code) === normalizeSubject(trimmedCode)
+  );
+
+  const isNameDuplicate = trimmedName && subjects.some(s =>
+    (!editMode || String(s.id) !== String(currentId)) &&
+    normalizeSubject(s.name) === normalizeSubject(trimmedName)
+  );
+
+  const isIdDuplicate = !editMode && trimmedId && subjects.some(s =>
+    String(s.id).trim().toLowerCase() === trimmedId.toLowerCase()
+  );
+
   const handleSave = async () => {
     setError(null);
-    const code = (formData.code || '').trim();
-    const name = (formData.name || '').trim();
+    const code = trimmedCode;
+    const name = trimmedName;
 
     if (!code) {
       setError("Subject code is required.");
@@ -213,11 +233,16 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       return;
     }
     
-    const normalize = str => (str || '').replace(/\s+/g, '').toUpperCase();
-    const isDuplicate = subjects.some(s => String(s.id) !== String(currentId) && normalize(s.code) === normalize(code));
-    
-    if (isDuplicate) {
+    if (isCodeDuplicate) {
       setError(`A subject with the code "${code}" already exists.`);
+      return;
+    }
+    if (isNameDuplicate) {
+      setError(`A subject named "${name}" already exists.`);
+      return;
+    }
+    if (isIdDuplicate) {
+      setError(`A subject with ID "${trimmedId}" already exists.`);
       return;
     }
 
@@ -408,7 +433,6 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
   // Split subjects into categories using useMemo for performance
   const { minorSubjects, majorSubjects } = useMemo(() => {
     const filteredSubjects = subjects.filter(s => {
-      const matchesSemester = !s.semester || s.semester === 'Both' || s.semester === activeSemester;
       const searchLowerCode = searchQuery.toLowerCase().replace(/\s+/g, '');
       const codeMatch = (s.code || '').toLowerCase().replace(/\s+/g, '').includes(searchLowerCode);
       const nameMatch = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -416,7 +440,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       if (searchQuery.trim() !== '') {
         return codeMatch || nameMatch;
       }
-      return matchesSemester;
+      return true;
     }).sort((a, b) => {
       const codeA = (a.code || '').replace(/\s+/g, '').toUpperCase();
       const codeB = (b.code || '').replace(/\s+/g, '').toUpperCase();
@@ -427,7 +451,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       minorSubjects: filteredSubjects.filter(s => s.category === 'Minor'),
       majorSubjects: filteredSubjects.filter(s => s.category !== 'Minor') // Default to major
     };
-  }, [subjects, searchQuery, activeSemester]);
+  }, [subjects, searchQuery]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -648,21 +672,33 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
             <div className="form-group">
               <label className="form-label">Subject Code</label>
               <input 
-                className="form-input" 
+                className={`form-input${isCodeDuplicate ? ' mgmt-input-duplicate' : ''}`}
                 value={formData.code} 
                 onChange={e => handleCodeChange(e.target.value)} 
                 placeholder="Enter subject code" 
               />
+              {isCodeDuplicate && (
+                <div className="mgmt-field-duplicate-msg">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  Already exists: A subject with code "{trimmedCode}" is already registered.
+                </div>
+              )}
             </div>
 
             <div className="form-group">
               <label className="form-label">Subject Name</label>
               <input 
-                className="form-input" 
+                className={`form-input${isNameDuplicate ? ' mgmt-input-duplicate' : ''}`}
                 value={formData.name} 
                 onChange={e => handleNameChange(e.target.value)} 
                 placeholder="Enter subject name" 
               />
+              {isNameDuplicate && (
+                <div className="mgmt-field-duplicate-msg">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  Already exists: A subject named "{trimmedName}" is already registered.
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '15px' }}>
@@ -696,17 +732,37 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label className="form-label">Departments</label>
               <div style={{ marginTop: '8px', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px 14px', display: 'flex', flexWrap: 'wrap', gap: '12px', background: 'var(--bg-main)' }}>
-                {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => (
-                  <label key={dept} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.88rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                    <input
-                      type="checkbox"
-                      checked={(formData.departments || []).includes(dept)}
-                      onChange={() => handleDeptToggle(dept)}
-                      style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }}
-                    />
-                    {dept}
-                  </label>
-                ))}
+                {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => {
+                  const deptObj = departments.find(d => d.id === dept);
+                  const colorHex = deptObj?.color || getDeptColor(dept);
+                  const colorInfo = getColorNameAndCode(colorHex);
+                  const isChecked = (formData.departments || []).includes(dept);
+                  return (
+                    <label
+                      key={dept}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        cursor: 'pointer', fontSize: '0.85rem', fontWeight: isChecked ? '600' : '500',
+                        color: 'var(--text-main)', padding: '5px 10px', borderRadius: '6px',
+                        background: isChecked ? `${colorInfo.hex}18` : 'transparent',
+                        border: isChecked ? `1px solid ${colorInfo.hex}40` : '1px solid transparent',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleDeptToggle(dept)}
+                        style={{ accentColor: colorInfo.hex, width: '16px', height: '16px' }}
+                      />
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: colorInfo.hex, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }}></div>
+                      <span>{dept}</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                        ({colorInfo.name} • {colorInfo.hex})
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '6px 0 0', fontWeight: '500' }}>
                 Select all departments that offer this subject
@@ -724,8 +780,13 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                   onChange={e => {
                     const newCredits = e.target.value === '' ? '' : Number(e.target.value);
                     const nextForm = { ...formData, credits: newCredits };
-                    setFormData(nextForm);
-                    runAutoDetectLab(nextForm, userLabModified);
+                    if (!userLabModified) {
+                      const detection = detectLabRequirement(nextForm, subjects);
+                      setAutoDetectedReason(detection.reason);
+                      setFormData({ ...nextForm, requiredLab: detection.requiredLab, isFoodLab: detection.isFoodLab });
+                    } else {
+                      setFormData(nextForm);
+                    }
                   }} 
                 />
               </div>

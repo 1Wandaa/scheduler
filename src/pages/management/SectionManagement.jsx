@@ -11,6 +11,7 @@ import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
 import QuickCreateModal from '../../components/QuickCreateModal/QuickCreateModal';
 import CustomSelect from '../../components/CustomSelect/CustomSelect';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
+import { getColorNameAndCode } from '../../utils/colorUtils';
 
 const SectionManagement = ({ sections, professors, schedules, subjects, activeSemester, departments = [], courses = [], user, onBack, onNavigateToHub }) => {
   const { confirm } = useGlobalDialog();
@@ -45,26 +46,39 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
     setShowModal(true);
   };
 
+  const normalizeSectionName = str => (str || '').replace(/\s+/g, '').toUpperCase();
+  const trimmedName = (formData.name || '').trim();
+  const trimmedId = (formData.id || '').trim();
+
+  const isNameDuplicate = trimmedName && sections.some(s =>
+    (!editMode || s.id !== currentId) &&
+    normalizeSectionName(s.name) === normalizeSectionName(trimmedName)
+  );
+
+  const isIdDuplicate = !editMode && trimmedId && sections.some(s =>
+    String(s.id).trim().toLowerCase() === trimmedId.toLowerCase()
+  );
+
   const handleSave = async () => {
     setError(null);
-    if (!formData.name || !formData.program) {
+    if (!trimmedName || !formData.program) {
       setError("Section name and program are required.");
       return;
     }
 
-    const normalize = str => (str || '').replace(/\s+/g, '').toUpperCase();
-    const isDuplicate = sections.some(s => s.id !== currentId && normalize(s.name) === normalize(formData.name));
-
-    if (isDuplicate) {
-      setError(`A section named "${formData.name}" already exists.`);
+    if (isNameDuplicate) {
+      setError(`A section named "${trimmedName}" already exists.`);
       return;
     }
 
-
+    if (isIdDuplicate) {
+      setError(`A section with ID "${trimmedId}" already exists.`);
+      return;
+    }
 
     const secPayload = {
-      id: currentId || formData.id || `SEC${Date.now().toString().slice(-4)}`,
-      name: formData.name.trim(),
+      id: currentId || trimmedId || `SEC${Date.now().toString().slice(-4)}`,
+      name: trimmedName,
       program: formData.program,
       yearLevel: formData.yearLevel || 1,
       subjects: formData.subjects || [],
@@ -593,21 +607,64 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                 Section Name
               </label>
-              <input className="form-input" value={formData.name} onChange={handleNameChange} placeholder="Enter section name" />
+              <input className={`form-input${isNameDuplicate ? ' mgmt-input-duplicate' : ''}`} value={formData.name} onChange={handleNameChange} placeholder="Enter section name" />
+              {isNameDuplicate && (
+                <div className="mgmt-field-duplicate-msg">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  Already exists: A section named "{trimmedName}" is already registered.
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
-                Program
+                Program / Department
               </label>
               <select className="form-select" value={formData.program} onChange={e => setFormData({ ...formData, program: e.target.value })} style={{ color: !formData.program ? '#757575' : 'inherit' }}>
                 <option value="" disabled hidden>Select Program / Department</option>
-                {courses.length > 0 ? courses.map(c => (
-                  <option key={c.id} value={c.code} style={{ color: '#000' }}>{c.code} ({c.title})</option>
-                )) : (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => (
-                  <option key={dept} value={dept} style={{ color: '#000' }}>{dept}</option>
-                ))}
+                {courses.length > 0 ? courses.map(c => {
+                  const deptObj = departments.find(d => d.id === c.departmentId);
+                  const colorHex = deptObj?.color || getDeptColor(c.departmentId || c.code);
+                  const colorInfo = getColorNameAndCode(colorHex);
+                  return (
+                    <option key={c.id} value={c.code} style={{ color: '#000' }}>
+                      {c.code} ({c.title}) — {colorInfo.name} ({colorInfo.hex})
+                    </option>
+                  );
+                }) : (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => {
+                  const deptObj = departments.find(d => d.id === dept);
+                  const colorHex = deptObj?.color || getDeptColor(dept);
+                  const colorInfo = getColorNameAndCode(colorHex);
+                  return (
+                    <option key={dept} value={dept} style={{ color: '#000' }}>
+                      {dept} — {colorInfo.name} ({colorInfo.hex})
+                    </option>
+                  );
+                })}
               </select>
+              {(() => {
+                if (!formData.program) return null;
+                const course = courses.find(c => c.code === formData.program || c.id === formData.program);
+                const deptId = course ? course.departmentId : (PROGRAM_DEPARTMENTS[formData.program] || formData.program);
+                const deptObj = departments.find(d => d.id === deptId);
+                const colorHex = deptObj?.color || getDeptColor(deptId);
+                const colorInfo = getColorNameAndCode(colorHex);
+                return (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    marginTop: '6px', padding: '4px 10px', borderRadius: '6px',
+                    background: `${colorInfo.hex}15`, border: `1px solid ${colorInfo.hex}40`
+                  }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: colorInfo.hex, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }}></div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-main)', fontWeight: 600 }}>
+                      Department Color: {colorInfo.name}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace', fontWeight: 700, marginLeft: 'auto' }}>
+                      {colorInfo.hex}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
             <div className="form-group">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

@@ -224,6 +224,12 @@ const UserManagement = ({ user, onBack }) => {
     setIsModalOpen(true);
   };
 
+  const cleanUsername = (formData.username || '').replace(/^@+/, '').toLowerCase().trim();
+  const isUsernameDuplicate = Boolean(cleanUsername && users.some(u =>
+    (!editingUser || u.id !== editingUser.id) &&
+    (u.username || '').replace(/^@+/, '').toLowerCase().trim() === cleanUsername
+  ));
+
   const handleSaveUser = async () => {
     if (isSubmittingRef.current || isSaving) return;
 
@@ -485,11 +491,17 @@ const UserManagement = ({ user, onBack }) => {
                   </label>
                   <input 
                     type="text" 
-                    className="form-input"
+                    className={`form-input${isUsernameDuplicate ? ' mgmt-input-duplicate' : ''}`}
                     placeholder="Enter username"
                     value={formData.username}
                     onChange={e => setFormData({ ...formData, username: e.target.value })}
                   />
+                  {isUsernameDuplicate && (
+                    <div className="mgmt-field-duplicate-msg">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                      Already exists: Username "@{cleanUsername}" is already registered.
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group" style={{ flex: 1 }}>

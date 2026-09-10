@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { db } from '../../config/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, doc, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 import { DEPARTMENTS } from '../../config/constants';
@@ -95,10 +95,31 @@ const QuickCreateModal = ({
   if (!isOpen) return null;
 
   const normalize = (str) => (str || '').replace(/\s+/g, '').toUpperCase();
+  const normalizeFacultyName = (name) => {
+    if (!name) return '';
+    let clean = name.replace(/Dr\.|Prof\.|Mr\.|Mrs\.|Ms\.|Engr\.|Atty\./gi, '');
+    return clean.replace(/[^a-z]/gi, '').toLowerCase();
+  };
+
+  // Live duplicate checks
+  const trimmedSubCode = (subjectData.code || '').trim();
+  const trimmedSubName = (subjectData.name || '').trim();
+  const isSubCodeDuplicate = Boolean(trimmedSubCode && subjects.some(s => normalize(s.code) === normalize(trimmedSubCode)));
+  const isSubNameDuplicate = Boolean(trimmedSubName && subjects.some(s => normalize(s.name) === normalize(trimmedSubName)));
+
+  const trimmedSecName = (sectionData.name || '').trim();
+  const isSecNameDuplicate = Boolean(trimmedSecName && sections.some(s => normalize(s.name) === normalize(trimmedSecName)));
+
+  const fNameTrim = (facultyData.firstName || '').trim();
+  const lNameTrim = (facultyData.lastName || '').trim();
+  const combinedFacName = `${lNameTrim}, ${fNameTrim}`;
+  const isFacNameDuplicate = Boolean(fNameTrim && lNameTrim && professors.some(p =>
+    normalizeFacultyName(p.name || `${p.firstName || ''} ${p.lastName || ''}`) === normalizeFacultyName(fNameTrim + lNameTrim)
+  ));
 
   const handleSaveSubject = async () => {
-    const code = subjectData.code.trim();
-    const name = subjectData.name.trim();
+    const code = trimmedSubCode;
+    const name = trimmedSubName;
 
     if (!code || !name) {
       setError('Subject code and title are required.');
@@ -110,9 +131,12 @@ const QuickCreateModal = ({
       return;
     }
 
-    const isDuplicate = subjects.some(s => normalize(s.code) === normalize(code));
-    if (isDuplicate) {
+    if (isSubCodeDuplicate) {
       setError(`A subject with the code "${code}" already exists.`);
+      return;
+    }
+    if (isSubNameDuplicate) {
+      setError(`A subject named "${name}" already exists.`);
       return;
     }
 
@@ -131,8 +155,8 @@ const QuickCreateModal = ({
         isFoodLab: Boolean(subjectData.isFoodLab)
       };
 
-      const docRef = await addDoc(collection(db, 'subjects'), payload);
-      const createdItem = { ...payload, docId: docRef.id };
+      await setDoc(doc(db, 'subjects', newId), payload);
+      const createdItem = { ...payload, docId: newId };
 
       logActivity({
         user,
@@ -152,7 +176,7 @@ const QuickCreateModal = ({
   };
 
   const handleSaveSection = async () => {
-    const name = sectionData.name.trim();
+    const name = trimmedSecName;
     const program = sectionData.program;
 
     if (!name || !program) {
@@ -160,8 +184,7 @@ const QuickCreateModal = ({
       return;
     }
 
-    const isDuplicate = sections.some(s => normalize(s.name) === normalize(name));
-    if (isDuplicate) {
+    if (isSecNameDuplicate) {
       setError(`A section named "${name}" already exists.`);
       return;
     }
@@ -176,8 +199,8 @@ const QuickCreateModal = ({
         yearLevel: Number(sectionData.yearLevel) || 1
       };
 
-      const docRef = await addDoc(collection(db, 'sections'), payload);
-      const createdItem = { ...payload, docId: docRef.id };
+      await setDoc(doc(db, 'sections', newId), payload);
+      const createdItem = { ...payload, docId: newId };
 
       logActivity({
         user,
@@ -197,17 +220,16 @@ const QuickCreateModal = ({
   };
 
   const handleSaveFaculty = async () => {
-    const firstName = facultyData.firstName.trim();
-    const lastName = facultyData.lastName.trim();
+    const firstName = fNameTrim;
+    const lastName = lNameTrim;
 
     if (!firstName || !lastName) {
       setError('First name and last name are required.');
       return;
     }
 
-    const combinedName = `${lastName}, ${firstName}`;
-    const isDuplicate = professors.some(p => normalize(p.name) === normalize(combinedName));
-    if (isDuplicate) {
+    const combinedName = combinedFacName;
+    if (isFacNameDuplicate) {
       setError(`A faculty member named "${combinedName}" already exists.`);
       return;
     }
@@ -224,8 +246,8 @@ const QuickCreateModal = ({
         maxUnits: Number(facultyData.maxUnits) || 12
       };
 
-      const docRef = await addDoc(collection(db, 'professors'), payload);
-      const createdItem = { ...payload, docId: docRef.id };
+      await setDoc(doc(db, 'professors', newId), payload);
+      const createdItem = { ...payload, docId: newId };
 
       logActivity({
         user,
@@ -295,22 +317,34 @@ const QuickCreateModal = ({
                   <label className="quick-form-label">Subject Code *</label>
                   <input
                     type="text"
-                    className="quick-form-input"
+                    className={`quick-form-input${isSubCodeDuplicate ? ' mgmt-input-duplicate' : ''}`}
                     placeholder="e.g. CS 101"
                     value={subjectData.code}
                     onChange={e => setSubjectData({ ...subjectData, code: e.target.value.toUpperCase() })}
                     autoFocus
                   />
+                  {isSubCodeDuplicate && (
+                    <div className="mgmt-field-duplicate-msg">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                      Already exists: Code "{trimmedSubCode}" is in use.
+                    </div>
+                  )}
                 </div>
                 <div className="quick-form-group" style={{ flex: 1.5 }}>
                   <label className="quick-form-label">Subject Title *</label>
                   <input
                     type="text"
-                    className="quick-form-input"
+                    className={`quick-form-input${isSubNameDuplicate ? ' mgmt-input-duplicate' : ''}`}
                     placeholder="e.g. Introduction to Computing"
                     value={subjectData.name}
                     onChange={e => setSubjectData({ ...subjectData, name: e.target.value })}
                   />
+                  {isSubNameDuplicate && (
+                    <div className="mgmt-field-duplicate-msg">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                      Already exists: Title "{trimmedSubName}" is in use.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -417,12 +451,18 @@ const QuickCreateModal = ({
                 <label className="quick-form-label">Section Name *</label>
                 <input
                   type="text"
-                  className="quick-form-input"
+                  className={`quick-form-input${isSecNameDuplicate ? ' mgmt-input-duplicate' : ''}`}
                   placeholder="e.g. BSCS 1-A"
                   value={sectionData.name}
                   onChange={e => setSectionData({ ...sectionData, name: e.target.value.toUpperCase() })}
                   autoFocus
                 />
+                {isSecNameDuplicate && (
+                  <div className="mgmt-field-duplicate-msg">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    Already exists: Section "{trimmedSecName}" is in use.
+                  </div>
+                )}
               </div>
 
               <div className="quick-form-row">
@@ -469,7 +509,7 @@ const QuickCreateModal = ({
                   <label className="quick-form-label">First Name *</label>
                   <input
                     type="text"
-                    className="quick-form-input"
+                    className={`quick-form-input${isFacNameDuplicate ? ' mgmt-input-duplicate' : ''}`}
                     placeholder="e.g. Maria"
                     value={facultyData.firstName}
                     onChange={e => setFacultyData({ ...facultyData, firstName: e.target.value })}
@@ -480,13 +520,19 @@ const QuickCreateModal = ({
                   <label className="quick-form-label">Last Name *</label>
                   <input
                     type="text"
-                    className="quick-form-input"
+                    className={`quick-form-input${isFacNameDuplicate ? ' mgmt-input-duplicate' : ''}`}
                     placeholder="e.g. Santos"
                     value={facultyData.lastName}
                     onChange={e => setFacultyData({ ...facultyData, lastName: e.target.value })}
                   />
                 </div>
               </div>
+              {isFacNameDuplicate && (
+                <div className="mgmt-field-duplicate-msg" style={{ marginTop: '-6px', marginBottom: '12px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  Already exists: Faculty member "{combinedFacName}" is in use.
+                </div>
+              )}
 
               <div className="quick-form-row">
                 <div className="quick-form-group" style={{ flex: 1.5 }}>

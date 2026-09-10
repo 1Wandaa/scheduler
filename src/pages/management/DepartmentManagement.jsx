@@ -6,6 +6,7 @@ import BatchActionBar from '../../components/common/BatchActionBar';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
+import { DEPARTMENT_COLOR_PALETTE, getColorNameAndCode } from '../../utils/colorUtils';
 
 const DepartmentManagement = ({ departments, onBack, user }) => {
   const { confirm } = useGlobalDialog();
@@ -43,26 +44,37 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
     setShowModal(true);
   };
 
+  const trimmedId = (formData.id || '').trim();
+  const trimmedName = (formData.name || '').trim();
+
+  const isIdDuplicate = !editMode && trimmedId && departments.some(d =>
+    d.id && d.id.trim().toLowerCase() === trimmedId.toLowerCase()
+  );
+
+  const isNameDuplicate = trimmedName && departments.some(d =>
+    (!editMode || d.id !== currentId) &&
+    d.name && d.name.trim().toLowerCase() === trimmedName.toLowerCase()
+  );
+
   const handleSave = async () => {
     setError(null);
-    if (!formData.name.trim()) {
+    if (!trimmedName) {
       setError('Department name is required.');
       return;
     }
     
     // Check for duplicates
-    const duplicate = departments.find(d => 
-      d.name.toLowerCase() === formData.name.trim().toLowerCase() && 
-      (editMode ? d.id !== currentId : true)
-    );
-    
-    if (duplicate) {
-      setError(`A department named "${formData.name.trim()}" already exists.`);
+    if (isIdDuplicate) {
+      setError(`A department with ID "${trimmedId}" already exists.`);
+      return;
+    }
+    if (isNameDuplicate) {
+      setError(`A department named "${trimmedName}" already exists.`);
       return;
     }
 
     const payload = {
-      name: formData.name.trim(),
+      name: trimmedName,
       color: formData.color,
     };
     
@@ -334,15 +346,21 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
                     </td>
                     <td><strong style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{dept.name}</strong></td>
                     <td>
-                      <div style={{ 
-                        display: 'inline-flex', alignItems: 'center', gap: '8px',
-                        padding: '4px 12px', borderRadius: '16px', 
-                        background: 'var(--bg-main)', border: '1px solid var(--border-color)',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                      }}>
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: dept.color, border: '1px solid rgba(0,0,0,0.1)' }}></div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600', letterSpacing: '0.5px' }}>{dept.color.toUpperCase()}</span>
-                      </div>
+                      {(() => {
+                        const colorInfo = getColorNameAndCode(dept.color);
+                        return (
+                          <div style={{ 
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            padding: '4px 12px', borderRadius: '16px', 
+                            background: `${dept.color}15`, border: `1px solid ${dept.color}40`,
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                          }}>
+                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: dept.color, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }}></div>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontWeight: '600' }}>{colorInfo.name}</span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: '700', fontFamily: 'monospace' }}>{colorInfo.hex}</span>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -395,37 +413,143 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
             <div className="form-group">
               <label className="form-label">Department ID / Code</label>
               <input 
-                className="form-input" 
+                className={`form-input${isIdDuplicate ? ' mgmt-input-duplicate' : ''}`}
                 value={formData.id} 
                 onChange={e => setFormData({ ...formData, id: e.target.value })} 
                 disabled={editMode} 
                 placeholder="Enter department code" 
               />
-              {!editMode && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px', display: 'block' }}>Used as unique identifier. Best to use the abbreviation.</span>}
+              {isIdDuplicate && (
+                <div className="mgmt-field-duplicate-msg">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  Already exists: A department with ID "{trimmedId}" is already registered.
+                </div>
+              )}
+              {!editMode && !isIdDuplicate && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px', display: 'block' }}>Used as unique identifier. Best to use the abbreviation.</span>}
             </div>
 
             <div className="form-group">
               <label className="form-label">Department Name</label>
               <input 
-                className="form-input" 
+                className={`form-input${isNameDuplicate ? ' mgmt-input-duplicate' : ''}`}
                 value={formData.name} 
                 onChange={e => setFormData({ ...formData, name: e.target.value })} 
                 placeholder="Enter department name" 
               />
+              {isNameDuplicate && (
+                <div className="mgmt-field-duplicate-msg">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  Already exists: A department named "{trimmedName}" is already registered.
+                </div>
+              )}
             </div>
 
             <div className="form-group">
-              <label className="form-label">Color Theme</label>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--bg-main)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <div style={{ position: 'relative', width: '38px', height: '38px', borderRadius: '6px', overflow: 'hidden', border: '2px solid rgba(0,0,0,0.05)', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+              <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Department Color Theme</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>Indicator, name & hex code</span>
+              </label>
+
+              {/* Live Selected Color Indicator Banner */}
+              {(() => {
+                const currentColor = getColorNameAndCode(formData.color || '#109EEF');
+                return (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    padding: '10px 14px', borderRadius: '8px',
+                    background: `${currentColor.hex}10`, border: `1.5px solid ${currentColor.hex}40`,
+                    marginBottom: '12px'
+                  }}>
+                    <div style={{
+                      width: '28px', height: '28px', borderRadius: '50%',
+                      backgroundColor: currentColor.hex,
+                      border: '2px solid rgba(0,0,0,0.15)',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                      flexShrink: 0
+                    }}></div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                        {currentColor.name}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace', fontWeight: 600 }}>
+                        {currentColor.hex}
+                      </span>
+                    </div>
+                    <span style={{
+                      marginLeft: 'auto', fontSize: '0.72rem', padding: '3px 9px', borderRadius: '12px',
+                      background: currentColor.hex, color: '#ffffff',
+                      fontWeight: 700, letterSpacing: '0.3px', textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                    }}>
+                      Active Color
+                    </span>
+                  </div>
+                );
+              })()}
+
+              {/* Predefined Department Color Options with Indicator, Name, and Code */}
+              <div style={{ marginBottom: '12px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                  Choose from Predefined Department Colors:
+                </span>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '6px', maxHeight: '160px', overflowY: 'auto', padding: '6px',
+                  border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-main)'
+                }}>
+                  {DEPARTMENT_COLOR_PALETTE.map(preset => {
+                    const isSelected = (formData.color || '').toUpperCase() === preset.hex.toUpperCase();
+                    return (
+                      <button
+                        key={preset.hex}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, color: preset.hex })}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          padding: '6px 10px', borderRadius: '6px',
+                          border: isSelected ? `2px solid ${preset.hex}` : '1px solid var(--border-color)',
+                          background: isSelected ? `${preset.hex}18` : '#ffffff',
+                          cursor: 'pointer', textAlign: 'left',
+                          boxShadow: isSelected ? `0 0 0 2px ${preset.hex}30` : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title={`${preset.name} (${preset.hex})`}
+                      >
+                        <div style={{
+                          width: '14px', height: '14px', borderRadius: '50%',
+                          backgroundColor: preset.hex, flexShrink: 0,
+                          border: '1px solid rgba(0,0,0,0.15)'
+                        }}></div>
+                        <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', flex: 1 }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: isSelected ? 700 : 600, color: 'var(--text-main)', lineHeight: 1.2 }}>
+                            {preset.name}
+                          </div>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'monospace', fontWeight: 500 }}>
+                            {preset.hex}
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={preset.hex} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Custom Color Picker and Hex Input */}
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', background: 'var(--bg-main)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div style={{ position: 'relative', width: '32px', height: '32px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)', flexShrink: 0 }}>
                   <input 
                     type="color" 
-                    value={formData.color} 
+                    value={formData.color || '#109EEF'} 
                     onChange={e => setFormData({ ...formData, color: e.target.value })} 
-                    style={{ position: 'absolute', top: '-10px', left: '-10px', width: '60px', height: '60px', padding: '0', border: 'none', cursor: 'pointer' }}
+                    style={{ position: 'absolute', top: '-10px', left: '-10px', width: '52px', height: '52px', padding: 0, border: 'none', cursor: 'pointer' }}
+                    title="Choose custom color"
                   />
                 </div>
-                <div style={{ position: 'relative', flex: 1, maxWidth: '140px' }}>
+                <div style={{ position: 'relative', width: '130px' }}>
                   <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontWeight: 'bold' }}>#</span>
                   <input 
                     type="text" 
@@ -435,13 +559,13 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
                       const hex = e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
                       setFormData({ ...formData, color: '#' + hex });
                     }} 
-                    style={{ width: '100%', paddingLeft: '22px', fontFamily: 'monospace', fontSize: '0.95rem', letterSpacing: '0.5px' }}
-                    placeholder="FFFFFF"
+                    style={{ width: '100%', paddingLeft: '22px', fontFamily: 'monospace', fontSize: '0.85rem', letterSpacing: '0.5px' }}
+                    placeholder="HEXCODE"
                   />
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '500', marginLeft: 'auto' }}>
-                  Used for tags and charts
-                </div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                  Custom color picker
+                </span>
               </div>
             </div>
 

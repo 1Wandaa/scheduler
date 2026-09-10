@@ -306,6 +306,23 @@
   box-shadow: var(--shadow-md);
 }
 
+.mgmt-field-duplicate-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #dc2626;
+  margin-top: 5px;
+  line-height: 1.3;
+}
+
+.mgmt-input-duplicate {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
 .mgmt-modal-actions {
   display: flex;
   gap: 12px;

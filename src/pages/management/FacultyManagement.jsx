@@ -9,6 +9,7 @@ import FacultyTable from '../../components/FacultyTable/FacultyTable';
 import BatchActionBar from '../../components/common/BatchActionBar';
 import AutocompleteMultiSelect from '../../components/AutocompleteMultiSelect/AutocompleteMultiSelect';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
+import { getColorNameAndCode } from '../../utils/colorUtils';
 
 const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], schedules = [], activeSemester, departments = [], courses = [], onBack, user, onNavigateToHub }) => {
   const { confirm } = useGlobalDialog();
@@ -94,36 +95,38 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
     setShowModal(true);
   };
 
+  const normalizeFacultyName = (name) => {
+    if (!name) return '';
+    let clean = name.replace(/Dr\.|Prof\.|Mr\.|Mrs\.|Ms\.|Engr\.|Atty\./gi, '');
+    return clean.replace(/[^a-z]/gi, '').toLowerCase();
+  };
+
+  const fNameTrim = (formData.firstName || '').trim();
+  const lNameTrim = (formData.lastName || '').trim();
+  const combinedName = `${lNameTrim}, ${fNameTrim}`;
+  const newNameNormalized = normalizeFacultyName(fNameTrim + lNameTrim);
+
+  const isNameDuplicate = Boolean(fNameTrim && lNameTrim) && professors.some(p =>
+    p.id !== currentId &&
+    normalizeFacultyName(p.name || `${p.firstName || ''} ${p.lastName || ''}`) === newNameNormalized
+  );
+
   const handleSave = async () => {
     setError(null);
-    if (!formData.firstName || !formData.lastName) {
+    if (!fNameTrim || !lNameTrim) {
       setError("First and last names are required.");
       return;
     }
 
-    const combinedName = `${(formData.lastName || '').trim()}, ${(formData.firstName || '').trim()}`;
-
-    // Robust duplicate check: normalize by removing titles, spaces, and punctuation
-    const normalizeName = (name) => {
-      if (!name) return '';
-      let clean = name.replace(/Dr\.|Prof\.|Mr\.|Mrs\.|Ms\.|Engr\.|Atty\./gi, '');
-      return clean.replace(/[^a-z]/gi, '').toLowerCase();
-    };
-
-    const newNameNormalized = normalizeName(formData.firstName + formData.lastName);
-
-    const isDuplicate = professors.some(p =>
-      p.id !== currentId &&
-      normalizeName(p.name) === newNameNormalized
-    );
-
-    if (isDuplicate) {
+    if (isNameDuplicate) {
       setError(`A faculty member named "${combinedName}" already exists!`);
       return;
     }
 
     const dataToSave = { 
       ...formData, 
+      firstName: fNameTrim,
+      lastName: lNameTrim,
       name: combinedName
     };
 
@@ -456,22 +459,51 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
             <div style={{ display: 'flex', gap: '15px' }}>
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Last Name (Surname)</label>
-                <input className="form-input" value={formData.lastName || ''} onChange={e => setFormData({ ...formData, lastName: e.target.value })} placeholder="Last name" />
+                <input className={`form-input${isNameDuplicate ? ' mgmt-input-duplicate' : ''}`} value={formData.lastName || ''} onChange={e => setFormData({ ...formData, lastName: e.target.value })} placeholder="Last name" />
               </div>
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">First Name</label>
-                <input className="form-input" value={formData.firstName || ''} onChange={e => setFormData({ ...formData, firstName: e.target.value })} placeholder="First name" />
+                <input className={`form-input${isNameDuplicate ? ' mgmt-input-duplicate' : ''}`} value={formData.firstName || ''} onChange={e => setFormData({ ...formData, firstName: e.target.value })} placeholder="First name" />
               </div>
             </div>
+            {isNameDuplicate && (
+              <div className="mgmt-field-duplicate-msg" style={{ marginTop: '-8px', marginBottom: '16px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                Already exists: A faculty member named "{combinedName}" is already registered.
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '15px' }}>
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Department</label>
                 <select className="form-select" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
-                  {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
+                  {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(deptId => {
+                    const deptObj = departments.find(d => d.id === deptId);
+                    const colorHex = deptObj?.color || getDeptColor(deptId);
+                    const colorInfo = getColorNameAndCode(colorHex);
+                    return (
+                      <option key={deptId} value={deptId}>
+                        {deptId} — {colorInfo.name} ({colorInfo.hex})
+                      </option>
+                    );
+                  })}
                 </select>
+                {(() => {
+                  const deptObj = departments.find(d => d.id === formData.department);
+                  const colorHex = deptObj?.color || getDeptColor(formData.department);
+                  const colorInfo = getColorNameAndCode(colorHex);
+                  return (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      marginTop: '6px', padding: '4px 10px', borderRadius: '6px',
+                      background: `${colorInfo.hex}15`, border: `1px solid ${colorInfo.hex}40`
+                    }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: colorInfo.hex, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }}></div>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-main)', fontWeight: 600 }}>{colorInfo.name}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace', fontWeight: 700, marginLeft: 'auto' }}>{colorInfo.hex}</span>
+                    </div>
+                  );
+                })()}
               </div>
               {(() => {
                 let currentUnits = 0;

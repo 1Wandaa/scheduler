@@ -8,6 +8,7 @@ import { ROOM_TYPES, BUILDINGS, DEPARTMENTS, getDeptColor } from '../../config/c
 import RoomTable from '../../components/RoomTable/RoomTable';
 import BatchActionBar from '../../components/common/BatchActionBar';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
+import { getColorNameAndCode } from '../../utils/colorUtils';
 
 const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack, user }) => {
   const { confirm } = useGlobalDialog();
@@ -49,23 +50,35 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
     setShowModal(true);
   };
 
+  const trimmedName = (formData.name || '').trim();
+  const trimmedId = (formData.id || '').trim();
+
+  const isNameDuplicate = trimmedName && rooms.some(r =>
+    (!editMode || r.id !== currentId) &&
+    (r.name || '').trim().toLowerCase() === trimmedName.toLowerCase()
+  );
+
+  const isIdDuplicate = !editMode && trimmedId && rooms.some(r =>
+    String(r.id).trim().toLowerCase() === trimmedId.toLowerCase()
+  );
+
   const handleSave = async () => {
     setError(null);
-    if (!formData.name.trim()) {
+    if (!trimmedName) {
       setError('Room name is required.');
       return;
     }
-    const duplicate = rooms.find(r =>
-      r.name.toLowerCase() === formData.name.trim().toLowerCase() &&
-      (editMode ? r.id !== currentId : true)
-    );
-    if (duplicate) {
-      setError(`A room named "${formData.name.trim()}" already exists.`);
+    if (isNameDuplicate) {
+      setError(`A room named "${trimmedName}" already exists.`);
+      return;
+    }
+    if (isIdDuplicate) {
+      setError(`A room with ID "${trimmedId}" already exists.`);
       return;
     }
     const isCSBuilding = formData.building === 'BSCS Building' || formData.department === 'BSCS';
     const payload = {
-      name: formData.name,
+      name: trimmedName,
       type: formData.type,
       hasComputers: isCSBuilding ? true : formData.hasComputers,
       isFoodLab: formData.isFoodLab,
@@ -208,11 +221,14 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
 
   const filteredRooms = useMemo(() => {
     return rooms.filter(r => {
-      const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = (r.name || '').toLowerCase().includes(query) ||
+                            (r.building || '').toLowerCase().includes(query) ||
+                            (r.id && String(r.id).toLowerCase().includes(query));
       const matchesBuilding = filterBuilding ? r.building === filterBuilding : true;
       const matchesDept = departmentFilter === 'All' ? true : (r.department || 'SHARED') === departmentFilter;
       return matchesSearch && matchesBuilding && matchesDept;
-    }).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    }).sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
   }, [rooms, searchQuery, filterBuilding, departmentFilter]);
 
   const handleKeyDown = (e) => {
@@ -365,7 +381,13 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-primary)' }}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                 Room Name
               </label>
-              <input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Enter room name" />
+              <input className={`form-input${isNameDuplicate ? ' mgmt-input-duplicate' : ''}`} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Enter room name" />
+              {isNameDuplicate && (
+                <div className="mgmt-field-duplicate-msg">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  Already exists: A room named "{trimmedName}" is already registered.
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '15px' }}>
@@ -398,9 +420,37 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
                 Department Owner
               </label>
               <select className="form-select" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
-                <option value="SHARED">SHARED (Any department)</option>
-                {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(d => <option key={d} value={d}>{d}</option>)}
+                <option value="SHARED">SHARED (Any department) — Slate Gray (#64748B)</option>
+                {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(d => {
+                  const deptObj = departments.find(item => item.id === d);
+                  const colorHex = deptObj?.color || getDeptColor(d);
+                  const colorInfo = getColorNameAndCode(colorHex);
+                  return (
+                    <option key={d} value={d}>
+                      {d} — {colorInfo.name} ({colorInfo.hex})
+                    </option>
+                  );
+                })}
               </select>
+              {(() => {
+                const isShared = formData.department === 'SHARED';
+                const deptObj = departments.find(d => d.id === formData.department);
+                const colorHex = isShared ? '#64748B' : (deptObj?.color || getDeptColor(formData.department));
+                const colorInfo = getColorNameAndCode(colorHex);
+                return (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    marginTop: '6px', padding: '4px 10px', borderRadius: '6px',
+                    background: `${colorInfo.hex}15`, border: `1px solid ${colorInfo.hex}40`
+                  }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: colorInfo.hex, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }}></div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-main)', fontWeight: 600 }}>
+                      {isShared ? 'Shared Department Color' : 'Department Color'}: {colorInfo.name}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace', fontWeight: 700, marginLeft: 'auto' }}>{colorInfo.hex}</span>
+                  </div>
+                );
+              })()}
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>Priority scheduling for this department's sections. SHARED = available to all.</span>
             </div>
 
