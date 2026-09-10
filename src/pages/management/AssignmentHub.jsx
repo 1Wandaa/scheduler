@@ -892,7 +892,7 @@ const AssignmentHub = ({
       }
 
       return true;
-    });
+    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }, [sections, departmentFilter, searchQuery, onlyNeedsAttention, getAssignedProf]);
 
   const filteredFaculty = useMemo(() => {
@@ -908,6 +908,10 @@ const AssignmentHub = ({
       }
 
       return true;
+    }).sort((a, b) => {
+      const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
+      const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
+      return nameA.localeCompare(nameB);
     });
   }, [professors, departmentFilter, searchQuery, onlyNeedsAttention]);
 
@@ -932,7 +936,7 @@ const AssignmentHub = ({
       }
 
       return true;
-    });
+    }).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
   }, [subjects, departmentFilter, searchQuery, onlyNeedsAttention, enrolledSubjectCodesSet, specializedSubjectCodesSet]);
 
   // Progressive windowing: start with 12 items for instant (<16ms) initial render
