@@ -278,7 +278,7 @@ const QuickCreateModal = ({
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
-    <div className="quick-modal-overlay" onClick={onClose}>
+    <div className="quick-modal-overlay">
       <div className="quick-modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="quick-modal-header">
           <div className="quick-modal-title-group">

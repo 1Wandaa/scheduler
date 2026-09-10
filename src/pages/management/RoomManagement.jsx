@@ -350,7 +350,7 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => !isSaving && setShowModal(false)}>
+        <div className="modal-overlay">
           <div 
             className="modal-content" 
             style={{ width: '480px', maxWidth: '100%' }} 

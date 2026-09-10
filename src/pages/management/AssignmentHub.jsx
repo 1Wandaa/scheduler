@@ -8,16 +8,16 @@ import { DEPARTMENTS, getDeptColor, PROGRAM_DEPARTMENTS } from '../../config/con
 import QuickCreateModal from '../../components/QuickCreateModal/QuickCreateModal';
 import AutocompleteMultiSelect from '../../components/AutocompleteMultiSelect/AutocompleteMultiSelect';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
-import { 
-  Building2, 
-  BookOpen, 
-  Users, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Sparkles, 
-  Search, 
-  X, 
-  Plus, 
+import {
+  Building2,
+  BookOpen,
+  Users,
+  AlertTriangle,
+  CheckCircle2,
+  Sparkles,
+  Search,
+  X,
+  Plus,
   ArrowLeft,
   ArrowRightLeft
 } from 'lucide-react';
@@ -879,8 +879,8 @@ const AssignmentHub = ({
     return sections.filter(sec => {
       const secDept = resolveDeptCode(sec.program) || resolveDeptCode(sec.department);
       const matchDept = departmentFilter === 'All' || secDept === departmentFilter;
-      const matchSearch = !searchQuery.trim() || 
-        (sec.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchSearch = !searchQuery.trim() ||
+        (sec.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (sec.program || '').toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchDept || !matchSearch) return false;
 
@@ -1120,9 +1120,9 @@ const AssignmentHub = ({
           </div>
 
           <div className={`hub-metric-card ${stats.sectionsNeedingTeachers > 0 ? 'needs-attention' : 'all-good'}`}>
-            <div className="hub-metric-icon" style={{ 
-              background: stats.sectionsNeedingTeachers > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
-              color: stats.sectionsNeedingTeachers > 0 ? '#dc2626' : '#059669' 
+            <div className="hub-metric-icon" style={{
+              background: stats.sectionsNeedingTeachers > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+              color: stats.sectionsNeedingTeachers > 0 ? '#dc2626' : '#059669'
             }}>
               {stats.sectionsNeedingTeachers > 0 ? <AlertTriangle size={20} /> : <CheckCircle2 size={20} />}
             </div>
@@ -1505,14 +1505,14 @@ const AssignmentHub = ({
                           enrolledSecs.map(sec => {
                             const assignedProf = getAssignedProf(sec, sub.code || sub.id);
                             return (
-                              <span 
-                                key={sec.id} 
-                                style={{ 
-                                  fontSize: '0.72rem', 
-                                  fontWeight: '600', 
-                                  padding: '2px 8px', 
-                                  borderRadius: '12px', 
-                                  background: assignedProf ? 'rgba(86, 69, 238, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+                              <span
+                                key={sec.id}
+                                style={{
+                                  fontSize: '0.72rem',
+                                  fontWeight: '600',
+                                  padding: '2px 8px',
+                                  borderRadius: '12px',
+                                  background: assignedProf ? 'rgba(86, 69, 238, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                                   color: assignedProf ? 'var(--accent-primary)' : '#dc2626',
                                   border: assignedProf ? '1px solid rgba(86, 69, 238, 0.2)' : '1px solid rgba(239, 68, 68, 0.25)'
                                 }}
@@ -1566,8 +1566,8 @@ const AssignmentHub = ({
 
       {/* --- IN-DEPTH CONFIGURATION MODAL --- */}
       {editingEntity && ReactDOM.createPortal(
-        <div className="modal-overlay" onClick={() => !isSaving && setEditingEntity(null)}>
-          <div className="modal-content" style={{ width: '600px', maxWidth: '100%' }} onClick={e => e.stopPropagation()}>
+        <div className="hub-modal-overlay">
+          <div className="hub-modal-content" onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main)' }}>
                 Configure {editingEntity.type === 'section' ? `Section: ${editingEntity.item.name}` : editingEntity.type === 'faculty' ? `Faculty: ${editingEntity.item.name}` : `Subject: ${editingEntity.item.code}`}

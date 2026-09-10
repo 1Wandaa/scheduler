@@ -576,7 +576,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => !isSaving && setShowModal(false)}>
+        <div className="modal-overlay">
           <div 
             className="modal-content" 
             style={{ width: '500px', maxWidth: '100%' }} 

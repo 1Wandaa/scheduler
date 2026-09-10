@@ -641,7 +641,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => !isSaving && setShowModal(false)}>
+        <div className="modal-overlay">
           <div 
             className="modal-content" 
             style={{ width: '480px', maxWidth: '100%' }} 
@@ -910,7 +910,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
       {/* Details Modal */}
       {detailsSubject && (
-        <div className="modal-overlay" onClick={() => setDetailsSubject(null)}>
+        <div className="modal-overlay">
           <div className="modal-content" style={{ width: '500px', maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)' }}>
               <div>

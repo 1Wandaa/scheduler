@@ -575,3 +575,39 @@
   color: #059669;
   border: 1px solid rgba(16, 185, 129, 0.25);
 }
+
+/* ==========================================================================
+   Configuration Modal (Custom Fit without Wasted Space)
+   ========================================================================== */
+.hub-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-start;
+  /* Allows scrolling on overlay if content gets very long */
+  justify-content: center;
+  z-index: 9999;
+  padding: 40px 20px;
+  overflow-y: auto;
+}
+
+.hub-modal-content {
+  background: var(--bg-surface, #ffffff);
+  border-radius: 14px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 800px;
+  padding: 24px;
+  position: relative;
+  margin: auto;
+  /* Vertically centers the modal dynamically */
+  display: flex;
+  flex-direction: column;
+  /* CRITICAL FIX: overflow visible allows the searchable dropdown to bleed over the edges */
+  overflow: visible;
+}

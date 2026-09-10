@@ -11,7 +11,7 @@ const AutocompleteMultiSelect = ({
   placeholder = "Search...", 
   renderOption,
   renderChip,
-  searchQuery = '',
+  searchQuery,
   setSearchQuery,
   noOptionsMessage = "No options found.",
   inputId,
@@ -20,9 +20,16 @@ const AutocompleteMultiSelect = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [internalQuery, setInternalQuery] = useState('');
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const optionsListRef = useRef(null);
+
+  const actualQuery = searchQuery !== undefined ? searchQuery : internalQuery;
+  const updateQuery = (val) => {
+    if (setSearchQuery) setSearchQuery(val);
+    else setInternalQuery(val);
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -56,7 +63,17 @@ const AutocompleteMultiSelect = ({
   // Any ID in selectedIds that doesn't correspond to any known option object
   const unmatchedIds = selectedIds.filter(id => !matchedTokens.has(String(id).toLowerCase()));
 
-  const availableOptionsToSelect = options.filter(opt => {
+  // Internal filtering for options based on actualQuery
+  const displayedOptions = options.filter(opt => {
+    if (!actualQuery.trim()) return true;
+    const q = actualQuery.toLowerCase();
+    const idMatch = String(opt.id || '').toLowerCase().includes(q);
+    const codeMatch = String(opt.code || '').toLowerCase().includes(q);
+    const nameMatch = String(opt.name || '').toLowerCase().includes(q);
+    return idMatch || codeMatch || nameMatch;
+  });
+
+  const availableOptionsToSelect = displayedOptions.filter(opt => {
     const isSelected = selectedIds.some(sid => 
       String(sid).toLowerCase() === String(opt.id).toLowerCase() || 
       String(sid).toLowerCase() === String(opt.code).toLowerCase() || 
@@ -65,7 +82,7 @@ const AutocompleteMultiSelect = ({
     return !isSelected && !opt.disabled;
   });
 
-  const visibleSelectedOptions = options.filter(opt => {
+  const visibleSelectedOptions = displayedOptions.filter(opt => {
     return selectedIds.some(sid => 
       String(sid).toLowerCase() === String(opt.id).toLowerCase() || 
       String(sid).toLowerCase() === String(opt.code).toLowerCase() || 
@@ -98,21 +115,21 @@ const AutocompleteMultiSelect = ({
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActiveIndex(prev => {
-        const next = prev < options.length - 1 ? prev + 1 : 0;
+        const next = prev < displayedOptions.length - 1 ? prev + 1 : 0;
         scrollOptionIntoView(next);
         return next;
       });
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex(prev => {
-        const next = prev > 0 ? prev - 1 : options.length - 1;
+        const next = prev > 0 ? prev - 1 : displayedOptions.length - 1;
         scrollOptionIntoView(next);
         return next;
       });
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (activeIndex >= 0 && activeIndex < options.length) {
-        const opt = options[activeIndex];
+      if (activeIndex >= 0 && activeIndex < displayedOptions.length) {
+        const opt = displayedOptions[activeIndex];
         if (opt && !opt.disabled) {
           handleOptionClick(opt);
         }
@@ -221,9 +238,9 @@ const AutocompleteMultiSelect = ({
           type="text"
           className="autocomplete-input"
           placeholder={selectedOptions.length > 0 ? `Add more... (${selectedOptions.length} selected)` : placeholder}
-          value={searchQuery}
+          value={actualQuery}
           onChange={(e) => {
-            if (setSearchQuery) setSearchQuery(e.target.value);
+            updateQuery(e.target.value);
             if (!isOpen) setIsOpen(true);
             setActiveIndex(0);
           }}
@@ -232,13 +249,13 @@ const AutocompleteMultiSelect = ({
         />
 
         {/* Clear query button */}
-        {searchQuery && (
+        {actualQuery && (
           <button
             type="button"
             className="autocomplete-clear-btn"
             onClick={(e) => {
               e.stopPropagation();
-              if (setSearchQuery) setSearchQuery('');
+              updateQuery('');
               inputRef.current?.focus();
             }}
             title="Clear search"
@@ -270,10 +287,10 @@ const AutocompleteMultiSelect = ({
       {isOpen && (
         <div className="autocomplete-dropdown">
           {/* Header Bar with Batch Actions */}
-          {allowBatchActions && options.length > 0 && (
+          {allowBatchActions && displayedOptions.length > 0 && (
             <div className="autocomplete-dropdown-header">
               <span className="autocomplete-count-label">
-                {options.length} option{options.length !== 1 ? 's' : ''} ({visibleSelectedOptions.length} checked)
+                {displayedOptions.length} option{displayedOptions.length !== 1 ? 's' : ''} ({visibleSelectedOptions.length} checked)
               </span>
 
               <div className="autocomplete-batch-actions">
@@ -299,11 +316,11 @@ const AutocompleteMultiSelect = ({
             </div>
           )}
 
-          {options.length === 0 ? (
+          {displayedOptions.length === 0 ? (
             <div className="autocomplete-empty">{noOptionsMessage}</div>
           ) : (
             <div className="autocomplete-options-list" ref={optionsListRef}>
-              {options.map((opt, idx) => {
+              {displayedOptions.map((opt, idx) => {
                 const isSelected = selectedIds.includes(opt.id) || selectedIds.includes(opt.name) || selectedIds.includes(opt.code);
                 const isDisabled = !!opt.disabled;
                 const isItemActive = idx === activeIndex;
@@ -346,3 +363,4 @@ const AutocompleteMultiSelect = ({
 };
 
 export default AutocompleteMultiSelect;
+

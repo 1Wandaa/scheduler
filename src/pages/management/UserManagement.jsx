@@ -452,7 +452,7 @@ const UserManagement = ({ user, onBack }) => {
       </div>
 
       {isModalOpen && (
-        <div className="modal-overlay" onClick={resetForm}>
+        <div className="modal-overlay">
           <div 
             className="modal-content" 
             style={{ width: '100%', maxWidth: '500px' }}

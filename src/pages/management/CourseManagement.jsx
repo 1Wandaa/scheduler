@@ -434,7 +434,7 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => !isSaving && setShowModal(false)}>
+        <div className="modal-overlay">
           <div 
             className="modal-content" 
             style={{ width: '100%', maxWidth: '450px' }} 
