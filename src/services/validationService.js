@@ -53,9 +53,9 @@ export function validateScheduleEntry(
   // Section enrollment check
   if (section && subject) {
     const sectionSubjects = section.subjects || [];
-    const isEnrolled = sectionSubjects.includes(subject.id) ||
-      (subject.code && sectionSubjects.includes(subject.code)) ||
-      (subject.name && sectionSubjects.includes(subject.name)) ||
+    const isEnrolled = sectionSubjects.some(id => String(id) === String(subject.id)) ||
+      (subject.code && sectionSubjects.some(id => String(id) === String(subject.code))) ||
+      (subject.name && sectionSubjects.some(id => String(id) === String(subject.name))) ||
       sectionSubjects.some(s => entitiesMatch(s, subject));
     if (!isEnrolled) {
       errors.push(`Section "${section.name}" is not enrolled in subject "${subject.code}".`);

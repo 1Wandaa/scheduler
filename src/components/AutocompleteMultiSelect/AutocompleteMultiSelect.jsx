@@ -16,7 +16,8 @@ const AutocompleteMultiSelect = ({
   noOptionsMessage = "No options found.",
   inputId,
   allOptions,
-  allowBatchActions = true
+  allowBatchActions = true,
+  matchIdOnly = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -45,11 +46,14 @@ const AutocompleteMultiSelect = ({
 
   const baseOptionsForSelection = allOptions || options;
   const selectedOptions = baseOptionsForSelection.filter(opt => {
-    return selectedIds.some(sid => 
-      String(sid).toLowerCase() === String(opt.id).toLowerCase() || 
-      String(sid).toLowerCase() === String(opt.code).toLowerCase() || 
-      String(sid).toLowerCase() === String(opt.name).toLowerCase()
-    );
+    return selectedIds.some(sid => {
+      if (String(sid).toLowerCase() === String(opt.id).toLowerCase()) return true;
+      if (matchIdOnly) return false;
+      return (
+        (opt.code && String(sid).toLowerCase() === String(opt.code).toLowerCase()) || 
+        (opt.name && String(sid).toLowerCase() === String(opt.name).toLowerCase())
+      );
+    });
   });
 
   // Track tokens matched by available options
@@ -66,10 +70,15 @@ const AutocompleteMultiSelect = ({
   // Internal filtering for options based on actualQuery
   const displayedOptions = options.filter(opt => {
     if (!actualQuery.trim()) return true;
-    const q = actualQuery.toLowerCase();
-    const idMatch = String(opt.id || '').toLowerCase().includes(q);
-    const codeMatch = String(opt.code || '').toLowerCase().includes(q);
-    const nameMatch = String(opt.name || '').toLowerCase().includes(q);
+    
+    // Make search space and hyphen insensitive
+    const cleanStr = (s) => String(s || '').toLowerCase().replace(/[\s\-_]/g, '');
+    const q = cleanStr(actualQuery);
+    
+    const idMatch = cleanStr(opt.id).includes(q);
+    const codeMatch = cleanStr(opt.code).includes(q);
+    const nameMatch = cleanStr(opt.name).includes(q);
+    
     return idMatch || codeMatch || nameMatch;
   });
 

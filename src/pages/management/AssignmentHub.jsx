@@ -136,19 +136,28 @@ const AssignmentHub = ({
 
   // --- High-Performance Pre-Indexed Lookups (O(1)) ---
   const subjectLookup = useMemo(() => {
-    const map = new Map();
+    const mapById = new Map();
+    const mapByCode = new Map();
+    const mapByName = new Map();
+    
     subjects.forEach(s => {
-      if (s.id) map.set(String(s.id).toLowerCase(), s);
-      if (s.code) map.set(String(s.code).toLowerCase(), s);
-      if (s.name) map.set(String(s.name).toLowerCase(), s);
+      if (s.id) mapById.set(String(s.id).toLowerCase(), s);
+      if (s.code && !mapByCode.has(String(s.code).toLowerCase())) mapByCode.set(String(s.code).toLowerCase(), s);
+      if (s.name && !mapByName.has(String(s.name).toLowerCase())) mapByName.set(String(s.name).toLowerCase(), s);
     });
-    return map;
+    
+    return { mapById, mapByCode, mapByName };
   }, [subjects]);
 
   const getSubject = useCallback((subRef) => {
     if (!subRef) return null;
     if (typeof subRef === 'object' && subRef !== null) return subRef;
-    return subjectLookup.get(String(subRef).toLowerCase()) || null;
+    
+    const key = String(subRef).toLowerCase();
+    return subjectLookup.mapById.get(key) || 
+           subjectLookup.mapByCode.get(key) || 
+           subjectLookup.mapByName.get(key) || 
+           null;
   }, [subjectLookup]);
 
   const profMap = useMemo(() => {
@@ -219,11 +228,11 @@ const AssignmentHub = ({
   }, [professors]);
 
   // On-demand lazy cache for specialized & other faculty per subject (computed only when needed)
-  const subjectProfOptionsCache = useRef(new Map());
-
-  useEffect(() => {
-    subjectProfOptionsCache.current.clear();
+  const subjectProfOptionsCacheMap = useMemo(() => {
+    void subjects; void professors; void profsBySubjectKey;
+    return new Map();
   }, [subjects, professors, profsBySubjectKey]);
+  const subjectProfOptionsCache = { current: subjectProfOptionsCacheMap };
 
   const getSubjectProfessors = useCallback((subRef) => {
     if (!subRef) return { specProfs: [], otherProfs: professors };
@@ -244,12 +253,21 @@ const AssignmentHub = ({
         }
       });
     });
-    const otherProfs = professors.filter(p => !seen.has(p.id));
+    specProfs.sort((a, b) => {
+      const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
+      const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
+      return nameA.localeCompare(nameB);
+    });
+    const otherProfs = professors.filter(p => !seen.has(p.id)).sort((a, b) => {
+      const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
+      const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
+      return nameA.localeCompare(nameB);
+    });
     const result = { specProfs, otherProfs };
     keys.forEach(k => subjectProfOptionsCache.current.set(String(k).toLowerCase(), result));
     subjectProfOptionsCache.current.set(cacheKey, result);
     return result;
-  }, [getSubject, profsBySubjectKey, professors]);
+  }, [getSubject, profsBySubjectKey, professors, subjectProfOptionsCache]);
 
   // Pre-indexed set of enrolled and specialized subject keys for instant O(1) attention filtering
   const enrolledSubjectCodesSet = useMemo(() => {
@@ -303,12 +321,11 @@ const AssignmentHub = ({
   }, [sectionsBySubjectKey]);
 
   // Fast memoized cache for assigned professors: `${sec.id}_${subRef}` -> prof
-  const assignedProfCache = useRef(new Map());
-
-  // Invalidate cache whenever base collections change
-  useEffect(() => {
-    assignedProfCache.current.clear();
+  const assignedProfCacheMap = useMemo(() => {
+    void sections; void professors; void subjects;
+    return new Map();
   }, [sections, professors, subjects]);
+  const assignedProfCache = { current: assignedProfCacheMap };
 
   // Helper to accurately resolve assigned professor for a specific section and subject in O(1)
   const getAssignedProf = useCallback((sec, subRef) => {
@@ -321,15 +338,15 @@ const AssignmentHub = ({
       return assignedProfCache.current.get(cacheKey);
     }
 
-    const sub = getSubject(subRef) || { id: subRef, code: subRef };
-    const subCode = sub.code || sub.id;
-    const subId = sub.id;
+    const subObj = getSubject(subRef) || { id: subRef, code: subRef };
+    const subKeyFound = subObj.id || subObj.code;
+    const subId = subObj.id;
 
     let result = null;
 
     // 1. Direct match on section.subjectInstructors (most authoritative)
     if (sec.subjectInstructors) {
-      const pId = sec.subjectInstructors[subCode] || sec.subjectInstructors[subId] || sec.subjectInstructors[subRef];
+      const pId = sec.subjectInstructors[subKeyFound] || sec.subjectInstructors[subId] || sec.subjectInstructors[subRef];
       if (pId) {
         const found = profMap.get(String(pId));
         if (found) result = found;
@@ -341,7 +358,7 @@ const AssignmentHub = ({
       const sectionProfs = getSectionProfs(sec);
       const profByMap = sectionProfs.find(p => {
         const mappedSubs = (p.sectionSubjectMap && (p.sectionSubjectMap[sec.id] || (sec.name && p.sectionSubjectMap[sec.name]))) || [];
-        return mappedSubs.some(s => s === subCode || s === subId || s === subRef);
+        return mappedSubs.some(s => String(s) === String(subKeyFound) || String(s) === String(subId) || String(s) === String(subRef));
       });
       if (profByMap) result = profByMap;
     }
@@ -350,7 +367,7 @@ const AssignmentHub = ({
     if (!result) {
       const sectionProfs = getSectionProfs(sec);
       const candidateProfs = sectionProfs.filter(p => {
-        return (p.specialization || []).some(sp => sp === subId || sp === subCode || (sub.name && sp === sub.name));
+        return (p.specialization || []).some(sp => String(sp) === String(subId) || String(sp) === String(subKeyFound) || (subObj.name && String(sp) === String(subObj.name)));
       });
 
       if (candidateProfs.length === 1) {
@@ -359,15 +376,15 @@ const AssignmentHub = ({
     }
 
     assignedProfCache.current.set(cacheKey, result);
-    if (subCode && String(subCode).toLowerCase() !== subKey) {
-      assignedProfCache.current.set(`${secKey}:::${String(subCode).toLowerCase()}`, result);
+    if (subKeyFound && String(subKeyFound).toLowerCase() !== subKey) {
+      assignedProfCache.current.set(`${secKey}:::${String(subKeyFound).toLowerCase()}`, result);
     }
     if (subId && String(subId).toLowerCase() !== subKey) {
       assignedProfCache.current.set(`${secKey}:::${String(subId).toLowerCase()}`, result);
     }
 
     return result;
-  }, [getSubject, profMap, getSectionProfs]);
+  }, [getSubject, profMap, getSectionProfs, assignedProfCache]);
 
   // --- KPI Stats Calculation ---
   const stats = useMemo(() => {
@@ -407,7 +424,7 @@ const AssignmentHub = ({
   // --- Inline Instructor Change for a Section Subject ---
   const handleAssignInstructorInline = async (section, subRef, newProfId) => {
     const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef };
-    const subCode = sub.code || sub.id;
+    const subCode = sub.id || sub.code;
 
     try {
       const batch = writeBatch(db);
@@ -456,7 +473,7 @@ const AssignmentHub = ({
             : [...curSecs, section.id];
 
           const curSpecs = targetProf.specialization || [];
-          const updatedSpecs = curSpecs.some(sp => sp === sub.id || sp === sub.code || sp === subCode)
+          const updatedSpecs = curSpecs.some(sp => String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(subCode))
             ? curSpecs
             : [...curSpecs, subCode];
 
@@ -528,11 +545,11 @@ const AssignmentHub = ({
 
     enrolled.forEach(subRef => {
       const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef);
-      const subCode = sub?.code || subRef;
+      const subCode = sub?.id || sub?.code || subRef;
       const alreadyAssigned = getAssignedProf(sec, subRef);
 
       if (!alreadyAssigned && sub) {
-        const candidates = professors.filter(p => (p.specialization || []).some(sp => sp === sub.id || sp === sub.code || sp === sub.name));
+        const candidates = professors.filter(p => (p.specialization || []).some(sp => String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name)));
         if (candidates.length > 0) {
           // Choose candidate with lowest current assigned section count
           const best = [...candidates].sort((a, b) => {
@@ -595,11 +612,11 @@ const AssignmentHub = ({
 
       enrolled.forEach(subRef => {
         const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef);
-        const subCode = sub?.code || subRef;
+        const subCode = sub?.id || sub?.code || subRef;
         const alreadyAssigned = getAssignedProf(sec, subRef);
 
         if (!alreadyAssigned && sub) {
-          const candidates = professors.filter(p => (p.specialization || []).some(sp => sp === sub.id || sp === sub.code || sp === sub.name));
+          const candidates = professors.filter(p => (p.specialization || []).some(sp => String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name)));
           if (candidates.length > 0) {
             const best = [...candidates].sort((a, b) => {
               const countA = (profUpdates[a.id]?.assignedSections || a.assignedSections || []).length;
@@ -656,9 +673,9 @@ const AssignmentHub = ({
     let count = 0;
     stagedAssignedSubjects.forEach(subRef => {
       const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef);
-      const key = sub?.code || subRef;
+      const key = sub?.id || sub?.code || subRef;
       if (!nextMap[key] && !nextMap[subRef]) {
-        const candidates = professors.filter(p => sub && (p.specialization || []).some(sp => sp === sub.id || sp === sub.code || sp === sub.name));
+        const candidates = professors.filter(p => sub && (p.specialization || []).some(sp => String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name)));
         if (candidates.length > 0) {
           const best = [...candidates].sort((a, b) => (a.assignedSections || []).length - (b.assignedSections || []).length)[0];
           nextMap[key] = best.id;
@@ -681,8 +698,8 @@ const AssignmentHub = ({
     if (type === 'section') {
       const subInstructorMap = { ...(item.subjectInstructors || {}) };
       (item.subjects || []).forEach(subRef => {
-        const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef };
-        const subCode = sub.code || sub.id;
+        const sub = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef)) || { id: subRef, code: subRef };
+        const subCode = sub.id || sub.code;
         if (!subInstructorMap[subCode] && !subInstructorMap[subRef]) {
           const assignedProf = getAssignedProf(item, subRef);
           if (assignedProf) {
@@ -691,13 +708,25 @@ const AssignmentHub = ({
           }
         }
       });
-      setStagedAssignedSubjects(item.subjects || []);
+
+      const uniqueSubs = [];
+      const seenSubs = new Set();
+      (item.subjects || []).forEach(ref => {
+        const subObj = subjects.find(s => String(s.id) === String(ref) || String(s.code) === String(ref) || String(s.name) === String(ref));
+        const key = subObj ? String(subObj.id) : String(ref);
+        if (!seenSubs.has(key)) {
+          seenSubs.add(key);
+          uniqueSubs.push(key);
+        }
+      });
+
+      setStagedAssignedSubjects(uniqueSubs);
       setStagedFacultyMap(subInstructorMap);
     } else if (type === 'faculty') {
       const secSubjectMap = { ...(item.sectionSubjectMap || {}) };
       const assignedSecs = item.assignedSections || [];
       assignedSecs.forEach(secId => {
-        const sec = sections.find(s => s.id === secId || s.name === secId);
+        const sec = sections.find(s => String(s.id) === String(secId) || String(s.name) === String(secId));
         if (sec && (!secSubjectMap[sec.id] || secSubjectMap[sec.id].length === 0)) {
           const matching = (sec.subjects || []).filter(subRef => {
             const assigned = getAssignedProf(sec, subRef);
@@ -706,15 +735,38 @@ const AssignmentHub = ({
           secSubjectMap[sec.id] = matching;
         }
       });
-      setStagedAssignedSections(assignedSecs);
-      setStagedAssignedSubjects(item.specialization || []);
+
+      const uniqueSecs = [];
+      const seenSecs = new Set();
+      assignedSecs.forEach(ref => {
+        const secObj = sections.find(s => String(s.id) === String(ref) || String(s.name) === String(ref));
+        const key = secObj ? String(secObj.id) : String(ref);
+        if (!seenSecs.has(key)) {
+          seenSecs.add(key);
+          uniqueSecs.push(key);
+        }
+      });
+
+      const uniqueSpecs = [];
+      const seenSpecs = new Set();
+      (item.specialization || []).forEach(ref => {
+        const subObj = subjects.find(s => String(s.id) === String(ref) || String(s.code) === String(ref) || String(s.name) === String(ref));
+        const key = subObj ? String(subObj.id) : String(ref);
+        if (!seenSpecs.has(key)) {
+          seenSpecs.add(key);
+          uniqueSpecs.push(key);
+        }
+      });
+
+      setStagedAssignedSections(uniqueSecs);
+      setStagedAssignedSubjects(uniqueSpecs);
       setStagedFacultyMap(secSubjectMap);
     } else if (type === 'subject') {
       const enrolled = sections.filter(s =>
-        (s.subjects || []).some(sub => sub === item.id || sub === item.code || sub === item.name)
+        (s.subjects || []).some(sub => String(sub) === String(item.id) || String(sub) === String(item.code) || String(sub) === String(item.name))
       ).map(s => s.id);
       const specialized = professors.filter(p =>
-        (p.specialization || []).some(sub => sub === item.id || sub === item.code || sub === item.name)
+        (p.specialization || []).some(sub => String(sub) === String(item.id) || String(sub) === String(item.code) || String(sub) === String(item.name))
       ).map(p => p.id);
       setStagedAssignedSections(enrolled);
       setStagedFacultyMap({ assignedProfessors: specialized });
@@ -739,7 +791,7 @@ const AssignmentHub = ({
         // 2. Map professors: profId -> list of subjects taught in this section
         const profToSubjects = {};
         Object.entries(stagedFacultyMap).forEach(([subRef, pId]) => {
-          if (pId && stagedAssignedSubjects.some(s => s === subRef)) {
+          if (pId && stagedAssignedSubjects.some(s => String(s) === String(subRef))) {
             if (!profToSubjects[pId]) profToSubjects[pId] = [];
             profToSubjects[pId].push(subRef);
           }
@@ -750,15 +802,15 @@ const AssignmentHub = ({
           const prof = professors.find(p => p.id === pId);
           if (prof) {
             const curSecs = prof.assignedSections || [];
-            const newSecs = curSecs.includes(item.id) || (item.name && curSecs.includes(item.name))
+            const newSecs = curSecs.some(id => String(id) === String(item.id) || (item.name && String(id) === String(item.name)))
               ? curSecs
               : [...curSecs, item.id];
 
             let curSpecs = [...(prof.specialization || [])];
             subRefs.forEach(subRef => {
-              const subObj = subjects.find(s => s.id === subRef || s.code === subRef);
-              const codeOrId = subObj?.code || subObj?.id || subRef;
-              if (!curSpecs.includes(codeOrId) && (!subObj || !curSpecs.includes(subObj.id))) {
+              const subObj = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef));
+              const codeOrId = subObj?.id || subObj?.code || subRef;
+              if (!curSpecs.some(sp => String(sp) === String(codeOrId)) && (!subObj || !curSpecs.some(sp => String(sp) === String(subObj.id)))) {
                 curSpecs.push(codeOrId);
               }
             });
@@ -776,9 +828,9 @@ const AssignmentHub = ({
 
         // 4. Remove section from professors no longer teaching here
         professors.forEach(prof => {
-          const hadSec = (prof.assignedSections || []).includes(item.id) || (prof.assignedSections || []).includes(item.name);
+          const hadSec = (prof.assignedSections || []).some(id => String(id) === String(item.id) || (item.name && String(id) === String(item.name)));
           if (hadSec && !profToSubjects[prof.id]) {
-            const newSecs = (prof.assignedSections || []).filter(s => s !== item.id && s !== item.name);
+            const newSecs = (prof.assignedSections || []).filter(s => String(s) !== String(item.id) && String(s) !== String(item.name));
             const newMap = { ...(prof.sectionSubjectMap || {}) };
             delete newMap[item.id];
             delete newMap[item.name];
@@ -797,65 +849,136 @@ const AssignmentHub = ({
           sectionSubjectMap: stagedFacultyMap
         });
 
-        // 2. Auto-enroll sections in the specific subjects chosen
-        stagedAssignedSections.forEach(secId => {
-          const sec = sections.find(s => s.id === secId || s.name === secId);
-          if (sec) {
-            const chosenSubs = stagedFacultyMap[sec.id] || [];
-            let updatedSubjs = [...(sec.subjects || [])];
-            let changed = false;
-            const updatedSubjectInstructors = { ...(sec.subjectInstructors || {}) };
+        // 2. Synchronize the sections to reflect this professor's specific subject assignments
+        sections.forEach(sec => {
+          const isNowAssignedSection = stagedAssignedSections.some(id => String(id) === String(sec.id) || String(id) === String(sec.name));
+          const wasAssignedSection = (item.assignedSections || []).some(id => String(id) === String(sec.id) || String(id) === String(sec.name));
+          
+          let updatedSubjs = [...(sec.subjects || [])];
+          const updatedSubjectInstructors = { ...(sec.subjectInstructors || {}) };
+          let secChanged = false;
 
+          if (isNowAssignedSection) {
+            const chosenSubs = stagedFacultyMap[sec.id] || [];
+            
+            // Add new assignments
             chosenSubs.forEach(subRef => {
-              const subObj = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef);
-              const val = subObj?.code || subObj?.id || subRef;
-              if (!updatedSubjs.some(existing => existing === val || (subObj && (existing === subObj.id || existing === subObj.code)))) {
+              const subObj = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
+              const val = subObj?.id || subObj?.code || subRef;
+              
+              if (!updatedSubjs.some(existing => String(existing) === String(val) || (subObj && (String(existing) === String(subObj.id) || String(existing) === String(subObj.code))))) {
                 updatedSubjs.push(val);
-                changed = true;
+                secChanged = true;
               }
-              updatedSubjectInstructors[val] = item.id;
-              changed = true;
+              // Set this professor as the instructor for this subject in the section
+              if (updatedSubjectInstructors[val] !== item.id) {
+                updatedSubjectInstructors[val] = item.id;
+                secChanged = true;
+              }
+              if (subObj && subObj.id && updatedSubjectInstructors[subObj.id] !== item.id) {
+                updatedSubjectInstructors[subObj.id] = item.id;
+                secChanged = true;
+              }
             });
 
-            if (changed) {
-              batch.update(doc(db, 'sections', String(sec.id)), {
-                subjects: updatedSubjs,
-                subjectInstructors: updatedSubjectInstructors
-              });
-            }
+            // Remove assignments that were unchecked for this section
+            const oldChosenSubs = item.sectionSubjectMap?.[sec.id] || [];
+            oldChosenSubs.forEach(oldSubRef => {
+              const subObj = subjects.find(s => String(s.id) === String(oldSubRef) || String(s.code) === String(oldSubRef) || String(s.name) === String(oldSubRef));
+              const val = subObj?.code || subObj?.id || oldSubRef;
+              
+              const isStillChosen = chosenSubs.some(c => String(c) === String(oldSubRef) || String(c) === String(val) || (subObj && (String(c) === String(subObj.id) || String(c) === String(subObj.code))));
+              if (!isStillChosen) {
+                if (updatedSubjectInstructors[val] === item.id) {
+                  delete updatedSubjectInstructors[val];
+                  secChanged = true;
+                }
+                if (subObj && subObj.id && updatedSubjectInstructors[subObj.id] === item.id) {
+                  delete updatedSubjectInstructors[subObj.id];
+                  secChanged = true;
+                }
+              }
+            });
+            
+          } else if (wasAssignedSection) {
+            // Professor is completely removed from this section
+            const oldChosenSubs = item.sectionSubjectMap?.[sec.id] || [];
+            oldChosenSubs.forEach(oldSubRef => {
+              const subObj = subjects.find(s => String(s.id) === String(oldSubRef) || String(s.code) === String(oldSubRef) || String(s.name) === String(oldSubRef));
+              const val = subObj?.code || subObj?.id || oldSubRef;
+              if (updatedSubjectInstructors[val] === item.id) {
+                delete updatedSubjectInstructors[val];
+                secChanged = true;
+              }
+              if (subObj && subObj.id && updatedSubjectInstructors[subObj.id] === item.id) {
+                delete updatedSubjectInstructors[subObj.id];
+                secChanged = true;
+              }
+            });
+          }
+
+          if (secChanged) {
+            batch.update(doc(db, 'sections', String(sec.id)), {
+              subjects: updatedSubjs,
+              subjectInstructors: updatedSubjectInstructors
+            });
           }
         });
       } else if (type === 'subject') {
         const code = item.code || item.id;
-        // 1. Sync sections
+        
+        // 1. Sync sections & update professors who might have been removed from these sections
         sections.forEach(sec => {
-          const wasEnrolled = (sec.subjects || []).some(s => s === item.id || s === code);
-          const isNowEnrolled = stagedAssignedSections.includes(sec.id);
+          const wasEnrolled = (sec.subjects || []).some(s => String(s) === String(item.id) || String(s) === String(code));
+          const isNowEnrolled = stagedAssignedSections.some(id => String(id) === String(sec.id) || String(id) === String(sec.name));
 
           if (!wasEnrolled && isNowEnrolled) {
             batch.update(doc(db, 'sections', String(sec.id)), { subjects: [...(sec.subjects || []), code] });
           } else if (wasEnrolled && !isNowEnrolled) {
-            const updated = (sec.subjects || []).filter(s => s !== item.id && s !== code);
+            const updated = (sec.subjects || []).filter(s => String(s) !== String(item.id) && String(s) !== String(code));
             const updatedInst = { ...(sec.subjectInstructors || {}) };
             delete updatedInst[code];
             delete updatedInst[item.id];
+            
             batch.update(doc(db, 'sections', String(sec.id)), {
               subjects: updated,
               subjectInstructors: updatedInst
             });
+
+            // If we unenroll a section from this subject, we must remove this subject from ANY professor's sectionSubjectMap
+            professors.forEach(prof => {
+              const curMap = { ...(prof.sectionSubjectMap || {}) };
+              const secSubs = curMap[sec.id] || [];
+              if (secSubs.some(s => String(s) === String(item.id) || String(s) === String(code))) {
+                const newSecSubs = secSubs.filter(s => String(s) !== String(item.id) && String(s) !== String(code));
+                
+                let newSecs = [...(prof.assignedSections || [])];
+                if (newSecSubs.length === 0) {
+                  delete curMap[sec.id];
+                  newSecs = newSecs.filter(s => String(s) !== String(sec.id) && String(s) !== String(sec.name));
+                } else {
+                  curMap[sec.id] = newSecSubs;
+                }
+                
+                batch.update(doc(db, 'professors', String(prof.id)), {
+                  sectionSubjectMap: curMap,
+                  assignedSections: newSecs
+                });
+              }
+            });
           }
         });
 
-        // 2. Sync professors
+        // 2. Sync professors' specializations
         const profIds = stagedFacultyMap.assignedProfessors || [];
         professors.forEach(prof => {
-          const wasAssigned = (prof.specialization || []).some(s => s === item.id || s === code);
-          const isNowAssigned = profIds.includes(prof.id);
+          const wasAssigned = (prof.specialization || []).some(s => String(s) === String(item.id) || String(s) === String(code));
+          const isNowAssigned = profIds.some(id => String(id) === String(prof.id));
 
           if (!wasAssigned && isNowAssigned) {
             batch.update(doc(db, 'professors', String(prof.id)), { specialization: [...(prof.specialization || []), code] });
           } else if (wasAssigned && !isNowAssigned) {
-            const updated = (prof.specialization || []).filter(s => s !== item.id && s !== code);
+            const updated = (prof.specialization || []).filter(s => String(s) !== String(item.id) && String(s) !== String(code));
             batch.update(doc(db, 'professors', String(prof.id)), { specialization: updated });
           }
         });
@@ -879,9 +1002,11 @@ const AssignmentHub = ({
     return sections.filter(sec => {
       const secDept = resolveDeptCode(sec.program) || resolveDeptCode(sec.department);
       const matchDept = departmentFilter === 'All' || secDept === departmentFilter;
+      const cleanStr = (s) => String(s || '').toLowerCase().replace(/[\s\-_]/g, '');
+      const q = cleanStr(searchQuery);
       const matchSearch = !searchQuery.trim() ||
-        (sec.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (sec.program || '').toLowerCase().includes(searchQuery.toLowerCase());
+        cleanStr(sec.name).includes(q) ||
+        cleanStr(sec.program).includes(q);
       if (!matchDept || !matchSearch) return false;
 
       if (onlyNeedsAttention) {
@@ -899,8 +1024,10 @@ const AssignmentHub = ({
     return professors.filter(prof => {
       const profDept = resolveDeptCode(prof.department);
       const matchDept = departmentFilter === 'All' || profDept === departmentFilter || prof.department === departmentFilter;
-      const fullName = (prof.name || `${prof.lastName || ''} ${prof.firstName || ''}`).toLowerCase();
-      const matchSearch = !searchQuery.trim() || fullName.includes(searchQuery.toLowerCase());
+      const cleanStr = (s) => String(s || '').toLowerCase().replace(/[\s\-_]/g, '');
+      const q = cleanStr(searchQuery);
+      const fullName = (prof.name || `${prof.lastName || ''} ${prof.firstName || ''}`);
+      const matchSearch = !searchQuery.trim() || cleanStr(fullName).includes(q);
       if (!matchDept || !matchSearch) return false;
 
       if (onlyNeedsAttention) {
@@ -919,10 +1046,9 @@ const AssignmentHub = ({
     return subjects.filter(sub => {
       const subDepts = (sub.departments || (sub.department ? [sub.department] : [])).map(resolveDeptCode);
       const matchDept = departmentFilter === 'All' || subDepts.includes(departmentFilter);
-      const codeStr = (sub.code || '').toLowerCase();
-      const nameStr = (sub.name || '').toLowerCase();
-      const q = searchQuery.toLowerCase().trim();
-      const matchSearch = !q || codeStr.includes(q) || nameStr.includes(q);
+      const cleanStr = (s) => String(s || '').toLowerCase().replace(/[\s\-_]/g, '');
+      const q = cleanStr(searchQuery);
+      const matchSearch = !searchQuery.trim() || cleanStr(sub.code).includes(q) || cleanStr(sub.name).includes(q);
       if (!matchDept || !matchSearch) return false;
 
       if (onlyNeedsAttention) {
@@ -1593,12 +1719,17 @@ const AssignmentHub = ({
                     selectedIds={stagedAssignedSubjects}
                     onToggle={(item) => {
                       const id = typeof item === 'object' && item !== null ? item.id : item;
-                      setStagedAssignedSubjects(prev =>
-                        prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-                      );
+                      const code = typeof item === 'object' && item !== null ? item.code : null;
+                      const name = typeof item === 'object' && item !== null ? item.name : null;
+                      setStagedAssignedSubjects(prev => {
+                        const isSelected = prev.some(x => String(x) === String(id) || (code && String(x) === String(code)) || (name && String(x) === String(name)));
+                        if (isSelected) return prev.filter(x => String(x) !== String(id) && String(x) !== String(code) && String(x) !== String(name));
+                        return [...prev, id];
+                      });
                     }}
                     renderChip={renderSubjectChip}
                     placeholder="Search subject to enroll..."
+                    matchIdOnly={true}
                   />
                 </div>
 
@@ -1617,9 +1748,19 @@ const AssignmentHub = ({
                     </div>
                     {stagedAssignedSubjects.map(subRef => {
                       const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef, name: subRef };
-                      const subKey = sub.code || sub.id;
+                      const subKey = sub.id || sub.code;
                       const curProfId = stagedFacultyMap[subKey] || stagedFacultyMap[subRef] || '';
-                      const specProfs = professors.filter(p => (p.specialization || []).some(sp => sp === sub.id || sp === sub.code || sp === sub.name));
+                      const specProfs = professors.filter(p => (p.specialization || []).some(sp => String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name))).sort((a, b) => {
+                        const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
+                        const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
+                        return nameA.localeCompare(nameB);
+                      });
+                      
+                      const otherProfs = professors.filter(p => !specProfs.some(sp => sp.id === p.id)).sort((a, b) => {
+                        const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
+                        const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
+                        return nameA.localeCompare(nameB);
+                      });
 
                       return (
                         <div key={subRef} className="hub-mapping-row">
@@ -1651,7 +1792,7 @@ const AssignmentHub = ({
                               </optgroup>
                             )}
                             <optgroup label="All Faculty">
-                              {professors.filter(p => !specProfs.some(sp => sp.id === p.id)).map(p => (
+                              {otherProfs.map(p => (
                                 <option key={p.id} value={p.id}>
                                   {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
                                 </option>
@@ -1677,12 +1818,15 @@ const AssignmentHub = ({
                     selectedIds={stagedAssignedSubjects}
                     onToggle={(item) => {
                       const id = typeof item === 'object' && item !== null ? item.id : item;
-                      setStagedAssignedSubjects(prev =>
-                        prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-                      );
+                      setStagedAssignedSubjects(prev => {
+                        const isSelected = prev.some(x => String(x) === String(id) || (item.code && String(x) === String(item.code)) || (item.name && String(x) === String(item.name)));
+                        if (isSelected) return prev.filter(x => String(x) !== String(id) && String(x) !== String(item.code) && String(x) !== String(item.name));
+                        return [...prev, id];
+                      });
                     }}
                     renderChip={renderSubjectChip}
                     placeholder="Search subject..."
+                    matchIdOnly={true}
                   />
                 </div>
 
@@ -1716,8 +1860,8 @@ const AssignmentHub = ({
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                             {stagedAssignedSubjects.map(subRef => {
                               const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef };
-                              const subKey = sub.code || sub.id;
-                              const isChecked = chosenSubs.includes(subKey) || chosenSubs.includes(sub.id);
+                              const subKey = sub.id || sub.code;
+                              const isChecked = chosenSubs.some(s => String(s) === String(subKey) || String(s) === String(sub.id));
 
                               return (
                                 <button
@@ -1726,8 +1870,8 @@ const AssignmentHub = ({
                                   onClick={() => {
                                     setStagedFacultyMap(prev => {
                                       const current = prev[sec.id] || [];
-                                      const updated = current.includes(subKey)
-                                        ? current.filter(s => s !== subKey && s !== sub.id)
+                                      const updated = current.some(s => String(s) === String(subKey) || String(s) === String(sub.id))
+                                        ? current.filter(s => String(s) !== String(subKey) && String(s) !== String(sub.id))
                                         : [...current, subKey];
                                       return { ...prev, [sec.id]: updated };
                                     });

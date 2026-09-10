@@ -356,7 +356,7 @@ export function getEligibleProfessors(professors, subject, section) {
   // 2. Second Priority: Professor whose sectionSubjectMap explicitly includes this subject for this section
   if (sectionId || sectionName) {
     const mappedProf = professors.find(p => {
-      const hasSec = (p.assignedSections || []).includes(sectionId) || (sectionName && (p.assignedSections || []).includes(sectionName));
+      const hasSec = (p.assignedSections || []).some(id => String(id) === String(sectionId)) || (sectionName && (p.assignedSections || []).some(id => String(id) === String(sectionName)));
       if (!hasSec) return false;
       const subs = (p.sectionSubjectMap && (p.sectionSubjectMap[sectionId] || (sectionName && p.sectionSubjectMap[sectionName]))) || [];
       return subs.some(s => s === subCode || s === subject.id || s === subject.name);
@@ -369,7 +369,7 @@ export function getEligibleProfessors(professors, subject, section) {
   if (sectionId || sectionName) {
     pool = pool.filter(p => {
       if (p.assignedSections && p.assignedSections.length > 0) {
-        return p.assignedSections.includes(sectionId) || (sectionName && p.assignedSections.includes(sectionName));
+        return p.assignedSections.some(id => String(id) === String(sectionId)) || (sectionName && p.assignedSections.some(id => String(id) === String(sectionName)));
       }
       return true;
     });
@@ -377,7 +377,7 @@ export function getEligibleProfessors(professors, subject, section) {
     if (pool.length > 0) {
       const explicitProfs = pool.filter(p => {
         const assigned = p.assignedSections || [];
-        return assigned.includes(sectionId) || (sectionName && assigned.includes(sectionName));
+        return assigned.some(id => String(id) === String(sectionId)) || (sectionName && assigned.some(id => String(id) === String(sectionName)));
       });
       if (explicitProfs.length > 0) pool = explicitProfs;
     }
@@ -846,7 +846,7 @@ export function getSmartScheduleRecommendations({
     if (sec) {
       const secSubs = sec.subjects || [];
       candidateSubjects = activeSemesterSubjects.filter(s =>
-        secSubs.includes(s.id) || (s.code && secSubs.includes(s.code)) || (s.name && secSubs.includes(s.name))
+        secSubs.some(id => String(id) === String(s.id)) || (s.code && secSubs.some(id => String(id) === String(s.code))) || (s.name && secSubs.some(id => String(id) === String(s.name)))
       );
     }
   }
@@ -886,7 +886,7 @@ export function getSmartScheduleRecommendations({
     } else {
       const unscheduledSections = (sections || []).filter(sec => {
         const secSubs = sec.subjects || [];
-        const needsSubject = secSubs.includes(subject.id) || (subject.code && secSubs.includes(subject.code)) || (subject.name && secSubs.includes(subject.name));
+        const needsSubject = secSubs.some(id => String(id) === String(subject.id)) || (subject.code && secSubs.some(id => String(id) === String(subject.code))) || (subject.name && secSubs.some(id => String(id) === String(subject.name)));
         if (!needsSubject) return false;
         const alreadyScheduled = (activeSchedules || []).some(s =>
           entitiesMatch(s.section, sec) && entitiesMatch(s.subject, subject)
@@ -898,7 +898,7 @@ export function getSmartScheduleRecommendations({
         ? unscheduledSections
         : (sections || []).filter(sec => {
             const secSubs = sec.subjects || [];
-            return secSubs.includes(subject.id) || (subject.code && secSubs.includes(subject.code)) || (subject.name && secSubs.includes(subject.name));
+            return secSubs.some(id => String(id) === String(subject.id)) || (subject.code && secSubs.some(id => String(id) === String(subject.code))) || (subject.name && secSubs.some(id => String(id) === String(subject.name)));
           });
     }
     if (candSections.length === 0) continue;

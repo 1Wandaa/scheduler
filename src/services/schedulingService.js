@@ -335,8 +335,8 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       const prefRoomIds = professor.preferredRooms || [];
       let sortedRoomPool = roomPool;
       if (prefRoomIds.length > 0) {
-        const validPrefRooms = roomPool.filter((r) => prefRoomIds.includes(r.id));
-        const nonPrefRooms = roomPool.filter((r) => !prefRoomIds.includes(r.id));
+        const validPrefRooms = roomPool.filter((r) => prefRoomIds.some(id => String(id) === String(r.id)));
+        const nonPrefRooms = roomPool.filter((r) => !prefRoomIds.some(id => String(id) === String(r.id)));
         sortedRoomPool = [...validPrefRooms, ...nonPrefRooms];
       }
 

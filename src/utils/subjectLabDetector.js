@@ -8,7 +8,8 @@ const KNOWN_LAB_CODES = {
   // BSCS Computer Labs
   'CS 103': { labType: 'computer', reason: 'BSCS Programming Laboratory (CS 103)' },
   'CS 107': { labType: 'computer', reason: 'BSCS Applications Development Laboratory (CS 107)' },
-  'CS 108': { labType: 'computer', reason: 'BSCS Information Management Laboratory (CS 108)' },
+  'CS 108': { labType: 'computer', reason: 'BSCS Software Engineering Laboratory (CS 108)' },
+  'CS 123': { labType: 'computer', reason: 'BSCS Human Computer Interaction Laboratory (CS 123)' },
   'CS 110': { labType: 'computer', reason: 'BSCS Object Oriented Programming Laboratory (CS 110)' },
   'CS 116': { labType: 'computer', reason: 'BSCS Programming Languages Laboratory (CS 116)' },
   'CS 117': { labType: 'computer', reason: 'BSCS Computer Architecture & Assembly Lab (CS 117)' },
