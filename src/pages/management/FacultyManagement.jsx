@@ -479,31 +479,14 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                 <select className="form-select" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
                   {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(deptId => {
                     const deptObj = departments.find(d => d.id === deptId);
-                    const colorHex = deptObj?.color || getDeptColor(deptId);
-                    const colorInfo = getColorNameAndCode(colorHex);
                     return (
                       <option key={deptId} value={deptId}>
-                        {deptId} — {colorInfo.name} ({colorInfo.hex})
+                        {deptObj?.name ? `${deptObj.name} (${deptId})` : deptId}
                       </option>
                     );
                   })}
                 </select>
-                {(() => {
-                  const deptObj = departments.find(d => d.id === formData.department);
-                  const colorHex = deptObj?.color || getDeptColor(formData.department);
-                  const colorInfo = getColorNameAndCode(colorHex);
-                  return (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '8px',
-                      marginTop: '6px', padding: '4px 10px', borderRadius: '6px',
-                      background: `${colorInfo.hex}15`, border: `1px solid ${colorInfo.hex}40`
-                    }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: colorInfo.hex, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }}></div>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-main)', fontWeight: 600 }}>{colorInfo.name}</span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace', fontWeight: 700, marginLeft: 'auto' }}>{colorInfo.hex}</span>
-                    </div>
-                  );
-                })()}
+
               </div>
               {(() => {
                 let currentUnits = 0;

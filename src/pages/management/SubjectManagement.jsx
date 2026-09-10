@@ -757,9 +757,6 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                       />
                       <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: colorInfo.hex, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }}></div>
                       <span>{dept}</span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                        ({colorInfo.name} • {colorInfo.hex})
-                      </span>
                     </label>
                   );
                 })}

@@ -420,37 +420,17 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
                 Department Owner
               </label>
               <select className="form-select" value={formData.department} onChange={e => setFormData({ ...formData, department: e.target.value })}>
-                <option value="SHARED">SHARED (Any department) — Slate Gray (#64748B)</option>
+                <option value="SHARED">SHARED (Any department)</option>
                 {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(d => {
                   const deptObj = departments.find(item => item.id === d);
-                  const colorHex = deptObj?.color || getDeptColor(d);
-                  const colorInfo = getColorNameAndCode(colorHex);
                   return (
                     <option key={d} value={d}>
-                      {d} — {colorInfo.name} ({colorInfo.hex})
+                      {deptObj?.name ? `${deptObj.name} (${d})` : d}
                     </option>
                   );
                 })}
               </select>
-              {(() => {
-                const isShared = formData.department === 'SHARED';
-                const deptObj = departments.find(d => d.id === formData.department);
-                const colorHex = isShared ? '#64748B' : (deptObj?.color || getDeptColor(formData.department));
-                const colorInfo = getColorNameAndCode(colorHex);
-                return (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    marginTop: '6px', padding: '4px 10px', borderRadius: '6px',
-                    background: `${colorInfo.hex}15`, border: `1px solid ${colorInfo.hex}40`
-                  }}>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: colorInfo.hex, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }}></div>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-main)', fontWeight: 600 }}>
-                      {isShared ? 'Shared Department Color' : 'Department Color'}: {colorInfo.name}
-                    </span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace', fontWeight: 700, marginLeft: 'auto' }}>{colorInfo.hex}</span>
-                  </div>
-                );
-              })()}
+
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>Priority scheduling for this department's sections. SHARED = available to all.</span>
             </div>
 

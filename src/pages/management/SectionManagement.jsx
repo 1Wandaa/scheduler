@@ -623,48 +623,21 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
               <select className="form-select" value={formData.program} onChange={e => setFormData({ ...formData, program: e.target.value })} style={{ color: !formData.program ? '#757575' : 'inherit' }}>
                 <option value="" disabled hidden>Select Program / Department</option>
                 {courses.length > 0 ? courses.map(c => {
-                  const deptObj = departments.find(d => d.id === c.departmentId);
-                  const colorHex = deptObj?.color || getDeptColor(c.departmentId || c.code);
-                  const colorInfo = getColorNameAndCode(colorHex);
                   return (
                     <option key={c.id} value={c.code} style={{ color: '#000' }}>
-                      {c.code} ({c.title}) — {colorInfo.name} ({colorInfo.hex})
+                      {c.code} ({c.title})
                     </option>
                   );
                 }) : (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => {
                   const deptObj = departments.find(d => d.id === dept);
-                  const colorHex = deptObj?.color || getDeptColor(dept);
-                  const colorInfo = getColorNameAndCode(colorHex);
                   return (
                     <option key={dept} value={dept} style={{ color: '#000' }}>
-                      {dept} — {colorInfo.name} ({colorInfo.hex})
+                      {deptObj?.name ? `${deptObj.name} (${dept})` : dept}
                     </option>
                   );
                 })}
               </select>
-              {(() => {
-                if (!formData.program) return null;
-                const course = courses.find(c => c.code === formData.program || c.id === formData.program);
-                const deptId = course ? course.departmentId : (PROGRAM_DEPARTMENTS[formData.program] || formData.program);
-                const deptObj = departments.find(d => d.id === deptId);
-                const colorHex = deptObj?.color || getDeptColor(deptId);
-                const colorInfo = getColorNameAndCode(colorHex);
-                return (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    marginTop: '6px', padding: '4px 10px', borderRadius: '6px',
-                    background: `${colorInfo.hex}15`, border: `1px solid ${colorInfo.hex}40`
-                  }}>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: colorInfo.hex, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }}></div>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-main)', fontWeight: 600 }}>
-                      Department Color: {colorInfo.name}
-                    </span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace', fontWeight: 700, marginLeft: 'auto' }}>
-                      {colorInfo.hex}
-                    </span>
-                  </div>
-                );
-              })()}
+
             </div>
             <div className="form-group">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

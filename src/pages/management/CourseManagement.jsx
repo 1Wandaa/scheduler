@@ -515,34 +515,14 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
               <label className="form-label">Department Owner</label>
               <select className="form-select" value={formData.departmentId} onChange={e => setFormData({ ...formData, departmentId: e.target.value })}>
                 {departments.map(d => {
-                  const colorInfo = getColorNameAndCode(d.color || getDeptColor(d.id));
                   return (
                     <option key={d.id} value={d.id}>
-                      {d.name} ({d.id}) — {colorInfo.name} ({colorInfo.hex})
+                      {d.name} ({d.id})
                     </option>
                   );
                 })}
               </select>
-              {(() => {
-                const selectedDept = departments.find(d => d.id === formData.departmentId);
-                if (!selectedDept) return null;
-                const colorInfo = getColorNameAndCode(selectedDept.color || getDeptColor(selectedDept.id));
-                return (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    marginTop: '8px', padding: '6px 12px', borderRadius: '8px',
-                    background: `${colorInfo.hex}15`, border: `1px solid ${colorInfo.hex}40`
-                  }}>
-                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: colorInfo.hex, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }}></div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontWeight: 600 }}>
-                      Department Color: {colorInfo.name}
-                    </span>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace', fontWeight: 700, marginLeft: 'auto' }}>
-                      {colorInfo.hex}
-                    </span>
-                  </div>
-                );
-              })()}
+
             </div>
 
             <div className="mgmt-modal-actions">
