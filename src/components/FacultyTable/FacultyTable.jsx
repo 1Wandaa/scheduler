@@ -49,22 +49,18 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments 
         </thead>
         <tbody>
           {facultyList.map(p => {
-            // Calculate units based on actual scheduled subject sections
-            const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
-            const matchesProfessor = (s, professor) => professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);
-            const profSchedules = (schedules || []).filter(s => matchesProfessor(s, p));
-            
-            const uniqueSubjectSections = new Map();
-            for (const s of profSchedules) {
-              const subjectId = s.subject?.id || s.subject?.code || 'unknown';
-              const sectionId = s.section?.id || 'no-section';
-              const key = `${subjectId}__${sectionId}`;
-              if (!uniqueSubjectSections.has(key)) {
-                uniqueSubjectSections.set(key, Number(s.subject?.credits) || 3);
-              }
+            // Calculate units based on assignments to ensure it immediately reflects Assignment Hub changes
+            let currentUnits = 0;
+            if (p.sectionSubjectMap) {
+              Object.entries(p.sectionSubjectMap).forEach(([secId, subRefs]) => {
+                subRefs.forEach(subRef => {
+                  const sub = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
+                  if (sub) {
+                    currentUnits += (Number(sub.credits) || 3);
+                  }
+                });
+              });
             }
-            
-            const currentUnits = Array.from(uniqueSubjectSections.values()).reduce((sum, c) => sum + c, 0);
             
             // For displaying assigned subjects count
             const assignedSubjectIds = p.specialization || [];

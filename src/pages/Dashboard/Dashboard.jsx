@@ -604,7 +604,7 @@ const Dashboard = ({ user, onLogout }) => {
         {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} professors={professors} sections={sections} schedules={displaySchedules} availableSemesters={availableSemesters} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
         {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} user={user} />}
         {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
-        {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} />}
+        {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} subjects={subjects} />}
         {isAdmin && activeTab === 'recycle-bin' && <RecycleBin user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'activity-log' && (
           <ActivityLog

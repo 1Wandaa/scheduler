@@ -3,7 +3,7 @@ import '../../styles/ProfessorWorkload.css';
 import PrintableFacultyWorkload from '../PrintableFacultyWorkload/PrintableFacultyWorkload';
 import { getScheduleTimeRange } from '../../utils/scheduleUtils';
 
-function ProfessorWorkload({ professors, schedules, departments = [] }) {
+function ProfessorWorkload({ professors, schedules, departments = [], subjects = [] }) {
   const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
@@ -63,13 +63,15 @@ function ProfessorWorkload({ professors, schedules, departments = [] }) {
       const profSchedules = schedules.filter(s => matchesProfessor(s, professor));
       
       let units = 0;
-      for (const s of profSchedules) {
-        const range = getScheduleTimeRange(s);
-        if (range && range.start > 0 && range.end > 0) {
-          units += (range.end - range.start) / 60;
-        } else {
-          units += (Number(s.subject?.hoursPerMeeting) || 1.5);
-        }
+      if (professor.sectionSubjectMap) {
+        Object.entries(professor.sectionSubjectMap).forEach(([secId, subRefs]) => {
+          subRefs.forEach(subRef => {
+            const sub = subjects?.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
+            if (sub) {
+              units += (Number(sub.credits) || 3);
+            }
+          });
+        });
       }
       const cap = Math.max(1, Number(professor.maxUnits || professor.maxHours || 12));
       const utilization = (units / cap) * 100;

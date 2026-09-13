@@ -367,13 +367,6 @@ export function getEligibleProfessors(professors, subject, section) {
   let pool = professors.filter(p => professorMatchesSubject(p, subject));
 
   if (sectionId || sectionName) {
-    pool = pool.filter(p => {
-      if (p.assignedSections && p.assignedSections.length > 0) {
-        return p.assignedSections.some(id => String(id) === String(sectionId)) || (sectionName && p.assignedSections.some(id => String(id) === String(sectionName)));
-      }
-      return true;
-    });
-
     if (pool.length > 0) {
       const explicitProfs = pool.filter(p => {
         const assigned = p.assignedSections || [];

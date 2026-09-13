@@ -156,7 +156,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   for (const a of assignments) {
     // Skip subjects that have no eligible professors (considered unassigned or not in active faculty filter)
     const profPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, a.subject, a.section, constraints);
-    if (profPool.length === 0) continue;
+    // REMOVED: if (profPool.length === 0) continue; // Do not silently drop them! Let them fail properly in tryPlaceGroup.
 
     const key = `${a.section?.id || 'none'}_${a.subject?.id}`;
     if (!groupsMap.has(key)) {
