@@ -5,7 +5,7 @@
   max-width: 8.5in;
   margin: 0 auto;
   background: white;
-  padding: 0.25in 0.65in;
+  padding: 0.15in 0.4in;
   box-sizing: border-box;
   font-size: 8.5pt;
   text-rendering: optimizeLegibility;
@@ -17,7 +17,8 @@
 .fw-header-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  border: 1.5px solid #000;
 }
 
 .fw-header-table td {
@@ -36,259 +37,209 @@
   height: auto;
   display: block;
   margin: 0 auto;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
 }
 
-.fw-header-text {
-  text-align: center;
-  width: 65%;
-}
-
-.fw-header-text h1 {
-  font-size: 11pt;
-  margin: 0;
-  font-weight: bold;
-}
-
-.fw-header-text h2 {
-  font-size: 9pt;
-  margin: 1px 0 0 0;
-  font-weight: normal;
-}
-
-.fw-header-text h3 {
-  font-size: 10pt;
-  margin: 2px 0 0 0;
-  font-weight: bold;
-}
-
-.fw-header-text p {
-  font-size: 8pt;
-  margin: 1px 0 0 0;
-}
-
-.fw-header-meta {
-  width: 20%;
-  font-size: 7.5pt;
+.fw-header-middle {
+  width: 45%;
   vertical-align: top;
 }
 
-/* Faculty Info Section */
-.fw-faculty-info {
-  margin-bottom: 4px;
+.fw-header-doc-type {
+  font-size: 9pt;
+  margin-top: 1px;
 }
 
-.fw-info-row {
-  display: flex;
-  margin-bottom: 1px;
+.fw-header-iso {
+  font-size: 8pt;
+  text-align: center;
+  margin-top: 2px;
 }
 
-.fw-info-label {
-  width: 150px;
-  font-size: 8.5pt;
-}
-
-.fw-info-value {
+.fw-header-title {
+  font-size: 11pt;
   font-weight: bold;
-  border-bottom: 1px solid #000;
-  flex: 1;
-  text-transform: uppercase;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.fw-header-label {
+  width: 20%;
+  font-size: 8pt;
+}
+
+.fw-header-value {
+  width: 20%;
   font-size: 8.5pt;
+  text-align: center;
+}
+
+/* Semester Info */
+.fw-semester-info {
+  text-align: center;
+  margin: 8px 0;
+  font-size: 10pt;
+}
+
+/* Faculty Info */
+.fw-faculty-name {
+  margin-bottom: 6px;
+  font-size: 9.5pt;
+}
+
+.fw-faculty-name-value {
+  font-weight: bold;
+  text-decoration: underline;
+  text-transform: uppercase;
+}
+
+/* Profile Table */
+.fw-profile-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 6px;
+}
+
+.fw-profile-table th,
+.fw-profile-table td {
+  border: 1px solid #000;
+  padding: 2px 4px;
+  vertical-align: middle;
+}
+
+.fw-profile-title {
+  font-weight: bold;
+  text-align: center;
+  font-size: 9pt;
+  padding: 4px;
+}
+
+.fw-profile-level {
+  font-weight: bold;
+  width: 20%;
+  text-align: center;
+}
+
+.fw-profile-field {
+  width: 12%;
+}
+
+.fw-profile-val {
+  width: 40%;
+  text-transform: uppercase;
+}
+
+.fw-profile-extra {
+  width: 28%;
+}
+
+/* Section Titles */
+.fw-section-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+  margin-top: 6px;
+  text-transform: uppercase;
+  font-size: 9pt;
 }
 
 /* Teaching Assignment Table */
-.fw-table {
+.fw-teaching-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   text-align: center;
-  table-layout: fixed;
 }
 
-.fw-table th,
-.fw-table td {
+.fw-teaching-table th,
+.fw-teaching-table td {
   border: 1px solid #000;
-  padding: 2px 3px;
+  padding: 2px 4px;
   vertical-align: middle;
-  font-size: 7.5pt;
-  box-sizing: border-box;
-}
-
-.fw-table th {
-  font-weight: bold;
-  font-size: 7.5pt;
-}
-
-.fw-table-title {
-  text-align: left;
-  font-weight: bold;
-  margin-bottom: 2px;
-  margin-top: 3px;
-  font-size: 8.5pt;
-}
-
-.fw-schedule-title {
-  text-align: center !important;
 }
 
 .fw-teaching-table th {
-  background-color: transparent;
-}
-
-.fw-teaching-total {
   font-weight: bold;
 }
 
-/* Specific to Schedule Table — Square Grid Layout */
+/* Class Schedule Table */
 .fw-schedule-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
-  margin: 0 auto;
+  margin-bottom: 8px;
+}
+
+.fw-schedule-table th,
+.fw-schedule-table td {
+  border: 1px solid #000;
+  padding: 2px 4px;
+  vertical-align: middle;
 }
 
 .fw-schedule-table th {
-  height: 20px;
-  font-size: 7.5pt;
-  background-color: #f4f4f4;
-  border: 1px solid #000;
-}
-
-.fw-schedule-table td {
-  height: 16.5px; /* 16.5px per half-hour -> 3hr is ~100px x 100px square */
-  padding: 1px 2px !important;
-  vertical-align: middle;
+  font-weight: bold;
   text-align: center;
-  box-sizing: border-box;
-}
-
-/* Hide internal horizontal borders on empty half-hour slots */
-.fw-schedule-table tbody td {
-  border-top: none;
-  border-bottom: none;
-  border-left: 1px solid #000;
-  border-right: 1px solid #000;
-}
-
-/* Top border on each full-hour mark */
-.fw-schedule-table tbody tr:nth-child(odd) td {
-  border-top: 1px solid #000;
-}
-
-/* Bottom border on the last row */
-.fw-schedule-table tbody tr:last-child td {
-  border-bottom: 1px solid #000;
-}
-
-/* Schedule Cell Card (Square / Boxy Vertical Layout) */
-.fw-schedule-cell {
-  color: #000000 !important;
-  font-size: 6.8pt;
-  line-height: 1.15;
-  border: 1px solid #000 !important;
-  vertical-align: middle !important;
-  text-align: center;
-  padding: 2px !important;
-  box-sizing: border-box;
-}
-
-.fw-schedule-cell-item {
-  color: #000000 !important;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-}
-
-.fw-schedule-cell-item strong,
-.fw-schedule-cell-item span {
-  color: #000000 !important;
-}
-
-.fw-schedule-cell-item strong {
-  font-weight: 700;
-  font-size: 7.2pt;
-}
-
-.fw-schedule-cell-item span {
-  font-size: 6.5pt;
-}
-
-.fw-schedule-cell-item + .fw-schedule-cell-item {
-  border-top: 1px dashed rgba(0, 0, 0, 0.4);
-  margin-top: 2px;
-  padding-top: 2px;
 }
 
 /* Signatures */
-.fw-signatures {
+.fw-signatures-container {
   display: flex;
   justify-content: space-between;
-  margin-top: 8px;
+  margin-top: 15px;
   padding: 0 10px;
+  font-size: 9pt;
 }
 
-.fw-signature-block {
-  text-align: left;
-  width: 40%;
+.fw-sig-left {
+  width: 50%;
 }
 
-.fw-signature-name {
+.fw-sig-right {
+  width: 50%;
+  padding-left: 15%;
+}
+
+.fw-sig-label {
+  margin-bottom: 10px;
+}
+
+.fw-sig-name {
   font-weight: bold;
   text-transform: uppercase;
-  margin-top: 12px;
-  border-bottom: 1px solid #000;
-  text-align: center;
-  font-size: 8.5pt;
 }
 
-.fw-signature-title {
-  text-align: center;
-  margin-top: 1px;
-  font-size: 7.5pt;
+.fw-sig-title {
+  margin-top: 2px;
 }
 
+/* Hide internally when not printing */
 @media screen {
   .faculty-workload-iso-document {
     display: none;
   }
 }
 
+/* Print Overrides */
 @media print {
   @page {
     size: portrait;
     margin: 0mm !important;
   }
 
-  /* Strip all watermarks, background images, and extra noise */
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     background-image: none !important;
     text-shadow: none !important;
     box-shadow: none !important;
   }
 
   body {
-    padding: 0.25in 0.6in !important;
+    padding: 0.15in 0.4in !important;
     margin: 0 !important;
     background: white !important;
-    background-color: white !important;
-    background-image: none !important;
   }
 
-  /* Hide the main app so it doesn't take up layout space */
   #root {
     display: none !important;
   }
 
-  /*
-   * CRITICAL: PrintableSchedule.css sets "body * { visibility: hidden }"
-   * which hides ALL elements. We must explicitly override visibility
-   * for our document and ALL its children.
-   */
   .faculty-workload-iso-document,
   .faculty-workload-iso-document * {
     visibility: visible !important;
@@ -300,138 +251,56 @@
     top: 0;
     left: 0;
     width: 100%;
-    padding: 0.25in 0.6in !important;
+    padding: 0.15in 0.4in !important;
     box-sizing: border-box !important;
-    margin: 0 auto;
     max-width: 100%;
-    font-size: 8.5pt;
     background: white !important;
-    background-image: none !important;
-    text-rendering: optimizeLegibility !important;
-    -webkit-font-smoothing: antialiased !important;
-    -moz-osx-font-smoothing: grayscale !important;
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
   }
-
-  /* Prevent page breaks inside tables and document */
-  .fw-table,
-  .faculty-workload-iso-document,
-  .fw-signatures {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .fw-signatures {
-    margin-top: 8px;
-  }
-
-  .fw-signature-name {
-    margin-top: 10px;
-  }
 }
+
 
 /* ==========================================================================
    DYNAMIC AUTO-SCALING TIERS (Ensures heavy workloads always fit on 1 page)
    ========================================================================== */
 
-/* Tier 1: Normal (1 - 4 assignments) */
-.fw-density-normal .fw-schedule-table td {
-  height: 16.5px;
-}
+/* Tier 2: Compact */
+.fw-density-compact { font-size: 8pt; }
+.fw-density-compact .fw-header-table { margin-bottom: 5px; }
+.fw-density-compact .fw-semester-info { margin: 5px 0; font-size: 9pt; }
+.fw-density-compact .fw-faculty-name { margin-bottom: 4px; font-size: 8.5pt; }
+.fw-density-compact .fw-profile-table, .fw-density-compact .fw-teaching-table { margin-bottom: 4px; }
+.fw-density-compact th, .fw-density-compact td { padding: 1.5px 3px; font-size: 7.5pt; }
+.fw-density-compact .fw-section-title { margin-top: 4px; margin-bottom: 2px; font-size: 8pt; }
+.fw-density-compact .fw-schedule-table td { height: 25px !important; font-size: 7.5pt; }
+.fw-density-compact .fw-signatures-container { margin-top: 10px; font-size: 8pt; }
 
-/* Tier 2: Compact (5 - 7 assignments) */
-.fw-density-compact {
-  font-size: 8pt;
-}
-.fw-density-compact .fw-header-logo img {
-  width: 44px;
-}
-.fw-density-compact .fw-table th,
-.fw-density-compact .fw-table td {
-  padding: 1.5px 2.5px;
-  font-size: 7pt;
-}
-.fw-density-compact .fw-schedule-table td {
-  height: 13.5px;
-}
-.fw-density-compact .fw-schedule-cell {
-  font-size: 6.2pt;
-}
-.fw-density-compact .fw-signatures {
-  margin-top: 6px;
-}
+/* Tier 3: Dense */
+.fw-density-dense { font-size: 7.5pt; }
+.fw-density-dense .fw-header-logo img { width: 40px; }
+.fw-density-dense .fw-header-title { font-size: 9.5pt; margin-top: 2px; }
+.fw-density-dense .fw-header-table { margin-bottom: 4px; }
+.fw-density-dense .fw-semester-info { margin: 3px 0; font-size: 8.5pt; }
+.fw-density-dense .fw-faculty-name { margin-bottom: 2px; font-size: 8pt; }
+.fw-density-dense .fw-profile-table, .fw-density-dense .fw-teaching-table { margin-bottom: 3px; }
+.fw-density-dense th, .fw-density-dense td { padding: 1px 2px; font-size: 7pt; }
+.fw-density-dense .fw-section-title { margin-top: 3px; margin-bottom: 1px; font-size: 7.5pt; }
+.fw-density-dense .fw-schedule-table td { height: 20px !important; font-size: 7pt; }
+.fw-density-dense .fw-signatures-container { margin-top: 8px; font-size: 7.5pt; }
+.fw-density-dense .fw-sig-label { margin-bottom: 6px; }
 
-/* Tier 3: Dense (8 - 10 assignments) */
-.fw-density-dense {
-  font-size: 7.5pt;
-}
-.fw-density-dense .fw-header-logo img {
-  width: 38px;
-}
-.fw-density-dense .fw-header-text h1 {
-  font-size: 9.5pt;
-}
-.fw-density-dense .fw-header-text h3 {
-  font-size: 9pt;
-}
-.fw-density-dense .fw-table th,
-.fw-density-dense .fw-table td {
-  padding: 1px 2px;
-  font-size: 6.5pt;
-}
-.fw-density-dense .fw-schedule-table th {
-  height: 16px;
-  font-size: 6.5pt;
-}
-.fw-density-dense .fw-schedule-table td {
-  height: 11.5px;
-}
-.fw-density-dense .fw-schedule-cell {
-  font-size: 5.6pt;
-  line-height: 1.05;
-}
-.fw-density-dense .fw-signatures {
-  margin-top: 4px;
-}
-.fw-density-dense .fw-signature-name {
-  margin-top: 8px;
-  font-size: 7.5pt;
-}
+/* Tier 4: Ultra Dense */
+.fw-density-ultra { font-size: 6.5pt; padding: 0.1in 0.3in !important; }
+.fw-density-ultra .fw-header-logo img { width: 32px; }
+.fw-density-ultra .fw-header-title { font-size: 8.5pt; margin-top: 1px; }
+.fw-density-ultra .fw-header-table { margin-bottom: 2px; border: 1px solid #000; }
+.fw-density-ultra .fw-semester-info { margin: 2px 0; font-size: 7.5pt; }
+.fw-density-ultra .fw-faculty-name { margin-bottom: 2px; font-size: 7.5pt; }
+.fw-density-ultra .fw-profile-table, .fw-density-ultra .fw-teaching-table { margin-bottom: 2px; }
+.fw-density-ultra th, .fw-density-ultra td { padding: 0px 1px; font-size: 6pt; }
+.fw-density-ultra .fw-section-title { margin-top: 2px; margin-bottom: 1px; font-size: 7pt; }
+.fw-density-ultra .fw-schedule-table td { height: 16px !important; font-size: 6pt; }
+.fw-density-ultra .fw-signatures-container { margin-top: 4px; font-size: 7pt; }
+.fw-density-ultra .fw-sig-label { margin-bottom: 4px; }
 
-/* Tier 4: Ultra Dense (11+ assignments) */
-.fw-density-ultra {
-  font-size: 7pt;
-}
-.fw-density-ultra .fw-header-logo img {
-  width: 32px;
-}
-.fw-density-ultra .fw-header-text h1 {
-  font-size: 9pt;
-}
-.fw-density-ultra .fw-header-text h3 {
-  font-size: 8.5pt;
-}
-.fw-density-ultra .fw-table th,
-.fw-density-ultra .fw-table td {
-  padding: 0.5px 1.5px;
-  font-size: 6pt;
-}
-.fw-density-ultra .fw-schedule-table th {
-  height: 14px;
-  font-size: 6pt;
-}
-.fw-density-ultra .fw-schedule-table td {
-  height: 9.5px;
-}
-.fw-density-ultra .fw-schedule-cell {
-  font-size: 5pt;
-  line-height: 1.0;
-}
-.fw-density-ultra .fw-signatures {
-  margin-top: 3px;
-}
-.fw-density-ultra .fw-signature-name {
-  margin-top: 6px;
-  font-size: 7pt;
-}
