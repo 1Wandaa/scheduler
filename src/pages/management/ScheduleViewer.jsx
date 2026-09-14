@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import ScheduleTable from '../../components/ScheduleTable/ScheduleTable';
 import PrintableSchedule from '../../components/PrintableSchedule/PrintableSchedule';
+import PrintableRoomUtilization from '../../components/PrintableRoomUtilization/PrintableRoomUtilization';
 import { DEPARTMENTS } from '../../config/constants';
 import ExportOptions from './components/ExportOptions';
 import PreviewModal from './components/PreviewModal';
@@ -440,26 +441,35 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 />
             </div>
 
-            <PrintableSchedule
-                scheduleItems={filteredSchedules}
-                scheduleMode={detectedScheduleMode}
-                department={viewType === 'department' ? selectedId : ''}
-                sectionName={
-                    viewType === 'department' && deptSectionId
-                        ? (sections.find(s => s.id === deptSectionId)?.name || titleName)
-                        : titleName
-                }
-                programName={
-                    viewType === 'department' && deptSectionId
-                        ? (sections.find(s => s.id === deptSectionId)?.program || selectedId)
-                        : viewType === 'department'
-                            ? selectedId
-                            : viewType === 'section' && selectedId
-                                ? (sections.find(s => s.id === selectedId)?.program || '')
-                                : ''
-                }
-                semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "2nd Sem 2025-2026"}
-            />
+            {viewType === 'room' ? (
+                <PrintableRoomUtilization
+                    scheduleItems={filteredSchedules}
+                    roomName={titleName}
+                    semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "First Semester, School Year 2026-2027"}
+                    scheduleMode={detectedScheduleMode}
+                />
+            ) : (
+                <PrintableSchedule
+                    scheduleItems={filteredSchedules}
+                    scheduleMode={detectedScheduleMode}
+                    department={viewType === 'department' ? selectedId : ''}
+                    sectionName={
+                        viewType === 'department' && deptSectionId
+                            ? (sections.find(s => s.id === deptSectionId)?.name || titleName)
+                            : titleName
+                    }
+                    programName={
+                        viewType === 'department' && deptSectionId
+                            ? (sections.find(s => s.id === deptSectionId)?.program || selectedId)
+                            : viewType === 'department'
+                                ? selectedId
+                                : viewType === 'section' && selectedId
+                                    ? (sections.find(s => s.id === selectedId)?.program || '')
+                                    : ''
+                    }
+                    semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "2nd Sem 2025-2026"}
+                />
+            )}
 
             <PreviewModal
                 previewImage={previewImage}

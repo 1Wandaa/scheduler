@@ -100,19 +100,20 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                         onClick={async () => {
                             setIsExportOpen(false);
                             setIsGenerating(true);
-                            const printContent = document.querySelector('.printable-iso-document');
+                            const printContent = document.querySelector('.printable-iso-document') || document.querySelector('.printable-room-utilization');
                             if (!printContent) {
                                 setIsGenerating(false);
                                 return;
                             }
+                            const isRoom = printContent.classList.contains('printable-room-utilization');
                             const tempContainer = document.createElement('div');
                             tempContainer.style.position = 'absolute';
                             tempContainer.style.top = '-10000px';
                             tempContainer.style.left = '-10000px';
                             tempContainer.style.width = '1100px'; 
                             tempContainer.style.backgroundColor = 'white';
-                            tempContainer.innerHTML = `
-                                <style>
+                            
+                            const isoStyles = `
                                     .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
                                     .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
                                     .iso-header-table .bold { font-weight: bold; }
@@ -131,8 +132,47 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     .cell-room { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
                                     .lunch-break { background-color: #e0e0e0 !important; font-weight: bold; letter-spacing: 5px; padding: 4px; height: 30px; overflow: hidden; font-size: 9pt; }
                                     .lunch-break-time { background-color: #e0e0e0 !important; height: 30px; font-size: 8pt; }
+                            `;
+                            
+                            const roomStyles = `
+                                .printable-room-utilization { font-family: "Times New Roman", Times, serif; color: #000; background: #fff; width: 100%; height: 1100px; display: flex; flex-direction: column; overflow: hidden; }
+                                .room-util-header { display: flex; justify-content: flex-start; align-items: center; border-bottom: 3px solid #f2a900; padding: 20px 40px; margin-bottom: 15px; position: relative; flex-shrink: 0; }
+                                .room-util-header::before { content: ''; position: absolute; top: 0; right: 0; width: 40%; height: 100%; background: linear-gradient(to right bottom, #0033a0 50%, #f2a900 50%); clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%); z-index: 0; opacity: 0.1; }
+                                .room-util-header-content { display: flex; align-items: center; gap: 15px; z-index: 1; }
+                                .room-util-header img { height: 60px; object-fit: contain; }
+                                .room-util-header-text { display: flex; flex-direction: column; }
+                                .room-util-header-text .republic { font-size: 8pt; font-family: Arial, sans-serif; }
+                                .room-util-header-text .univ { font-size: 14pt; font-weight: bold; color: #002060; font-family: Arial, sans-serif; letter-spacing: 1px; }
+                                .room-util-header-text .campus { font-size: 9pt; font-family: Arial, sans-serif; color: #002060; font-weight: bold; }
+                                .room-util-titles { text-align: center; margin-bottom: 10px; flex-shrink: 0; }
+                                .room-util-titles h2 { font-family: Arial, sans-serif; color: #2e5296; font-size: 12pt; font-weight: bold; text-transform: uppercase; margin: 0 0 5px 0; }
+                                .room-util-titles h3 { font-size: 12pt; font-weight: bold; margin: 0 0 5px 0; font-family: "Times New Roman", Times, serif;}
+                                .room-util-titles p { font-size: 10pt; margin: 0; font-family: "Times New Roman", Times, serif;}
+                                .room-util-room-name { font-size: 11pt; font-weight: bold; background-color: #ffff00 !important; display: inline-block; padding: 2px 5px; margin-left: 40px; margin-bottom: 10px; flex-shrink: 0; }
+                                .room-util-subjects { width: 90%; margin: 0 auto 15px auto; border-collapse: collapse; font-family: "Times New Roman", Times, serif; font-size: 9pt; flex-shrink: 0; }
+                                .room-util-subjects th, .room-util-subjects td { border: 1px solid #000; padding: 4px; text-align: center; }
+                                .room-util-subjects th { font-weight: bold; }
+                                .room-util-timetable { width: 90%; margin: 0 auto 15px auto; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 8pt; table-layout: fixed; flex: 1; }
+                                .room-util-timetable th, .room-util-timetable td { border: 1px solid #000; text-align: center; vertical-align: middle; padding: 0; overflow: hidden; }
+                                .room-util-timetable th { font-size: 7.5pt; font-weight: normal; padding: 2px; }
+                                .room-util-timetable .time-col { width: 15%; font-size: 7.5pt; font-weight: bold; }
+                                .room-util-timetable .cell-content { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; padding: 2px; box-sizing: border-box; overflow: hidden; }
+                                .room-util-timetable .cell-scheduled { background-color: #00b0f0 !important; font-weight: bold; }
+                                .room-util-timetable .cell-line { font-size: 7pt; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+                                .room-util-signatures { display: flex; justify-content: space-between; padding: 0 40px; margin-top: auto; font-family: "Times New Roman", Times, serif; font-size: 10pt; flex-shrink: 0; }
+                                .sig-block { text-align: left; }
+                                .sig-label { margin-bottom: 20px; }
+                                .sig-name { font-weight: bold; }
+                                .sig-title { font-size: 9pt; }
+                                .room-util-footer { position: relative; bottom: 0; width: 100%; padding: 10px 40px; border-top: 3px solid #f2a900; display: flex; justify-content: space-between; align-items: center; font-family: Arial, sans-serif; font-size: 7.5pt; flex-shrink: 0; margin-top: 20px; box-sizing: border-box; }
+                                .room-util-footer::after { content: ''; position: absolute; bottom: 0; right: 0; width: 100%; height: 100%; background: linear-gradient(to right bottom, #0033a0 30%, #f2a900 30%); clip-path: polygon(0 80%, 100% 0%, 100% 100%, 0 100%); z-index: 0; opacity: 0.1; }
+                            `;
+
+                            tempContainer.innerHTML = `
+                                <style>
+                                    ${isRoom ? roomStyles : isoStyles}
                                 </style>
-                                <div style="padding: 40px;">
+                                <div style="${isRoom ? 'padding: 0; height: 1100px; display: flex; flex-direction: column;' : 'padding: 40px;'}">
                                     ${printContent.innerHTML}
                                 </div>
                             `;
@@ -176,8 +216,9 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                     <button 
                         onClick={() => {
                             setIsExportOpen(false);
-                            const printContent = document.querySelector('.printable-iso-document');
+                            const printContent = document.querySelector('.printable-iso-document') || document.querySelector('.printable-room-utilization');
                             if (!printContent) return;
+                            const isRoom = printContent.classList.contains('printable-room-utilization');
                             const iframe = document.createElement('iframe');
                             iframe.style.position = 'fixed';
                             iframe.style.top = '-10000px';
@@ -187,10 +228,8 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             document.body.appendChild(iframe);
                             const doc = iframe.contentDocument || iframe.contentWindow.document;
                             doc.open();
-                            doc.write(`
-                                <html>
-                                <head>
-                                    <style>
+                            
+                            const isoPrintStyles = `
                                         @page { size: letter landscape; margin: 0; }
                                         html, body { margin: 0; padding: 0; height: 100vh; overflow: hidden; }
                                         body { font-family: "Times New Roman", Times, serif; color: #000; padding: 0.3in; box-sizing: border-box; display: flex; flex-direction: column; }
@@ -215,6 +254,51 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                         .cell-room { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
                                         .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; padding: 2px; overflow: hidden; font-size: 9pt; height: 4vh; }
                                         .lunch-break-time { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; height: 4vh; }
+                            `;
+                            
+                            const roomPrintStyles = `
+                                        @page { size: letter portrait; margin: 0; }
+                                        html, body { margin: 0; padding: 0; height: 100vh; overflow: hidden; background: white; }
+                                        body { padding: 0.25in; box-sizing: border-box; display: flex; flex-direction: column; font-family: "Times New Roman", Times, serif; color: #000; }
+                                        .print-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+                                        .printable-room-utilization { width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+                                        .room-util-header { display: flex; justify-content: flex-start; align-items: center; border-bottom: 3px solid #f2a900; padding: 10px 20px; margin-bottom: 10px; position: relative; overflow: hidden; flex-shrink: 0; }
+                                        .room-util-header::before { content: ''; position: absolute; top: 0; right: 0; width: 40%; height: 100%; background: linear-gradient(to right bottom, #0033a0 50%, #f2a900 50%); clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%); z-index: 0; opacity: 0.1; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                        .room-util-header-content { display: flex; align-items: center; gap: 15px; z-index: 1; }
+                                        .room-util-header img { height: 60px; object-fit: contain; }
+                                        .room-util-header-text { display: flex; flex-direction: column; }
+                                        .room-util-header-text .republic { font-size: 8pt; font-family: Arial, sans-serif; }
+                                        .room-util-header-text .univ { font-size: 14pt; font-weight: bold; color: #002060; font-family: Arial, sans-serif; letter-spacing: 1px; }
+                                        .room-util-header-text .campus { font-size: 9pt; font-family: Arial, sans-serif; color: #002060; font-weight: bold; }
+                                        .room-util-titles { text-align: center; margin-bottom: 8px; flex-shrink: 0; }
+                                        .room-util-titles h2 { font-family: Arial, sans-serif; color: #2e5296; font-size: 12pt; font-weight: bold; text-transform: uppercase; margin: 0 0 5px 0; }
+                                        .room-util-titles h3 { font-size: 12pt; font-weight: bold; margin: 0 0 5px 0; font-family: "Times New Roman", Times, serif; }
+                                        .room-util-titles p { font-size: 10pt; margin: 0; font-family: "Times New Roman", Times, serif; }
+                                        .room-util-room-name { font-size: 11pt; font-weight: bold; background-color: #ffff00 !important; display: inline-block; padding: 2px 5px; margin-left: 20px; margin-bottom: 8px; -webkit-print-color-adjust: exact; print-color-adjust: exact; flex-shrink: 0; }
+                                        .room-util-subjects { width: 100%; margin: 0 auto 10px auto; border-collapse: collapse; font-family: "Times New Roman", Times, serif; font-size: 9.5pt; flex-shrink: 0; }
+                                        .room-util-subjects th, .room-util-subjects td { border: 1px solid #000; padding: 4px; text-align: center; }
+                                        .room-util-subjects th { font-weight: bold; }
+                                        .room-util-timetable { width: 100%; margin: 0 auto 10px auto; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 8pt; table-layout: fixed; flex: 1; min-height: 0; }
+                                        .room-util-timetable th, .room-util-timetable td { border: 1px solid #000; text-align: center; vertical-align: middle; padding: 0; overflow: hidden; }
+                                        .room-util-timetable th { font-size: 7.5pt; font-weight: normal; padding: 2px; }
+                                        .room-util-timetable .time-col { width: 15%; font-size: 7.5pt; font-weight: bold; }
+                                        .room-util-timetable .cell-content { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; padding: 2px; box-sizing: border-box; overflow: hidden; }
+                                        .room-util-timetable .cell-scheduled { background-color: #00b0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; }
+                                        .room-util-timetable .cell-line { font-size: 7pt; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+                                        .room-util-signatures { display: flex; justify-content: space-between; padding: 0 20px; margin-top: auto; margin-bottom: 10px; font-family: "Times New Roman", Times, serif; font-size: 10pt; flex-shrink: 0; }
+                                        .sig-block { text-align: left; }
+                                        .sig-label { margin-bottom: 15px; }
+                                        .sig-name { font-weight: bold; }
+                                        .sig-title { font-size: 9pt; }
+                                        .room-util-footer { position: relative; bottom: 0; width: 100%; padding: 10px 20px; border-top: 3px solid #f2a900; display: flex; justify-content: space-between; align-items: center; font-family: Arial, sans-serif; font-size: 7.5pt; flex-shrink: 0; margin-top: 5px;}
+                                        .room-util-footer::after { content: ''; position: absolute; bottom: 0; right: 0; width: 100%; height: 100%; background: linear-gradient(to right bottom, #0033a0 30%, #f2a900 30%); clip-path: polygon(0 80%, 100% 0%, 100% 100%, 0 100%); z-index: 0; opacity: 0.1; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                            `;
+                            
+                            doc.write(`
+                                <html>
+                                <head>
+                                    <style>
+                                        ${isRoom ? roomPrintStyles : isoPrintStyles}
                                     </style>
                                 </head>
                                 <body><div class="print-wrapper">${printContent.innerHTML}</div></body>
