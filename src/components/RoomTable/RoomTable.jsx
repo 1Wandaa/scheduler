@@ -111,7 +111,7 @@ const RoomTable = ({ roomList, onEdit, onDelete, selectedIds = [], onToggleSelec
             return (
               <tr key={r.id} className={isSelected ? 'table-row-selected' : ''}>
                 {onToggleSelect && (
-                  <td className="table-checkbox-col">
+                  <td className="table-checkbox-col" data-label="Select">
                     <input
                       type="checkbox"
                       className="data-checkbox"
@@ -121,8 +121,8 @@ const RoomTable = ({ roomList, onEdit, onDelete, selectedIds = [], onToggleSelec
                     />
                   </td>
                 )}
-                <td><strong style={{ color: 'var(--text-main)' }}>{r.name}</strong></td>
-              <td>
+                <td data-label="Name"><strong style={{ color: 'var(--text-main)' }}>{r.name}</strong></td>
+              <td data-label="Dept Owner">
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: '4px',
                   fontSize: '0.75rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
@@ -140,14 +140,14 @@ const RoomTable = ({ roomList, onEdit, onDelete, selectedIds = [], onToggleSelec
                   {r.department || 'SHARED'}
                 </span>
               </td>
-              <td>
+              <td data-label="Building">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontWeight: 500, fontSize: '0.85rem' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
                   {r.building || 'Unassigned'}
                 </div>
               </td>
-              <td>{getRoomTypeBadge(r)}</td>
-              <td style={{ whiteSpace: 'nowrap' }}>
+              <td data-label="Type & Facilities">{getRoomTypeBadge(r)}</td>
+              <td style={{ whiteSpace: 'nowrap' }} data-label="Actions">
                 <button className="btn-edit" onClick={() => onEdit(r)}>Edit</button>
                 <button className="btn-delete" onClick={() => onDelete(r.id)}>Delete</button>
               </td>

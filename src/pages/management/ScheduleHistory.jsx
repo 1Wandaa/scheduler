@@ -53,7 +53,7 @@ const ScheduleHistory = ({ history, onBack }) => {
   return (
     <div className="card" style={{  display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(100vh - 120px)' }}>
       <div className="mgmt-header" style={{ flexShrink: 0, paddingBottom: '16px', borderBottom: '1px solid var(--border-color)' }}>
-        <div className="mgmt-header-left">
+        <div className="mgmt-header-left" style={{ flex: 1 }}>
           <button className="back-btn" onClick={onBack}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             Back
@@ -102,21 +102,20 @@ const ScheduleHistory = ({ history, onBack }) => {
                 }}>
                   <div 
                     onClick={() => toggleExpand(record.id)}
+                    className="history-card-header"
                     style={{
                       padding: '20px',
                       display: 'flex',
-                      flexWrap: 'wrap',
                       gap: '16px',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       cursor: 'pointer',
                       borderBottom: isExpanded ? '1px solid var(--border-color)' : '1px solid transparent',
-                      transition: 'all 0.3s ease'
+                      transition: 'all 0.3s ease',
+                      position: 'relative'
                     }}
-                    
-                    
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div className="history-card-info" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                       <div style={{
                         width: '48px', height: '48px', borderRadius: '12px',
                         background: hasErrors ? 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(217,119,6,0.1))' : 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.1))',
@@ -151,17 +150,17 @@ const ScheduleHistory = ({ history, onBack }) => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className="history-card-stats" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                       <div style={{ textAlign: 'center', minWidth: '60px' }}>
                         <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#10b981', lineHeight: 1 }}>{record.successCount}</div>
                         <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginTop: '4px', letterSpacing: '0.02em' }}>Success</div>
                       </div>
-                      <div style={{ width: '1px', height: '30px', background: 'var(--border-color)' }}></div>
+                      <div className="history-card-stats-divider" style={{ width: '1px', height: '30px', background: 'var(--border-color)' }}></div>
                       <div style={{ textAlign: 'center', minWidth: '60px' }}>
                         <div style={{ fontSize: '1.3rem', fontWeight: 800, color: hasErrors ? '#ef4444' : 'var(--text-muted)', lineHeight: 1 }}>{record.errorCount}</div>
                         <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginTop: '4px', letterSpacing: '0.02em' }}>Failed</div>
                       </div>
-                      <div style={{ 
+                      <div className="history-card-chevron" style={{ 
                         color: isExpanded ? 'var(--accent-primary)' : 'var(--text-muted)', 
                         transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', 
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -300,6 +299,33 @@ const ScheduleHistory = ({ history, onBack }) => {
         }
         [data-theme='dark'] .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background-color: rgba(255,255,255,0.2);
+        }
+
+        /* Mobile specific styling for ScheduleHistory */
+        @media (max-width: 768px) {
+          .mgmt-header {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          .mgmt-header > button {
+            width: 100%;
+          }
+          .history-card-header {
+            flex-direction: column;
+            align-items: flex-start !important;
+            padding: 16px !important;
+          }
+          .history-card-stats {
+            width: 100%;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 1px dashed var(--border-color);
+          }
+          .history-card-chevron {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+          }
         }
       `}</style>
     </div>

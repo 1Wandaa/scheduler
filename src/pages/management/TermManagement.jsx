@@ -210,7 +210,7 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
                                 ) : (
                                     availableSemesters.map((sem, idx) => (
                                         <tr key={idx}>
-                                            <td>
+                                            <td data-label="Semester">
                                                 <span style={{
                                                     display: 'inline-flex', alignItems: 'center', gap: '6px',
                                                     fontSize: '0.8rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
@@ -223,7 +223,7 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
                                                     {sem}
                                                 </span>
                                             </td>
-                                            <td style={{ textAlign: 'center' }}>
+                                            <td style={{ textAlign: 'center' }} data-label="Actions">
                                                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                                                     <button onClick={() => handleEditTerm('semester', sem)} className="btn-icon" style={{ background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px' }} title="Edit">
                                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -259,7 +259,7 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
                                 ) : (
                                     availableSchoolYears.map((year, idx) => (
                                         <tr key={idx}>
-                                            <td>
+                                            <td data-label="School Year">
                                                 <span style={{
                                                     display: 'inline-flex', alignItems: 'center', gap: '6px',
                                                     fontSize: '0.8rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
@@ -272,7 +272,7 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
                                                     {year}
                                                 </span>
                                             </td>
-                                            <td style={{ textAlign: 'center' }}>
+                                            <td style={{ textAlign: 'center' }} data-label="Actions">
                                                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                                                     <button onClick={() => handleEditTerm('schoolYear', year)} className="btn-icon" style={{ background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px' }} title="Edit">
                                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>

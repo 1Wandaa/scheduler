@@ -1,0 +1,6 @@
+/* Desktop styles for action buttons */
+@media (min-width: 769px) {
+  .action-buttons-container {
+    justify-content: flex-end;
+  }
+}

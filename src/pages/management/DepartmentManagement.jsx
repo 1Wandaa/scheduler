@@ -321,7 +321,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
                   return (
                   <tr key={dept.id} className={isSelected ? 'table-row-selected' : ''}>
                     {selectionMode && (
-                      <td className="table-checkbox-col">
+                      <td className="table-checkbox-col" data-label="Select">
                         <input
                           type="checkbox"
                           className="data-checkbox"
@@ -331,7 +331,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
                         />
                       </td>
                     )}
-                    <td>
+                    <td data-label="Code">
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: '6px',
                         fontSize: '0.75rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
@@ -344,8 +344,8 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
                         {dept.id}
                       </span>
                     </td>
-                    <td><strong style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{dept.name}</strong></td>
-                    <td>
+                    <td data-label="Department Name"><strong style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{dept.name}</strong></td>
+                    <td data-label="Color">
                       {(() => {
                         const colorInfo = getColorNameAndCode(dept.color);
                         return (
@@ -362,7 +362,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
                         );
                       })()}
                     </td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td style={{ textAlign: 'right' }} data-label="Actions">
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                         <button onClick={() => handleOpenEdit(dept)} className="btn-icon" style={{ background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px' }} title="Edit">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>

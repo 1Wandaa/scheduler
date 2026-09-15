@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import BatchActionBar from '../../components/common/BatchActionBar';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
+import './RecycleBin.css';
 
 const RecycleBin = ({ onBack, user }) => {
   const { confirm } = useGlobalDialog();
@@ -265,7 +266,7 @@ const RecycleBin = ({ onBack, user }) => {
             )}
 
             <div className="table-responsive">
-              <table className="data-table">
+              <table className="data-table recycle-bin-table">
                 <thead>
                   <tr>
                     {selectionMode && (
@@ -292,7 +293,7 @@ const RecycleBin = ({ onBack, user }) => {
                     return (
                     <tr key={item.id} className={isSelected ? 'table-row-selected' : ''}>
                       {selectionMode && (
-                        <td className="table-checkbox-col">
+                        <td className="table-checkbox-col" data-label="Select">
                           <input
                             type="checkbox"
                             className="data-checkbox"
@@ -302,7 +303,7 @@ const RecycleBin = ({ onBack, user }) => {
                           />
                         </td>
                       )}
-                    <td>
+                    <td data-label="Type">
                       <span style={{ 
                         background: `${getTypeColor(item.type)}20`, 
                         color: getTypeColor(item.type), 
@@ -316,27 +317,31 @@ const RecycleBin = ({ onBack, user }) => {
                         {item.type}
                       </span>
                     </td>
-                    <td>
-                      <div style={{ fontWeight: '600', color: 'var(--text-main)' }}>
-                        {item.data.name || item.data.code || item.originalId}
-                      </div>
-                      {item.data && Object.keys(item.data).length > 0 && (
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          {Object.entries(item.data)
+                    <td data-label="Item Details">
+                      <div className="td-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right' }}>
+                        <div style={{ fontWeight: '600', color: 'var(--text-main)' }}>
+                          {item.data.name || item.data.code || item.originalId}
+                        </div>
+                        {item.data && Object.keys(item.data).length > 0 && (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                            {Object.entries(item.data)
                             .filter(([key, value]) => !['name', 'code', 'id', 'createdAt', 'updatedAt'].includes(key) && value !== null && value !== undefined && typeof value !== 'object')
                             .map(([key, value]) => (
                               <span key={key}>
                                 <span style={{ textTransform: 'capitalize' }}>{key.replace(/([A-Z])/g, ' $1').trim()}</span>: {String(value)}
                               </span>
                             ))}
-                        </div>
-                      )}
+                          </div>
+                        )}
+                      </div>
                     </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                      {formatDate(item.deletedAt)}
+                    <td data-label="Deleted At">
+                      <div className="td-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                        {formatDate(item.deletedAt)}
+                      </div>
                     </td>
-                    <td>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <td data-label="Cascaded Impact">
+                      <div className="td-content" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'flex-end' }}>
                         {item.cascadedSchedules?.length > 0 ? (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#f59e0b', fontWeight: '500' }}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
@@ -345,8 +350,8 @@ const RecycleBin = ({ onBack, user }) => {
                         ) : 'None'}
                       </div>
                     </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <td data-label="Actions">
+                      <div className="action-buttons-container" style={{ display: 'flex', gap: '8px' }}>
                         <button 
                           className="btn btn-sm" 
                           onClick={() => handleRestore(item)}

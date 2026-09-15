@@ -262,7 +262,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
 
       {/* Header & Stats Card */}
       <div className="card" style={{ padding: '24px 28px' }}>
-        <div className="mgmt-header" style={{ marginBottom: '16px' }}>
+        <div className="mgmt-header activity-mgmt-header" style={{ marginBottom: '16px' }}>
           <div className="mgmt-header-left">
             {onBack && (
               <button className="back-btn" onClick={onBack}>
@@ -468,9 +468,9 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
           </div>
         ) : (
           <div style={{ overflowX: 'auto', width: '100%' }}>
-            <div style={{ minWidth: '850px' }}>
+            <div className="activity-table-container" style={{ minWidth: '850px' }}>
               {/* Table Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.6fr 3.5fr 1.3fr 40px', gap: 0, padding: '12px 20px', background: 'var(--bg-main)', borderBottom: '1px solid var(--border-color)' }}>
+              <div className="activity-table-header" style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.6fr 3.5fr 1.3fr 40px', gap: 0, padding: '12px 20px', background: 'var(--bg-main)', borderBottom: '1px solid var(--border-color)' }}>
                 {['Action / Event', 'User & Role', 'Details', 'Time', ''].map((h, i) => (
                   <div key={i} style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</div>
                 ))}
@@ -495,11 +495,12 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
                       }}
                     >
                       <div
+                        className="activity-table-row"
                         style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.6fr 3.5fr 1.3fr 40px', gap: 0, padding: '13px 20px', cursor: 'pointer', alignItems: 'center' }}
                         onClick={() => setExpandedId(isExpanded ? null : log.id)}
                       >
                         {/* Action badge */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div className="activity-col-action" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <div style={{ width: 28, height: 28, borderRadius: 7, background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d={iconPath} />
@@ -511,7 +512,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
                         </div>
 
                         {/* User - clickable to show profile */}
-                        <div>
+                        <div className="activity-col-user">
                           <button
                             onClick={(e) => handleUsernameClick(e, log.username)}
                             style={{
@@ -527,17 +528,17 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
                         </div>
 
                         {/* Details */}
-                        <div style={{ fontSize: '0.83rem', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                        <div className="activity-col-details" style={{ fontSize: '0.83rem', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
                           {log.details || <em style={{ color: 'var(--text-muted)', opacity: 0.6 }}>No details recorded</em>}
                         </div>
 
                         {/* Time */}
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500 }} title={fullDateStr}>
+                        <div className="activity-col-time" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500 }} title={fullDateStr}>
                           {formatTimestamp(log.timestamp || log.clientTimestamp)}
                         </div>
 
                         {/* Expand arrow */}
-                        <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--text-muted)', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'none' }}>
+                        <div className="activity-col-expand" style={{ display: 'flex', justifyContent: 'center', color: 'var(--text-muted)', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'none' }}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                         </div>
                       </div>
@@ -612,3 +613,65 @@ const DetailBox = ({ label, value, mono }) => (
 );
 
 export default ActivityLog;
+
+<style>{`
+  /* Mobile specific styling for ActivityLog */
+  @media (max-width: 768px) {
+    .activity-mgmt-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .activity-mgmt-header > div:last-child,
+    .activity-mgmt-header > div:last-child > button {
+      width: 100%;
+      justify-content: center;
+    }
+    
+    .activity-table-container {
+      min-width: 0 !important;
+    }
+    
+    .activity-table-header {
+      display: none !important;
+    }
+    
+    .activity-table-row {
+      display: flex !important;
+      flex-wrap: wrap;
+      gap: 10px !important;
+      position: relative;
+    }
+    
+    .activity-col-action {
+      width: 100%;
+    }
+    
+    .activity-col-user {
+      width: 45%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .activity-col-time {
+      width: 45%;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    
+    .activity-col-details {
+      width: 100%;
+      margin-top: 4px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-color);
+      white-space: normal !important;
+    }
+    
+    .activity-col-expand {
+      position: absolute;
+      top: 18px;
+      right: 20px;
+    }
+  }
+`}</style>

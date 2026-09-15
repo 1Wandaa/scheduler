@@ -162,6 +162,35 @@
 
 
 
+/* === Segmented Control === */
+.segmented-control {
+  display: inline-flex;
+  background-color: var(--bg-main);
+  border-radius: 8px;
+  padding: 4px;
+  gap: 2px;
+  border: 1px solid var(--border-color);
+}
+
+.segmented-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.3px;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.segmented-btn.active {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
 /* === New Semantic Classes === */
 .btn-danger-outline {
   flex: 1;
@@ -513,8 +542,47 @@
 }
 
 /* Make card-list responsive */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+  .auto-scheduler-container {
+    padding: 1rem;
+  }
+
+  .segmented-control {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .segmented-btn {
+    width: 100%;
+    text-align: center;
+  }
+
   .ai-suggestion-grid {
     grid-template-columns: 1fr;
+  }
+
+  .schedule-card-header {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
+
+  .schedule-card-header span:last-child {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .prescription-card-header {
+    flex-direction: column;
+  }
+
+  .prescription-meta-badges {
+    margin-top: 4px;
+  }
+
+  .btn-danger-outline {
+    width: 100%;
+    margin-top: 8px;
   }
 }

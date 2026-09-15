@@ -81,7 +81,7 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
               return (
                 <tr key={sec.id} className={isSelected ? 'table-row-selected' : ''}>
                   {onToggleSelect && (
-                    <td className="table-checkbox-col">
+                    <td className="table-checkbox-col" data-label="Select">
                       <input
                         type="checkbox"
                         className="data-checkbox"
@@ -91,10 +91,10 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
                       />
                     </td>
                   )}
-                  <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                  <td style={{ textAlign: 'center', verticalAlign: 'middle' }} data-label="Section Name">
                     <strong style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{sec.name}</strong>
                   </td>
-                  <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                  <td style={{ textAlign: 'center', verticalAlign: 'middle' }} data-label="Program">
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: '6px',
                       fontSize: '0.75rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
@@ -112,7 +112,7 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
                     })()}
                     </span>
                   </td>
-                  <td style={{ whiteSpace: 'nowrap', textAlign: 'center', verticalAlign: 'middle' }}>
+                  <td style={{ whiteSpace: 'nowrap', textAlign: 'center', verticalAlign: 'middle' }} data-label="Year Level">
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: '4px',
                       fontSize: '0.75rem', padding: '4px 12px', borderRadius: '16px', fontWeight: 700,
@@ -124,7 +124,7 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
                       Year {sec.yearLevel}
                     </span>
                   </td>
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '240px', textAlign: 'center', verticalAlign: 'middle' }}>
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '240px', textAlign: 'center', verticalAlign: 'middle' }} data-label="Subjects">
                     {(sec.subjects || []).length === 0 ? (
                       <span style={{ fontStyle: 'italic' }}>None</span>
                     ) : (
@@ -134,7 +134,7 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
                       </span>
                     )}
                   </td>
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '200px', textAlign: 'center', verticalAlign: 'middle' }}>
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '200px', textAlign: 'center', verticalAlign: 'middle' }} data-label="Handled By">
                     {assignedProfs.length === 0 ? (
                       <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>None</span>
                     ) : (
@@ -144,7 +144,7 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
                       </span>
                     )}
                   </td>
-                <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }} data-label="Actions">
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                   <button 
                     onClick={() => onEdit(sec)} 

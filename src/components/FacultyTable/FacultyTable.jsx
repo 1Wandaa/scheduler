@@ -84,7 +84,7 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments 
             return (
               <tr key={p.id} className={isSelected ? 'table-row-selected' : ''}>
                 {onToggleSelect && (
-                  <td className="table-checkbox-col">
+                  <td className="table-checkbox-col" data-label="Select">
                     <input
                       type="checkbox"
                       className="data-checkbox"
@@ -94,8 +94,8 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments 
                     />
                   </td>
                 )}
-                <td><strong style={{ color: 'var(--text-main)' }}>{p.formattedName}</strong></td>
-                <td>
+                <td data-label="Name"><strong style={{ color: 'var(--text-main)' }}>{p.formattedName}</strong></td>
+                <td data-label="Department">
                   {(() => {
                     const color = departments?.find(d => d.id === p.department)?.color || getDeptColor(p.department);
                     const isVar = color && color.startsWith('var');
@@ -114,7 +114,7 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments 
                     );
                   })()}
                 </td>
-                <td>
+                <td data-label="Unit Utilization">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '120px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
                       <span style={{ fontWeight: '600', color: 'var(--text-main)' }}>{currentUnits} <span style={{ color: 'var(--text-muted)', fontWeight: '500' }}>/ {maxUnits}</span></span>
@@ -139,16 +139,16 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments 
                     </div>
                   </div>
                 </td>
-                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }} data-label="Subjects">
                   {currentSubjects.length} subject{currentSubjects.length !== 1 ? 's' : ''}
                 </td>
-                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }} data-label="Sections">
                   {(p.assignedSections || []).length} section{(p.assignedSections || []).length !== 1 ? 's' : ''}
                 </td>
-                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }} data-label="Rooms">
                   {(p.preferredRooms || []).length} room{(p.preferredRooms || []).length !== 1 ? 's' : ''}
                 </td>
-                <td className="table-actions">
+                <td className="table-actions" data-label="Actions">
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                   <button 
                     className="btn-edit"

@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 const DraggableSpeedDial = ({ onAddSchedule, onAutoScheduleAction, isHidden }) => {
-  const [position, setPosition] = useState({ x: window.innerWidth - 76, y: window.innerHeight - 136 });
+  const [position, setPosition] = useState({ 
+    x: window.innerWidth - 76, 
+    y: window.innerWidth <= 768 ? window.innerHeight - 86 : window.innerHeight - 136 
+  });
   const [isOpen, setIsOpen] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, dragged: false, isDragging: false });
 
@@ -54,6 +57,7 @@ const DraggableSpeedDial = ({ onAddSchedule, onAutoScheduleAction, isHidden }) =
         <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(2px)' }} onClick={() => setIsOpen(false)} />
       )}
       <div 
+        className="speed-dial-wrapper"
         style={{
           position: 'fixed',
           left: position.x,
@@ -141,3 +145,13 @@ const DraggableSpeedDial = ({ onAddSchedule, onAutoScheduleAction, isHidden }) =
 };
 
 export default DraggableSpeedDial;
+
+<style>{`
+  /* Scale down the entire speed dial on mobile devices to look clean and uniform */
+  @media (max-width: 768px) {
+    .speed-dial-wrapper {
+      transform: scale(0.85);
+      transform-origin: bottom right;
+    }
+  }
+`}</style>

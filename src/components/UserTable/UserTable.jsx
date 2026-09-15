@@ -74,7 +74,7 @@ const UserTable = ({ users, onDeleteUser, onEditUser, selectedIds = [], onToggle
                             return (
                             <tr key={u.id} className={isSelected ? 'table-row-selected' : ''}>
                                 {onToggleSelect && (
-                                    <td className="table-checkbox-col">
+                                    <td className="table-checkbox-col" data-label="Select">
                                         <input
                                             type="checkbox"
                                             className="data-checkbox"
@@ -84,14 +84,14 @@ const UserTable = ({ users, onDeleteUser, onEditUser, selectedIds = [], onToggle
                                         />
                                     </td>
                                 )}
-                                <td>
+                                <td data-label="User">
                                     <span style={{ color: 'var(--accent-primary)', fontWeight: '600', fontSize: '0.85rem', letterSpacing: '0.3px' }}>
                                         {u.username}
                                     </span>
                                 </td>
-                                <td><strong style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{u.name}</strong></td>
-                                <td>{renderRoleBadge(u.role)}</td>
-                                <td style={{ whiteSpace: 'nowrap', display: 'flex', gap: '8px' }}>
+                                <td data-label="Full Name"><strong style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{u.name}</strong></td>
+                                <td data-label="Role">{renderRoleBadge(u.role)}</td>
+                                <td style={{ whiteSpace: 'nowrap', display: 'flex', gap: '8px' }} data-label="Actions">
                                     <button onClick={() => onEditUser(u)} className="btn-icon" style={{ background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px' }} title="Edit">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                     </button>

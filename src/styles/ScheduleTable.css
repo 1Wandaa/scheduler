@@ -545,7 +545,7 @@
 
 /* Card View (Mobile-first list) */
 .schedule-card-view {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 16px;
 }
@@ -641,6 +641,15 @@
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
+  .schedule-card-view {
+    display: none !important;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+    zoom: 0.5;
+  }
+
   .schedule-table-container {
     padding: 0.5rem;
   }

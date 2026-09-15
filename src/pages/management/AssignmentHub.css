@@ -611,3 +611,69 @@
   /* CRITICAL FIX: overflow visible allows the searchable dropdown to bleed over the edges */
   overflow: visible;
 }
+
+/* ==========================================================================
+   Mobile Responsiveness
+   ========================================================================== */
+.hub-mapping-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 260px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .hub-header-top, .hub-control-top, .hub-control-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .hub-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .hub-tabs {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    padding-bottom: 4px;
+    justify-content: flex-start;
+  }
+  
+  .hub-tab-btn {
+    flex: 1 0 auto;
+  }
+  
+  .hub-search-box {
+    max-width: 100%;
+  }
+  
+  .hub-mapping-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .hub-mapping-actions {
+    width: 100%;
+    margin-top: 4px;
+  }
+  
+  .hub-entity-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .hub-metrics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .hub-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}

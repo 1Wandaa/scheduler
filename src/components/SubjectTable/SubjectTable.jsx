@@ -78,7 +78,7 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
               return (
                 <tr key={s.id} className={isSelected ? 'table-row-selected' : ''}>
                   {onToggleSelect && (
-                    <td className="table-checkbox-col">
+                    <td className="table-checkbox-col" data-label="Select">
                       <input
                         type="checkbox"
                         className="data-checkbox"
@@ -88,12 +88,12 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
                       />
                     </td>
                   )}
-                <td><strong style={{ color: titleColor }}>{s.code}</strong></td>
-                <td style={{ fontWeight: '500' }}>{s.name}</td>
-                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                <td data-label="Code"><strong style={{ color: titleColor }}>{s.code}</strong></td>
+                <td style={{ fontWeight: '500' }} data-label="Name">{s.name}</td>
+                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }} data-label="Semester">
                   {s.semester && s.semester !== 'Both' ? s.semester.replace(' Semester', ' Sem') : 'Both'}
                 </td>
-                <td>
+                <td data-label="Department(s)">
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {getSubjectDepts(s).length > 0 ? getSubjectDepts(s).map(dept => {
                       const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
@@ -112,9 +112,9 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
                     }) : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>None</span>}
                   </div>
                 </td>
-                <td style={{ fontWeight: '500', textAlign: 'center' }}>{s.credits || 3}</td>
-                <td style={{ fontWeight: '500', color: 'var(--text-muted)' }}>{s.hoursPerMeeting || 1.5} hrs</td>
-                <td>
+                <td style={{ fontWeight: '500', textAlign: 'center' }} data-label="Units">{s.credits || 3}</td>
+                <td style={{ fontWeight: '500', color: 'var(--text-muted)' }} data-label="Meeting Time">{s.hoursPerMeeting || 1.5} hrs</td>
+                <td data-label="Lab Required">
                   <span style={{
                     background: s.requiredLab ? 'var(--danger-bg)' : s.isFoodLab ? '#fff3cd' : 'var(--success-bg)',
                     color: s.requiredLab ? 'var(--danger)' : s.isFoodLab ? '#856404' : 'var(--success)',
@@ -124,7 +124,7 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
                     {s.requiredLab ? 'Computer' : s.isFoodLab ? 'Food' : 'No'}
                   </span>
                 </td>
-                <td style={{ whiteSpace: 'nowrap' }}>
+                <td style={{ whiteSpace: 'nowrap' }} data-label="Actions">
                   <button className="btn-details" onClick={() => onViewDetails && onViewDetails(s)}>Details</button>
                   <button className="btn-edit" onClick={() => onEdit(s)}>Edit</button>
                   <button className="btn-delete" onClick={() => onDelete(s.id)}>Delete</button>

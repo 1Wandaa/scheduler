@@ -322,30 +322,11 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         <label className="form-label" style={{ marginBottom: '12px', display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Class Schedule Type</label>
         
         {/* Ultra-Minimalist Segmented Control (Themed) */}
-        <div style={{ 
-          display: 'inline-flex', 
-          backgroundColor: 'var(--bg-main)', 
-          borderRadius: '8px', 
-          padding: '4px', 
-          gap: '2px',
-          border: '1px solid var(--border-color)'
-        }}>
+        <div className="segmented-control">
           <button
             type="button"
             onClick={() => setScheduleMode(SCHEDULE_MODES.STANDARD)}
-            style={{
-              padding: '8px 20px',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '0.8rem',
-              letterSpacing: '0.3px',
-              background: scheduleMode === SCHEDULE_MODES.STANDARD ? 'var(--accent-primary)' : 'transparent',
-              color: scheduleMode === SCHEDULE_MODES.STANDARD ? '#ffffff' : 'var(--text-muted)',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-            }}
+            className={`segmented-btn ${scheduleMode === SCHEDULE_MODES.STANDARD ? 'active' : ''}`}
           >
             5-Day Standard
           </button>
@@ -353,19 +334,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           <button
             type="button"
             onClick={() => setScheduleMode(SCHEDULE_MODES.FOUR_DAY)}
-            style={{
-              padding: '8px 20px',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '0.8rem',
-              letterSpacing: '0.3px',
-              background: scheduleMode === SCHEDULE_MODES.FOUR_DAY ? 'var(--accent-primary)' : 'transparent',
-              color: scheduleMode === SCHEDULE_MODES.FOUR_DAY ? '#ffffff' : 'var(--text-muted)',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-            }}
+            className={`segmented-btn ${scheduleMode === SCHEDULE_MODES.FOUR_DAY ? 'active' : ''}`}
           >
             4-Day Accelerated
           </button>

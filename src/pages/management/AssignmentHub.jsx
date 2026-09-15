@@ -1424,7 +1424,7 @@ const AssignmentHub = ({
                               </span>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '260px', flexShrink: 0 }}>
+                            <div className="hub-mapping-actions">
                               {!isOrphan ? (
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <InlineInstructorSelect
