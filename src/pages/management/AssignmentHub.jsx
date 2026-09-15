@@ -1044,6 +1044,11 @@ const AssignmentHub = ({
 
   const filteredSubjects = useMemo(() => {
     return subjects.filter(sub => {
+      // Filter by active semester if applicable
+      if (activeSemester && sub.semester && sub.semester !== 'Both' && sub.semester !== activeSemester) {
+        return false;
+      }
+      
       const subDepts = (sub.departments || (sub.department ? [sub.department] : [])).map(resolveDeptCode);
       const matchDept = departmentFilter === 'All' || subDepts.includes(departmentFilter);
       const cleanStr = (s) => String(s || '').toLowerCase().replace(/[\s\-_]/g, '');
@@ -1063,7 +1068,7 @@ const AssignmentHub = ({
 
       return true;
     }).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-  }, [subjects, departmentFilter, searchQuery, onlyNeedsAttention, enrolledSubjectCodesSet, specializedSubjectCodesSet]);
+  }, [subjects, departmentFilter, searchQuery, onlyNeedsAttention, enrolledSubjectCodesSet, specializedSubjectCodesSet, activeSemester]);
 
   // Progressive windowing: start with 12 items for instant (<16ms) initial render
   const [visibleLimit, setVisibleLimit] = useState(12);

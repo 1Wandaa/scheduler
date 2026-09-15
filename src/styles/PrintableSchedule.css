@@ -36,15 +36,16 @@
 
 .meta-info {
     display: flex;
-    justify-content: space-between;
-    font-size: 10pt;
+    justify-content: flex-start;
+    gap: 15px;
+    font-size: 11pt;
     font-weight: bold;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     text-transform: uppercase;
 }
 
 .meta-value {
-    font-weight: normal;
+    font-weight: bold;
     text-decoration: underline;
 }
 
@@ -64,25 +65,22 @@
     vertical-align: middle;
     box-sizing: border-box;
     /* Every cell is exactly this height - fixed square box */
-    height: 42px;
+    height: 48px;
     overflow: hidden; /* Absolutely prevent content from overflowing */
 }
 
 .iso-schedule-table th {
-    background-color: #f0f0f0 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    background-color: transparent !important;
     padding: 6px 4px;
-    font-size: 10pt;
-    height: 32px;
+    font-size: 11pt;
+    height: 35px;
 }
 
 /* TIME COLUMN */
 
 .iso-schedule-table .time-cell {
     white-space: nowrap;
-    font-weight: bold;
-    font-size: 9pt;
+    font-size: 11pt;
     padding: 2px 4px;
 }
 
@@ -90,7 +88,7 @@
 
 .iso-schedule-table .schedule-cell {
     padding: 0;
-    height: 42px;
+    height: 48px;
     overflow: hidden;
 }
 
@@ -108,7 +106,7 @@
 
 .iso-schedule-table .cell-subject {
     font-weight: bold;
-    font-size: 10pt;
+    font-size: 11pt;
     line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;
@@ -117,7 +115,7 @@
 }
 
 .iso-schedule-table .cell-professor {
-    font-size: 8.5pt;
+    font-size: 10pt;
     line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;
@@ -127,7 +125,7 @@
 }
 
 .iso-schedule-table .cell-room {
-    font-size: 8.5pt;
+    font-size: 10pt;
     line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;
@@ -139,23 +137,43 @@
 /* LUNCH BREAK ROW */
 
 .iso-schedule-table .lunch-break {
-    background-color: #e0e0e0 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    background-color: transparent !important;
     font-weight: bold;
-    letter-spacing: 5px;
+    letter-spacing: 2px;
     padding: 4px;
-    height: 30px;
+    height: 35px;
     overflow: hidden;
-    font-size: 10pt;
+    font-size: 11pt;
 }
 
-.iso-schedule-table .lunch-break-time {
-    background-color: #e0e0e0 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    height: 30px;
-    font-size: 8.5pt;
+/* SIGNATURES SECTION */
+
+.signatures-section {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+    padding: 0 40px;
+    font-size: 11pt;
+    font-family: "Times New Roman", Times, serif;
+    color: #000;
+}
+
+.signature-block {
+    text-align: left;
+}
+
+.signature-block.right-aligned {
+    text-align: left;
+    padding-right: 40px;
+}
+
+.sig-label {
+    margin-bottom: 25px;
+}
+
+.sig-name {
+    text-decoration: underline;
+    font-weight: bold;
 }
 
 /* SCREEN VISIBILITY */
@@ -171,11 +189,11 @@
 @media print {
     @page {
         size: letter landscape;
-        margin: 0;
+        margin: 0.25in;
     }
 
     body {
-        padding: 0.5in !important;
+        padding: 0 !important;
         margin: 0 !important;
     }
 
@@ -193,11 +211,12 @@
         top: 0;
         left: 0;
         width: 100%;
+        height: 100%;
+        page-break-after: avoid;
     }
 
-    .iso-schedule-table th {
-        background-color: #f0f0f0 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+    .iso-schedule-table th,
+    .iso-schedule-table td {
+        background-color: transparent !important;
     }
 }

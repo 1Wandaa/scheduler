@@ -433,6 +433,11 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
   // Split subjects into categories using useMemo for performance
   const { minorSubjects, majorSubjects } = useMemo(() => {
     const filteredSubjects = subjects.filter(s => {
+      // Filter by active semester if applicable
+      if (activeSemester && s.semester && s.semester !== 'Both' && s.semester !== activeSemester) {
+        return false;
+      }
+      
       const searchLowerCode = searchQuery.toLowerCase().replace(/\s+/g, '');
       const codeMatch = (s.code || '').toLowerCase().replace(/\s+/g, '').includes(searchLowerCode);
       const nameMatch = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -451,7 +456,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       minorSubjects: filteredSubjects.filter(s => s.category === 'Minor'),
       majorSubjects: filteredSubjects.filter(s => s.category !== 'Minor') // Default to major
     };
-  }, [subjects, searchQuery]);
+  }, [subjects, searchQuery, activeSemester]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
