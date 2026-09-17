@@ -45,15 +45,32 @@
   text-align: center;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .login-center-wrapper {
-    padding: 16px 28px; /* Even more breathing room on the sides */
+    padding: 24px 16px;
   }
   .login-card {
-    padding: 20px 16px; /* Even smaller inner padding */
+    padding: 28px 24px;
+    border-radius: 18px;
+    max-width: 400px;
+  }
+  .login-card.login-card-wide {
+    max-width: 440px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-center-wrapper {
+    padding: 16px 12px;
+  }
+  .login-card {
+    padding: 24px 18px;
     border-radius: 14px;
     width: 100%;
-    max-width: 300px; /* Even narrower maximum width */
+    max-width: none;
+  }
+  .login-card.login-card-wide {
+    max-width: none;
   }
   .signup-row {
     flex-direction: column;

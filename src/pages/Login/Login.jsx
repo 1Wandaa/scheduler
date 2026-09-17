@@ -168,7 +168,7 @@ const Login = ({ onLogin }) => {
     let secondaryApp = null;
     try {
       const cleanUsername = username.replace('@', '').toLowerCase().trim();
-      const dummyEmail = `${cleanUsername}@gmail.com`;
+      const dummyEmail = `${cleanUsername}@smartsched.capsu.edu.ph`;
 
       if (isSignUp) {
         const selectedRole = signUpRole === 'Admin' ? 'Admin' : 'User';
@@ -188,7 +188,11 @@ const Login = ({ onLogin }) => {
           }
 
           // Validate Admin Security Passcode
-          const validAdminKey = (import.meta.env.VITE_ADMIN_SECRET_KEY || 'Raien2506').trim();
+          const validAdminKey = (import.meta.env.VITE_ADMIN_SECRET_KEY || '').trim();
+          if (!validAdminKey) {
+            setError('Admin registration is currently disabled. Contact the system administrator.');
+            return;
+          }
           if (!adminPasscode.trim()) {
             setError('Admin Security Passcode is required to create an administrator account.');
             return;
@@ -352,6 +356,8 @@ const Login = ({ onLogin }) => {
         setError('Invalid username or password. Please try again.');
       } else if (err.code === 'auth/email-already-in-use') {
         setError('That username is already taken. Please choose another.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many unsuccessful login attempts. Please try again later or reset your password.');
       } else {
         setError(`Failed to ${isSignUp ? 'sign up' : 'log in'}: ` + err.message);
       }

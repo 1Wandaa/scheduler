@@ -57,9 +57,11 @@ function normalizeProgram(prog) {
  * provides memoized lookup maps for efficient access.
  *
  * @param {string} activeSemester  - currently selected semester
+ * @param {string} activeSemester  - currently selected semester
  * @param {string} activeSchoolYear - currently selected school year
+ * @param {boolean} [isAdmin] - whether the current user is an admin
  */
-export function useFirestoreData(activeSemester, activeSchoolYear) {
+export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = true) {
  // Core collection state
   const [rooms, setRooms] = useState([]);
   const [professors, setProfessors] = useState([]);
@@ -231,6 +233,15 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
   useEffect(() => {
     if (!activeSemester || !activeSchoolYear) return;
 
+    // Filter unpublished schedules at the query level for students
+    if (isAdmin === false) {
+      const termKey = `${activeSemester}_${activeSchoolYear}`;
+      if (publishedTerms[termKey] !== true) {
+        setSchedules([]);
+        return;
+      }
+    }
+
     const schedulesQuery = query(
       collection(db, 'schedules'),
       where('semester', '==', activeSemester),
@@ -244,7 +255,7 @@ export function useFirestoreData(activeSemester, activeSchoolYear) {
     return () => {
       unsubSched();
     };
-  }, [activeSemester, activeSchoolYear]);
+  }, [activeSemester, activeSchoolYear, isAdmin, publishedTerms]);
 
  // Derived data
 

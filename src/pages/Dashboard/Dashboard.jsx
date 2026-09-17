@@ -1,5 +1,5 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SEMESTERS, SCHOOL_YEARS } from '../../config/constants';
 import { useFirestoreData } from '../../hooks/useFirestoreData';
@@ -19,27 +19,6 @@ import {
   autoScheduleForFaculty,
   autoScheduleFull,
 } from '../../services/schedulingService';
-import UserManagement from '../management/UserManagement';
-import ProfessorWorkload from '../../components/ProfessorWorkload/ProfessorWorkload';
-import ScheduleTable from '../../components/ScheduleTable/ScheduleTable';
-import ScheduleForm from '../../components/ScheduleForm/ScheduleForm';
-import AutoScheduler from '../../components/AutoScheduler/AutoScheduler';
-import RoomManagement from '../management/RoomManagement';
-import FacultyManagement from '../management/FacultyManagement';
-import SubjectManagement from '../management/SubjectManagement';
-import TermManagement from '../management/TermManagement';
-import ScheduleViewer from '../management/ScheduleViewer';
-import SectionManagement from '../management/SectionManagement';
-import ScheduleHistory from '../management/ScheduleHistory';
-import Profile from '../../components/Profile/Profile';
-import Chatbot from '../../components/Chatbot/Chatbot';
-import ActivityLog from '../management/ActivityLog';
-import DepartmentManagement from '../management/DepartmentManagement';
-import CourseManagement from '../management/CourseManagement';
-import RoomAvailability from '../management/RoomAvailability';
-import FacultyAvailability from '../management/FacultyAvailability';
-import RecycleBin from '../management/RecycleBin';
-import AssignmentHub from '../management/AssignmentHub';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 import { Icon, NAV_ICONS } from './components/Icon';
@@ -52,6 +31,36 @@ import SystemReminders from './components/SystemReminders';
 import RecentActivity from './components/RecentActivity';
 import { showAutoScheduleModal } from './utils/autoScheduleModals';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
+
+// Lazy-loaded pages (code-splitting)
+const UserManagement = React.lazy(() => import('../management/UserManagement'));
+const ProfessorWorkload = React.lazy(() => import('../../components/ProfessorWorkload/ProfessorWorkload'));
+const ScheduleForm = React.lazy(() => import('../../components/ScheduleForm/ScheduleForm'));
+const AutoScheduler = React.lazy(() => import('../../components/AutoScheduler/AutoScheduler'));
+const RoomManagement = React.lazy(() => import('../management/RoomManagement'));
+const FacultyManagement = React.lazy(() => import('../management/FacultyManagement'));
+const SubjectManagement = React.lazy(() => import('../management/SubjectManagement'));
+const TermManagement = React.lazy(() => import('../management/TermManagement'));
+const ScheduleViewer = React.lazy(() => import('../management/ScheduleViewer'));
+const SectionManagement = React.lazy(() => import('../management/SectionManagement'));
+const ScheduleHistory = React.lazy(() => import('../management/ScheduleHistory'));
+const Profile = React.lazy(() => import('../../components/Profile/Profile'));
+const Chatbot = React.lazy(() => import('../../components/Chatbot/Chatbot'));
+const ActivityLog = React.lazy(() => import('../management/ActivityLog'));
+const DepartmentManagement = React.lazy(() => import('../management/DepartmentManagement'));
+const CourseManagement = React.lazy(() => import('../management/CourseManagement'));
+const RoomAvailability = React.lazy(() => import('../management/RoomAvailability'));
+const FacultyAvailability = React.lazy(() => import('../management/FacultyAvailability'));
+const RecycleBin = React.lazy(() => import('../management/RecycleBin'));
+const AssignmentHub = React.lazy(() => import('../management/AssignmentHub'));
+
+// Suspense fallback for lazy-loaded tabs
+const TabLoader = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '60px 0' }}>
+    <div style={{ width: '32px', height: '32px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
 
 // Dashboard
 const Dashboard = ({ user, onLogout }) => {
@@ -91,7 +100,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [activeSchoolYear, setActiveSchoolYear] = useState(SCHOOL_YEARS[1]);
 
   // Centralized data from Firestore
-  const data = useFirestoreData(activeSemester, activeSchoolYear);
+  const data = useFirestoreData(activeSemester, activeSchoolYear, isAdmin);
   const {
     rooms, professors, subjects, sections,
     schedules, activeSchedules, enrichedSchedules, scheduleHistory,
@@ -583,7 +592,8 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
         )}
 
-        {/* Other Tabs */}
+        {/* Other Tabs — wrapped in Suspense for code-split chunks */}
+        <Suspense fallback={<TabLoader />}>
         {isAdmin && activeTab === 'users' && <UserManagement user={user} onBack={() => setActiveTab('dashboard')} />}
         {isAdmin && activeTab === 'schedule' && (
           <div className="schedule-grid" style={{  }}>
@@ -632,9 +642,12 @@ const Dashboard = ({ user, onLogout }) => {
             }}
           />
         )}
+        </Suspense>
 
       </div>
-      <Chatbot schedules={displaySchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
+      <Suspense fallback={null}>
+        <Chatbot schedules={displaySchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
+      </Suspense>
       <BottomNav activeTab={activeTab} handleTabClick={handleTabClick} isAdmin={isAdmin} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 
       {/* --- Mobile Floating Action Button (FAB) --- */}
