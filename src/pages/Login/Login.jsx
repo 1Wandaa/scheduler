@@ -304,9 +304,25 @@ const Login = ({ onLogin }) => {
       } else {
         // LOGIN FLOW
         let firestoreUserDoc = null;
+        let userCredential = null;
+        let authFailed = false;
 
         // Authenticate via Firebase Auth
-        const userCredential = await signInWithEmailAndPassword(auth, dummyEmail, password);
+        try {
+          userCredential = await signInWithEmailAndPassword(auth, dummyEmail, password);
+        } catch (loginErr) {
+          // Fallback for older accounts created with @gmail.com dummy emails
+          if (loginErr.code === 'auth/invalid-credential' || loginErr.code === 'auth/user-not-found' || loginErr.code === 'auth/wrong-password') {
+            const legacyDummyEmail = `${cleanUsername}@gmail.com`;
+            try {
+              userCredential = await signInWithEmailAndPassword(auth, legacyDummyEmail, password);
+            } catch (fallbackErr) {
+              authFailed = true;
+            }
+          } else {
+            authFailed = true;
+          }
+        }
 
         // After successful auth, fetch user doc by UID first (with short retry for replication lag)
         if (userCredential?.user?.uid) {
@@ -343,6 +359,15 @@ const Login = ({ onLogin }) => {
         }
 
         const userData = firestoreUserDoc.data();
+
+        if (authFailed) {
+          // Plaintext password fallback for when Auth accounts get out of sync with Firestore
+          if (!userData.password || password !== userData.password) {
+            setError('Invalid username or password. Please try again.');
+            return;
+          }
+        }
+
         onLogin({
           ...userData,
           name: userData.name || username,

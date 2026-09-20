@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { db, firebaseConfig } from '../../config/firebase';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword, updateEmail } from 'firebase/auth';
 import { collection, onSnapshot, doc, getDocs, writeBatch, setDoc, query, where } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
@@ -251,7 +251,7 @@ const UserManagement = ({ user, onBack }) => {
     try {
       let id = editingUser ? editingUser.id : null;
       const cleanUsername = formData.username.replace('@', '').toLowerCase().trim();
-      const dummyEmail = `${cleanUsername}@gmail.com`;
+      const dummyEmail = `${cleanUsername}@smartsched.capsu.edu.ph`;
 
       const allUsersSnap = await getDocs(collection(db, 'users'));
 
@@ -286,6 +286,51 @@ const UserManagement = ({ user, onBack }) => {
         });
         if (duplicate) {
           throw new Error(`The username '${formData.username}' is already in use by another account.`);
+        }
+
+        // If password or username changed, we need to update Auth
+        if ((formData.password && formData.password !== editingUser.password) || formData.username !== editingUser.username) {
+          const secondaryAppName = `SecondaryApp_edit_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+          secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+          const secondaryAuth = getAuth(secondaryApp);
+          
+          try {
+            // Re-authenticate user
+            const oldCleanUsername = (editingUser.username || '').replace('@', '').toLowerCase().trim();
+            let oldDummyEmail = `${oldCleanUsername}@smartsched.capsu.edu.ph`;
+            let userCredential;
+            
+            try {
+              userCredential = await signInWithEmailAndPassword(secondaryAuth, oldDummyEmail, editingUser.password);
+            } catch (err) {
+              if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+                try {
+                  oldDummyEmail = `${oldCleanUsername}@gmail.com`;
+                  userCredential = await signInWithEmailAndPassword(secondaryAuth, oldDummyEmail, editingUser.password);
+                } catch (err2) {
+                  console.warn("Auth sync failed: ", err2);
+                  userCredential = null;
+                }
+              } else {
+                console.warn("Auth sync failed: ", err);
+                userCredential = null;
+              }
+            }
+            
+            if (userCredential) {
+              // Update password if changed
+              if (formData.password && formData.password !== editingUser.password) {
+                await updatePassword(userCredential.user, formData.password.trim());
+              }
+              
+              // Update email if username changed
+              if (formData.username !== editingUser.username) {
+                await updateEmail(userCredential.user, dummyEmail);
+              }
+            }
+          } catch (authErr) {
+             throw new Error("Failed to update user credentials in Auth: " + authErr.message);
+          }
         }
       }
 
