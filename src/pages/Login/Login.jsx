@@ -127,7 +127,8 @@ const Login = ({ onLogin }) => {
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'sections'), (snapshot) => {
       const secs = snapshot.docs.map(doc => ({
-        id: doc.id,
+  /*
+  -++6id: doc.id,
         ...doc.data()
       }));
       setFirestoreSections(secs);
@@ -157,8 +158,8 @@ const Login = ({ onLogin }) => {
     setSection('');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  cons
+   handleSubmit = async (e) => {    e.preventDefault();
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     setError('');
@@ -187,8 +188,11 @@ const Login = ({ onLogin }) => {
             return;
           }
 
-          // Validate Admin Security Passcode
-          const validAdminKey = (import.meta.env.VITE_ADMIN_SECRET_KEY || '').trim();
+          // Validate Admin Security Passcode466  qwe62j?.,'';\';l;';;;';'';'/p;;/..fopotyuioty35678erty786r6tTRCRERTRasdfcvbnbc/./m,gkl;jk;';lkhjkl8ijm8ujmijjkb,k/ml,,l;;pl[p;;[-[[[;;'=-=['']\\]
+
+//,mcvfdfghjqwer\
+
+          const validAdminKey = (import.meta.env.VITE_AMIN_SECRET_KEY || '').trim();
           if (!validAdminKey) {
             setError('Admin registration is currently disabled. Contact the system administrator.');
             return;
@@ -217,7 +221,7 @@ const Login = ({ onLogin }) => {
 
           const userCredential = await createUserWithEmailAndPassword(secondaryAuth, dummyEmail, password);
 
-          // Save Admin user to Firestore using auth UID
+         // Save Admin user to Firestore using auth UID
           await setDoc(doc(db, 'users', userCredential.user.uid), {
             id: userCredential.user.uid,
             username: cleanUsername,
@@ -247,8 +251,7 @@ const Login = ({ onLogin }) => {
         if (!yearLevel) {
           setError('Please select a year level.');
           return;
-        }
-        if (!section) {
+        }        if (!section) {
           setError('Please select a section.');
           return;
         }
@@ -462,7 +465,7 @@ const Login = ({ onLogin }) => {
   const renderSignUp = () => (
     <>
       {/* Role Selection */}
-      <div className="role-selector-container">
+        < div className = "role-selector-container" >
         <label className="role-selector-label">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -503,478 +506,478 @@ const Login = ({ onLogin }) => {
             </div>
           </button>
         </div>
+      </div >
+
+  { signUpRole === 'Admin' ? (
+  <>
+    {/* Admin Full Name */}
+    <div className="input-group">
+      <label>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+        Full Name
+      </label>
+      <input
+        required
+        type="text"
+        value={fullName}
+        onChange={e => setFullName(e.target.value)}
+        placeholder="Enter administrator full name"
+      />
+    </div>
+
+    {/* Admin Username */}
+    <div className="input-group">
+      <label>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><circle cx="12" cy="12" r="4"></circle><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path></svg>
+        Username
+      </label>
+      <input
+        required
+        type="text"
+        value={username}
+        onChange={e => setUsername(e.target.value)}
+        placeholder="Choose an admin username"
+      />
+    </div>
+
+    {/* Admin Password */}
+    <div className="input-group">
+      <label>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+        Password
+      </label>
+      <div style={{ position: 'relative' }}>
+        <input
+          required
+          type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          placeholder="Create a password (min 6 chars)"
+          style={{ paddingRight: '40px' }}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(v => !v)}
+          aria-label={showPassword ? 'Hide password' : 'Show password'}
+          style={{
+            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
+            color: 'inherit', opacity: 0.6, display: 'flex', alignItems: 'center'
+          }}
+        >
+          {showPassword ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+          )}
+        </button>
       </div>
+      {password && password.length < 6 && (
+        <span className="field-hint field-hint-error">Password must be at least 6 characters</span>
+      )}
+      {password && password.length >= 6 && (
+        <span className="field-hint field-hint-success">✓ Password strength OK</span>
+      )}
+    </div>
 
-      {signUpRole === 'Admin' ? (
+    {/* Admin Security Passcode */}
+    <div className="input-group">
+      <label style={{ color: '#dc2626', fontWeight: 600 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        Admin Security Passcode
+      </label>
+      <div style={{ position: 'relative' }}>
+        <input
+          required
+          type={showAdminPasscode ? 'text' : 'password'}
+          value={adminPasscode}
+          onChange={e => setAdminPasscode(e.target.value)}
+          placeholder="Enter Admin Passcode"
+          style={{ paddingRight: '40px', borderColor: '#fca5a5' }}
+        />
+        <button
+          type="button"
+          onClick={() => setShowAdminPasscode(v => !v)}
+          aria-label={showAdminPasscode ? 'Hide passcode' : 'Show passcode'}
+          style={{
+            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
+            color: 'inherit', opacity: 0.6, display: 'flex', alignItems: 'center'
+          }}
+        >
+          {showAdminPasscode ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+          )}
+        </button>
+      </div>
+      <span className="field-hint" style={{ color: '#64748b' }}>
+        🔒 Institutional authorization key required to create administrator accounts
+      </span>
+    </div>
+
+    <button
+      type="submit"
+      className="btn-login"
+      style={{ marginTop: '10px', background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}
+      disabled={loading || !fullName.trim() || !username.trim() || !password.trim() || password.length < 6 || !adminPasscode.trim()}
+    >
+      {loading ? (
         <>
-          {/* Admin Full Name */}
-          <div className="input-group">
-            <label>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-              Full Name
-            </label>
-            <input
-              required
-              type="text"
-              value={fullName}
-              onChange={e => setFullName(e.target.value)}
-              placeholder="Enter administrator full name"
-            />
-          </div>
-
-          {/* Admin Username */}
-          <div className="input-group">
-            <label>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><circle cx="12" cy="12" r="4"></circle><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path></svg>
-              Username
-            </label>
-            <input
-              required
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              placeholder="Choose an admin username"
-            />
-          </div>
-
-          {/* Admin Password */}
-          <div className="input-group">
-            <label>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-              Password
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                required
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Create a password (min 6 chars)"
-                style={{ paddingRight: '40px' }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(v => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                style={{
-                  position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
-                  color: 'inherit', opacity: 0.6, display: 'flex', alignItems: 'center'
-                }}
-              >
-                {showPassword ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                )}
-              </button>
-            </div>
-            {password && password.length < 6 && (
-              <span className="field-hint field-hint-error">Password must be at least 6 characters</span>
-            )}
-            {password && password.length >= 6 && (
-              <span className="field-hint field-hint-success">✓ Password strength OK</span>
-            )}
-          </div>
-
-          {/* Admin Security Passcode */}
-          <div className="input-group">
-            <label style={{ color: '#dc2626', fontWeight: 600 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              Admin Security Passcode
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                required
-                type={showAdminPasscode ? 'text' : 'password'}
-                value={adminPasscode}
-                onChange={e => setAdminPasscode(e.target.value)}
-                placeholder="Enter Admin Passcode"
-                style={{ paddingRight: '40px', borderColor: '#fca5a5' }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowAdminPasscode(v => !v)}
-                aria-label={showAdminPasscode ? 'Hide passcode' : 'Show passcode'}
-                style={{
-                  position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
-                  color: 'inherit', opacity: 0.6, display: 'flex', alignItems: 'center'
-                }}
-              >
-                {showAdminPasscode ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                )}
-              </button>
-            </div>
-            <span className="field-hint" style={{ color: '#64748b' }}>
-              🔒 Institutional authorization key required to create administrator accounts
-            </span>
-          </div>
-
-          <button
-            type="submit"
-            className="btn-login"
-            style={{ marginTop: '10px', background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}
-            disabled={loading || !fullName.trim() || !username.trim() || !password.trim() || password.length < 6 || !adminPasscode.trim()}
-          >
-            {loading ? (
-              <>
-                <span className="btn-spinner"></span>
-                Creating Admin Account...
-              </>
-            ) : (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-                Create Admin Account
-              </>
-            )}
-          </button>
+          <span className="btn-spinner"></span>
+          Creating Admin Account...
         </>
       ) : (
         <>
-          {/* User Full Name */}
-          <div className="input-group">
-            <label>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-              Full Name
-            </label>
-            <input
-              required
-              type="text"
-              value={fullName}
-              onChange={e => setFullName(e.target.value)}
-              placeholder="Enter your full name"
-            />
-          </div>
-
-          {/* Student ID & Department side by side */}
-          <div className="signup-row">
-            <div className="input-group" style={{ flex: 1 }}>
-              <label>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><circle cx="9" cy="10" r="4"></circle><line x1="15" y1="10" x2="19" y2="10"></line><line x1="15" y1="14" x2="19" y2="14"></line><line x1="9" y1="18" x2="19" y2="18"></line></svg>
-                Student ID
-              </label>
-              <input
-                required
-                type="text"
-                value={studentId}
-                onChange={e => setStudentId(e.target.value)}
-                placeholder="Student ID"
-              />
-            </div>
-
-            <div className="input-group" style={{ flex: 1 }}>
-              <label>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
-                Department
-              </label>
-              <select
-                required
-                value={department}
-                onChange={e => handleDepartmentChange(e.target.value)}
-              >
-                <option value="" disabled hidden>Program</option>
-                {Object.keys(DEPARTMENT_PROGRAM).map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Year Level + Section side by side */}
-          <div className="signup-row">
-            <div className="input-group" style={{ flex: 1 }}>
-              <label>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 12 12 17 22 12"></polyline><polyline points="2 17 12 22 22 17"></polyline></svg>
-                Year Level
-              </label>
-              <select
-                required
-                value={yearLevel}
-                onChange={e => handleYearLevelChange(e.target.value)}
-                disabled={!department}
-                className={!department ? 'select-disabled' : ''}
-              >
-                <option value="" disabled hidden>Year</option>
-                {YEAR_LEVELS.map(yl => (
-                  <option key={yl.value} value={yl.value}>{yl.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="input-group" style={{ flex: 1 }}>
-              <label>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                Section
-              </label>
-              <select
-                required
-                value={section}
-                onChange={e => setSection(e.target.value)}
-                disabled={!department || !yearLevel}
-                className={(!department || !yearLevel) ? 'select-disabled' : ''}
-              >
-                <option value="" disabled hidden>
-                  {!department
-                    ? 'Dept first'
-                    : !yearLevel
-                      ? 'Year first'
-                      : availableSections.length === 0
-                        ? 'No sections'
-                        : 'Section'}
-                </option>
-                {availableSections.map(sec => (
-                  <option key={sec.id} value={sec.name}>{sec.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Username */}
-          <div className="input-group">
-            <label>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><circle cx="12" cy="12" r="4"></circle><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path></svg>
-              Username
-            </label>
-            <input
-              required
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              placeholder="Choose a username"
-            />
-          </div>
-
-          {/* Password */}
-          <div className="input-group">
-            <label>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-              Password
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                required
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Create a password (min 6 chars)"
-                style={{ paddingRight: '40px' }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(v => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                style={{
-                  position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
-                  color: 'inherit', opacity: 0.6, display: 'flex', alignItems: 'center'
-                }}
-              >
-                {showPassword ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                )}
-              </button>
-            </div>
-            {password && password.length < 6 && (
-              <span className="field-hint field-hint-error">Password must be at least 6 characters</span>
-            )}
-            {password && password.length >= 6 && (
-              <span className="field-hint field-hint-success">✓ Password strength OK</span>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            className="btn-login"
-            style={{ marginTop: '10px' }}
-            disabled={loading || !fullName.trim() || !username.trim() || !password.trim() || password.length < 6 || !studentId.trim() || !department || !yearLevel || !section}
-          >
-            {loading ? (
-              <>
-                <span className="btn-spinner"></span>
-                Creating User Account...
-              </>
-            ) : (
-              'Create User Account'
-            )}
-          </button>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+          Create Admin Account
         </>
       )}
+    </button>
+  </>
+) : (
+  <>
+    {/* User Full Name */}
+    <div className="input-group">
+      <label>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+        Full Name
+      </label>
+      <input
+        required
+        type="text"
+        value={fullName}
+        onChange={e => setFullName(e.target.value)}
+        placeholder="Enter your full name"
+      />
+    </div>
+
+    {/* Student ID & Department side by side */}
+    <div className="signup-row">
+      <div className="input-group" style={{ flex: 1 }}>
+        <label>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><circle cx="9" cy="10" r="4"></circle><line x1="15" y1="10" x2="19" y2="10"></line><line x1="15" y1="14" x2="19" y2="14"></line><line x1="9" y1="18" x2="19" y2="18"></line></svg>
+          Student ID
+        </label>
+        <input
+          required
+          type="text"
+          value={studentId}
+          onChange={e => setStudentId(e.target.value)}
+          placeholder="Student ID"
+        />
+      </div>
+
+      <div className="input-group" style={{ flex: 1 }}>
+        <label>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+          Department
+        </label>
+        <select
+          required
+          value={department}
+          onChange={e => handleDepartmentChange(e.target.value)}
+        >
+          <option value="" disabled hidden>Program</option>
+          {Object.keys(DEPARTMENT_PROGRAM).map(dept => (
+            <option key={dept} value={dept}>{dept}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+
+    {/* Year Level + Section side by side */}
+    <div className="signup-row">
+      <div className="input-group" style={{ flex: 1 }}>
+        <label>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 12 12 17 22 12"></polyline><polyline points="2 17 12 22 22 17"></polyline></svg>
+          Year Level
+        </label>
+        <select
+          required
+          value={yearLevel}
+          onChange={e => handleYearLevelChange(e.target.value)}
+          disabled={!department}
+          className={!department ? 'select-disabled' : ''}
+        >
+          <option value="" disabled hidden>Year</option>
+          {YEAR_LEVELS.map(yl => (
+            <option key={yl.value} value={yl.value}>{yl.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="input-group" style={{ flex: 1 }}>
+        <label>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Section
+        </label>
+        <select
+          required
+          value={section}
+          onChange={e => setSection(e.target.value)}
+          disabled={!department || !yearLevel}
+          className={(!department || !yearLevel) ? 'select-disabled' : ''}
+        >
+          <option value="" disabled hidden>
+            {!department
+              ? 'Dept first'
+              : !yearLevel
+                ? 'Year first'
+                : availableSections.length === 0
+                  ? 'No sections'
+                  : 'Section'}
+          </option>
+          {availableSections.map(sec => (
+            <option key={sec.id} value={sec.name}>{sec.name}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+
+    {/* Username */}
+    <div className="input-group">
+      <label>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><circle cx="12" cy="12" r="4"></circle><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path></svg>
+        Username
+      </label>
+      <input
+        required
+        type="text"
+        value={username}
+        onChange={e => setUsername(e.target.value)}
+        placeholder="Choose a username"
+      />
+    </div>
+
+    {/* Password */}
+    <div className="input-group">
+      <label>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+        Password
+      </label>
+      <div style={{ position: 'relative' }}>
+        <input
+          required
+          type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          placeholder="Create a password (min 6 chars)"
+          style={{ paddingRight: '40px' }}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(v => !v)}
+          aria-label={showPassword ? 'Hide password' : 'Show password'}
+          style={{
+            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
+            color: 'inherit', opacity: 0.6, display: 'flex', alignItems: 'center'
+          }}
+        >
+          {showPassword ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+          )}
+        </button>
+      </div>
+      {password && password.length < 6 && (
+        <span className="field-hint field-hint-error">Password must be at least 6 characters</span>
+      )}
+      {password && password.length >= 6 && (
+        <span className="field-hint field-hint-success">✓ Password strength OK</span>
+      )}
+    </div>
+
+    <button
+      type="submit"
+      className="btn-login"
+      style={{ marginTop: '10px' }}
+      disabled={loading || !fullName.trim() || !username.trim() || !password.trim() || password.length < 6 || !studentId.trim() || !department || !yearLevel || !section}
+    >
+      {loading ? (
+        <>
+          <span className="btn-spinner"></span>
+          Creating User Account...
+        </>
+      ) : (
+        'Create User Account'
+      )}
+    </button>
+  </>
+)}
     </>
   );
 
-  return (
-    <div className="login-fullscreen">
-      {/* Fullscreen campus background */}
-      <div className="login-bg" aria-hidden="true">
-        <img src="/background2.jpg?v=1" alt="" className="login-bg-img" />
-      </div>
-      <div className="login-bg-overlay" aria-hidden="true"></div>
+return (
+  <div className="login-fullscreen">
+    {/* Fullscreen campus background */}
+    <div className="login-bg" aria-hidden="true">
+      <img src="/background2.jpg?v=1" alt="" className="login-bg-img" />
+    </div>
+    <div className="login-bg-overlay" aria-hidden="true"></div>
 
-      {/* Centered content */}
-      <div className="login-center-wrapper">
-        {/* Form card */}
-        <div className={`login-card ${isSignUp ? 'login-card-wide' : ''}`}>
-          {/* Branding inside card */}
-          <div className="login-branding">
-            <img
-              src={LOGO_SRC}
-              alt="CAPSU Logo"
-              className="login-logo"
-              onError={(e) => {
-                if (e.currentTarget.src !== FALLBACK_LOGO) {
-                  e.currentTarget.src = FALLBACK_LOGO;
-                }
-              }}
-            />
-            <h1 className="login-system-title">SMARTSCHED</h1>
-            <p className="login-school-name">Capiz State University<br />Mambusao Satellite College</p>
+    {/* Centered content */}
+    <div className="login-center-wrapper">
+      {/* Form card */}
+      <div className={`login-card ${isSignUp ? 'login-card-wide' : ''}`}>
+        {/* Branding inside card */}
+        <div className="login-branding">
+          <img
+            src={LOGO_SRC}
+            alt="CAPSU Logo"
+            className="login-logo"
+            onError={(e) => {
+              if (e.currentTarget.src !== FALLBACK_LOGO) {
+                e.currentTarget.src = FALLBACK_LOGO;
+              }
+            }}
+          />
+          <h1 className="login-system-title">SMARTSCHED</h1>
+          <p className="login-school-name">Capiz State University<br />Mambusao Satellite College</p>
+        </div>
+
+        {isSignUp ? (
+          <>
+            <h2 className="login-card-title">Create Account</h2>
+            <p className="login-card-subtitle">
+              {signUpRole === 'Admin'
+                ? 'Register as an Administrator for full system access'
+                : 'Register as a User to view schedules & classes'}
+            </p>
+          </>
+        ) : (
+          <div style={{ height: '12px' }}></div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="login-error-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+            {error}
           </div>
+        )}
 
+        {/* Success */}
+        {successMsg && (
+          <div className="login-error-box" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#10b981' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+            {successMsg}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
           {isSignUp ? (
-            <>
-              <h2 className="login-card-title">Create Account</h2>
-              <p className="login-card-subtitle">
-                {signUpRole === 'Admin'
-                  ? 'Register as an Administrator for full system access'
-                  : 'Register as a User to view schedules & classes'}
-              </p>
-            </>
+            renderSignUp()
           ) : (
-            <div style={{ height: '12px' }}></div>
-          )}
-
-          {/* Error */}
-          {error && (
-            <div className="login-error-box">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
-              {error}
-            </div>
-          )}
-
-          {/* Success */}
-          {successMsg && (
-            <div className="login-error-box" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#10b981' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
-              {successMsg}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            {isSignUp ? (
-              renderSignUp()
-            ) : (
-              <>
-                <div className="input-group">
-                  <label>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-                    Username
-                  </label>
-                  <input
-                    id="login-username"
-                    required
-                    type="text"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                    placeholder="Enter your username"
-                  />
-                </div>
-
-                <div className="input-group">
-                  <label>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                    Password
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      id="login-password"
-                      required
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      style={{ paddingRight: '40px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(v => !v)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      style={{
-                        position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-                        background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
-                        color: 'inherit', opacity: 0.6, display: 'flex', alignItems: 'center'
-                      }}
-                    >
-                      {showPassword ? (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
-                      ) : (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <button type="submit" id="login-submit" className="btn-login" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <span className="btn-spinner"></span>
-                      Authenticating...
-                    </>
-                  ) : (
-                    <>
-                      Sign In
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}><path d="m9 18 6-6-6-6" /></svg>
-                    </>
-                  )}
-                </button>
-              </>
-            )}
-          </form>
-
-          {/* Divider - only show on login */}
-          {!isSignUp && (
             <>
-              <div className="login-divider">
-                <span>OR</span>
+              <div className="input-group">
+                <label>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                  Username
+                </label>
+                <input
+                  id="login-username"
+                  required
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  placeholder="Enter your username"
+                />
               </div>
 
-              <button
-                onClick={handleGoogleLogin}
-                className="btn-login btn-google"
-                disabled={loading}
-                id="login-google"
-              >
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '18px', height: '18px' }} />
-                Sign in with Google
+              <div className="input-group">
+                <label>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                  Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    id="login-password"
+                    required
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    style={{ paddingRight: '40px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    style={{
+                      position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
+                      color: 'inherit', opacity: 0.6, display: 'flex', alignItems: 'center'
+                    }}
+                  >
+                    {showPassword ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" id="login-submit" className="btn-login" disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="btn-spinner"></span>
+                    Authenticating...
+                  </>
+                ) : (
+                  <>
+                    Sign In
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}><path d="m9 18 6-6-6-6" /></svg>
+                  </>
+                )}
               </button>
             </>
           )}
+        </form>
 
-          {/* Toggle between Login and Sign Up */}
-          <div className="login-toggle">
-            {isSignUp ? "Already have an account? " : "Don't have an account? "}
-            <span
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setSignUpRole('User');
-                resetFormFields();
-              }}
-              className="login-toggle-link"
+        {/* Divider - only show on login */}
+        {!isSignUp && (
+          <>
+            <div className="login-divider">
+              <span>OR</span>
+            </div>
+
+            <button
+              onClick={handleGoogleLogin}
+              className="btn-login btn-google"
+              disabled={loading}
+              id="login-google"
             >
-              {isSignUp ? 'Log in here' : 'Sign up here'}
-            </span>
-          </div>
-        </div>
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '18px', height: '18px' }} />
+              Sign in with Google
+            </button>
+          </>
+        )}
 
-        <p className="login-footer">© 2026 Capiz State University</p>
+        {/* Toggle between Login and Sign Up */}
+        <div className="login-toggle">
+          {isSignUp ? "Already have an account? " : "Don't have an account? "}
+          <span
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setSignUpRole('User');
+              resetFormFields();
+            }}
+            className="login-toggle-link"
+          >
+            {isSignUp ? 'Log in here' : 'Sign up here'}
+          </span>
+        </div>
       </div>
+
+      <p className="login-footer">© 2026 Capiz State University</p>
     </div>
-  );
+  </div>
+);
 };
 
 export default Login;

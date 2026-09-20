@@ -132,6 +132,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     .cell-room { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
                                     .lunch-break { background-color: #e0e0e0 !important; font-weight: bold; letter-spacing: 5px; padding: 4px; height: 30px; overflow: hidden; font-size: 9pt; }
                                     .lunch-break-time { background-color: #e0e0e0 !important; height: 30px; font-size: 8pt; }
+                                    .signatures-section { display: flex; justify-content: space-between; margin-top: 15px; padding: 0 40px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    .signature-block { text-align: left; }
+                                    .signature-block.right-aligned { text-align: left; padding-right: 40px; }
+                                    .sig-label { margin-bottom: 25px; }
+                                    .sig-name { text-decoration: underline; font-weight: bold; }
                             `;
                             
                             const roomStyles = `
@@ -254,6 +259,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                         .cell-room { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
                                         .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; padding: 2px; overflow: hidden; font-size: 9pt; height: 4vh; }
                                         .lunch-break-time { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; height: 4vh; }
+                                        .signatures-section { display: flex; justify-content: space-between; margin-top: 15px; padding: 0 40px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; flex-shrink: 0; }
+                                        .signature-block { text-align: left; }
+                                        .signature-block.right-aligned { text-align: left; padding-right: 40px; }
+                                        .sig-label { margin-bottom: 25px; }
+                                        .sig-name { text-decoration: underline; font-weight: bold; }
                             `;
                             
                             const roomPrintStyles = `

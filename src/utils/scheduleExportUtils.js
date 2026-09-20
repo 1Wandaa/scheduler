@@ -135,7 +135,7 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
       border: none;
       padding: 0.5pt 0;
       font-family: "Times New Roman", Times, serif;
-      font-size: 6pt;
+      font-size: 9pt;
       font-weight: bold;
     }
     .meta-value {
@@ -186,8 +186,8 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
     .iso-schedule-table th, .ordinary-schedule-table th {
       background-color: #f2f2f2;
       font-weight: bold;
-      font-size: 6.5pt;
-      height: 11pt;
+      font-size: 10pt;
+      height: 16pt;
     }
     .time-cell {
       font-weight: bold;
@@ -329,29 +329,29 @@ export async function exportIsoToWord(user) {
         <td rowspan="4" align="center" valign="middle" width="90" style="width: 90pt; text-align: center; vertical-align: middle; padding: 1pt;">
           ${logoHtml}
         </td>
-        <td width="110" style="width: 110pt; font-weight: bold; font-size: 6.5pt;">Document Type:</td>
-        <td rowspan="2" align="center" valign="middle" width="280" style="width: 280pt; font-weight: bold; font-size: 8.5pt; text-align: center; vertical-align: middle;">
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">Document Type:</td>
+        <td rowspan="2" align="center" valign="middle" width="280" style="width: 280pt; font-weight: bold; font-size: 11pt; text-align: center; vertical-align: middle;">
           DOCUMENTED INFORMATION
         </td>
-        <td width="110" style="width: 110pt; font-weight: bold; font-size: 6.5pt;">Document Code</td>
-        <td width="110" style="width: 110pt; font-size: 6.5pt;">INS-CLS-08</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">Document Code</td>
+        <td width="110" style="width: 110pt; font-size: 9pt;">INS-CLS-08</td>
       </tr>
       <tr>
-        <td width="110" style="width: 110pt; font-weight: bold; font-size: 6.5pt;">ISO 9001:2015</td>
-        <td width="110" style="width: 110pt; font-weight: bold; font-size: 6.5pt;">Revision No.</td>
-        <td width="110" style="width: 110pt; font-size: 6.5pt;">00</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">ISO 9001:2015</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">Revision No.</td>
+        <td width="110" style="width: 110pt; font-size: 9pt;">00</td>
       </tr>
       <tr>
-        <td rowspan="2" width="110" style="width: 110pt; font-weight: bold; font-size: 6.5pt;">Document Title:</td>
-        <td rowspan="2" align="center" valign="middle" width="280" style="width: 280pt; font-weight: bold; font-size: 10pt; text-align: center; vertical-align: middle;">
+        <td rowspan="2" width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">Document Title:</td>
+        <td rowspan="2" align="center" valign="middle" width="280" style="width: 280pt; font-weight: bold; font-size: 12pt; text-align: center; vertical-align: middle;">
           CLASS SCHEDULE
         </td>
-        <td width="110" style="width: 110pt; font-weight: bold; font-size: 6.5pt;">Effective Date</td>
-        <td width="110" style="width: 110pt; font-size: 6.5pt;">June 25, 2018</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">Effective Date</td>
+        <td width="110" style="width: 110pt; font-size: 9pt;">June 25, 2018</td>
       </tr>
       <tr>
-        <td width="110" style="width: 110pt; font-weight: bold; font-size: 6.5pt;">Page</td>
-        <td width="110" style="width: 110pt; font-size: 6.5pt;">1 of 1</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">Page</td>
+        <td width="110" style="width: 110pt; font-size: 9pt;">1 of 1</td>
       </tr>
     </table>
   `;
@@ -398,7 +398,7 @@ export async function exportIsoToWord(user) {
 
     // Transform cell contents to crisp, fixed-width Word cells
     cloneTable.querySelectorAll('tbody tr').forEach(tr => {
-      tr.style.height = '18pt';
+      tr.style.height = '40pt';
       tr.style.msoHeightRule = 'exactly';
 
       const tds = tr.querySelectorAll('td');
@@ -406,19 +406,20 @@ export async function exportIsoToWord(user) {
         if (td.classList.contains('time-cell')) {
           td.setAttribute('width', '80');
           td.style.width = '80pt';
-          td.style.height = '18pt';
+          td.style.height = '40pt';
+          td.style.fontSize = '8pt';
         } else if (td.classList.contains('lunch-break')) {
           td.setAttribute('align', 'center');
           td.setAttribute('valign', 'middle');
           td.style.backgroundColor = '#d1d5db';
           td.style.letterSpacing = '2pt';
           td.style.fontWeight = 'bold';
-          td.style.fontSize = '6.5pt';
-          td.style.height = '14pt';
+          td.style.fontSize = '8.5pt';
+          td.style.height = '24pt';
         } else {
           td.setAttribute('width', '124');
           td.style.width = '124pt';
-          td.style.height = '18pt';
+          td.style.height = '40pt';
 
           const subj = td.querySelector('.cell-subject')?.textContent.trim() || '';
           const prof = td.querySelector('.cell-professor')?.textContent.trim() || '';
@@ -426,9 +427,9 @@ export async function exportIsoToWord(user) {
 
           if (subj || prof || room) {
             td.innerHTML = `
-              <p style="font-weight: bold; font-size: 7pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.0;">${subj}</p>
-              ${prof ? `<p style="font-size: 5.5pt; margin: 0; padding: 0; text-align: center; color: #111827; line-height: 1.0;">${prof}</p>` : ''}
-              ${room ? `<p style="font-size: 5.5pt; margin: 0; padding: 0; text-align: center; color: #374151; line-height: 1.0;">${room}</p>` : ''}
+              <p style="font-weight: bold; font-size: 8.5pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.1;">${subj}</p>
+              ${prof ? `<p style="font-size: 7pt; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #111827; line-height: 1.1;">${prof}</p>` : ''}
+              ${room ? `<p style="font-size: 7pt; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #374151; line-height: 1.1;">${room}</p>` : ''}
             `;
           } else {
             td.innerHTML = '';
@@ -469,14 +470,14 @@ export async function exportIsoToWord(user) {
       </colgroup>
       <tr>
         <td width="350" style="width: 350pt; text-align: left; vertical-align: top; padding: 0 10pt;">
-          <p style="margin: 0 0 3pt 0; font-size: 6pt;">Prepared by:</p>
-          <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 7pt;">${prepName}</p>
-          <p style="margin: 0.5pt 0 0 0; font-size: 6pt;">${prepTitle}</p>
+          <p style="margin: 0 0 3pt 0; font-size: 10pt;">Prepared by:</p>
+          <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 11pt;">${prepName}</p>
+          <p style="margin: 0.5pt 0 0 0; font-size: 10pt;">${prepTitle}</p>
         </td>
         <td width="350" style="width: 350pt; text-align: left; padding-left: 30pt; vertical-align: top;">
-          <p style="margin: 0 0 3pt 0; font-size: 6pt;">Approved:</p>
-          <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 7pt;">${appName}</p>
-          <p style="margin: 0.5pt 0 0 0; font-size: 6pt;">${appTitle}</p>
+          <p style="margin: 0 0 3pt 0; font-size: 10pt;">Approved:</p>
+          <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 11pt;">${appName}</p>
+          <p style="margin: 0.5pt 0 0 0; font-size: 10pt;">${appTitle}</p>
         </td>
       </tr>
     </table>
