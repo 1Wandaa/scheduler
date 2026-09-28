@@ -93,11 +93,33 @@ function buildAssignments(subjects, sections, activeSemester, filter) {
       if (subject.semester && subject.semester !== 'Both' && subject.semester !== activeSemester) continue;
       if (filter && !filter(subject, section)) continue;
 
-      const credits = Number(subject.credits) || 3;
-      const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
-      const meetings = Math.max(1, Math.ceil(credits / targetDuration));
-      for (let i = 0; i < meetings; i++) {
-        assignments.push({ subject, section, meetingIndex: i + 1, targetDuration });
+      if (subject.hasLecLab) {
+        const lecHours = Number(subject.lectureHours) || 0;
+        const labHours = Number(subject.labHours) || 0;
+        if (lecHours > 0) {
+          assignments.push({ subject, section, meetingIndex: 1, targetDuration: lecHours / 2, component: 'Lecture' });
+          assignments.push({ subject, section, meetingIndex: 2, targetDuration: lecHours / 2, component: 'Lecture' });
+        }
+        if (labHours > 0) {
+          assignments.push({ subject, section, meetingIndex: 1, targetDuration: labHours / 2, component: 'Laboratory' });
+          assignments.push({ subject, section, meetingIndex: 2, targetDuration: labHours / 2, component: 'Laboratory' });
+        }
+        // Fallback: if both are 0, treat as a normal subject
+        if (lecHours === 0 && labHours === 0) {
+          const credits = Number(subject.credits) || 3;
+          const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
+          const meetings = Math.max(1, Math.ceil(credits / targetDuration));
+          for (let i = 0; i < meetings; i++) {
+            assignments.push({ subject, section, meetingIndex: i + 1, targetDuration });
+          }
+        }
+      } else {
+        const credits = Number(subject.credits) || 3;
+        const targetDuration = Number(subject.hoursPerMeeting) || 1.5;
+        const meetings = Math.max(1, Math.ceil(credits / targetDuration));
+        for (let i = 0; i < meetings; i++) {
+          assignments.push({ subject, section, meetingIndex: i + 1, targetDuration });
+        }
       }
     }
   }
@@ -158,16 +180,24 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     const profPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, a.subject, a.section, constraints);
     // REMOVED: if (profPool.length === 0) continue; // Do not silently drop them! Let them fail properly in tryPlaceGroup.
 
-    const key = `${a.section?.id || 'none'}_${a.subject?.id}`;
+    const componentStr = a.component ? `_${a.component}` : '';
+    const key = `${a.section?.id || 'none'}_${a.subject?.id}${componentStr}`;
     if (!groupsMap.has(key)) {
-      groupsMap.set(key, { subject: a.subject, section: a.section, count: 0 });
+      groupsMap.set(key, { 
+        subject: a.subject, 
+        section: a.section, 
+        component: a.component, 
+        targetDuration: a.targetDuration, 
+        count: 0 
+      });
     }
     groupsMap.get(key).count++;
   }
 
   // Reduce counts by already-scheduled to prevent duplicates
   for (const s of temp) {
-    const key = `${s.section?.id || 'none'}_${s.subject?.id}`;
+    const componentStr = s.component ? `_${s.component}` : '';
+    const key = `${s.section?.id || 'none'}_${s.subject?.id}${componentStr}`;
     if (groupsMap.has(key)) {
       groupsMap.get(key).count--;
     }
@@ -247,12 +277,12 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   // causing false rejections (e.g. FT subjects blocked from all rooms).
   // Conflict checks (room/prof/section overlap) are handled by schedulesOverlap.
   // Helper: check if a single slot is free for a given combo
-  const isSlotFree = (room, professor, subject, section, day, timeSlot) => {
-    const candidate = { room, professor, subject, section, day, timeSlot };
+  const isSlotFree = (room, professor, subject, section, day, timeSlot, customHours, customComponent) => {
+    const candidate = { room, professor, subject, section, day, timeSlot, hours: customHours, component: customComponent };
     // Check for time conflicts with already-scheduled classes
     if (temp.some((s) => schedulesOverlap(candidate, s, scheduleMode))) return false;
     const startIdx = getTimeSlotIndex(timeSlot, scheduleMode);
-    if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting, scheduleMode) === 0) return false;
+    if (startIdx < 0 || slotsNeededFromIndex(startIdx, customHours || subject?.hoursPerMeeting, scheduleMode) === 0) return false;
     if (subject?.code?.toUpperCase().startsWith('PE') && String(timeSlot.id) === '2') return false;
     return true;
   };
@@ -359,17 +389,17 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         for (const timeSlot of ACTIVE_TIME_SLOTS) {
           if (signal?.aborted) return { success: false };
           const startIdx = getTimeSlotIndex(timeSlot, scheduleMode);
-          if (startIdx < 0 || slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting, scheduleMode) === 0) continue;
+          if (startIdx < 0 || slotsNeededFromIndex(startIdx, group.targetDuration || subject?.hoursPerMeeting, scheduleMode) === 0) continue;
 
-          const isFree = (d) => isSlotFree(room, professor, subject, section, d, timeSlot);
+          const isFree = (d) => isSlotFree(room, professor, subject, section, d, timeSlot, group.targetDuration, group.component);
           const modeAllowsDay = (d) => ACTIVE_DAYS.includes(d);
 
           // Try preferred day pairs for 2-meeting classes
           if (count === 2) {
             for (const pair of PREFERRED_PAIRS) {
               if (modeAllowsDay(pair[0]) && modeAllowsDay(pair[1]) && isFree(pair[0]) && isFree(pair[1])) {
-                const s1 = { room, professor, subject, section, day: pair[0], timeSlot };
-                const s2 = { room, professor, subject, section, day: pair[1], timeSlot };
+                const s1 = { room, professor, subject, section, day: pair[0], timeSlot, hours: group.targetDuration, component: group.component };
+                const s2 = { room, professor, subject, section, day: pair[1], timeSlot, hours: group.targetDuration, component: group.component };
                 const w1 = await wrappedAddSchedule(s1);
                 const w2 = await wrappedAddSchedule(s2);
                 if (w1?.ok !== false && w2?.ok !== false) {
@@ -387,9 +417,9 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
               ? ['Monday', 'Wednesday', 'Thursday']
               : ['Monday', 'Wednesday', 'Friday'];
             if (triple.every(d => modeAllowsDay(d) && isFree(d))) {
-              const s1 = { room, professor, subject, section, day: triple[0], timeSlot };
-              const s2 = { room, professor, subject, section, day: triple[1], timeSlot };
-              const s3 = { room, professor, subject, section, day: triple[2], timeSlot };
+              const s1 = { room, professor, subject, section, day: triple[0], timeSlot, hours: group.targetDuration, component: group.component };
+              const s2 = { room, professor, subject, section, day: triple[1], timeSlot, hours: group.targetDuration, component: group.component };
+              const s3 = { room, professor, subject, section, day: triple[2], timeSlot, hours: group.targetDuration, component: group.component };
               const w1 = await wrappedAddSchedule(s1);
               const w2 = await wrappedAddSchedule(s2);
               const w3 = await wrappedAddSchedule(s3);
@@ -412,7 +442,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
               let allOk = true;
               const writes = [];
               for (const d of validDays) {
-                const sc = { room, professor, subject, section, day: d, timeSlot };
+                const sc = { room, professor, subject, section, day: d, timeSlot, hours: group.targetDuration, component: group.component };
                 const w = await wrappedAddSchedule(sc);
                 if (w?.ok === false) { allOk = false; break; }
                 writes.push(sc);
@@ -446,11 +476,11 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
             for (const ts of ACTIVE_TIME_SLOTS) {
               if (signal?.aborted) return { success: false };
               const si = getTimeSlotIndex(ts, scheduleMode);
-              if (si < 0 || slotsNeededFromIndex(si, subject?.hoursPerMeeting, scheduleMode) === 0) continue;
+              if (si < 0 || slotsNeededFromIndex(si, group.targetDuration || subject?.hoursPerMeeting, scheduleMode) === 0) continue;
               for (const day of ACTIVE_DAYS) {
                 if (usedDays.has(day)) continue;
-                if (isSlotFree(room, professor, subject, section, day, ts)) {
-                  const meeting = { room, professor, subject, section, day, timeSlot: ts };
+                if (isSlotFree(room, professor, subject, section, day, ts, group.targetDuration, group.component)) {
+                  const meeting = { room, professor, subject, section, day, timeSlot: ts, hours: group.targetDuration, component: group.component };
                   placedMeetings.push(meeting);
                   temp.push(meeting);
                   usedDays.add(day);
@@ -508,7 +538,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 
       // Structured sample of classes this professor is currently teaching
       const sampleConflicts = pScheds.slice(0, 4).map((s) => {
-        const timeRange = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, scheduleMode) || s.timeSlot?.label || 'slot';
+      const timeRange = getMeetingTimeLabel(s.timeSlot, s.hours || s.subject?.hoursPerMeeting, scheduleMode) || s.timeSlot?.label || 'slot';
         return {
           day: s.day,
           time: timeRange,
@@ -535,7 +565,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     const evaluatedRooms = roomPool.map((r) => {
       const rScheds = temp.filter((s) => String(s.room?.id) === String(r.id));
       const busySamples = rScheds.slice(0, 4).map((s) => {
-        const timeRange = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, scheduleMode) || s.timeSlot?.label || 'slot';
+      const timeRange = getMeetingTimeLabel(s.timeSlot, s.hours || s.subject?.hoursPerMeeting, scheduleMode) || s.timeSlot?.label || 'slot';
         return {
           day: s.day,
           time: timeRange,
@@ -560,7 +590,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     // Sample existing schedules of this section
     const secScheds = section ? temp.filter((s) => String(s.section?.id) === String(section.id)) : [];
     const sectionBusySlots = secScheds.slice(0, 4).map((s) => {
-      const timeRange = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, scheduleMode) || s.timeSlot?.label || 'slot';
+      const timeRange = getMeetingTimeLabel(s.timeSlot, s.hours || s.subject?.hoursPerMeeting, scheduleMode) || s.timeSlot?.label || 'slot';
       return {
         day: s.day,
         time: timeRange,
@@ -936,12 +966,12 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 
         // Hard check: reject AI suggestions that cross the lunch break
         const aiStartIdx = getTimeSlotIndex(timeSlot, scheduleMode);
-        if (aiStartIdx < 0 || slotsNeededFromIndex(aiStartIdx, group.subject?.hoursPerMeeting, scheduleMode) === 0) {
-          console.warn(`[AutoScheduler] AI suggestion rejected: slot ${timeSlot.label} does not fit ${group.subject?.hoursPerMeeting || 1.5}hr meeting (likely crosses lunch break).`);
+        if (aiStartIdx < 0 || slotsNeededFromIndex(aiStartIdx, group.targetDuration || group.subject?.hoursPerMeeting, scheduleMode) === 0) {
+          console.warn(`[AutoScheduler] AI suggestion rejected: slot ${timeSlot.label} does not fit ${group.targetDuration || group.subject?.hoursPerMeeting || 1.5}hr meeting (likely crosses lunch break).`);
           continue;
         }
 
-        const sc = { room, professor, subject: group.subject, section: group.section, day, timeSlot, prescriptionNote: res.prescriptionNote };
+        const sc = { room, professor, subject: group.subject, section: group.section, day, timeSlot, prescriptionNote: res.prescriptionNote, hours: group.targetDuration, component: group.component };
         const w = await addScheduleFn(sc);
 
         if (w?.ok !== false) {

@@ -131,7 +131,7 @@ export function getOccupiedSlots(schedule, scheduleMode) {
   const startIdx = getTimeSlotIndex(schedule.timeSlot, scheduleMode);
   if (startIdx < 0) return [{ day: schedule.day, timeSlotId: schedule.timeSlot.id }];
 
-  const needed = slotsNeededFromIndex(startIdx, schedule.subject?.hoursPerMeeting, scheduleMode);
+  const needed = slotsNeededFromIndex(startIdx, schedule.hours || schedule.subject?.hoursPerMeeting, scheduleMode);
   if (needed === 0) return [{ day: schedule.day, timeSlotId: schedule.timeSlot.id }];
   const slotList = [];
   for (let i = 0; i < needed; i++) {
@@ -198,7 +198,7 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     }
     const start = parseTimeToMinutes(schedule.timeSlot);
     if (start !== null) {
-      const duration = (schedule.subject?.hoursPerMeeting || 1.5) * 60;
+      const duration = (schedule.hours || schedule.subject?.hoursPerMeeting || 1.5) * 60;
       return { start, end: start + duration };
     }
   }
@@ -213,13 +213,13 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     }
     const start = parseTimeToMinutes(schedule.timeSlot.customLabel);
     if (start !== null) {
-      const duration = (schedule.subject?.hoursPerMeeting || 1.5) * 60;
+      const duration = (schedule.hours || schedule.subject?.hoursPerMeeting || 1.5) * 60;
       return { start, end: start + duration };
     }
   }
 
   // 2. Try standard label resolution
-  const label = getMeetingTimeLabel(schedule.timeSlot, schedule.subject?.hoursPerMeeting, scheduleMode);
+  const label = getMeetingTimeLabel(schedule.timeSlot, schedule.hours || schedule.subject?.hoursPerMeeting, scheduleMode);
   const parts = (label || '').split('-');
   if (parts.length === 2) {
     const start = parseTimeToMinutes(parts[0].trim());
@@ -233,8 +233,9 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     const start = parseTimeToMinutes(timeParts[0].trim());
     let end = parseTimeToMinutes(timeParts[1].trim());
     if (start !== null && end !== null && start < end) {
-      if (schedule.subject?.hoursPerMeeting) {
-        end = Math.max(end, start + schedule.subject.hoursPerMeeting * 60);
+      const meetingHours = schedule.hours || schedule.subject?.hoursPerMeeting;
+      if (meetingHours) {
+        end = Math.max(end, start + meetingHours * 60);
       }
       return { start, end };
     }
@@ -246,8 +247,9 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     const start = parseTimeToMinutes(labelParts[0].trim());
     let end = parseTimeToMinutes(labelParts[1].trim());
     if (start !== null && end !== null && start < end) {
-      if (schedule.subject?.hoursPerMeeting) {
-        end = Math.max(end, start + schedule.subject.hoursPerMeeting * 60);
+      const meetingHours = schedule.hours || schedule.subject?.hoursPerMeeting;
+      if (meetingHours) {
+        end = Math.max(end, start + meetingHours * 60);
       }
       return { start, end };
     }
@@ -314,6 +316,8 @@ export function findScheduleConflicts(candidate, existingSchedules, { excludeSch
     subject: candidate.subject,
     day: candidate.day,
     timeSlot: candidate.timeSlot,
+    hours: candidate.hours,
+    component: candidate.component,
   };
 
   for (const s of existingSchedules) {

@@ -32,7 +32,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
   const [facultySearchQuery, setFacultySearchQuery] = useState('');
   const [quickCreateState, setQuickCreateState] = useState({ isOpen: false, type: 'section' });
   const [formData, setFormData] = useState({
-    id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, isFoodLab: false, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || (availableSemesters[0] || '')
+    id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, isFoodLab: false, hasLecLab: false, lectureHours: 2, labHours: 3, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || (availableSemesters[0] || '')
   });
 
   const handleCodeChange = (newCode) => {
@@ -145,6 +145,9 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       credits: 3,
       requiredLab: detection.requiredLab,
       isFoodLab: detection.isFoodLab,
+      hasLecLab: false,
+      lectureHours: 2,
+      labHours: 3,
       hoursPerMeeting: 1.5,
       category: defaultCategory,
       semester: activeSemester || (availableSemesters[0] || '1st Semester')
@@ -179,6 +182,9 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       hoursPerMeeting: subject.hoursPerMeeting !== undefined ? Number(subject.hoursPerMeeting) : 1.5,
       requiredLab: Boolean(subject.requiredLab),
       isFoodLab: Boolean(subject.isFoodLab),
+      hasLecLab: Boolean(subject.hasLecLab),
+      lectureHours: subject.lectureHours !== undefined ? Number(subject.lectureHours) : 2,
+      labHours: subject.labHours !== undefined ? Number(subject.labHours) : 3,
     };
 
     setFormData(normalized);
@@ -258,6 +264,9 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       hoursPerMeeting: Number(formData.hoursPerMeeting) || 1.5,
       requiredLab: Boolean(formData.requiredLab),
       isFoodLab: Boolean(formData.isFoodLab),
+      hasLecLab: Boolean(formData.hasLecLab),
+      lectureHours: Number(formData.lectureHours) || 2,
+      labHours: Number(formData.labHours) || 3,
     };
 
     setIsSaving(true);
@@ -792,25 +801,80 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                   }} 
                 />
               </div>
-              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                <label className="form-label">Hours per Meeting</label>
-                <select 
-                  className="form-select" 
-                  value={formData.hoursPerMeeting || 1.5} 
-                  onChange={e => setFormData({ ...formData, hoursPerMeeting: Number(e.target.value) })}
-                >
-                  <option value={1}>1.0 Hours</option>
-                  <option value={1.5}>1.5 Hours</option>
-                  <option value={2}>2.0 Hours</option>
-                  <option value={2.5}>2.5 Hours</option>
-                  <option value={3}>3.0 Hours</option>
-                  <option value={4}>4.0 Hours</option>
-                  <option value={5}>5.0 Hours</option>
-                </select>
-              </div>
+              {!formData.hasLecLab && (
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label className="form-label">Hours per Meeting</label>
+                  <select 
+                    className="form-select" 
+                    value={formData.hoursPerMeeting || 1.5} 
+                    onChange={e => setFormData({ ...formData, hoursPerMeeting: Number(e.target.value) })}
+                  >
+                    <option value={1}>1.0 Hours</option>
+                    <option value={1.5}>1.5 Hours</option>
+                    <option value={2}>2.0 Hours</option>
+                    <option value={2.5}>2.5 Hours</option>
+                    <option value={3}>3.0 Hours</option>
+                    <option value={4}>4.0 Hours</option>
+                    <option value={5}>5.0 Hours</option>
+                  </select>
+                </div>
+              )}
             </div>
+            
+            {formData.hasLecLab && (
+              <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label className="form-label">Lecture Hours</label>
+                  <select 
+                    className="form-select" 
+                    value={formData.lectureHours || 2} 
+                    onChange={e => setFormData({ ...formData, lectureHours: Number(e.target.value) })}
+                  >
+                    <option value={1}>1.0 Hours</option>
+                    <option value={1.5}>1.5 Hours</option>
+                    <option value={2}>2.0 Hours</option>
+                    <option value={2.5}>2.5 Hours</option>
+                    <option value={3}>3.0 Hours</option>
+                    <option value={4}>4.0 Hours</option>
+                    <option value={5}>5.0 Hours</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label className="form-label">Lab Hours</label>
+                  <select 
+                    className="form-select" 
+                    value={formData.labHours || 3} 
+                    onChange={e => setFormData({ ...formData, labHours: Number(e.target.value) })}
+                  >
+                    <option value={1}>1.0 Hours</option>
+                    <option value={1.5}>1.5 Hours</option>
+                    <option value={2}>2.0 Hours</option>
+                    <option value={2.5}>2.5 Hours</option>
+                    <option value={3}>3.0 Hours</option>
+                    <option value={4}>4.0 Hours</option>
+                    <option value={5}>5.0 Hours</option>
+                  </select>
+                </div>
+              </div>
+            )}
 
             <div style={{ marginBottom: '25px', padding: '14px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                <input 
+                  type="checkbox" 
+                  checked={Boolean(formData.hasLecLab)} 
+                  onChange={e => {
+                    const checked = e.target.checked;
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      hasLecLab: checked,
+                      requiredLab: checked ? true : prev.requiredLab
+                    }));
+                  }} 
+                  style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} 
+                /> 
+                Requires Lecture and Laboratory separately
+              </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
                 <input 
                   type="checkbox" 

@@ -96,7 +96,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   // Term selection
-  const [activeSemester, setActiveSemester] = useState(SEMESTERS[1]);
+  const [activeSemester, setActiveSemester] = useState(SEMESTERS[0]);
   const [activeSchoolYear, setActiveSchoolYear] = useState(SCHOOL_YEARS[1]);
 
   // Centralized data from Firestore

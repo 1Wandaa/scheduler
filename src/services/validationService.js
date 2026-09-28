@@ -30,7 +30,7 @@ import { generateConflictResolutions } from './conflictResolutionService';
  * @returns {{ valid: boolean, errors: string[], warnings: string[] }}
  */
 export function validateScheduleEntry(
-  { room, professor, subject, section, day, timeSlot, excludeScheduleId = null, scheduleMode },
+  { room, professor, subject, section, day, timeSlot, excludeScheduleId = null, scheduleMode, hours, component },
   activeSchedules,
   rooms
 ) {
@@ -112,9 +112,9 @@ export function validateScheduleEntry(
   if (!timeSlot?.isCustom && !timeSlot?.customLabel) {
     const activeSlots = config.timeSlots;
     const startIdx = activeSlots.findIndex(ts => String(ts.id) === String(timeSlot?.id));
-    const needed = slotsNeededFromIndex(startIdx, subject?.hoursPerMeeting, scheduleMode);
+    const needed = slotsNeededFromIndex(startIdx, hours || subject?.hoursPerMeeting, scheduleMode);
     if (startIdx < 0 || needed === 0) {
-      errors.push(`Time slot does not fit the ${subject?.hoursPerMeeting || 1.5}hr meeting duration.`);
+      errors.push(`Time slot does not fit the ${hours || subject?.hoursPerMeeting || 1.5}hr meeting duration.`);
       return { valid: false, errors, warnings };
     }
 
@@ -125,25 +125,25 @@ export function validateScheduleEntry(
 
   // Conflict detection
   const conflicts = findScheduleConflicts(
-    { room, professor, subject, section, day, timeSlot },
+    { room, professor, subject, section, day, timeSlot, hours, component },
     activeSchedules,
     { excludeScheduleId, scheduleMode }
   );
   if (conflicts.room) {
     const s = conflicts.room;
-    const timeRange = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, scheduleMode) || timeSlot?.label;
+    const timeRange = getMeetingTimeLabel(s.timeSlot, s.hours || s.subject?.hoursPerMeeting, scheduleMode) || timeSlot?.label;
     const occupant = `${s.subject?.code || 'a class'}${s.section?.name ? ` (${s.section.name})` : ''}${s.professor?.name ? ` taught by ${s.professor.name}` : ''}`;
     errors.push(`Room "${room?.name}" is already occupied on ${day} (${timeRange}) by ${occupant}.`);
   }
   if (conflicts.professor) {
     const s = conflicts.professor;
-    const timeRange = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, scheduleMode) || timeSlot?.label;
+    const timeRange = getMeetingTimeLabel(s.timeSlot, s.hours || s.subject?.hoursPerMeeting, scheduleMode) || timeSlot?.label;
     const teaching = `${s.subject?.code || 'a class'}${s.section?.name ? ` for ${s.section.name}` : ''}${s.room?.name ? ` in ${s.room.name}` : ''}`;
     errors.push(`Faculty "${professor?.name}" is already scheduled on ${day} (${timeRange}) teaching ${teaching}.`);
   }
   if (section?.id && conflicts.section) {
     const s = conflicts.section;
-    const timeRange = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, scheduleMode) || timeSlot?.label;
+    const timeRange = getMeetingTimeLabel(s.timeSlot, s.hours || s.subject?.hoursPerMeeting, scheduleMode) || timeSlot?.label;
     const session = `${s.subject?.code || 'a class'}${s.room?.name ? ` in ${s.room.name}` : ''}${s.professor?.name ? ` with ${s.professor.name}` : ''}`;
     errors.push(`Section "${section?.name}" already has a class on ${day} (${timeRange}): ${session}.`);
   }
@@ -153,7 +153,7 @@ export function validateScheduleEntry(
   let suggestions = [];
   if (Object.keys(conflicts).length > 0 && rooms && rooms.length > 0) {
     suggestions = generateConflictResolutions(
-      { room, professor, subject, section, day, timeSlot, excludeScheduleId },
+      { room, professor, subject, section, day, timeSlot, excludeScheduleId, hours, component },
       activeSchedules,
       rooms,
       scheduleMode
@@ -191,13 +191,16 @@ export async function addSchedule(newSchedule, activeSchedules, rooms, activeSem
       timeSlot: newSchedule?.timeSlot,
       excludeScheduleId: null,
       scheduleMode,
+      hours: newSchedule?.hours,
+      component: newSchedule?.component,
     },
     activeSchedules,
     rooms
   );
 
   if (!check.valid) return { ok: false, errors: check.errors };
-  await addDoc(collection(db, 'schedules'), { ...newSchedule, semester: activeSemester, schoolYear: activeSchoolYear });
+  const sanitized = JSON.parse(JSON.stringify({ ...newSchedule, semester: activeSemester, schoolYear: activeSchoolYear }));
+  await addDoc(collection(db, 'schedules'), sanitized);
   return { ok: true };
 }
 
@@ -226,6 +229,8 @@ export async function updateSchedule(scheduleId, newDay, newTimeSlotOrId, schedu
       day: newDay,
       timeSlot: newTimeSlot,
       excludeScheduleId: scheduleId,
+      hours: existing.hours,
+      component: existing.component,
     },
     activeSchedules,
     rooms
@@ -279,13 +284,14 @@ export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, ac
   // Validate each schedule against both existing schedules AND already-accepted batch entries
   for (const s of newSchedules) {
     const check = validateScheduleEntry(
-      { room: s.room, professor: s.professor, subject: s.subject, section: s.section || null, day: s.day, timeSlot: s.timeSlot, excludeScheduleId: null, scheduleMode },
+      { room: s.room, professor: s.professor, subject: s.subject, section: s.section || null, day: s.day, timeSlot: s.timeSlot, excludeScheduleId: null, scheduleMode, hours: s.hours, component: s.component },
       [...activeSchedules, ...validSchedules],
       rooms
     );
     if (check.valid) {
       validSchedules.push(s);
     } else {
+      console.warn(`[addSchedulesBatch] Rejected ${s.subject?.code} (${s.component || 'standard'}) on ${s.day} at ${s.timeSlot?.label}: ${check.errors.join(', ')}`, { hours: s.hours, hoursPerMeeting: s.subject?.hoursPerMeeting, timeSlotId: s.timeSlot?.id });
       errors.push(`Failed to validate ${s.subject?.code}: ${check.errors.join(', ')}`);
     }
   }
@@ -303,7 +309,13 @@ export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, ac
       const batch = writeBatch(db);
       for (const s of chunk) {
         const newDocRef = doc(schedulesRef);
-        batch.set(newDocRef, { ...s, semester: activeSemester, schoolYear: activeSchoolYear });
+        // Sanitize object to remove undefined properties (Firestore throws on undefined)
+        const sanitized = JSON.parse(JSON.stringify({ 
+            ...s, 
+            semester: activeSemester, 
+            schoolYear: activeSchoolYear 
+        }));
+        batch.set(newDocRef, sanitized);
       }
       await batch.commit();
     }

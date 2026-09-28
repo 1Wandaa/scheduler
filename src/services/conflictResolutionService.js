@@ -65,7 +65,7 @@ export function generateConflictResolutions(failedEntry, activeSchedules, allRoo
         if (day === failedEntry.day && String(slot.id) === String(failedEntry.timeSlot?.id)) continue;
 
         // Skip if this timeslot doesn't have enough consecutive slots for the meeting duration
-        if (!checkSlotFits(slot, failedEntry.subject?.hoursPerMeeting, scheduleMode)) continue;
+        if (!checkSlotFits(slot, failedEntry.hours || failedEntry.subject?.hoursPerMeeting, scheduleMode)) continue;
 
         // Physical Education (PE) subjects cannot be scheduled in the first period.
         if (failedEntry.subject?.code?.toUpperCase().startsWith('PE') && String(slot.id) === '2') {

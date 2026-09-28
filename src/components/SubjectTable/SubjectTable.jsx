@@ -113,7 +113,16 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
                   </div>
                 </td>
                 <td style={{ fontWeight: '500', textAlign: 'center' }} data-label="Units">{s.credits || 3}</td>
-                <td style={{ fontWeight: '500', color: 'var(--text-muted)' }} data-label="Meeting Time">{s.hoursPerMeeting || 1.5} hrs</td>
+                <td style={{ fontWeight: '500', color: 'var(--text-muted)' }} data-label="Meeting Time">
+                  {s.hasLecLab ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem', gap: '2px' }}>
+                      <span>Lec: {s.lectureHours || 0} hrs</span>
+                      <span>Lab: {s.labHours || 0} hrs</span>
+                    </div>
+                  ) : (
+                    <span>{s.hoursPerMeeting || 1.5} hrs</span>
+                  )}
+                </td>
                 <td data-label="Lab Required">
                   <span style={{
                     background: s.requiredLab ? 'var(--danger-bg)' : s.isFoodLab ? '#fff3cd' : 'var(--success-bg)',

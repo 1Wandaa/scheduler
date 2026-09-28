@@ -232,7 +232,7 @@ export async function resolveUnscheduledClasses(unscheduledGroups, context, cons
       return current + (Number(subject.credits) || 3) <= max + 0.01;
     });
 
-    return `- Group ${idx}: Subject "${subject.code}" (${subject.id}), Section "${section?.name || 'Any'}" (${section?.id || 'none'}), Meetings Needed: ${count}, Duration: ${subject.hoursPerMeeting || 1.5}hr. Eligible Profs (with +3 unit override allowed): [${relaxedProfs.map(p => p.id).join(', ')}]`;
+    return `- Group ${idx}: Subject "${subject.code}" (${subject.id}), Section "${section?.name || 'Any'}" (${section?.id || 'none'}), Meetings Needed: ${count}, Duration: ${g.targetDuration || subject.hoursPerMeeting || 1.5}hr. Eligible Profs (with +3 unit override allowed): [${relaxedProfs.map(p => p.id).join(', ')}]`;
   }).join('\n');
 
   const profSummary = professors.map(p => {

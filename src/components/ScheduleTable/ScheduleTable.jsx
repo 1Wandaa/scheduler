@@ -209,11 +209,15 @@ const ScheduleTable = React.memo(function ScheduleTable({
   const scheduleGridMap = useMemo(() => {
     const map = new Map();
     for (const s of schedules) {
-      if (!s.day || !s.timeSlot?.id) continue;
+      if (!s.day || !s.timeSlot?.id) {
+        console.warn('[ScheduleTable] Found schedule missing day or timeSlot.id', s);
+        continue;
+      }
       const key = `${s.day}-${s.timeSlot.id}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(s);
     }
+    console.log('[ScheduleTable] scheduleGridMap built. Size:', map.size, 'Total passed schedules:', schedules.length);
     return map;
   }, [schedules]);
 
@@ -288,7 +292,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
       if (range && range.start > 0 && range.end > 0) {
         units += (range.end - range.start) / 60;
       } else {
-        units += (Number(current.subject?.hoursPerMeeting) || 1.5);
+        units += (Number(current.hours) || Number(current.subject?.hoursPerMeeting) || 1.5);
       }
     });
 
@@ -791,7 +795,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
           <tbody>
             {uniqueSubjectsList.map(s => (
               <tr key={s.subject?.id || s.id}>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.code || ''}</td>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.code || ''}{s.component ? ` (${s.component})` : ''}</td>
                 <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.title || s.subject?.description || ''}</td>
                 <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{s.subject?.credits || ''}</td>
                 <td style={{ border: '1px solid #000', padding: '6px' }}>{s.professor?.name || ''}</td>
@@ -872,6 +876,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
                               <div className="schedule-content" style={{ display: 'flex', flexDirection: 'column', paddingRight: (onRemove && isDeleteMode) ? '24px' : '0' }}>
                                 <p className="subject" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0 }}>
                                   {schedule.subject?.code ?? '—'}
+                                  {schedule.component && <span style={{ fontSize: '0.7em', display: 'block', fontWeight: 'normal', opacity: 0.9 }}>{schedule.component}</span>}
                                 </p>
                                 <div className="details" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                   <p className="professor" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>

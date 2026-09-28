@@ -172,9 +172,15 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 const sectionObj = sections.find(sec => s.section && String(sec.id) === String(s.section.id)) || s.section;
                 const secDept = (sectionObj?.program || sectionObj?.department || '').trim().toUpperCase();
                 const secName = (sectionObj?.name || '').trim().toUpperCase();
+                const subjCode = (s.subject?.code || '').trim().toUpperCase();
 
                 // A class on the department schedule belongs to this department's sections
-                const isDeptSection = secDept === targetDept || secName.startsWith(targetDept);
+                // Check if the target department string is anywhere in the program, department, section name, or subject code
+                const isDeptSection = secDept === targetDept || 
+                                      secName.includes(targetDept) || 
+                                      secDept.includes(targetDept) ||
+                                      subjCode.includes(targetDept);
+                                      
                 if (!isDeptSection) return false;
 
                 if (selectedYearLevel && !deptSectionId) {
@@ -192,6 +198,10 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
             return false;
         });
     }, [schedules, selectedId, viewType, selectedYearLevel, deptSectionId, sections]);
+
+    React.useEffect(() => {
+        console.log('[ScheduleViewer] Raw schedules:', schedules.length, 'Filtered:', filteredSchedules.length, 'Target:', selectedId, 'ViewType:', viewType);
+    }, [schedules, filteredSchedules, selectedId, viewType]);
 
     const activeEntity = React.useMemo(() => {
         if (viewType === 'department') {

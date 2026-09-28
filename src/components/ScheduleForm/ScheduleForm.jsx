@@ -22,7 +22,8 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     professor: '',
     room: '',
     day: [],
-    timeSlot: {}
+    timeSlot: {},
+    component: 'Lecture' // default to Lecture
   });
 
   const [validation, setValidation] = useState(null);
@@ -62,6 +63,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       const newData = { ...prev, [name]: value };
 
       if (name === 'subject') {
+        newData.component = 'Lecture';
         if (!value) {
           newData.room = '';
         } else {
@@ -164,6 +166,8 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     }
 
     const subject = subjects.find(s => s.id === formData.subject);
+    const getSubjectHours = (sub, comp) => sub?.hasLecLab ? (comp === 'Lecture' ? sub.lectureHours / 2 : sub.labHours / 2) : sub?.hoursPerMeeting;
+    const currentHours = getSubjectHours(subject, formData.component);
     const section = sections ? sections.find(s => s.id === formData.section) : null;
     const professor = professors.find(p => p.id === formData.professor);
     const room = rooms.find(r => r.id === formData.room);
@@ -189,14 +193,14 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
       let timeSlotObj = null;
       const eligibleSlots = subject
-        ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, subject.hoursPerMeeting) > 0)
+        ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, currentHours) > 0)
         : TIME_SLOTS;
 
       const cleanTimeStr = (str) => String(str || '').replace(/\s+/g, '').toUpperCase();
       const targetStr = cleanTimeStr(timeStr);
 
       timeSlotObj = eligibleSlots.find(t =>
-        cleanTimeStr(getMeetingTimeLabel(t, subject?.hoursPerMeeting)) === targetStr ||
+        cleanTimeStr(getMeetingTimeLabel(t, currentHours)) === targetStr ||
         cleanTimeStr(t.label) === targetStr ||
         cleanTimeStr(t.time) === targetStr
       );
@@ -242,19 +246,26 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       const successfullyAdded = [];
 
       for (const sess of resolvedSessions) {
-        const scheduleResult = validator.addSchedule(room, professor, subject, section, sess.day, sess.timeSlotObj);
+        const validationSubject = subject ? { ...subject, hoursPerMeeting: currentHours } : subject;
+        const scheduleResult = validator.addSchedule(room, professor, validationSubject, section, sess.day, sess.timeSlotObj);
+        if (scheduleResult.schedule) {
+          if (subject?.hasLecLab) {
+            scheduleResult.schedule.component = formData.component;
+          }
+          scheduleResult.schedule.hours = currentHours;
+        }
         const addResult = await onSchedule(scheduleResult.schedule);
         if (addResult && addResult.ok === false) {
           hasAddError = true;
           allErrors.push(`Failed to save for ${sess.day}: ${addResult.errors?.join(', ') || 'Unknown error'}`);
         } else {
           successfullyAdded.push({
-            subject: `${subject?.code || ''} ${subject?.name ? `— ${subject.name}` : ''}`.trim(),
+            subject: `${subject?.code || ''} ${subject?.name ? `— ${subject.name}` : ''}`.trim() + (subject?.hasLecLab ? ` (${formData.component})` : ''),
             section: section?.name || '',
             professor: professor?.name || '',
             room: room?.name || '',
             day: sess.day,
-            timeSlot: getMeetingTimeLabel(sess.timeSlotObj, subject?.hoursPerMeeting, 'standard') || sess.timeSlotObj?.label || sess.originalLabel
+            timeSlot: getMeetingTimeLabel(sess.timeSlotObj, currentHours, 'standard') || sess.timeSlotObj?.label || sess.originalLabel
           });
         }
       }
@@ -377,8 +388,10 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       })
       : professors;
 
+  const currentRenderHours = selectedSubject?.hasLecLab ? (formData.component === 'Lecture' ? selectedSubject.lectureHours / 2 : selectedSubject.labHours / 2) : selectedSubject?.hoursPerMeeting;
+
   const eligibleTimeSlots = selectedSubject
-    ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, selectedSubject.hoursPerMeeting) > 0)
+    ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, currentRenderHours) > 0)
     : TIME_SLOTS;
 
   const resolveTimeSlotForDay = (day) => {
@@ -390,7 +403,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     const targetStr = cleanTimeStr(timeStr);
 
     let resolvedSlot = eligibleTimeSlots.find(t =>
-      cleanTimeStr(getMeetingTimeLabel(t, selectedSubject?.hoursPerMeeting)) === targetStr ||
+      cleanTimeStr(getMeetingTimeLabel(t, currentRenderHours)) === targetStr ||
       cleanTimeStr(t.label) === targetStr ||
       cleanTimeStr(t.time) === targetStr
     );
@@ -835,6 +848,32 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                 return sorted.map(subject => ({ value: subject.id, label: `${subject.code} - ${subject.name}` }));
               })()}
             />
+            {selectedSubject?.hasLecLab && (
+              <div style={{ marginTop: '10px', display: 'flex', gap: '15px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                  <input 
+                    type="radio" 
+                    name="component" 
+                    value="Lecture" 
+                    checked={formData.component === 'Lecture'} 
+                    onChange={handleChange}
+                    style={{ accentColor: 'var(--accent-primary)' }}
+                  />
+                  Lecture ({selectedSubject.lectureHours} hrs)
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                  <input 
+                    type="radio" 
+                    name="component" 
+                    value="Laboratory" 
+                    checked={formData.component === 'Laboratory'} 
+                    onChange={handleChange}
+                    style={{ accentColor: 'var(--accent-primary)' }}
+                  />
+                  Laboratory ({selectedSubject.labHours} hrs)
+                </label>
+              </div>
+            )}
           </div>
 
           <div className="form-group">
@@ -1204,7 +1243,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   }}>
                     {eligibleTimeSlots.map(slot => {
                       const rangeLabel = selectedSubject
-                        ? getMeetingTimeLabel(slot, selectedSubject.hoursPerMeeting)
+                        ? getMeetingTimeLabel(slot, currentRenderHours)
                         : slot.label;
 
                       if (timeValue && !rangeLabel.toLowerCase().includes(timeValue.toLowerCase())) {
@@ -1252,7 +1291,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                     })}
 
                     {timeValue && !eligibleTimeSlots.some(slot => {
-                      const rangeLabel = selectedSubject ? getMeetingTimeLabel(slot, selectedSubject.hoursPerMeeting) : slot.label;
+                      const rangeLabel = selectedSubject ? getMeetingTimeLabel(slot, currentRenderHours) : slot.label;
                       return rangeLabel.toLowerCase() === timeValue.toLowerCase();
                     }) && (
                         <div

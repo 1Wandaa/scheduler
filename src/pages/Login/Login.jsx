@@ -127,8 +127,7 @@ const Login = ({ onLogin }) => {
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'sections'), (snapshot) => {
       const secs = snapshot.docs.map(doc => ({
-  /*
-  -++6id: doc.id,
+        id: doc.id,
         ...doc.data()
       }));
       setFirestoreSections(secs);
@@ -158,8 +157,8 @@ const Login = ({ onLogin }) => {
     setSection('');
   };
 
-  cons
-   handleSubmit = async (e) => {    e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     setError('');
@@ -188,11 +187,8 @@ const Login = ({ onLogin }) => {
             return;
           }
 
-          // Validate Admin Security Passcode466  qwe62j?.,'';\';l;';;;';'';'/p;;/..fopotyuioty35678erty786r6tTRCRERTRasdfcvbnbc/./m,gkl;jk;';lkhjkl8ijm8ujmijjkb,k/ml,,l;;pl[p;;[-[[[;;'=-=['']\\]
-
-//,mcvfdfghjqwer\
-
-          const validAdminKey = (import.meta.env.VITE_AMIN_SECRET_KEY || '').trim();
+          // Validate Admin Security Passcode
+          const validAdminKey = (import.meta.env.VITE_ADMIN_SECRET_KEY || '').trim();
           if (!validAdminKey) {
             setError('Admin registration is currently disabled. Contact the system administrator.');
             return;
@@ -465,7 +461,7 @@ const Login = ({ onLogin }) => {
   const renderSignUp = () => (
     <>
       {/* Role Selection */}
-        < div className = "role-selector-container" >
+        <div className="role-selector-container">
         <label className="role-selector-label">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -506,7 +502,7 @@ const Login = ({ onLogin }) => {
             </div>
           </button>
         </div>
-      </div >
+      </div>
 
   { signUpRole === 'Admin' ? (
   <>
