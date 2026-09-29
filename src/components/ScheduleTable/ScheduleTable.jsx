@@ -86,6 +86,7 @@ function computeDeptColor(schedule, departments = []) {
 
 const ScheduleTable = React.memo(function ScheduleTable({
   schedules = [],
+  activeSchedules = [],
   onRemove,
   onUpdateSchedule,
   title = "ROOM SCHEDULE GRID",
@@ -687,7 +688,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
     setDraggingId(null);
     const scheduleId = e.dataTransfer.getData('scheduleId');
     if (!scheduleId || !onUpdateSchedule) return;
-    const movingSchedule = schedules.find(s => s.id === scheduleId);
+    const movingSchedule = schedules.find(s => String(s.id) === String(scheduleId));
     if (!movingSchedule) return;
     if (movingSchedule.day === day && String(movingSchedule.timeSlot?.id) === String(timeSlotId)) return;
 
@@ -715,10 +716,40 @@ const ScheduleTable = React.memo(function ScheduleTable({
       }
     }
 
+    // ALWAYS preserve duration by computing customLabel even if original had none, if it visually spanned > 30mins
+    const originalRange = getScheduleTimeRange(movingSchedule, scheduleMode);
+    if (!movingSchedule.timeSlot?.customLabel && originalRange.start > 0 && originalRange.end > 0) {
+        const durationMins = originalRange.end - originalRange.start;
+        if (durationMins > 30) {
+            const newStartStr = baseTimeSlot.time.split('-')[0].trim();
+            const newStartMins = parseTimeToMinutes(newStartStr);
+            if (newStartMins !== null) {
+                const newEndMins = newStartMins + durationMins;
+                const formatMin = (mins) => {
+                    const h = Math.floor(mins / 60);
+                    const m = mins % 60;
+                    const period = h >= 12 ? 'PM' : 'AM';
+                    const displayH = h % 12 === 0 ? 12 : h % 12;
+                    const displayM = m.toString().padStart(2, '0');
+                    return `${displayH}:${displayM} ${period}`;
+                };
+                finalTimeSlot.customLabel = `${newStartStr} - ${formatMin(newEndMins)}`;
+            }
+        }
+    }
+
     const candidate = { ...movingSchedule, day, timeSlot: finalTimeSlot };
-    const overlap = schedules.find(s => s.id !== scheduleId && schedulesOverlap(candidate, s, scheduleMode));
+    
+    const schedulesToCheck = activeSchedules && activeSchedules.length > 0 ? activeSchedules : schedules;
+    const overlap = schedulesToCheck.find(s => String(s.id) !== String(scheduleId) && schedulesOverlap(candidate, s, scheduleMode));
+    
     if (overlap) {
-      showToast('Cannot move schedule: the new time overlaps an existing class (room, faculty, or section).');
+      const isHidden = !schedules.some(vs => String(vs.id) === String(overlap.id));
+      if (isHidden) {
+        showToast(`Cannot move schedule: The new time overlaps a hidden schedule from another class (${overlap.section?.name || 'Unknown'}).`);
+      } else {
+        showToast('Cannot move schedule: the new time overlaps an existing visible class.');
+      }
       return;
     }
     const result = await onUpdateSchedule(scheduleId, day, finalTimeSlot);

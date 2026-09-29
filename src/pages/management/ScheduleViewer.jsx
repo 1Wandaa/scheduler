@@ -430,6 +430,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
             <div className="colored-schedule-wrapper">
                 <ScheduleTable
                     schedules={filteredSchedules}
+                    activeSchedules={schedules}
                     title={`${titlePrefix} SCHEDULE: ${titleName}`}
                     targetDepartment={viewType === 'department' ? selectedId : ''}
                     onUpdateSchedule={isAdmin ? onUpdateSchedule : undefined}

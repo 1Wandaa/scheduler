@@ -321,7 +321,7 @@ export function findScheduleConflicts(candidate, existingSchedules, { excludeSch
   };
 
   for (const s of existingSchedules) {
-    if (excludeScheduleId && s.id === excludeScheduleId) continue;
+    if (excludeScheduleId && String(s.id) === String(excludeScheduleId)) continue;
     if (!schedulesOverlap(candidateEntry, s, scheduleMode)) continue;
 
     if (!conflicts.room && entitiesMatch(candidate.room, s.room)) {

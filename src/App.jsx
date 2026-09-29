@@ -13,9 +13,31 @@ function App() {
   // Show a loading spinner while checking auth state
   if (loading) {
     return (
-      <div className="app-loading-container">
-        <div className="app-loading-spinner"></div>
-        <p className="app-loading-text">Loading SMARTSCHED...</p>
+      <div className="app-loading-container" style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '16px', background: 'var(--bg-main, #0f111a)' }}>
+        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <img 
+            src="/logo.png?v=1" 
+            alt="Loading" 
+            style={{ 
+              width: '86px', height: '86px', 
+              borderRadius: '50%', 
+              objectFit: 'cover',
+              backgroundColor: 'white',
+              border: '3px solid white',
+              boxShadow: '0 0 0 8px rgba(99, 102, 241, 0.15), 0 0 30px rgba(99, 102, 241, 0.4)',
+              animation: 'pulse-glow 2s ease-in-out infinite'
+            }} 
+            onError={e => e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png'}
+          />
+        </div>
+        <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '12px' }}>Loading SMARTSCHED...</div>
+        <style>{`
+          @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.15), 0 0 20px rgba(99, 102, 241, 0.3); }
+            50% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0.1), 0 0 40px rgba(99, 102, 241, 0.6); }
+            100% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.15), 0 0 20px rgba(99, 102, 241, 0.3); }
+          }
+        `}</style>
       </div>
     );
   }

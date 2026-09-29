@@ -330,6 +330,76 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     let profMaxUnitsCount = 0;
     const totalProfsChecked = profPool.length;
 
+    let validPlacements = [];
+
+    // Helper to score a candidate placement (Best Fit Heuristic)
+    const scorePlacement = (candidateDays, candidateTimeSlot, candidateRoom, candidateProf) => {
+      let score = 0;
+      const startIdx = getTimeSlotIndex(candidateTimeSlot, scheduleMode);
+      const neededSlots = slotsNeededFromIndex(startIdx, group.targetDuration || subject?.hoursPerMeeting, scheduleMode);
+      const endIdx = startIdx + neededSlots - 1;
+
+      for (const day of candidateDays) {
+        // 1. Check Section Adjacency (Prioritize keeping student schedules contiguous)
+        const secScheds = temp.filter(s => String(s.section?.id) === String(section?.id) && s.day === day);
+        let secAdjacent = false;
+        let secGaps = 0;
+        for (const s of secScheds) {
+          const sStart = getTimeSlotIndex(s.timeSlot, scheduleMode);
+          const sNeeded = slotsNeededFromIndex(sStart, s.hours || s.subject?.hoursPerMeeting, scheduleMode);
+          const sEnd = sStart + sNeeded - 1;
+          if (sEnd === startIdx - 1 || sStart === endIdx + 1) secAdjacent = true;
+          else {
+            // Penalize small un-fillable gaps (e.g. 1 slot = 30 mins, 2 slots = 1 hr)
+            const gap = sStart > endIdx ? sStart - endIdx - 1 : startIdx - sEnd - 1;
+            if (gap === 1) secGaps -= 50; // Severe penalty for 30min gap
+            else if (gap === 2) secGaps -= 10; // Moderate penalty for 60min gap
+          }
+        }
+        if (secAdjacent) score += 30;
+        if (secScheds.length === 0) score += 10; // First class of the day is fine
+        score += secGaps;
+
+        // 2. Check Professor Adjacency
+        const profScheds = temp.filter(s => String(s.professor?.id) === String(candidateProf.id) && s.day === day);
+        let profAdjacent = false;
+        let profGaps = 0;
+        for (const s of profScheds) {
+          const sStart = getTimeSlotIndex(s.timeSlot, scheduleMode);
+          const sNeeded = slotsNeededFromIndex(sStart, s.hours || s.subject?.hoursPerMeeting, scheduleMode);
+          const sEnd = sStart + sNeeded - 1;
+          if (sEnd === startIdx - 1 || sStart === endIdx + 1) profAdjacent = true;
+          else {
+            const gap = sStart > endIdx ? sStart - endIdx - 1 : startIdx - sEnd - 1;
+            if (gap === 1) profGaps -= 30;
+          }
+        }
+        if (profAdjacent) score += 20;
+        score += profGaps;
+
+        // 3. Check Room Adjacency
+        const roomScheds = temp.filter(s => String(s.room?.id) === String(candidateRoom.id) && s.day === day);
+        let roomAdjacent = false;
+        let roomGaps = 0;
+        for (const s of roomScheds) {
+          const sStart = getTimeSlotIndex(s.timeSlot, scheduleMode);
+          const sNeeded = slotsNeededFromIndex(sStart, s.hours || s.subject?.hoursPerMeeting, scheduleMode);
+          const sEnd = sStart + sNeeded - 1;
+          if (sEnd === startIdx - 1 || sStart === endIdx + 1) roomAdjacent = true;
+          else {
+            const gap = sStart > endIdx ? sStart - endIdx - 1 : startIdx - sEnd - 1;
+            if (gap === 1) roomGaps -= 20; // Try to avoid 30min room gaps
+          }
+        }
+        if (roomAdjacent) score += 15;
+        score += roomGaps;
+
+        // 4. Prefer earlier slots slightly
+        score -= (startIdx * 0.5);
+      }
+      return score;
+    };
+
     for (const professor of profPool) {
       if (signal?.aborted) return { success: false };
       await yieldToMain();
@@ -398,15 +468,8 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
           if (count === 2) {
             for (const pair of PREFERRED_PAIRS) {
               if (modeAllowsDay(pair[0]) && modeAllowsDay(pair[1]) && isFree(pair[0]) && isFree(pair[1])) {
-                const s1 = { room, professor, subject, section, day: pair[0], timeSlot, hours: group.targetDuration, component: group.component };
-                const s2 = { room, professor, subject, section, day: pair[1], timeSlot, hours: group.targetDuration, component: group.component };
-                const w1 = await wrappedAddSchedule(s1);
-                const w2 = await wrappedAddSchedule(s2);
-                if (w1?.ok !== false && w2?.ok !== false) {
-                  temp.push(s1, s2);
-                  results.push(s1, s2);
-                  return { success: true };
-                }
+                const score = scorePlacement(pair, timeSlot, room, professor);
+                validPlacements.push({ type: 'pair', days: pair, timeSlot, room, professor, score });
               }
             }
           }
@@ -417,17 +480,8 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
               ? ['Monday', 'Wednesday', 'Thursday']
               : ['Monday', 'Wednesday', 'Friday'];
             if (triple.every(d => modeAllowsDay(d) && isFree(d))) {
-              const s1 = { room, professor, subject, section, day: triple[0], timeSlot, hours: group.targetDuration, component: group.component };
-              const s2 = { room, professor, subject, section, day: triple[1], timeSlot, hours: group.targetDuration, component: group.component };
-              const s3 = { room, professor, subject, section, day: triple[2], timeSlot, hours: group.targetDuration, component: group.component };
-              const w1 = await wrappedAddSchedule(s1);
-              const w2 = await wrappedAddSchedule(s2);
-              const w3 = await wrappedAddSchedule(s3);
-              if (w1?.ok !== false && w2?.ok !== false && w3?.ok !== false) {
-                temp.push(s1, s2, s3);
-                results.push(s1, s2, s3);
-                return { success: true };
-              }
+              const score = scorePlacement(triple, timeSlot, room, professor);
+              validPlacements.push({ type: 'triple', days: triple, timeSlot, room, professor, score });
             }
           }
 
@@ -439,27 +493,49 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
               if (validDays.length === count) break;
             }
             if (validDays.length === count) {
-              let allOk = true;
-              const writes = [];
-              for (const d of validDays) {
-                const sc = { room, professor, subject, section, day: d, timeSlot, hours: group.targetDuration, component: group.component };
-                const w = await wrappedAddSchedule(sc);
-                if (w?.ok === false) { allOk = false; break; }
-                writes.push(sc);
-              }
-              if (allOk) {
-                temp.push(...writes);
-                results.push(...writes);
-                return { success: true };
-              }
+              const score = scorePlacement(validDays, timeSlot, room, professor);
+              validPlacements.push({ type: 'any', days: validDays, timeSlot, room, professor, score });
             }
           }
         }
       }
+    }
 
-      // FLEXIBLE TIME SLOT FALLBACK
-      // Each meeting can use a DIFFERENT time slot on different days.
-      if (!usePairsOnly && count >= 2) {
+    // Execute best placement if any found
+    if (validPlacements.length > 0) {
+      // Sort descending by score
+      validPlacements.sort((a, b) => b.score - a.score);
+
+      for (const placement of validPlacements) {
+        let allOk = true;
+        const writes = [];
+        for (const d of placement.days) {
+          const sc = { room: placement.room, professor: placement.professor, subject, section, day: d, timeSlot: placement.timeSlot, hours: group.targetDuration, component: group.component };
+          const w = await wrappedAddSchedule(sc);
+          if (w?.ok === false) { allOk = false; break; }
+          writes.push(sc);
+        }
+        if (allOk) {
+          temp.push(...writes);
+          results.push(...writes);
+          return { success: true };
+        }
+      }
+    }
+
+    // FLEXIBLE TIME SLOT FALLBACK
+    // Each meeting can use a DIFFERENT time slot on different days.
+    if (validPlacements.length === 0 && !usePairsOnly && count >= 2) {
+      for (const professor of profPool) {
+        const isStageLocked = isProfessorStageLocked(professor);
+        const prefRoomIds = professor.preferredRooms || [];
+        let sortedRoomPool = roomPool;
+        if (prefRoomIds.length > 0) {
+          const validPrefRooms = roomPool.filter((r) => prefRoomIds.some(id => String(id) === String(r.id)));
+          const nonPrefRooms = roomPool.filter((r) => !prefRoomIds.some(id => String(id) === String(r.id)));
+          sortedRoomPool = [...validPrefRooms, ...nonPrefRooms];
+        }
+
         const placedMeetings = [];
         const usedDays = new Set();
 

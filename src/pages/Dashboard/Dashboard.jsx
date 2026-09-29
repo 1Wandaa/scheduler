@@ -1,5 +1,5 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, useTransition } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SEMESTERS, SCHOOL_YEARS } from '../../config/constants';
 import { useFirestoreData } from '../../hooks/useFirestoreData';
@@ -56,9 +56,31 @@ const AssignmentHub = React.lazy(() => import('../management/AssignmentHub'));
 
 // Suspense fallback for lazy-loaded tabs
 const TabLoader = () => (
-  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '60px 0' }}>
-    <div style={{ width: '32px', height: '32px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '100px 0', gap: '16px' }}>
+    <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <img 
+        src="/logo.png?v=1" 
+        alt="Loading" 
+        style={{ 
+          width: '86px', height: '86px', 
+          borderRadius: '50%', 
+          objectFit: 'cover',
+          backgroundColor: 'white',
+          border: '3px solid white',
+          boxShadow: '0 0 0 8px rgba(99, 102, 241, 0.15), 0 0 30px rgba(99, 102, 241, 0.4)',
+          animation: 'pulse-glow 2s ease-in-out infinite'
+        }} 
+        onError={e => e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png'}
+      />
+    </div>
+    <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '12px' }}>Loading Module...</div>
+    <style>{`
+      @keyframes pulse-glow {
+        0% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.15), 0 0 20px rgba(99, 102, 241, 0.3); }
+        50% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0.1), 0 0 40px rgba(99, 102, 241, 0.6); }
+        100% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.15), 0 0 20px rgba(99, 102, 241, 0.3); }
+      }
+    `}</style>
   </div>
 );
 
@@ -75,15 +97,29 @@ const Dashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const pathParts = location.pathname.split('/');
-  const activeTab = pathParts[2] || (isStudent ? 'view-schedules' : 'dashboard');
+  const actualActiveTab = pathParts[2] || (isStudent ? 'view-schedules' : 'dashboard');
   const { confirm, prompt } = useGlobalDialog();
 
+  // Performance: Use transitions for heavy page renders
+  const [isPending, startTransition] = useTransition();
+  const [optimisticTab, setOptimisticTab] = useState(null);
+  
+  // Reset optimistic tab when URL finally updates
+  useEffect(() => {
+    setOptimisticTab(null);
+  }, [location.pathname]);
+
+  const activeTab = optimisticTab || actualActiveTab;
+
   const setActiveTab = (tab) => {
-    if (tab === 'dashboard') {
-      navigate('/dashboard');
-    } else {
-      navigate(`/dashboard/${tab}`);
-    }
+    if (tab === actualActiveTab) return;
+    startTransition(() => {
+      if (tab === 'dashboard') {
+        navigate('/dashboard');
+      } else {
+        navigate(`/dashboard/${tab}`);
+      }
+    });
   };
 
   // UI state
@@ -115,7 +151,12 @@ const Dashboard = ({ user, onLogout }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleTabClick = (tab) => { setActiveTab(tab); setIsMobileMenuOpen(false); };
+  const handleTabClick = (tab) => { 
+    if (tab === actualActiveTab) return;
+    setOptimisticTab(tab); 
+    setIsMobileMenuOpen(false); 
+    setActiveTab(tab); 
+  };
 
   const handleAutoScheduleAction = async (mode) => {
     setIsFabHidden(true);
@@ -194,7 +235,7 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const handleUpdateSchedule = async (scheduleId, newDay, newTimeSlot) => {
-    const sched = schedules.find(s => s.id === scheduleId) || enrichedSchedules.find(s => s.id === scheduleId);
+    const sched = schedules.find(s => String(s.id) === String(scheduleId)) || enrichedSchedules.find(s => String(s.id) === String(scheduleId));
     const res = await updateSchedule(scheduleId, newDay, newTimeSlot, schedules, enrichedSchedules, rooms, isAdmin);
     if (res?.ok !== false) {
       logActivity({
@@ -207,7 +248,7 @@ const Dashboard = ({ user, onLogout }) => {
   };
 
   const handleRemoveSchedule = async (scheduleId) => {
-    const sched = schedules.find(s => s.id === scheduleId) || enrichedSchedules.find(s => s.id === scheduleId);
+    const sched = schedules.find(s => String(s.id) === String(scheduleId)) || enrichedSchedules.find(s => String(s.id) === String(scheduleId));
     const res = await removeSchedule(scheduleId, isAdmin);
     if (res?.ok !== false) {
       logActivity({
@@ -593,56 +634,59 @@ const Dashboard = ({ user, onLogout }) => {
         )}
 
         {/* Other Tabs — wrapped in Suspense for code-split chunks */}
-        <Suspense fallback={<TabLoader />}>
-        {isAdmin && activeTab === 'users' && <UserManagement user={user} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'schedule' && (
-          <div className="schedule-grid" style={{  }}>
-            {!isMobile && (
-              <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} onLogHistory={handleLogHistory} validator={validator} activeSemester={activeSemester} activeSchedules={enrichedSchedules} />
-            )}
-            <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onAutoScheduleBatch={handleAddSchedulesBatch} onLogHistory={handleLogHistory} />
-          </div>
-        )}
-        {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} professors={professors} schedules={displaySchedules} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'availability' && <RoomAvailability rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'faculty-availability' && <FacultyAvailability professors={professors} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'departments' && <DepartmentManagement departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'courses' && <CourseManagement courses={courses} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'assignments' && <AssignmentHub sections={sections} professors={professors} subjects={subjects} departments={departments} courses={courses} activeSemester={activeSemester} user={user} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
-        {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} professors={professors} sections={sections} schedules={displaySchedules} availableSemesters={availableSemesters} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
-        {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} user={user} />}
-        {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
-        {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} subjects={subjects} />}
-        {isAdmin && activeTab === 'recycle-bin' && <RecycleBin user={user} onBack={() => setActiveTab('dashboard')} />}
-        {isAdmin && activeTab === 'activity-log' && (
-          <ActivityLog
-            onBack={() => setActiveTab('dashboard')}
-            onViewProfile={(username) => {
-              setTargetProfileUsername(username);
-              setActiveTab('profile');
-            }}
-          />
-        )}
+        {isPending && <TabLoader />}
+        <div style={{ display: isPending ? 'none' : 'block' }}>
+          <Suspense fallback={<TabLoader />}>
+          {isAdmin && actualActiveTab === 'users' && <UserManagement user={user} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && actualActiveTab === 'schedule' && (
+            <div className="schedule-grid" style={{  }}>
+              {!isMobile && (
+                <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} onLogHistory={handleLogHistory} validator={validator} activeSemester={activeSemester} activeSchedules={enrichedSchedules} />
+              )}
+              <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onAutoScheduleBatch={handleAddSchedulesBatch} onLogHistory={handleLogHistory} />
+            </div>
+          )}
+          {isAdmin && actualActiveTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && actualActiveTab === 'rooms' && <RoomManagement rooms={rooms} professors={professors} schedules={displaySchedules} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && actualActiveTab === 'availability' && <RoomAvailability rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && actualActiveTab === 'faculty-availability' && <FacultyAvailability professors={professors} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && actualActiveTab === 'departments' && <DepartmentManagement departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && actualActiveTab === 'courses' && <CourseManagement courses={courses} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && actualActiveTab === 'assignments' && <AssignmentHub sections={sections} professors={professors} subjects={subjects} departments={departments} courses={courses} activeSemester={activeSemester} user={user} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && actualActiveTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
+          {isAdmin && actualActiveTab === 'subjects' && <SubjectManagement subjects={subjects} professors={professors} sections={sections} schedules={displaySchedules} availableSemesters={availableSemesters} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
+          {isAdmin && actualActiveTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} user={user} />}
+          {isAdmin && actualActiveTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
+          {isAdmin && actualActiveTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} subjects={subjects} />}
+          {isAdmin && actualActiveTab === 'recycle-bin' && <RecycleBin user={user} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && actualActiveTab === 'activity-log' && (
+            <ActivityLog
+              onBack={() => setActiveTab('dashboard')}
+              onViewProfile={(username) => {
+                setTargetProfileUsername(username);
+                setActiveTab('profile');
+              }}
+            />
+          )}
 
-        {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
-        {activeTab === 'view-schedules' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={displaySchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} onRemoveSchedule={handleRemoveSchedule} onRemoveSchedulesBatch={handleRemoveSchedulesBatch} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} departments={departments} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
+          {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
+          {actualActiveTab === 'view-schedules' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={displaySchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} onRemoveSchedule={handleRemoveSchedule} onRemoveSchedulesBatch={handleRemoveSchedulesBatch} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} departments={departments} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
 
-        {activeTab === 'profile' && (
-          <Profile
-            user={{
-              username: targetProfileUsername || user.username,
-              role: (targetProfileUsername && targetProfileUsername !== user.username) ? '' : user.role
-            }}
-            readOnly={!!targetProfileUsername && targetProfileUsername !== user.username}
-            onBack={() => {
-              setTargetProfileUsername(null);
-              setActiveTab(isAdmin ? 'dashboard' : 'view-schedules');
-            }}
-          />
-        )}
-        </Suspense>
+          {actualActiveTab === 'profile' && (
+            <Profile
+              user={{
+                username: targetProfileUsername || user.username,
+                role: (targetProfileUsername && targetProfileUsername !== user.username) ? '' : user.role
+              }}
+              readOnly={!!targetProfileUsername && targetProfileUsername !== user.username}
+              onBack={() => {
+                setTargetProfileUsername(null);
+                setActiveTab(isAdmin ? 'dashboard' : 'view-schedules');
+              }}
+            />
+          )}
+          </Suspense>
+        </div>
 
       </div>
       <Suspense fallback={null}>

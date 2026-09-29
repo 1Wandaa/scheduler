@@ -217,7 +217,7 @@ export async function updateSchedule(scheduleId, newDay, newTimeSlotOrId, schedu
     newTimeSlot = TIME_SLOTS.find((ts) => String(ts.id) === String(newTimeSlotOrId));
   }
 
-  const existing = schedules.find((s) => s.id === scheduleId);
+  const existing = schedules.find((s) => String(s.id) === String(scheduleId));
   if (!existing) return { ok: false, errors: ['Schedule not found.'] };
 
   const check = validateScheduleEntry(
