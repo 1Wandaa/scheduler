@@ -744,11 +744,32 @@ const ScheduleTable = React.memo(function ScheduleTable({
     const overlap = schedulesToCheck.find(s => String(s.id) !== String(scheduleId) && schedulesOverlap(candidate, s, scheduleMode));
     
     if (overlap) {
+      const roomConflict = candidate.room?.id && overlap.room?.id && String(candidate.room.id) === String(overlap.room.id);
+      const profConflict = candidate.professor?.id && overlap.professor?.id && String(candidate.professor.id) === String(overlap.professor.id);
+      const sectionConflict = candidate.section?.id && overlap.section?.id && String(candidate.section.id) === String(overlap.section.id);
+      
+      let reasons = [];
+      if (roomConflict) reasons.push(`Room`);
+      if (profConflict) reasons.push(`Faculty`);
+      if (sectionConflict) reasons.push(`Section`);
+      
+      const reasonStr = reasons.join(' and ');
       const isHidden = !schedules.some(vs => String(vs.id) === String(overlap.id));
+      
+      // Build specific details string
+      const subjStr = overlap.subject?.code || overlap.subject?.name || 'Unknown Subject';
+      const secStr = overlap.section?.name || 'Unknown Section';
+      const profStr = overlap.professor?.name || 'Unknown Faculty';
+      const roomStr = overlap.room?.name || 'Unknown Room';
+      const timeStr = overlap.timeSlot?.customLabel || overlap.timeSlot?.label || overlap.timeSlot?.time || 'Unknown Time';
+      const dayStr = overlap.day || 'Unknown Day';
+      
+      const detailsMsg = `Conflict in ${reasonStr}:\nOverlaps with ${subjStr} (${secStr})\nProf. ${profStr} • ${roomStr}\n${dayStr} @ ${timeStr}`;
+
       if (isHidden) {
-        showToast(`Cannot move schedule: The new time overlaps a hidden schedule from another class (${overlap.section?.name || 'Unknown'}).`);
+        showToast(`Cannot move schedule (Hidden Class):\n${detailsMsg}`);
       } else {
-        showToast('Cannot move schedule: the new time overlaps an existing visible class.');
+        showToast(`Cannot move schedule:\n${detailsMsg}`);
       }
       return;
     }

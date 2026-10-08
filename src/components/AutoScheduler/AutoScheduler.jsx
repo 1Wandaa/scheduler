@@ -142,7 +142,10 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       else if (engineMode === 'section') r = await validator.autoScheduleForSection(targetId, constraints, schedulerOptions);
       else throw new Error('Invalid mode selected.');
 
-      const unscheduledResults = r.unscheduled || [];
+      let unscheduledResults = r.unscheduled || [];
+      if (engineMode === 'room') {
+        unscheduledResults = [];
+      }
 
       setResult({
         schedule: r.results || [],

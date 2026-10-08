@@ -846,18 +846,22 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     if (placed?.success) {
       placedKeys.add(groupKey);
     } else {
-      let reason = placed?.reason || 'No open time slot found for any available faculty and room.';
-      if (constraints?.respectLabs && group.subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
-        reason = `This subject needs a computer lab, but "${fixedRoom.name}" doesn't have computers.`;
-      } else if (constraints?.respectLabs && group.subject?.isFoodLab && fixedRoom && !fixedRoom.isFoodLab) {
-        reason = `This subject needs a food lab, but "${fixedRoom.name}" isn't one.`;
+      // OPTIMIZATION: Do not throw/record unscheduled errors if we are just packing a specific room or professor.
+      // Failing to fit the entire school into one room/prof is expected, not an error.
+      if (!constraints?.fixedRoom && !constraints?.fixedProfessor) {
+        let reason = placed?.reason || 'No open time slot found for any available faculty and room.';
+        if (constraints?.respectLabs && group.subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
+          reason = `This subject needs a computer lab, but "${fixedRoom.name}" doesn't have computers.`;
+        } else if (constraints?.respectLabs && group.subject?.isFoodLab && fixedRoom && !fixedRoom.isFoodLab) {
+          reason = `This subject needs a food lab, but "${fixedRoom.name}" isn't one.`;
+        }
+        unscheduled.push({
+          subject: group.subject,
+          section: group.section,
+          reason,
+          details: placed?.details || null
+        });
       }
-      unscheduled.push({
-        subject: group.subject,
-        section: group.section,
-        reason,
-        details: placed?.details || null
-      });
     }
     await reportProgress(3, i, remainingAfterPass2.length);
   }
@@ -1086,7 +1090,16 @@ export async function autoScheduleForRoom(roomId, context, constraints, addSched
   const room = rooms.find((r) => r.id === roomId);
   if (!room) return { results: [], unscheduled: [], error: `Room "${roomId}" not found.` };
 
-  const assignments = buildAssignments(subjects, sections, activeSemester, null);
+  const filter = (subject) => {
+    // Optimization: Skip subjects that definitely cannot fit in this room due to lab constraints
+    if (constraints?.respectLabs) {
+      if (subject.requiredLab && !room.hasComputers) return false;
+      if (subject.isFoodLab && !room.isFoodLab) return false;
+    }
+    return true;
+  };
+
+  const assignments = buildAssignments(subjects, sections, activeSemester, filter);
   return runTargetedScheduler(assignments, context, { ...constraints, fixedRoom: room }, addScheduleFn, options);
 }
 
