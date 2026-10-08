@@ -3,59 +3,60 @@
    Print Styles for Colored Mode 
    ========================= */
 @media print {
-    /* Override PrintableSchedule.css global hide */
-    body.print-colored-mode * {
-        visibility: visible !important;
-    }
 
-    /* Page layout */
-    @page {
-        size: landscape;
-        margin: 10mm;
-    }
+  /* Override PrintableSchedule.css global hide */
+  body.print-colored-mode * {
+    visibility: visible !important;
+  }
 
-    /* Hide layout elements that are not the schedule table */
-    body.print-colored-mode .sidebar,
-    body.print-colored-mode .main-content > header,
-    body.print-colored-mode .mobile-menu-btn,
-    body.print-colored-mode .schedule-toolbar,
-    body.print-colored-mode .floating-exit-btn,
-    body.print-colored-mode .rotate-device-hint,
-    body.print-colored-mode .btn,
-    body.print-colored-mode .no-print,
-    body.print-colored-mode .printable-iso-document,
-    body.print-colored-mode .schedule-filters {
-        display: none !important;
-    }
+  /* Page layout */
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
 
-    body.print-colored-mode .main-content {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100% !important;
-    }
+  /* Hide layout elements that are not the schedule table */
+  body.print-colored-mode .sidebar,
+  body.print-colored-mode .main-content>header,
+  body.print-colored-mode .mobile-menu-btn,
+  body.print-colored-mode .schedule-toolbar,
+  body.print-colored-mode .floating-exit-btn,
+  body.print-colored-mode .rotate-device-hint,
+  body.print-colored-mode .btn,
+  body.print-colored-mode .no-print,
+  body.print-colored-mode .printable-iso-document,
+  body.print-colored-mode .schedule-filters {
+    display: none !important;
+  }
 
-    body.print-colored-mode .colored-schedule-wrapper {
-        width: 100% !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-        /* Scale down to ensure it fits completely within one page vertically */
-        zoom: 0.85; 
-        transform-origin: top center;
-    }
+  body.print-colored-mode .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
 
-    body.print-colored-mode .schedule-table-container {
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-    }
+  body.print-colored-mode .colored-schedule-wrapper {
+    width: 100% !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    /* Scale down to ensure it fits completely within one page vertically */
+    zoom: 0.85;
+    transform-origin: top center;
+  }
 
-    /* Force background colors to print */
-    body.print-colored-mode {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
+  body.print-colored-mode .schedule-table-container {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Force background colors to print */
+  body.print-colored-mode {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }
 
 .schedule-table-container {
@@ -72,7 +73,8 @@
   z-index: 99999;
   background: #ffffff !important;
   padding: 0 !important;
-  overflow: hidden; /* prevent scrolling to fit in one page */
+  overflow: hidden;
+  /* prevent scrolling to fit in one page */
   border-radius: 0 !important;
   margin: 0 !important;
   display: flex;
@@ -91,7 +93,8 @@
 
 .schedule-fullscreen .table-wrapper {
   flex: 1;
-  overflow: auto; /* allow panning */
+  overflow: auto;
+  /* allow panning */
   box-shadow: none !important;
   border-radius: 0 !important;
   background: #fff;
@@ -104,7 +107,8 @@
 .schedule-fullscreen .schedule-table {
   width: auto;
   min-width: 680px;
-  margin: auto; /* Safe centering that doesn't clip top/left when overflowing */
+  margin: auto;
+  /* Safe centering that doesn't clip top/left when overflowing */
 }
 
 .schedule-fullscreen .schedule-table th {
@@ -394,6 +398,7 @@
 .schedule-table tr.half-hour-row td:not(.time-label) {
   border-top: none;
 }
+
 .schedule-table tr.hour-row td:not(.time-label) {
   border-bottom: none;
 }
@@ -444,7 +449,7 @@
   border-radius: 4px;
 }
 
-.schedule-item + .schedule-item {
+.schedule-item+.schedule-item {
   border-top: 1px dashed rgba(0, 0, 0, 0.2);
 }
 
@@ -678,16 +683,20 @@
   .schedule-summary-container h3 {
     font-size: 0.85rem !important;
   }
+
   .schedule-summary-container h4 {
     font-size: 0.75rem !important;
   }
+
   .schedule-summary-container p {
     font-size: 0.65rem !important;
   }
+
   .schedule-summary-table {
     font-size: 0.65rem !important;
   }
-  .schedule-summary-table th, 
+
+  .schedule-summary-table th,
   .schedule-summary-table td {
     padding: 3px !important;
   }

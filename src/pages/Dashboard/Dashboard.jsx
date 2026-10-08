@@ -562,9 +562,9 @@ const Dashboard = ({ user, onLogout }) => {
                     <tbody>
                       {professors.slice(0, 3).map(p => (
                         <tr key={p.id}>
-                          <td style={{ fontWeight: 600 }}>{p.name}</td>
-                          <td><span style={{ fontSize: '0.78rem', padding: '2px 8px', borderRadius: 6, background: '#EEF2FF', color: '#5645EE', fontWeight: 600 }}>{p.department}</span></td>
-                          <td style={{ textAlign: 'center', fontWeight: 600 }}>{p.maxUnits || p.maxHours || 12}</td>
+                          <td data-label="Name" style={{ fontWeight: 600 }}>{p.name}</td>
+                          <td data-label="Department"><span style={{ fontSize: '0.78rem', padding: '2px 8px', borderRadius: 6, background: '#EEF2FF', color: '#5645EE', fontWeight: 600 }}>{p.department}</span></td>
+                          <td data-label="Max Units" style={{ textAlign: 'center', fontWeight: 600 }}>{p.maxUnits || p.maxHours || 12}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -597,9 +597,9 @@ const Dashboard = ({ user, onLogout }) => {
                     <tbody>
                       {rooms.slice(0, 3).map(r => (
                         <tr key={r.id}>
-                          <td style={{ fontWeight: 600 }}>{r.name}</td>
-                          <td><span style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.03em' }}>{r.type}</span></td>
-                          <td style={{ textAlign: 'center' }}>
+                          <td data-label="Name" style={{ fontWeight: 600 }}>{r.name}</td>
+                          <td data-label="Type"><span style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.03em' }}>{r.type}</span></td>
+                          <td data-label="Lab?" style={{ textAlign: 'center' }}>
                             <span style={{
                               fontSize: '0.73rem', padding: '3px 10px', borderRadius: 20, fontWeight: 700,
                               background: r.hasComputers ? 'linear-gradient(135deg, #E6F8F0, #D1FAE5)' : '#F1F5F9',

@@ -92,19 +92,20 @@ const PrintableRoomUtilization = ({ scheduleItems = [], roomName = '', semesterI
     }, [activeTimeSlots, days, scheduleGridMap, scheduleMode]);
 
     return (
-        <div className="printable-room-utilization" style={{ 
-            fontFamily: '"Times New Roman", Times, serif', 
-            color: '#000', 
-            background: '#fff', 
-            width: '100%', 
-            maxWidth: '8.5in', 
-            margin: '0 auto', 
-            padding: '20px 40px', 
-            boxSizing: 'border-box',
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: '100%'
-        }}>
+        <div className="printable-room-utilization-wrapper" style={{ width: '100%', overflowX: 'auto' }}>
+            <div className="printable-room-utilization" style={{ 
+                fontFamily: '"Times New Roman", Times, serif', 
+                color: '#000', 
+                background: '#fff', 
+                width: '100%', 
+                maxWidth: '8.5in', 
+                margin: '0 auto', 
+                padding: '20px 40px', 
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: '100%'
+            }}>
             <style>{`
                 .room-util-timetable th, .room-util-timetable td {
                     border: 1px solid #000;
@@ -120,6 +121,15 @@ const PrintableRoomUtilization = ({ scheduleItems = [], roomName = '', semesterI
                 }
                 .room-util-timetable td {
                     height: 25px; /* Minimum height for a 30-min block */
+                }
+                @media (max-width: 768px) {
+                    .printable-room-utilization-wrapper {
+                        zoom: 0.5;
+                    }
+                    .printable-room-utilization {
+                        min-width: 680px !important;
+                        padding: 10px 15px !important;
+                    }
                 }
             `}</style>
 
@@ -257,6 +267,7 @@ const PrintableRoomUtilization = ({ scheduleItems = [], roomName = '', semesterI
             </div>
             
             <div style={{ marginTop: '30px' }}></div>
+        </div>
         </div>
     );
 };

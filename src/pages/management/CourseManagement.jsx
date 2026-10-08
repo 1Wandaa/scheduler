@@ -410,8 +410,10 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
                         border: `1px solid ${getDeptColor(course.departmentId)}40`,
                         boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
                       }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: getDeptColor(course.departmentId) }}></div>
-                        {getDeptName(course.departmentId)}
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: getDeptColor(course.departmentId), flexShrink: 0 }}></div>
+                        <span style={{ minWidth: 0, textAlign: 'right', wordBreak: 'break-word' }}>
+                          {getDeptName(course.departmentId)}
+                        </span>
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }} data-label="Actions">

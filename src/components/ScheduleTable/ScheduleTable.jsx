@@ -719,43 +719,43 @@ const ScheduleTable = React.memo(function ScheduleTable({
     // ALWAYS preserve duration by computing customLabel even if original had none, if it visually spanned > 30mins
     const originalRange = getScheduleTimeRange(movingSchedule, scheduleMode);
     if (!movingSchedule.timeSlot?.customLabel && originalRange.start > 0 && originalRange.end > 0) {
-        const durationMins = originalRange.end - originalRange.start;
-        if (durationMins > 30) {
-            const newStartStr = baseTimeSlot.time.split('-')[0].trim();
-            const newStartMins = parseTimeToMinutes(newStartStr);
-            if (newStartMins !== null) {
-                const newEndMins = newStartMins + durationMins;
-                const formatMin = (mins) => {
-                    const h = Math.floor(mins / 60);
-                    const m = mins % 60;
-                    const period = h >= 12 ? 'PM' : 'AM';
-                    const displayH = h % 12 === 0 ? 12 : h % 12;
-                    const displayM = m.toString().padStart(2, '0');
-                    return `${displayH}:${displayM} ${period}`;
-                };
-                finalTimeSlot.customLabel = `${newStartStr} - ${formatMin(newEndMins)}`;
-            }
+      const durationMins = originalRange.end - originalRange.start;
+      if (durationMins > 30) {
+        const newStartStr = baseTimeSlot.time.split('-')[0].trim();
+        const newStartMins = parseTimeToMinutes(newStartStr);
+        if (newStartMins !== null) {
+          const newEndMins = newStartMins + durationMins;
+          const formatMin = (mins) => {
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            const period = h >= 12 ? 'PM' : 'AM';
+            const displayH = h % 12 === 0 ? 12 : h % 12;
+            const displayM = m.toString().padStart(2, '0');
+            return `${displayH}:${displayM} ${period}`;
+          };
+          finalTimeSlot.customLabel = `${newStartStr} - ${formatMin(newEndMins)}`;
         }
+      }
     }
 
     const candidate = { ...movingSchedule, day, timeSlot: finalTimeSlot };
-    
+
     const schedulesToCheck = activeSchedules && activeSchedules.length > 0 ? activeSchedules : schedules;
     const overlap = schedulesToCheck.find(s => String(s.id) !== String(scheduleId) && schedulesOverlap(candidate, s, scheduleMode));
-    
+
     if (overlap) {
       const roomConflict = candidate.room?.id && overlap.room?.id && String(candidate.room.id) === String(overlap.room.id);
       const profConflict = candidate.professor?.id && overlap.professor?.id && String(candidate.professor.id) === String(overlap.professor.id);
       const sectionConflict = candidate.section?.id && overlap.section?.id && String(candidate.section.id) === String(overlap.section.id);
-      
+
       let reasons = [];
       if (roomConflict) reasons.push(`Room`);
       if (profConflict) reasons.push(`Faculty`);
       if (sectionConflict) reasons.push(`Section`);
-      
+
       const reasonStr = reasons.join(' and ');
       const isHidden = !schedules.some(vs => String(vs.id) === String(overlap.id));
-      
+
       // Build specific details string
       const subjStr = overlap.subject?.code || overlap.subject?.name || 'Unknown Subject';
       const secStr = overlap.section?.name || 'Unknown Section';
@@ -763,7 +763,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
       const roomStr = overlap.room?.name || 'Unknown Room';
       const timeStr = overlap.timeSlot?.customLabel || overlap.timeSlot?.label || overlap.timeSlot?.time || 'Unknown Time';
       const dayStr = overlap.day || 'Unknown Day';
-      
+
       const detailsMsg = `Conflict in ${reasonStr}:\nOverlaps with ${subjStr} (${secStr})\nProf. ${profStr} • ${roomStr}\n${dayStr} @ ${timeStr}`;
 
       if (isHidden) {
