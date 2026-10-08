@@ -2,6 +2,22 @@ import React, { useMemo } from 'react';
 import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS } from '../../config/constants';
 import { slotsNeededFromIndex, getMeetingTimeLabel } from '../../utils/scheduleUtils';
 
+// Helper: Format professor name compactly to match ScheduleTable
+function formatProfessorName(name) {
+    if (!name) return '—';
+    const clean = name.trim();
+    if (clean.includes(',')) {
+        const [surname, firstNames] = clean.split(',').map(s => s.trim());
+        const initial = firstNames ? firstNames[0].toUpperCase() : '';
+        return initial ? `${initial}. ${surname}` : surname;
+    }
+    const parts = clean.split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    const initial = parts[0][0].toUpperCase();
+    const surname = parts.slice(1).join(' ');
+    return `${initial}. ${surname}`;
+}
+
 const PrintableRoomUtilization = ({ scheduleItems = [], roomName = '', semesterInfo = '', scheduleMode = 'standard' }) => {
     const isFourDay = scheduleMode === 'fourDay';
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -207,7 +223,7 @@ const PrintableRoomUtilization = ({ scheduleItems = [], roomName = '', semesterI
                                             {cls ? (
                                                 <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', lineHeight: '1.2' }}>
                                                     <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{cls.subject?.code || 'N/A'}</div>
-                                                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{cls.professor?.name?.split(' ')?.map(n=>n[0])?.join('') + '.' + cls.professor?.name?.split(' ')?.pop() || 'TBA'}</div>
+                                                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{formatProfessorName(cls.professor?.name) || 'TBA'}</div>
                                                     <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{roomName || cls.room?.name || 'TBA'}</div>
                                                     <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{cls.section?.name || 'N/A'}</div>
                                                 </div>

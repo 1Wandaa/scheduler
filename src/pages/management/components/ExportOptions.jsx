@@ -77,7 +77,172 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                     <button 
                         onClick={() => {
                             setIsExportOpen(false);
-                            exportIsoToWord(user);
+                            const printContent = document.querySelector('.printable-iso-document') || document.querySelector('.printable-room-utilization');
+                            if (!printContent) return;
+                            
+                            if (printContent.classList.contains('printable-room-utilization')) {
+                                const clone = printContent.cloneNode(true);
+                                
+                                // Extract specific divs since PrintableRoomUtilization uses inline styles instead of class names
+                                const directDivs = Array.from(clone.children).filter(c => c.tagName === 'DIV');
+                                
+                                const headerDiv = directDivs.find(d => d.querySelector('img')); // The header contains the logo
+                                if (headerDiv) {
+                                    headerDiv.remove();
+                                }
+                                
+                                const titlesDiv = directDivs.find(d => d.querySelector('h3') && d.textContent.includes('Room Utilization'));
+                                if (titlesDiv) {
+                                    const h2 = titlesDiv.querySelector('h2');
+                                    if (h2) h2.remove();
+                                }
+
+                                const sigsDiv = directDivs.find(d => d.textContent.includes('Prepared by:'));
+                                if (sigsDiv) {
+                                    const blocks = Array.from(sigsDiv.children);
+                                    const tableHtml = `
+                                        <table cellspacing="0" cellpadding="0" style="width: 570pt; margin-top: 15pt; border: 1px solid #ffffff; border-collapse: collapse;">
+                                            <tr>
+                                                ${blocks.map(block => `
+                                                    <td style="width: ${570 / blocks.length}pt; border: 1px solid #ffffff; text-align: left; vertical-align: top; font-size: 8pt; padding: 0;">
+                                                        ${block.innerHTML}
+                                                    </td>
+                                                `).join('')}
+                                            </tr>
+                                        </table>
+                                    `;
+                                    sigsDiv.outerHTML = tableHtml;
+                                }
+
+                                // Force the timetable and subjects to have exact widths and heights to prevent resizing
+                                const timetable = clone.querySelector('.room-util-timetable');
+                                if (timetable) {
+                                    timetable.setAttribute('width', '570');
+                                    timetable.style.width = '570pt';
+                                    timetable.style.tableLayout = 'fixed';
+                                    
+                                    const ths = timetable.querySelectorAll('thead th');
+                                    if (ths.length > 0) {
+                                        const colgroup = document.createElement('colgroup');
+                                        const timeColWidth = 65;
+                                        const dayColWidth = (570 - timeColWidth) / (ths.length > 1 ? ths.length - 1 : 1);
+                                        ths.forEach((th, idx) => {
+                                            const w = idx === 0 ? timeColWidth : dayColWidth;
+                                            th.setAttribute('width', w);
+                                            th.style.width = w + 'pt';
+                                            const col = document.createElement('col');
+                                            col.setAttribute('width', w);
+                                            col.style.width = w + 'pt';
+                                            colgroup.appendChild(col);
+                                        });
+                                        timetable.insertBefore(colgroup, timetable.firstChild);
+                                    }
+
+                                    timetable.querySelectorAll('tr').forEach((tr, idx) => {
+                                        tr.style.height = '25pt';
+                                        tr.style.msoHeightRule = 'exactly';
+                                        
+                                        const isHourRow = tr.classList.contains('hour-row');
+                                        const isHalfHourRow = tr.classList.contains('half-hour-row');
+                                        
+                                        Array.from(tr.children).forEach(td => {
+                                            if (!td.classList.contains('time-cell') && !td.classList.contains('scheduled-cell')) {
+                                                if (isHourRow) {
+                                                    td.style.borderBottom = '1px solid #ffffff';
+                                                }
+                                                if (isHalfHourRow) {
+                                                    td.style.borderTop = '1px solid #ffffff';
+                                                }
+                                            }
+                                        });
+                                    });
+                                }
+                                
+                                const tables = Array.from(clone.querySelectorAll('table'));
+                                const subjectsTable = tables.find(t => !t.classList.contains('room-util-timetable'));
+                                if (subjectsTable) {
+                                    subjectsTable.setAttribute('width', '570');
+                                    subjectsTable.style.width = '570pt';
+                                }
+
+                                const roomPrintStyles = `
+                                    @page Section1 {
+                                        size: 8.5in 11.0in;
+                                        margin: 0.1in;
+                                        mso-header-margin: 0in;
+                                        mso-footer-margin: 0in;
+                                        mso-paper-source: 0;
+                                    }
+                                    div.Section1 { page: Section1; width: 570pt; margin: 0 auto; }
+                                    html, body, div, p, h1, h2, h3, h4, h5, h6 { 
+                                        margin: 0; padding: 0; 
+                                        mso-line-height-rule: exactly; 
+                                        line-height: 1.0; 
+                                    }
+                                    table { border-collapse: collapse; page-break-inside: avoid; mso-table-lspace: 0pt; mso-table-rspace: 0pt; margin: 0; padding: 0; }
+                                    tr { page-break-inside: avoid; }
+                                    td, th { overflow: hidden; }
+                                    
+                                    /* Aggressive resizing for 1-page fit */
+                                    h3, h2 { font-size: 10pt !important; margin-bottom: 2pt !important; }
+                                    p { font-size: 8pt !important; }
+                                    span { font-size: 9pt !important; padding: 1pt 4pt !important; margin-bottom: 2pt !important; }
+                                    
+                                    /* Subjects Table */
+                                    table:not(.room-util-timetable) th, 
+                                    table:not(.room-util-timetable) td { 
+                                        font-size: 7.5pt !important; 
+                                        padding: 1pt !important; 
+                                    }
+                                    
+                                    /* Timetable Grid */
+                                    .room-util-timetable th { 
+                                        font-size: 7pt !important; 
+                                        padding: 1pt !important; 
+                                    }
+                                    .room-util-timetable td { 
+                                        padding: 0 !important; 
+                                    }
+                                    .room-util-timetable td div { 
+                                        font-size: 6.5pt !important; 
+                                    }
+                                    
+                                    /* Signatures */
+                                    table[style*="margin-top: 15pt"] { margin-top: 5pt !important; }
+                                    table[style*="margin-top: 15pt"] td div { margin-bottom: 5pt !important; font-size: 7.5pt !important; }
+                                `;
+                                const htmlContent = `
+                                    <html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:m="http://schemas.microsoft.com/office/2004/12/omml" xmlns="http://www.w3.org/TR/REC-html40">
+                                    <head>
+                                        <meta charset="utf-8">
+                                        <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->
+                                        <style>${roomPrintStyles}</style>
+                                    </head>
+                                    <body>
+                                        <div class="Section1">
+                                            ${clone.innerHTML}
+                                        </div>
+                                    </body>
+                                    </html>
+                                `;
+                                const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword;charset=utf-8' });
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = `Room_Utilization_Schedule_${Date.now()}.doc`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                                
+                                logActivity({
+                                    user,
+                                    action: LOG_ACTIONS.EXPORT,
+                                    details: 'Exported Room Utilization to Word document'
+                                });
+                            } else {
+                                exportIsoToWord(user);
+                            }
                         }} 
                         style={itemStyle}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}

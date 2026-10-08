@@ -176,11 +176,11 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
 
                 // A class on the department schedule belongs to this department's sections
                 // Check if the target department string is anywhere in the program, department, section name, or subject code
-                const isDeptSection = secDept === targetDept || 
-                                      secName.includes(targetDept) || 
-                                      secDept.includes(targetDept) ||
-                                      subjCode.includes(targetDept);
-                                      
+                const isDeptSection = secDept === targetDept ||
+                    secName.includes(targetDept) ||
+                    secDept.includes(targetDept) ||
+                    subjCode.includes(targetDept);
+
                 if (!isDeptSection) return false;
 
                 if (selectedYearLevel && !deptSectionId) {
