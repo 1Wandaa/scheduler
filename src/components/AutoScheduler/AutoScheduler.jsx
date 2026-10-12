@@ -129,7 +129,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       // Check again before starting scheduler
       if (controller.signal.aborted) return;
 
-      const constraints = { respectLabs, preventDoubleBooking, aiProfessorMap, scheduleMode };
+      const constraints = { respectLabs, preventDoubleBooking, aiProfessorMap, scheduleMode, aiAssisted };
       const schedulerOptions = {
         onProgress: (p) => setProgress(p),
         signal: controller.signal,

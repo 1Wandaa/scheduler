@@ -147,8 +147,8 @@ export function validateScheduleEntry(
     const session = `${s.subject?.code || 'a class'}${s.room?.name ? ` in ${s.room.name}` : ''}${s.professor?.name ? ` with ${s.professor.name}` : ''}`;
     errors.push(`Section "${section?.name}" already has a class on ${day} (${timeRange}): ${session}.`);
   }
-  if (subject?.requiredLab && !room?.hasComputers) errors.push(`Subject "${subject?.code || 'selected'}" requires a computer laboratory, but room "${room?.name || 'selected'}" does not have computers.`);
-  if (subject?.isFoodLab && !room?.isFoodLab) errors.push(`Subject "${subject?.code || 'selected'}" requires a food laboratory, but room "${room?.name || 'selected'}" is not a food laboratory.`);
+  if (subject?.requiredLab && component !== 'Lecture' && !room?.hasComputers) errors.push(`Subject "${subject?.code || 'selected'}" requires a computer laboratory, but room "${room?.name || 'selected'}" does not have computers.`);
+  if (subject?.isFoodLab && component !== 'Lecture' && !room?.isFoodLab) errors.push(`Subject "${subject?.code || 'selected'}" requires a food laboratory, but room "${room?.name || 'selected'}" is not a food laboratory.`);
 
   let suggestions = [];
   if (Object.keys(conflicts).length > 0 && rooms && rooms.length > 0) {

@@ -63,6 +63,7 @@ export const FOUR_DAY_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 // Preferred day pairs for the scheduling engine
 export const PREFERRED_PAIRS_STANDARD = [
   ['Monday', 'Thursday'],
+  ['Tuesday', 'Thursday'],
   ['Tuesday', 'Friday'],
   ['Monday', 'Wednesday'],
   ['Wednesday', 'Friday']
