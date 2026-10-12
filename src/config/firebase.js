@@ -3,6 +3,11 @@ import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
+import { 
+  initializeAppCheck, 
+  ReCaptchaEnterpriseProvider, 
+  ReCaptchaV3Provider 
+} from "firebase/app-check";
 
 // Firebase Configuration (from environment variables)
 export const firebaseConfig = {
@@ -26,6 +31,39 @@ for (const key of requiredKeys) {
 
 const app = initializeApp(firebaseConfig);
 try { getAnalytics(app); } catch (e) { console.warn('Firebase Analytics unavailable:', e.message); }
+
+// Initialize Firebase App Check to protect Firebase AI Logic & Gemini API calls
+export let appCheck = null;
+const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || import.meta.env.VITE_FIREBASE_APPCHECK_KEY;
+
+if (typeof window !== "undefined") {
+  // In development, enable debug token to allow localhost API requests
+  if (import.meta.env.DEV) {
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN || true;
+  }
+
+  if (recaptchaSiteKey) {
+    try {
+      const isV3 = import.meta.env.VITE_RECAPTCHA_PROVIDER === 'v3';
+      const provider = isV3 
+        ? new ReCaptchaV3Provider(recaptchaSiteKey)
+        : new ReCaptchaEnterpriseProvider(recaptchaSiteKey);
+
+      appCheck = initializeAppCheck(app, {
+        provider,
+        isTokenAutoRefreshEnabled: true,
+      });
+      console.info(`[Firebase App Check] Initialized successfully using ${isV3 ? 'reCAPTCHA v3' : 'reCAPTCHA Enterprise'}.`);
+    } catch (e) {
+      console.warn('[Firebase App Check] Initialization failed:', e);
+    }
+  } else {
+    console.info(
+      '[Firebase App Check] Note: VITE_RECAPTCHA_SITE_KEY not provided. ' +
+      'Required by Firebase AI Logic starting November 2, 2026.'
+    );
+  }
+}
 
 export const db = getFirestore(app);
 export const auth = getAuth(app);
