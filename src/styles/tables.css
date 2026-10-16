@@ -89,15 +89,33 @@
 }
 
 .table-actions .btn-edit,
-.table-actions .btn-delete {
+.table-actions .btn-delete,
+.table-actions .btn-details {
   opacity: 0.85;
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 .table-actions .btn-edit:hover,
-.table-actions .btn-delete:hover {
+.table-actions .btn-delete:hover,
+.table-actions .btn-details:hover {
   opacity: 1;
   transform: scale(1.08);
+}
+
+/* Desktop default for subject and room action buttons */
+.subject-actions-wrapper,
+.room-actions-wrapper {
+  display: inline-block;
+}
+
+.subject-actions-wrapper .mobile-action-icon,
+.room-actions-wrapper .mobile-action-icon {
+  display: none !important;
+}
+
+.subject-actions-wrapper .desktop-action-text,
+.room-actions-wrapper .desktop-action-text {
+  display: inline !important;
 }
 
 
@@ -439,5 +457,53 @@
     min-width: 0;
     word-break: break-word;
     white-space: normal;
+  }
+
+  /* Mobile styling for subject & room actions & alignments */
+  .subject-actions-wrapper,
+  .room-actions-wrapper {
+    display: flex !important;
+    gap: 8px !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+
+  .subject-actions-wrapper .mobile-action-icon,
+  .room-actions-wrapper .mobile-action-icon {
+    display: block !important;
+  }
+
+  .subject-actions-wrapper .desktop-action-text,
+  .room-actions-wrapper .desktop-action-text {
+    display: none !important;
+  }
+
+  .subject-actions-wrapper .btn-details,
+  .subject-actions-wrapper .btn-edit,
+  .subject-actions-wrapper .btn-delete,
+  .room-actions-wrapper .btn-edit,
+  .room-actions-wrapper .btn-delete {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 7px 9px !important;
+    border-radius: 6px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    line-height: 1 !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  .data-table td[data-label="Department(s)"] > div,
+  .data-table td[data-label="Building"] > div {
+    justify-content: flex-end;
+  }
+
+  .data-table td[data-label="Meeting Time"] > div {
+    align-items: flex-end;
+    text-align: right;
   }
 }
