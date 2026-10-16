@@ -433,6 +433,18 @@ const Dashboard = ({ user, onLogout }) => {
             >
               <Icon d={NAV_ICONS.menu} size={20} />
             </button>
+            {isMobile && (
+              <img
+                src={LOGO_SRC}
+                alt="CAPSU Logo"
+                className="dashboard-mobile-header-logo"
+                onError={e => {
+                  if (e.currentTarget.src !== FALLBACK_LOGO) {
+                    e.currentTarget.src = FALLBACK_LOGO;
+                  }
+                }}
+              />
+            )}
             <div>
               <p style={{ margin: 0, fontSize: '0.76rem', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                 Capiz State University · Mambusao Satellite College

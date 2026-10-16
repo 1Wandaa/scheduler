@@ -80,9 +80,14 @@
     margin-bottom: 14px !important;
   }
   .login-logo {
-    width: 42px;
-    height: 42px;
-    margin-bottom: 6px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid white;
+    box-shadow: 0 6px 24px rgba(86, 69, 238, 0.2),
+                0 0 0 6px rgba(86, 69, 238, 0.12);
+    margin-bottom: 10px;
   }
   .login-system-title {
     font-size: 1.05rem;

@@ -18,7 +18,7 @@ export default defineConfig({
         name: 'SMARTSCHED',
         short_name: 'SMARTSCHED',
         description: 'SMARTSCHED AI Scheduling System',
-        theme_color: '#ffffff',
+        theme_color: '#0288d1',
         background_color: '#0a1b2f',
         display: 'standalone',
         icons: [
@@ -32,7 +32,19 @@ export default defineConfig({
             src: '/app-icon-512-v3.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: '/app-icon-192-maskable.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: '/app-icon-512-maskable.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       },
