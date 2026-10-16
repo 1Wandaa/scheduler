@@ -57,30 +57,20 @@ const AssignmentHub = React.lazy(() => import('../management/AssignmentHub'));
 // Suspense fallback for lazy-loaded tabs
 const TabLoader = () => (
   <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '100px 0', gap: '16px' }}>
-    <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+    <div className="loading-logo-wrapper">
       <img 
         src="/logo.png?v=1" 
         alt="Loading" 
-        style={{ 
-          width: '86px', height: '86px', 
-          borderRadius: '50%', 
-          objectFit: 'cover',
-          backgroundColor: 'white',
-          border: '3px solid white',
-          boxShadow: '0 0 0 8px rgba(99, 102, 241, 0.15), 0 0 30px rgba(99, 102, 241, 0.4)',
-          animation: 'pulse-glow 2s ease-in-out infinite'
-        }} 
+        className="loading-logo-img"
         onError={e => e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png'}
       />
     </div>
-    <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '12px' }}>Loading Module...</div>
-    <style>{`
-      @keyframes pulse-glow {
-        0% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.15), 0 0 20px rgba(99, 102, 241, 0.3); }
-        50% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0.1), 0 0 40px rgba(99, 102, 241, 0.6); }
-        100% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.15), 0 0 20px rgba(99, 102, 241, 0.3); }
-      }
-    `}</style>
+    <div className="loading-text">
+      Loading Module
+      <span className="loading-dots" style={{ marginLeft: '4px' }}>
+        <span></span><span></span><span></span>
+      </span>
+    </div>
   </div>
 );
 
