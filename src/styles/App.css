@@ -61,17 +61,16 @@ textarea {
 .mgmt-container,
 .schedule-viewer-container {
   animation: tabEntrance 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: opacity, transform;
 }
 
 @keyframes tabEntrance {
   from {
     opacity: 0;
-    transform: translateY(6px) translateZ(0);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) translateZ(0);
+    transform: none;
   }
 }
 

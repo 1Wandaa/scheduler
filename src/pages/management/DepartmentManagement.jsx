@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { db } from '../../config/firebase';
 import { collection, addDoc, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
 import { deleteDepartmentBatch } from '../../services/cascadeDeleteService';
@@ -381,7 +382,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
         </div>
       </div>
 
-      {showModal && (
+      {showModal && createPortal(
         <div className="modal-overlay">
           <div 
             className="modal-content" 
@@ -576,7 +577,8 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

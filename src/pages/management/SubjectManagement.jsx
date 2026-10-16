@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { db } from '../../config/firebase';
 import SubjectTable, { getSubjectDepts } from '../../components/SubjectTable/SubjectTable';
 import { collection, addDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
@@ -654,7 +655,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
       </div>
 
-      {showModal && (
+      {showModal && createPortal(
         <div className="modal-overlay">
           <div 
             className="modal-content" 
@@ -971,11 +972,12 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Details Modal */}
-      {detailsSubject && (
+      {detailsSubject && createPortal(
         <div className="modal-overlay">
           <div className="modal-content" style={{ width: '500px', maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)' }}>
@@ -1039,7 +1041,8 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               <button className="btn" onClick={() => setDetailsSubject(null)}>Close</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Quick Create Modal */}
