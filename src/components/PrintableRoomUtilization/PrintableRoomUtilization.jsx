@@ -236,7 +236,7 @@ const PrintableRoomUtilization = ({
                     border: 1px solid #000 !important;
                 }
                 .room-util-timetable td {
-                    height: 32px;
+                    height: 25px; /* Minimum height for a 30-min block */
                 }
                 .room-util-timetable .time-cell,
                 .room-util-timetable th.time-header {
@@ -251,39 +251,12 @@ const PrintableRoomUtilization = ({
                     z-index: 3;
                 }
                 @media (max-width: 768px) {
+                    .printable-room-utilization-wrapper {
+                        zoom: 0.5;
+                    }
                     .printable-room-utilization {
-                        padding: 12px 14px !important;
-                        max-width: 100% !important;
-                    }
-                    .room-util-header {
-                        padding-bottom: 8px !important;
-                        margin-bottom: 10px !important;
-                    }
-                    .room-util-header img {
-                        height: 50px !important;
-                        margin-right: 10px !important;
-                    }
-                    .room-util-header .univ {
-                        font-size: 12pt !important;
-                    }
-                    .room-util-titles h2 {
-                        font-size: 9.5pt !important;
-                    }
-                    .room-util-titles h3 {
-                        font-size: 10pt !important;
-                    }
-                    .room-util-titles p {
-                        font-size: 8.5pt !important;
-                    }
-                    .room-util-room-name {
-                        font-size: 10pt !important;
-                        margin-left: 0 !important;
-                    }
-                    .room-util-signatures {
-                        flex-direction: column !important;
-                        gap: 16px !important;
-                        padding: 0 !important;
-                        margin-top: 15px !important;
+                        min-width: 680px !important;
+                        padding: 10px 15px !important;
                     }
                 }
                 @media print {
