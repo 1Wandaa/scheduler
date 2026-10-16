@@ -458,6 +458,8 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     roomName={titleName}
                     semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "First Semester, School Year 2026-2027"}
                     scheduleMode={detectedScheduleMode}
+                    departments={departments}
+                    targetDepartment={viewType === 'department' ? selectedId : ''}
                 />
             ) : (
                 <PrintableSchedule
