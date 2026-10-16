@@ -96,7 +96,10 @@ const ScheduleTable = React.memo(function ScheduleTable({
   programName,
   targetDepartment,
   semesterInfo,
-  user
+  user,
+  isAdmin = false,
+  onDeleteAll,
+  onToggleDeleteMode
 }) {
   const { confirm } = useGlobalDialog();
 
@@ -785,14 +788,56 @@ const ScheduleTable = React.memo(function ScheduleTable({
     <div ref={containerRef} className={`schedule-table-container ${isFullscreen ? 'schedule-fullscreen' : ''}`}>
 
       {/* Toolbar Row */}
-      <div className="schedule-toolbar">
-        <div style={{ marginLeft: 'auto' }}></div>
+      <div className="schedule-toolbar no-print">
+        {(isAdmin && (onDeleteAll || onToggleDeleteMode)) ? (
+          <div className="schedule-toolbar-actions">
+            {onDeleteAll && (
+              <button
+                className="btn btn-sm schedule-viewer-btn schedule-viewer-delete-btn"
+                onClick={onDeleteAll}
+                style={{
+                  backgroundColor: 'var(--danger-bg, #fee2e2)',
+                  color: 'var(--danger-text, #ef4444)',
+                  border: '1px solid currentColor',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                title="Delete all schedules in current view"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Delete All
+              </button>
+            )}
+            {onToggleDeleteMode && (
+              <button
+                className={`btn btn-sm schedule-viewer-btn schedule-viewer-edit-btn ${isDeleteMode ? 'btn-danger' : 'btn-outline'}`}
+                onClick={onToggleDeleteMode}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: isDeleteMode ? '#fee2e2' : 'white',
+                  color: isDeleteMode ? '#dc2626' : 'var(--text-main)',
+                  border: `1px solid ${isDeleteMode ? '#fca5a5' : 'var(--border-color)'}`
+                }}
+                title="Toggle edit mode to delete individual schedules"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                {isDeleteMode ? 'Done Editing' : 'Edit Schedules'}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ marginLeft: 'auto' }}></div>
+        )}
 
         {/* Fullscreen Toggle Button */}
         <button
           className="fullscreen-btn"
           onClick={toggleFullscreen}
           title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          style={{ marginLeft: isAdmin ? 'auto' : undefined }}
         >
           {isFullscreen ? (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" /></svg>

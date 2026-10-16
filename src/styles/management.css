@@ -385,12 +385,53 @@
   color: var(--text-main);
 }
 
+/* ─── Schedule Viewer Header & Actions ─── */
+.schedule-viewer-header-actions,
+.schedule-viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.schedule-viewer-header-actions .export-dropdown-container,
+.schedule-viewer-actions .export-dropdown-container {
+  position: relative;
+  margin-left: 0;
+}
+
+.export-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  min-width: 220px;
+  max-width: calc(100vw - 32px);
+  overflow: hidden;
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
   .mgmt-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .schedule-viewer-header-actions,
+  .schedule-viewer-actions {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .schedule-viewer-header-actions .export-dropdown-container,
+  .schedule-viewer-actions .export-dropdown-container {
+    margin-left: 0 !important;
   }
 
   .mgmt-toolbar {
@@ -423,6 +464,42 @@
     width: 100%;
     justify-content: center;
     text-align: center;
+  }
+}
+
+@media (max-width: 540px) {
+  .schedule-viewer-header-actions,
+  .schedule-viewer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .schedule-viewer-header-actions .export-dropdown-container,
+  .schedule-viewer-actions .export-dropdown-container {
+    flex: 1 1 100%;
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  .schedule-viewer-header-actions .export-dropdown-container > button,
+  .schedule-viewer-actions .export-dropdown-container > button {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 7px 12px;
+    font-size: 0.82rem;
+  }
+
+  .schedule-viewer-header-actions .export-dropdown-menu,
+  .schedule-viewer-actions .export-dropdown-menu,
+  .export-dropdown-menu {
+    left: 0;
+    right: 0;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
   }
 }
 

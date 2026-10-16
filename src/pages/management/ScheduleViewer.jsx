@@ -316,46 +316,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                             <p>Filter schedules by department{isAdmin ? ', faculty, or room' : ' or room'}</p>
                         </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        {isAdmin && (
-                            <button
-                                className="btn btn-sm"
-                                onClick={handleDeleteSchedules}
-                                style={{
-                                    backgroundColor: 'var(--danger-bg, #fee2e2)',
-                                    color: 'var(--danger-text, #ef4444)',
-                                    border: '1px solid currentColor',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px'
-                                }}
-                                title="Delete all schedules in current view"
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                Delete All
-                            </button>
-                        )}
-                        {isAdmin && (
-                            <button
-                                className={`btn ${isDeleteMode ? 'btn-danger' : 'btn-outline'}`}
-                                onClick={() => setIsDeleteMode(!isDeleteMode)}
-                                style={{
-                                    padding: '8px 14px',
-                                    fontSize: '0.85rem',
-                                    borderRadius: '8px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    backgroundColor: isDeleteMode ? '#fee2e2' : 'white',
-                                    color: isDeleteMode ? '#dc2626' : 'var(--text-main)',
-                                    border: `1px solid ${isDeleteMode ? '#fca5a5' : 'var(--border-color)'}`
-                                }}
-                                title="Toggle edit mode to delete individual schedules"
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                                {isDeleteMode ? 'Done Editing' : 'Edit Schedules'}
-                            </button>
-                        )}
+                    <div className="schedule-viewer-header-actions">
                         <ExportOptions
                             user={user}
                             isGenerating={isGenerating}
@@ -449,6 +410,9 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     }
                     semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "First Semester, School Year 2026 - 2027"}
                     user={user}
+                    isAdmin={isAdmin}
+                    onDeleteAll={handleDeleteSchedules}
+                    onToggleDeleteMode={() => setIsDeleteMode(!isDeleteMode)}
                 />
             </div>
 

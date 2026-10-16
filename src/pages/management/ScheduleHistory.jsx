@@ -131,11 +131,11 @@ const ScheduleHistory = ({ history, onBack }) => {
                           )}
                         </svg>
                       </div>
-                      <div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <strong style={{ fontSize: '1.05rem', color: 'var(--text-main)', display: 'block', marginBottom: '4px' }}>
                           {formatDate(record.timestamp)}
                         </strong>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '0.85rem' }}>
                           <span style={{ 
                             background: 'var(--bg-main)', border: '1px solid var(--border-color)', 
                             padding: '2px 8px', borderRadius: '6px', color: 'var(--text-muted)', 
@@ -314,17 +314,28 @@ const ScheduleHistory = ({ history, onBack }) => {
             flex-direction: column;
             align-items: flex-start !important;
             padding: 16px !important;
+            position: relative;
+          }
+          .history-card-info {
+            width: 100%;
+            box-sizing: border-box;
+            padding-right: 48px;
+            margin-bottom: 12px;
+          }
+          .history-card-info strong {
+            font-size: 0.95rem !important;
+            line-height: 1.3;
           }
           .history-card-stats {
             width: 100%;
             justify-content: space-around;
-            padding-top: 10px;
+            padding-top: 12px;
             border-top: 1px dashed var(--border-color);
           }
           .history-card-chevron {
             position: absolute;
-            top: 16px;
-            right: 16px;
+            top: 24px;
+            right: 14px;
           }
         }
       `}</style>

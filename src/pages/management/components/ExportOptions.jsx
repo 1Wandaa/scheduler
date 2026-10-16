@@ -37,7 +37,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
     };
 
     return (
-        <div className="no-print export-dropdown-container" style={{ position: 'relative', marginLeft: 'auto' }}>
+        <div className="no-print export-dropdown-container">
             <button 
                 className="btn btn-sm" 
                 onClick={() => setIsExportOpen(!isExportOpen)} 
@@ -55,19 +55,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
             </button>
 
             {isExportOpen && (
-                <div style={{ 
-                    position: 'absolute', 
-                    top: '100%', 
-                    right: 0, 
-                    marginTop: '8px', 
-                    background: 'white', 
-                    border: '1px solid var(--border-color)', 
-                    borderRadius: '8px', 
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)', 
-                    zIndex: 100, 
-                    minWidth: '220px', 
-                    overflow: 'hidden' 
-                }}>
+                <div className="export-dropdown-menu">
                     {/* --- ISO FORMAT SECTION --- */}
                     <div style={{ padding: '8px 12px', fontSize: '0.72rem', fontWeight: 'bold', color: 'var(--accent-primary)', backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)', letterSpacing: '0.5px' }}>
                         ISO 9001:2015 FORMAT
