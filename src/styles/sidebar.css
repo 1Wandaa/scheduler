@@ -56,6 +56,15 @@
   justify-content: center;
 }
 
+/* Mobile elements hidden on desktop */
+.sidebar-overlay {
+  display: none;
+}
+
+.sidebar-mobile-close-btn {
+  display: none;
+}
+
 .logo-area {
   text-align: center;
   margin-bottom: 20px;

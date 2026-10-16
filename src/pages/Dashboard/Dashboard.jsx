@@ -322,11 +322,31 @@ const Dashboard = ({ user, onLogout }) => {
       {/* Animated background */}
       <div className="mesh-bg"></div>
 
+      {/* Mobile Drawer Backdrop Overlay */}
+      <div 
+        className={`sidebar-overlay ${isMobileMenuOpen ? 'active' : ''}`}
+        onClick={() => setIsMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
+
       {/* Sidebar */}
       <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
 
+        {/* Mobile Close Button */}
+        <button 
+          className="sidebar-mobile-close-btn"
+          onClick={() => setIsMobileMenuOpen(false)}
+          title="Close Menu"
+          aria-label="Close Menu"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
         {/* Logo block */}
-        <div style={{ padding: '28px 20px 24px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', textAlign: 'center' }}>
+        <div className="sidebar-logo-block" style={{ padding: '28px 20px 24px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', textAlign: 'center' }}>
           <img
             src={LOGO_SRC}
             alt="CAPSU Logo"
@@ -339,7 +359,7 @@ const Dashboard = ({ user, onLogout }) => {
           />
           {!isSidebarCollapsed && (
             <>
-              <div style={{
+              <div className="sidebar-title" style={{
                 fontWeight: 900,
                 fontSize: '1.25rem',
                 letterSpacing: '0.12em',
@@ -348,7 +368,7 @@ const Dashboard = ({ user, onLogout }) => {
               }}>
                 SMARTSCHED
               </div>
-              <span style={{
+              <span className="sidebar-role-badge" style={{
                 display: 'inline-block', marginTop: 10,
                 fontSize: '0.75rem', padding: '6px 18px', borderRadius: '20px',
                 background: isAdmin ? '#2f2c68' : 'rgba(2,185,116,0.2)',
