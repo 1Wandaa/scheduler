@@ -1,50 +1,28 @@
 import React, { useMemo } from 'react';
-import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS, getProgramChairInfo } from '../../config/constants';
-import { getMeetingTimeLabel, parseTimeToMinutes } from '../../utils/scheduleUtils';
+import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS, DAYS, FOUR_DAY_DAYS, getScheduleConfig, getProgramChairInfo } from '../../config/constants';
+import { slotsNeededFromIndex, getScheduleTimeRange, normalizeDay } from '../../utils/scheduleUtils';
 import '../../styles/PrintableSchedule.css';
 
-const getRowIndexForTime = (mins) => {
-    if (mins === null || isNaN(mins)) return -1;
-    if (mins < 510) return 0;       // 7:00 - 8:30
-    if (mins < 600) return 1;       // 8:30 - 10:00
-    if (mins < 750) return 2;       // 10:00 - 12:30 (groups anything before 12:30 into row 2)
-    if (mins < 840) return 4;       // 12:30 - 2:00
-    if (mins < 930) return 5;       // 2:00 - 3:30
-    if (mins < 1020) return 6;      // 3:30 - 5:00
-    return 7;                       // 5:00 - 6:00
-};
-
-function getSchedulePrintSpan(schedule, scheduleMode) {
-    const timeStr = getMeetingTimeLabel(schedule.timeSlot, schedule.subject?.hoursPerMeeting, scheduleMode);
-    if (!timeStr) return { startRow: -1, span: 1 };
-    
-    const parts = timeStr.split('-');
-    let startMins = parseTimeToMinutes(parts[0]);
-    let endMins = parts.length > 1 ? parseTimeToMinutes(parts[1]) : startMins + (schedule.subject?.hoursPerMeeting || 1.5) * 60;
-    
-    if (startMins === null) return { startRow: -1, span: 1 };
-    
-    const startRow = getRowIndexForTime(startMins);
-    let endRow = startRow;
-    
-    if (endMins !== null && endMins > startMins) {
-        endRow = getRowIndexForTime(endMins - 1);
+// Helper: Format professor name compactly to match ScheduleTable
+function formatProfessorName(name) {
+    if (!name) return '—';
+    const clean = name.trim();
+    if (clean.includes(',')) {
+        const [surname, firstNames] = clean.split(',').map(s => s.trim());
+        const initial = firstNames ? firstNames[0].toUpperCase() : '';
+        return initial ? `${initial}. ${surname}` : surname;
     }
-    
-    let span = endRow - startRow + 1;
-    if (span < 1) span = 1;
-    
-    // Prevent spanning across the lunch break row (index 3)
-    if (startRow <= 2 && endRow >= 4) {
-        span = 2 - startRow + 1;
-    }
-    
-    return { startRow, span };
+    const parts = clean.split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    const initial = parts[0][0].toUpperCase();
+    const surname = parts.slice(1).join(' ');
+    return `${initial}. ${surname}`;
 }
 
-const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, department, semesterInfo, scheduleMode }) => {
-    const isFourDay = scheduleMode === 'fourDay';
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, department, semesterInfo, scheduleMode = 'standard' }) => {
+    const config = useMemo(() => getScheduleConfig(scheduleMode), [scheduleMode]);
+    const activeTimeSlots = config.timeSlots || (scheduleMode === 'fourDay' ? FOUR_DAY_TIME_SLOTS : TIME_SLOTS);
+    const days = config.days || (scheduleMode === 'fourDay' ? FOUR_DAY_DAYS : DAYS);
 
     const chairInfo = useMemo(() => {
         return getProgramChairInfo({
@@ -55,57 +33,67 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
         });
     }, [department, programName, sectionName, scheduleItems]);
 
-    const fixedTimeSlots = [
-        "7:00 \u2013 8:30",
-        "8:30 \u2013 10:00",
-        "10:00 \u2013 11:30",
-        "11:30 \u2013 12:30",
-        "12:30 \u2013 2:00",
-        "2:00 \u2013 3:30",
-        "3:30 \u2013 5:00",
-        "5:00 \u2013 6:00"
-    ];
-
-    const scheduleRowMap = useMemo(() => {
+    // O(1) cell lookup map directly matching the main timetable (ScheduleTable)
+    const scheduleGridMap = useMemo(() => {
         const map = new Map();
-        scheduleItems.forEach(s => {
-            if (!s.day || !s.timeSlot) return;
-            const { startRow } = getSchedulePrintSpan(s, scheduleMode);
-            if (startRow >= 0) {
-                const key = `${s.day}-${startRow}`;
-                if (!map.has(key)) map.set(key, []);
-                map.get(key).push(s);
+        for (const s of scheduleItems) {
+            const dayName = normalizeDay(s.day) || s.day;
+            if (!dayName) continue;
+            let slotId = s.timeSlot?.id;
+            if (slotId == null && s.timeSlot) {
+                const matched = activeTimeSlots.find(ts => 
+                    String(ts.id) === String(s.timeSlot) || 
+                    ts.label === s.timeSlot || 
+                    ts.time === s.timeSlot?.time ||
+                    ts.label === s.timeSlot?.label
+                );
+                if (matched) slotId = matched.id;
             }
-        });
+            if (slotId == null) continue;
+            const key = `${dayName}-${slotId}`;
+            if (!map.has(key)) map.set(key, []);
+            map.get(key).push(s);
+        }
         return map;
-    }, [scheduleItems, scheduleMode]);
+    }, [scheduleItems, activeTimeSlots]);
 
-    const getClassForRow = (day, rowIndex) => scheduleRowMap.get(`${day}-${rowIndex}`);
+    // Pre-calculate cell span mapping & skipped multi-slot cells EXACTLY like ScheduleTable
+    const { cellSpanMap, skippedCellsSet } = useMemo(() => {
+        const spanMap = new Map();
+        const skipped = new Set();
 
-    const { skipCells, spanInfo } = useMemo(() => {
-        const skip = new Set();
-        const spans = {};
+        activeTimeSlots.forEach((timeSlot, tIdx) => {
+            days.forEach(day => {
+                const cellKey = `${day}-${timeSlot.id}`;
+                if (skipped.has(cellKey)) return;
 
-        scheduleItems.forEach(schedule => {
-            if (!schedule.day || !schedule.timeSlot) return;
-            const { startRow, span } = getSchedulePrintSpan(schedule, scheduleMode);
-            
-            if (startRow >= 0 && span > 1) {
-                const cellKey = `${schedule.day}-${startRow}`;
-                spans[cellKey] = Math.max(spans[cellKey] || 1, span);
-
-                for (let i = 1; i < span; i++) {
-                    const skipRow = startRow + i;
-                    // Never skip the lunch break index 3
-                    if (skipRow !== 3) {
-                        skip.add(`${schedule.day}-${skipRow}`);
+                const cellSchedules = scheduleGridMap.get(cellKey) || [];
+                let rowSpan = 1;
+                for (const s of cellSchedules) {
+                    const range = getScheduleTimeRange(s, scheduleMode);
+                    if (range && range.start > 0 && range.end > 0) {
+                        const durationMins = range.end - range.start;
+                        let needed = Math.ceil(durationMins / 30);
+                        if (needed < 1) needed = 1;
+                        if (needed > rowSpan) rowSpan = needed;
+                    } else {
+                        const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting || s.hours, scheduleMode);
+                        if (needed > rowSpan) rowSpan = needed;
                     }
                 }
-            }
+                spanMap.set(cellKey, rowSpan);
+
+                if (rowSpan > 1) {
+                    for (let skip = 1; skip < rowSpan; skip++) {
+                        const skipSlot = activeTimeSlots[tIdx + skip];
+                        if (skipSlot) skipped.add(`${day}-${skipSlot.id}`);
+                    }
+                }
+            });
         });
 
-        return { skipCells: skip, spanInfo: spans };
-    }, [scheduleItems, scheduleMode]);
+        return { cellSpanMap: spanMap, skippedCellsSet: skipped };
+    }, [activeTimeSlots, days, scheduleGridMap, scheduleMode]);
 
     return (
         <div className="printable-iso-document">
@@ -113,13 +101,13 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
             <table className="iso-header-table">
                 <tbody>
                     <tr>
-                        <td rowSpan="4" className="center" style={{ width: '15%', verticalAlign: 'middle', padding: '10px' }}>
-                            <img src="/download.jpg" alt="Logo" style={{ width: '100%', maxWidth: '90px', height: 'auto', display: 'block', margin: '0 auto' }} />
+                        <td rowSpan="4" className="center" style={{ width: '12%', verticalAlign: 'middle', padding: '6px' }}>
+                            <img src="/download.jpg" alt="Logo" style={{ width: '100%', maxWidth: '65px', height: 'auto', display: 'block', margin: '0 auto' }} />
                         </td>
                         <td style={{ width: '15%', verticalAlign: 'top', borderRight: 'none', paddingLeft: '8px' }}>Document Type:</td>
-                        <td rowSpan="2" className="center" style={{ width: '40%', verticalAlign: 'middle' }}>
-                            <div className="bold" style={{ fontSize: '12pt', marginBottom: '4px' }}>DOCUMENTED INFORMATION</div>
-                            <div className="bold" style={{ fontSize: '9pt' }}>ISO 9001:2015</div>
+                        <td rowSpan="2" className="center" style={{ width: '43%', verticalAlign: 'middle' }}>
+                            <div className="bold" style={{ fontSize: '11pt', marginBottom: '2px' }}>DOCUMENTED INFORMATION</div>
+                            <div className="bold" style={{ fontSize: '8.5pt' }}>ISO 9001:2015</div>
                         </td>
                         <td style={{ width: '15%', textAlign: 'right', paddingRight: '8px', borderRight: 'none' }}>Document Code</td>
                         <td className="bold center" style={{ width: '15%' }}>INS-CLS-08</td>
@@ -131,7 +119,7 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
                     </tr>
                     <tr>
                         <td rowSpan="2" style={{ verticalAlign: 'top', borderRight: 'none', paddingLeft: '8px' }}>Document Title:</td>
-                        <td rowSpan="2" className="bold center" style={{ fontSize: '13pt', verticalAlign: 'middle', letterSpacing: '1px' }}>CLASS SCHEDULE</td>
+                        <td rowSpan="2" className="bold center" style={{ fontSize: '12pt', verticalAlign: 'middle', letterSpacing: '1px' }}>CLASS SCHEDULE</td>
                         <td style={{ textAlign: 'right', paddingRight: '8px', borderRight: 'none' }}>Effective Date</td>
                         <td className="bold center">June 25, 2018</td>
                     </tr>
@@ -149,50 +137,63 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
                 <span>SEMESTER &amp; AY: <span className="meta-value underline bold">{semesterInfo || '1st Sem 2026-2027'}</span></span>
             </div>
 
-            {/* Schedule Table */}
+            {/* Schedule Table: Built directly on main timetable grid */}
             <table className="iso-schedule-table">
                 <thead>
                     <tr>
-                        <th style={{ width: '12%' }}>TIME</th>
+                        <th className="time-header" style={{ width: '12%' }}>TIME</th>
                         {days.map(day => (
-                            <th key={day} style={{ width: '17.6%' }}>{day.toUpperCase()}</th>
+                            <th key={day} style={{ width: `${88 / days.length}%` }}>{day.toUpperCase()}</th>
                         ))}
                     </tr>
                 </thead>
                 <tbody>
-                    {fixedTimeSlots.map((timeLabel, index) => {
-                        if (index === 3) {
-                            return (
-                                <tr key={timeLabel}>
-                                    <td className="time-cell">{timeLabel}</td>
-                                    <td colSpan="5" className="lunch-break center bold">LUNCH BREAK</td>
-                                </tr>
-                            );
-                        }
+                    {activeTimeSlots.map((timeSlot, tIdx) => {
+                        const isHourGroupHead = tIdx % 2 === 0;
+                        const nextSlot = activeTimeSlots[tIdx + 1];
+                        const timeRowSpan = isHourGroupHead ? (nextSlot ? 2 : 1) : 0;
+                        const hourLabel = isHourGroupHead
+                            ? (nextSlot ? `${timeSlot.label.split(' - ')[0]} - ${nextSlot.label.split(' - ')[1]}` : timeSlot.label)
+                            : '';
 
                         return (
-                            <tr key={timeLabel}>
-                                <td className="time-cell">{timeLabel}</td>
+                            <tr key={timeSlot.id} className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
+                                {isHourGroupHead && (
+                                    <td className="time-cell" rowSpan={timeRowSpan}>
+                                        {hourLabel}
+                                    </td>
+                                )}
                                 {days.map(day => {
-                                    const cellKey = `${day}-${index}`;
-
-                                    // This cell is covered by a rowSpan from above
-                                    if (skipCells.has(cellKey)) {
+                                    const cellKey = `${day}-${timeSlot.id}`;
+                                    if (skippedCellsSet.has(cellKey)) {
                                         return null;
                                     }
 
-                                    const clsArray = getClassForRow(day, index);
-                                    const rowSpan = spanInfo[cellKey] || 1;
+                                    const cellSchedules = scheduleGridMap.get(cellKey) || [];
+                                    const rowSpan = cellSpanMap.get(cellKey) || 1;
+                                    const isScheduled = cellSchedules.length > 0;
 
                                     return (
-                                        <td key={cellKey} className="schedule-cell" rowSpan={rowSpan}>
-                                            {clsArray && clsArray.length > 0 ? clsArray.map((cls, idx) => (
-                                                <div key={idx} className="cell-content" style={idx > 0 ? { marginTop: '8px', borderTop: '1px dashed #ccc', paddingTop: '8px' } : {}}>
-                                                    <div className="cell-subject">{cls.subject?.code || 'N/A'}</div>
-                                                    <div className="cell-professor">{cls.professor?.name || 'TBA'}</div>
-                                                    <div className="cell-room">{cls.room?.name || 'TBA'}</div>
-                                                </div>
-                                            )) : null}
+                                        <td 
+                                            key={cellKey} 
+                                            className={`schedule-cell ${isScheduled ? 'scheduled-cell' : ''}`} 
+                                            rowSpan={rowSpan}
+                                        >
+                                            {cellSchedules.map((cls, idx) => {
+                                                const profFormatted = formatProfessorName(cls.professor?.name);
+
+                                                return (
+                                                    <div 
+                                                        key={cls.id || idx} 
+                                                        className="cell-content" 
+                                                        style={idx > 0 ? { marginTop: '2px', borderTop: '1px dashed #ccc', paddingTop: '2px' } : {}}
+                                                    >
+                                                        <div className="cell-subject">{cls.subject?.code || '—'}{cls.component ? ` (${cls.component})` : ''}</div>
+                                                        <div className="cell-professor">{profFormatted}</div>
+                                                        <div className="cell-room">{cls.room?.name || 'TBA'}</div>
+                                                    </div>
+                                                );
+                                            })}
                                         </td>
                                     );
                                 })}

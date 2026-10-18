@@ -1,11 +1,12 @@
 /* src/styles/PrintableSchedule.css */
 
-/* SHARED ISO STYLES (used by both screen preview & print) */
+/* SHARED ISO STYLES (used by screen preview & print) */
 
 .printable-iso-document {
     font-family: "Times New Roman", Times, serif;
     color: #000;
     background: #fff;
+    width: 100%;
 }
 
 /* ISO HEADER TABLE */
@@ -13,14 +14,14 @@
 .iso-header-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 20px;
-    font-size: 10pt;
+    margin-bottom: 6px;
+    font-size: 8.5pt;
 }
 
 .iso-header-table td,
 .iso-header-table th {
     border: 1px solid #000;
-    padding: 6px;
+    padding: 3px 6px;
     text-align: left;
 }
 
@@ -36,11 +37,10 @@
 
 .meta-info {
     display: flex;
-    justify-content: flex-start;
-    gap: 15px;
-    font-size: 11pt;
+    justify-content: space-between;
+    font-size: 9pt;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     text-transform: uppercase;
 }
 
@@ -49,13 +49,14 @@
     text-decoration: underline;
 }
 
-/* SCHEDULE TABLE: FIXED BOX GRID (NO rowSpan, NO overlap) */
+/* SCHEDULE TABLE: Built directly on main timetable grid with sharp 1px borders */
 
 .iso-schedule-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 11pt;
-    table-layout: fixed; /* Force fixed column widths */
+    font-size: 8pt;
+    table-layout: fixed;
+    border: 1px solid #000;
 }
 
 .iso-schedule-table th,
@@ -64,35 +65,53 @@
     text-align: center;
     vertical-align: middle;
     box-sizing: border-box;
-    /* Every cell is exactly this height - fixed square box */
-    height: 48px;
-    overflow: hidden; /* Absolutely prevent content from overflowing */
+    padding: 0;
+    overflow: hidden;
 }
 
 .iso-schedule-table th {
     background-color: transparent !important;
-    padding: 6px 4px;
-    font-size: 11pt;
-    height: 35px;
+    padding: 4px 2px;
+    font-size: 8.5pt;
+    font-weight: bold;
+    height: 22px;
 }
 
 /* TIME COLUMN */
 
 .iso-schedule-table .time-cell {
     white-space: nowrap;
-    font-size: 11pt;
+    font-size: 7.5pt;
+    font-weight: bold;
     padding: 2px 4px;
 }
 
-/* EVERY SCHEDULE CELL: fixed box */
+/* Inner dividers: hour-row vs half-hour-row */
+.iso-schedule-table tr.hour-row td:not(.time-cell):not(.scheduled-cell) {
+    border-bottom: 1px dashed #d1d5db;
+}
+
+.iso-schedule-table tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) {
+    border-top: none;
+}
+
+.iso-schedule-table td.scheduled-cell {
+    border: 1px solid #000 !important;
+    background-color: transparent;
+}
+
+.iso-schedule-table tr {
+    height: 19px;
+    min-height: 19px;
+}
+
+/* SCHEDULE CELL CONTENT */
 
 .iso-schedule-table .schedule-cell {
     padding: 0;
-    height: 48px;
     overflow: hidden;
 }
 
-/* Content wrapper inside a schedule cell */
 .iso-schedule-table .cell-content {
     display: flex;
     flex-direction: column;
@@ -102,12 +121,12 @@
     height: 100%;
     overflow: hidden;
     box-sizing: border-box;
+    line-height: 1.15;
 }
 
 .iso-schedule-table .cell-subject {
     font-weight: bold;
-    font-size: 11pt;
-    line-height: 1.15;
+    font-size: 8.5pt;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -115,8 +134,8 @@
 }
 
 .iso-schedule-table .cell-professor {
-    font-size: 10pt;
-    line-height: 1.15;
+    font-size: 7.5pt;
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -125,8 +144,7 @@
 }
 
 .iso-schedule-table .cell-room {
-    font-size: 10pt;
-    line-height: 1.15;
+    font-size: 7.5pt;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -134,26 +152,14 @@
     margin-top: 1px;
 }
 
-/* LUNCH BREAK ROW */
-
-.iso-schedule-table .lunch-break {
-    background-color: transparent !important;
-    font-weight: bold;
-    letter-spacing: 2px;
-    padding: 4px;
-    height: 35px;
-    overflow: hidden;
-    font-size: 11pt;
-}
-
 /* SIGNATURES SECTION */
 
 .signatures-section {
     display: flex;
     justify-content: space-between;
-    margin-top: 15px;
-    padding: 0 40px;
-    font-size: 11pt;
+    margin-top: 8px;
+    padding: 0 30px;
+    font-size: 8.5pt;
     font-family: "Times New Roman", Times, serif;
     color: #000;
 }
@@ -164,11 +170,11 @@
 
 .signature-block.right-aligned {
     text-align: left;
-    padding-right: 40px;
+    padding-right: 30px;
 }
 
 .sig-label {
-    margin-bottom: 25px;
+    margin-bottom: 16px;
 }
 
 .sig-name {
@@ -213,6 +219,7 @@
         width: 100%;
         height: 100%;
         page-break-after: avoid;
+        page-break-inside: avoid;
     }
 
     .iso-schedule-table th,

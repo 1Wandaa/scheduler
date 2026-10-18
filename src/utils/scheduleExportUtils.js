@@ -207,9 +207,11 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
     .signatures-table {
       width: 700pt;
       border: none;
-      margin-top: 1pt;
+      margin-top: 4pt;
       border-collapse: collapse;
       table-layout: fixed;
+      page-break-inside: avoid;
+      page-break-after: avoid;
     }
     .signatures-table td {
       border: none;
@@ -378,48 +380,71 @@ export async function exportIsoToWord(user) {
     </table>
   `;
 
-  // 6. Build Schedule Grid Table (Exact 700pt fixed width: 80 + 124*5 = 700pt)
+  // 6. Build Schedule Grid Table based on main timetable geometry (Exact 700pt fixed width)
   const originalTable = isoDoc.querySelector('.iso-schedule-table');
   let scheduleTableHtml = '';
 
   if (originalTable) {
     const cloneTable = originalTable.cloneNode(true);
 
-    // Apply strict column widths on header
     const ths = cloneTable.querySelectorAll('thead th');
-    if (ths.length >= 6) {
-      ths[0].setAttribute('width', '80');
-      ths[0].style.width = '80pt';
+    const dayCount = ths.length > 1 ? ths.length - 1 : 5;
+    const timeWidth = 75;
+    const dayWidth = (700 - timeWidth) / dayCount;
+
+    // Apply strict column widths on header
+    if (ths.length > 0) {
+      ths[0].setAttribute('width', `${timeWidth}`);
+      ths[0].style.width = `${timeWidth}pt`;
+      ths[0].style.fontSize = '8pt';
+      ths[0].style.height = '14pt';
+
       for (let i = 1; i < ths.length; i++) {
-        ths[i].setAttribute('width', '124');
-        ths[i].style.width = '124pt';
+        ths[i].setAttribute('width', `${dayWidth}`);
+        ths[i].style.width = `${dayWidth}pt`;
+        ths[i].style.fontSize = '8pt';
+        ths[i].style.height = '14pt';
       }
     }
 
+    const tbodyRows = cloneTable.querySelectorAll('tbody tr');
+    const totalRows = tbodyRows.length || 22;
+    // Allocate ~350pt for table body so all rows + header + signatures fit strictly on 1 landscape page
+    const dynamicRowHeight = Math.max(11, Math.min(16, Math.floor(350 / totalRows)));
+
     // Transform cell contents to crisp, fixed-width Word cells
-    cloneTable.querySelectorAll('tbody tr').forEach(tr => {
-      tr.style.height = '40pt';
+    tbodyRows.forEach(tr => {
+      tr.style.height = `${dynamicRowHeight}pt`;
       tr.style.msoHeightRule = 'exactly';
+
+      const isHourRow = tr.classList.contains('hour-row');
+      const isHalfHourRow = tr.classList.contains('half-hour-row');
 
       const tds = tr.querySelectorAll('td');
       tds.forEach((td) => {
         if (td.classList.contains('time-cell')) {
-          td.setAttribute('width', '80');
-          td.style.width = '80pt';
-          td.style.height = '40pt';
-          td.style.fontSize = '8pt';
-        } else if (td.classList.contains('lunch-break')) {
+          td.setAttribute('width', `${timeWidth}`);
+          td.style.width = `${timeWidth}pt`;
+          td.style.fontSize = '7pt';
+          td.style.fontWeight = 'bold';
+          td.style.border = '1.0pt solid #000000';
           td.setAttribute('align', 'center');
           td.setAttribute('valign', 'middle');
-          td.style.backgroundColor = '#d1d5db';
-          td.style.letterSpacing = '2pt';
-          td.style.fontWeight = 'bold';
-          td.style.fontSize = '8.5pt';
-          td.style.height = '24pt';
         } else {
-          td.setAttribute('width', '124');
-          td.style.width = '124pt';
-          td.style.height = '40pt';
+          td.setAttribute('width', `${dayWidth}`);
+          td.style.width = `${dayWidth}pt`;
+
+          const isScheduled = td.classList.contains('scheduled-cell');
+          if (isScheduled) {
+            td.style.border = '1.0pt solid #000000';
+          } else {
+            if (isHourRow) {
+              td.style.borderBottom = '1px solid #ffffff';
+            }
+            if (isHalfHourRow) {
+              td.style.borderTop = '1px solid #ffffff';
+            }
+          }
 
           const subj = td.querySelector('.cell-subject')?.textContent.trim() || '';
           const prof = td.querySelector('.cell-professor')?.textContent.trim() || '';
@@ -427,9 +452,9 @@ export async function exportIsoToWord(user) {
 
           if (subj || prof || room) {
             td.innerHTML = `
-              <p style="font-weight: bold; font-size: 8.5pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.1;">${subj}</p>
-              ${prof ? `<p style="font-size: 7pt; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #111827; line-height: 1.1;">${prof}</p>` : ''}
-              ${room ? `<p style="font-size: 7pt; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #374151; line-height: 1.1;">${room}</p>` : ''}
+              <p style="font-weight: bold; font-size: 7.5pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.1;">${subj}</p>
+              ${prof ? `<p style="font-size: 6.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #111827; line-height: 1.1;">${prof}</p>` : ''}
+              ${room ? `<p style="font-size: 6.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #374151; line-height: 1.1;">${room}</p>` : ''}
             `;
           } else {
             td.innerHTML = '';
@@ -445,17 +470,15 @@ export async function exportIsoToWord(user) {
     cloneTable.setAttribute('cellspacing', '0');
     cloneTable.setAttribute('cellpadding', '1');
     cloneTable.className = 'iso-schedule-table';
+    cloneTable.style.borderCollapse = 'collapse';
 
     // Insert Colgroup for Word
     const colgroup = document.createElement('colgroup');
-    colgroup.innerHTML = `
-      <col width="80" style="width: 80pt;">
-      <col width="124" style="width: 124pt;">
-      <col width="124" style="width: 124pt;">
-      <col width="124" style="width: 124pt;">
-      <col width="124" style="width: 124pt;">
-      <col width="124" style="width: 124pt;">
-    `;
+    let colsHtml = `<col width="${timeWidth}" style="width: ${timeWidth}pt;">`;
+    for (let i = 0; i < dayCount; i++) {
+      colsHtml += `<col width="${dayWidth}" style="width: ${dayWidth}pt;">`;
+    }
+    colgroup.innerHTML = colsHtml;
     cloneTable.insertBefore(colgroup, cloneTable.firstChild);
 
     scheduleTableHtml = cloneTable.outerHTML;
@@ -463,7 +486,7 @@ export async function exportIsoToWord(user) {
 
   // 7. Build Signatures Table (Exact 700pt fixed width: 350 + 350 = 700pt)
   const signaturesTableHtml = `
-    <table class="signatures-table" border="0" cellspacing="0" cellpadding="1">
+    <table class="signatures-table" border="0" cellspacing="0" cellpadding="1" style="page-break-inside: avoid; page-break-after: avoid; margin-top: 4pt;">
       <colgroup>
         <col width="350" style="width: 350pt;">
         <col width="350" style="width: 350pt;">
@@ -875,7 +898,7 @@ export async function exportGridToWord(tableContainer, user) {
   }
 
   const signaturesTableHtml = `
-    <table class="signatures-table" border="0" cellspacing="0" cellpadding="1">
+    <table class="signatures-table" border="0" cellspacing="0" cellpadding="1" style="page-break-inside: avoid; page-break-after: avoid; margin-top: 4pt;">
       <colgroup>
         <col width="350" style="width: 350pt;">
         <col width="350" style="width: 350pt;">

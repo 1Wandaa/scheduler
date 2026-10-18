@@ -89,20 +89,37 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 if (sigsDiv) {
                                     const blocks = Array.from(sigsDiv.children);
                                     const tableHtml = `
-                                        <table cellspacing="0" cellpadding="0" style="width: 570pt; margin-top: 15pt; border: 1px solid #ffffff; border-collapse: collapse;">
+                                        <table cellspacing="0" cellpadding="0" style="width: 570pt; margin-top: 4pt; border: none; border-collapse: collapse; page-break-inside: avoid; page-break-after: avoid; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
                                             <tr>
-                                                ${blocks.map(block => `
-                                                    <td style="width: ${570 / blocks.length}pt; border: 1px solid #ffffff; text-align: left; vertical-align: top; font-size: 8pt; padding: 0;">
-                                                        ${block.innerHTML}
-                                                    </td>
-                                                `).join('')}
+                                                ${blocks.map(block => {
+                                                    const blockClone = block.cloneNode(true);
+                                                    const label = blockClone.querySelector('.sig-label') || blockClone.children[0];
+                                                    if (label) label.style.marginBottom = '6pt';
+                                                    const name = blockClone.querySelector('.sig-name') || blockClone.children[1];
+                                                    if (name) {
+                                                        name.style.fontWeight = 'bold';
+                                                        name.style.textDecoration = 'underline';
+                                                    }
+                                                    return `
+                                                        <td style="width: ${570 / blocks.length}pt; border: none; text-align: left; vertical-align: top; font-size: 8pt; padding: 0 4pt;">
+                                                            ${blockClone.innerHTML}
+                                                        </td>
+                                                    `;
+                                                }).join('')}
                                             </tr>
                                         </table>
                                     `;
                                     sigsDiv.outerHTML = tableHtml;
                                 }
 
-                                // Force the timetable and subjects to have exact widths and heights to prevent resizing
+                                // Remove empty trailing spacer divs
+                                Array.from(clone.children).forEach(child => {
+                                    if (child.tagName === 'DIV' && !child.textContent.trim() && !child.querySelector('table, img')) {
+                                        child.remove();
+                                    }
+                                });
+
+                                // Force the timetable and subjects to have exact widths and heights to prevent resizing and guarantee 1-page fit
                                 const timetable = clone.querySelector('.room-util-timetable');
                                 if (timetable) {
                                     timetable.setAttribute('width', '570');
@@ -126,8 +143,17 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                         timetable.insertBefore(colgroup, timetable.firstChild);
                                     }
 
-                                    timetable.querySelectorAll('tr').forEach((tr, idx) => {
-                                        tr.style.height = '25pt';
+                                    const bodyRows = timetable.querySelectorAll('tbody tr');
+                                    const totalRows = bodyRows.length || 24;
+                                    const dynamicRowHeight = Math.max(9, Math.min(13, Math.floor(315 / totalRows)));
+
+                                    timetable.querySelectorAll('thead tr').forEach(tr => {
+                                        tr.style.height = '14pt';
+                                        tr.style.msoHeightRule = 'exactly';
+                                    });
+
+                                    bodyRows.forEach(tr => {
+                                        tr.style.height = `${dynamicRowHeight}pt`;
                                         tr.style.msoHeightRule = 'exactly';
                                         
                                         const isHourRow = tr.classList.contains('hour-row');
@@ -156,7 +182,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 const roomPrintStyles = `
                                     @page Section1 {
                                         size: 8.5in 11.0in;
-                                        margin: 0.1in;
+                                        margin: 0.15in;
                                         mso-header-margin: 0in;
                                         mso-footer-margin: 0in;
                                         mso-paper-source: 0;
@@ -166,38 +192,62 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                         margin: 0; padding: 0; 
                                         mso-line-height-rule: exactly; 
                                         line-height: 1.0; 
+                                        font-family: Arial, "Times New Roman", sans-serif;
+                                        color: #000000;
                                     }
                                     table { border-collapse: collapse; page-break-inside: avoid; mso-table-lspace: 0pt; mso-table-rspace: 0pt; margin: 0; padding: 0; }
                                     tr { page-break-inside: avoid; }
                                     td, th { overflow: hidden; }
                                     
-                                    /* Aggressive resizing for 1-page fit */
                                     h3, h2 { font-size: 10pt !important; margin-bottom: 2pt !important; }
                                     p { font-size: 8pt !important; }
                                     span { font-size: 9pt !important; padding: 1pt 4pt !important; margin-bottom: 2pt !important; }
                                     
-                                    /* Subjects Table */
+                                    /* Subjects Table - Crisp Sharp Borders */
+                                    table:not(.room-util-timetable) {
+                                        border: 1px solid #000000 !important;
+                                        margin-bottom: 4pt !important;
+                                    }
                                     table:not(.room-util-timetable) th, 
                                     table:not(.room-util-timetable) td { 
+                                        border: 1px solid #000000 !important;
                                         font-size: 7.5pt !important; 
-                                        padding: 1pt !important; 
+                                        padding: 1.5pt !important; 
                                     }
                                     
-                                    /* Timetable Grid */
+                                    /* Timetable Grid - Crisp 1px Borders */
+                                    .room-util-timetable {
+                                        border: 1px solid #000000 !important;
+                                        margin-bottom: 4pt !important;
+                                    }
                                     .room-util-timetable th { 
+                                        border: 1px solid #000000 !important;
                                         font-size: 7pt !important; 
                                         padding: 1pt !important; 
                                     }
                                     .room-util-timetable td { 
+                                        border: 1px solid #000000;
                                         padding: 0 !important; 
+                                    }
+                                    .room-util-timetable td.scheduled-cell {
+                                        border: 1px solid #000000 !important;
+                                        background-color: #00b0f0 !important;
                                     }
                                     .room-util-timetable td div { 
                                         font-size: 6.5pt !important; 
+                                        line-height: 1.1 !important;
                                     }
                                     
-                                    /* Signatures */
-                                    table[style*="margin-top: 15pt"] { margin-top: 5pt !important; }
-                                    table[style*="margin-top: 15pt"] td div { margin-bottom: 5pt !important; font-size: 7.5pt !important; }
+                                    /* Signatures Table */
+                                    table[style*="border: none"] { 
+                                        margin-top: 4pt !important; 
+                                        page-break-inside: avoid !important;
+                                        page-break-after: avoid !important;
+                                    }
+                                    table[style*="border: none"] td { 
+                                        border: none !important;
+                                        font-size: 7.5pt !important; 
+                                    }
                                 `;
                                 const htmlContent = `
                                     <html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:m="http://schemas.microsoft.com/office/2004/12/omml" xmlns="http://www.w3.org/TR/REC-html40">
@@ -267,28 +317,29 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             tempContainer.style.backgroundColor = 'white';
                             
                             const isoStyles = `
-                                    .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
-                                    .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
+                                    .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 8.5pt; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 3px 6px; text-align: left; }
                                     .iso-header-table .bold { font-weight: bold; }
                                     .iso-header-table .center { text-align: center; }
-                                    .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
                                     .meta-value { font-weight: normal; text-decoration: underline; }
-                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; table-layout: fixed; }
-                                    .iso-schedule-table tr { height: 38px; }
-                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 38px; overflow: hidden; box-sizing: border-box; }
-                                    .iso-schedule-table th { background-color: #f0f0f0 !important; padding: 6px 4px; height: 32px; font-size: 9pt; }
-                                    .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8pt; padding: 2px 4px; }
-                                    .iso-schedule-table .schedule-cell { padding: 0; height: 38px; overflow: hidden; }
-                                    .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; }
-                                    .cell-subject { font-weight: bold; font-size: 9pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-                                    .cell-professor { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                    .cell-room { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                    .lunch-break { background-color: #e0e0e0 !important; font-weight: bold; letter-spacing: 5px; padding: 4px; height: 30px; overflow: hidden; font-size: 9pt; }
-                                    .lunch-break-time { background-color: #e0e0e0 !important; height: 30px; font-size: 8pt; }
-                                    .signatures-section { display: flex; justify-content: space-between; margin-top: 15px; padding: 0 40px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 8pt; font-family: "Times New Roman", Times, serif; color: #000; table-layout: fixed; border: 1px solid #000; }
+                                    .iso-schedule-table tr { height: 19px; }
+                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 19px; overflow: hidden; box-sizing: border-box; }
+                                    .iso-schedule-table th { background-color: #f0f0f0 !important; padding: 4px 2px; height: 22px; font-size: 8.5pt; font-weight: bold; }
+                                    .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 7.5pt; padding: 2px 4px; }
+                                    .iso-schedule-table tr.hour-row td:not(.time-cell):not(.scheduled-cell) { border-bottom: 1px dashed #d1d5db; }
+                                    .iso-schedule-table tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) { border-top: none; }
+                                    .iso-schedule-table td.scheduled-cell { border: 1px solid #000 !important; }
+                                    .iso-schedule-table .schedule-cell { padding: 0; overflow: hidden; }
+                                    .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; line-height: 1.15; }
+                                    .cell-subject { font-weight: bold; font-size: 8.5pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+                                    .cell-professor { font-size: 7.5pt; font-weight: 600; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                    .cell-room { font-size: 7.5pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                    .signatures-section { display: flex; justify-content: space-between; margin-top: 8px; padding: 0 40px; font-size: 8.5pt; font-family: "Times New Roman", Times, serif; color: #000; }
                                     .signature-block { text-align: left; }
                                     .signature-block.right-aligned { text-align: left; padding-right: 40px; }
-                                    .sig-label { margin-bottom: 25px; }
+                                    .sig-label { margin-bottom: 16px; }
                                     .sig-name { text-decoration: underline; font-weight: bold; }
                             `;
                             
@@ -390,32 +441,33 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             const isoPrintStyles = `
                                         @page { size: letter landscape; margin: 0; }
                                         html, body { margin: 0; padding: 0; height: 100vh; overflow: hidden; }
-                                        body { font-family: "Times New Roman", Times, serif; color: #000; padding: 0.3in; box-sizing: border-box; display: flex; flex-direction: column; }
+                                        body { font-family: "Times New Roman", Times, serif; color: #000; padding: 0.25in; box-sizing: border-box; display: flex; flex-direction: column; }
                                         .print-wrapper { width: 100%; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
                                         .printable-iso-document { display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden; }
-                                        .printable-iso-document > div:last-child { flex-shrink: 0; margin-top: 10px !important; }
-                                        .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 9pt; flex-shrink: 0; }
-                                        .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 4px; text-align: left; }
+                                        .printable-iso-document > div:last-child { flex-shrink: 0; margin-top: 8px !important; }
+                                        .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 8.5pt; flex-shrink: 0; }
+                                        .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 3px 6px; text-align: left; }
                                         .iso-header-table .bold { font-weight: bold; }
                                         .iso-header-table .center { text-align: center; }
                                         .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; flex-shrink: 0; }
                                         .meta-value { font-weight: normal; text-decoration: underline; }
-                                        .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; flex: 1; height: 100%; margin: 0; }
-                                        .iso-schedule-table tr { height: 38px; }
-                                        .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 38px; overflow: hidden; box-sizing: border-box; }
-                                        .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 2px 4px; font-size: 9pt; height: 4vh; }
-                                        .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8pt; padding: 2px 4px; }
+                                        .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 8pt; table-layout: fixed; flex: 1; height: 100%; margin: 0; border: 1px solid #000; }
+                                        .iso-schedule-table tr { height: 19px; }
+                                        .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 19px; overflow: hidden; box-sizing: border-box; }
+                                        .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 3px 2px; font-size: 8.5pt; height: 22px; }
+                                        .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 7.5pt; padding: 2px 4px; }
+                                        .iso-schedule-table tr.hour-row td:not(.time-cell):not(.scheduled-cell) { border-bottom: 1px dashed #d1d5db; }
+                                        .iso-schedule-table tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) { border-top: none; }
+                                        .iso-schedule-table td.scheduled-cell { border: 1px solid #000 !important; }
                                         .iso-schedule-table .schedule-cell { padding: 0; overflow: hidden; }
-                                        .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; }
-                                        .cell-subject { font-weight: bold; font-size: 9pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-                                        .cell-professor { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                        .cell-room { font-size: 8pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                        .lunch-break { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; letter-spacing: 5px; padding: 2px; overflow: hidden; font-size: 9pt; height: 4vh; }
-                                        .lunch-break-time { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 8pt; height: 4vh; }
-                                        .signatures-section { display: flex; justify-content: space-between; margin-top: 15px; padding: 0 40px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; flex-shrink: 0; }
+                                        .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; line-height: 1.15; }
+                                        .cell-subject { font-weight: bold; font-size: 8.5pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+                                        .cell-professor { font-size: 7.5pt; font-weight: 600; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                        .cell-room { font-size: 7.5pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                        .signatures-section { display: flex; justify-content: space-between; margin-top: 8px; padding: 0 40px; font-size: 8.5pt; font-family: "Times New Roman", Times, serif; color: #000; flex-shrink: 0; }
                                         .signature-block { text-align: left; }
                                         .signature-block.right-aligned { text-align: left; padding-right: 40px; }
-                                        .sig-label { margin-bottom: 25px; }
+                                        .sig-label { margin-bottom: 16px; }
                                         .sig-name { text-decoration: underline; font-weight: bold; }
                             `;
                             
