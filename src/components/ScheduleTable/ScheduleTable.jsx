@@ -873,7 +873,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
       </div>
 
       {/* Subject Summary Table */}
-      <div className="schedule-summary-container" style={{ margin: '20px 0', padding: '0 10px', width: '100%', overflowX: 'auto' }}>
+      <div className="schedule-summary-container" style={{ margin: '20px 0', padding: '0 10px', width: '100%', overflowX: 'auto', overscrollBehaviorY: 'auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '15px' }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#033279', textTransform: 'uppercase' }}>{fullDepartmentName}</h3>
           <h4 style={{ margin: '5px 0', fontSize: '0.9rem', color: '#000' }}>SCHEDULE OF CLASSES</h4>
@@ -909,7 +909,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
       </div>
 
       {/* Main Grid View */}
-      <div className="table-wrapper">
+      <div className="table-wrapper" style={{ overscrollBehaviorY: 'auto' }}>
         <table
           className="schedule-table"
           style={isFullscreen && fitScale !== 1 ? { transform: `scale(${fitScale})`, transformOrigin: 'top center' } : undefined}

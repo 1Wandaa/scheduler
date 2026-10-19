@@ -388,7 +388,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 </div>
             </div>
 
-            <div className="colored-schedule-wrapper" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            <div className="colored-schedule-wrapper" style={{ maxWidth: '1200px', margin: '0 auto', overscrollBehaviorY: 'auto' }}>
                 <ScheduleTable
                     schedules={filteredSchedules}
                     activeSchedules={schedules}
