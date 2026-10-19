@@ -12,7 +12,7 @@ import { collection, query, where, getDocs, getDoc, doc, setDoc } from 'firebase
 import { logActivity, LOG_ACTIONS } from '../utils/activityLogger';
 
 /** Timeout (ms) for the initial Firestore profile fetch. */
-const PROFILE_FETCH_TIMEOUT = 5000;
+const PROFILE_FETCH_TIMEOUT = 3000;
 
 /**
  * Custom hook that manages Firebase Auth state and user profile
@@ -80,70 +80,60 @@ export function useAuthUser() {
           const emailPrefix = firebaseUser.email ? firebaseUser.email.split('@')[0] : 'user';
           let targetDoc = null;
 
-          // 1. Try direct fetch by UID first (with retries to handle any replication or creation latency)
-          for (let attempt = 0; attempt < 3; attempt++) {
-            try {
-              const uidSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
-              if (uidSnap.exists()) {
-                targetDoc = uidSnap;
-                break;
-              }
-            } catch (uidErr) {
-              console.warn('Direct UID fetch in auth observer failed:', uidErr);
-            }
-            if (attempt < 2) {
-              await new Promise((resolve) => setTimeout(resolve, 300));
-            }
+          // Build username search targets
+          const storedUsername = localStorage.getItem('smartsched_username');
+          const searchTargets = [emailPrefix, `@${emailPrefix}`, firebaseUser.email];
+          if (storedUsername && !searchTargets.includes(storedUsername)) {
+            searchTargets.push(storedUsername);
+          }
+
+          // Race: UID doc fetch vs username query — whichever resolves first
+          const uidFetchPromise = getDoc(doc(db, 'users', firebaseUser.uid))
+            .then(snap => snap.exists() ? snap : null)
+            .catch(() => null);
+
+          const usernameFetchPromise = getDocs(
+            query(collection(db, 'users'), where('username', 'in', searchTargets))
+          ).catch(() => null);
+
+          const timeoutPromise = new Promise((resolve) => {
+            setTimeout(() => resolve('timeout'), PROFILE_FETCH_TIMEOUT);
+          });
+
+          // Wait for both to settle (with a timeout safety net)
+          const [uidResult, usernameResult] = await Promise.all([
+            Promise.race([uidFetchPromise, timeoutPromise]),
+            Promise.race([usernameFetchPromise, timeoutPromise]),
+          ]);
+
+          // 1. Prefer direct UID match
+          if (uidResult && uidResult !== 'timeout') {
+            targetDoc = uidResult;
           }
 
           // 2. Fallback to username search if UID lookup returned nothing
-          if (!targetDoc) {
-            const storedUsername = localStorage.getItem('smartsched_username');
-            const searchTargets = [emailPrefix, `@${emailPrefix}`, firebaseUser.email];
-            if (storedUsername && !searchTargets.includes(storedUsername)) {
-              searchTargets.push(storedUsername);
-            }
+          if (!targetDoc && usernameResult && usernameResult !== 'timeout' && !usernameResult.empty) {
+            const snapshot = usernameResult;
+            const cleanEmailPrefix = emailPrefix.replace(/^@+/, '').toLowerCase().trim();
+            const cleanStored = (storedUsername || '').replace(/^@+/, '').toLowerCase().trim();
 
-            for (let attempt = 0; attempt < 3; attempt++) {
-              try {
-                const q = query(collection(db, 'users'), where('username', 'in', searchTargets));
-                const fetchPromise = getDocs(q);
-                const timeoutPromise = new Promise((_, reject) => {
-                  setTimeout(() => reject(new Error('Firestore request timed out')), PROFILE_FETCH_TIMEOUT);
-                });
+            const matchingDocs = snapshot.docs.filter((d) => {
+              const u = (d.data().username || '').replace(/^@+/, '').toLowerCase().trim();
+              return u === cleanEmailPrefix || (cleanStored && u === cleanStored);
+            });
 
-                const snapshot = await Promise.race([fetchPromise, timeoutPromise]);
+            const pool = matchingDocs.length > 0 ? matchingDocs : snapshot.docs;
 
-                if (!snapshot.empty) {
-                  const cleanEmailPrefix = emailPrefix.replace(/^@+/, '').toLowerCase().trim();
-                  const cleanStored = (storedUsername || '').replace(/^@+/, '').toLowerCase().trim();
+            // Prefer doc with matching auth UID
+            const uidMatch = pool.find((d) => d.id === firebaseUser.uid || d.data().id === firebaseUser.uid);
 
-                  const matchingDocs = snapshot.docs.filter((d) => {
-                    const u = (d.data().username || '').replace(/^@+/, '').toLowerCase().trim();
-                    return u === cleanEmailPrefix || (cleanStored && u === cleanStored);
-                  });
+            // Prefer Admin / Staff role if duplicates exist
+            const adminMatch = pool.find((d) => {
+              const role = (d.data().role || '').toLowerCase();
+              return role === 'admin' || role === 'department head' || role === 'faculty';
+            });
 
-                  const pool = matchingDocs.length > 0 ? matchingDocs : snapshot.docs;
-
-                  // 1. Prefer doc with matching auth UID
-                  const uidMatch = pool.find((d) => d.id === firebaseUser.uid || d.data().id === firebaseUser.uid);
-
-                  // 2. Prefer Admin / Staff role if duplicates exist
-                  const adminMatch = pool.find((d) => {
-                    const role = (d.data().role || '').toLowerCase();
-                    return role === 'admin' || role === 'department head' || role === 'faculty';
-                  });
-
-                  targetDoc = uidMatch || adminMatch || pool[0];
-                  break;
-                }
-              } catch (qErr) {
-                console.warn('Username query in auth observer failed:', qErr);
-              }
-              if (attempt < 2) {
-                await new Promise((resolve) => setTimeout(resolve, 300));
-              }
-            }
+            targetDoc = uidMatch || adminMatch || pool[0];
           }
 
           if (targetDoc) {

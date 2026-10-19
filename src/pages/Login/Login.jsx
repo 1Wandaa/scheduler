@@ -51,15 +51,6 @@ const findUserDocument = async (rawUsername, targetUid = null) => {
     return docU === cleanU;
   });
 
-  if (matches.length === 0) {
-    // Broader fallback
-    const allSnap = await getDocs(collection(db, 'users'));
-    matches = allSnap.docs.filter(d => {
-      const docU = (d.data().username || '').replace(/^@+/, '').toLowerCase().trim();
-      return docU === cleanU;
-    });
-  }
-
   if (matches.length === 0) return undefined;
 
   // 1. If targetUid is provided, prioritize the document matching this Auth UID
