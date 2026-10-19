@@ -88,11 +88,11 @@
 
 /* Inner dividers: hour-row vs half-hour-row */
 .iso-schedule-table tr.hour-row td:not(.time-cell):not(.scheduled-cell) {
-    border-bottom: 1px dashed #d1d5db;
+    border-bottom: none !important;
 }
 
 .iso-schedule-table tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) {
-    border-top: none;
+    border-top: none !important;
 }
 
 .iso-schedule-table td.scheduled-cell {

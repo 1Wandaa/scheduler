@@ -126,8 +126,8 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 19px; overflow: hidden; box-sizing: border-box; }
                                     .iso-schedule-table th { background-color: #f0f0f0 !important; padding: 4px 2px; height: 22px; font-size: 8.5pt; font-weight: bold; }
                                     .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 7.5pt; padding: 2px 4px; }
-                                    .iso-schedule-table tr.hour-row td:not(.time-cell):not(.scheduled-cell) { border-bottom: 1px dashed #d1d5db; }
-                                    .iso-schedule-table tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) { border-top: none; }
+                                    .iso-schedule-table tr.hour-row td:not(.time-cell):not(.scheduled-cell) { border-bottom: none !important; }
+                                    .iso-schedule-table tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) { border-top: none !important; }
                                     .iso-schedule-table td.scheduled-cell { border: 1px solid #000 !important; }
                                     .iso-schedule-table .schedule-cell { padding: 0; overflow: hidden; }
                                     .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; line-height: 1.15; }
@@ -469,8 +469,8 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                         .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 19px; overflow: hidden; box-sizing: border-box; }
                                         .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 3px 2px; font-size: 8.5pt; height: 22px; }
                                         .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 7.5pt; padding: 2px 4px; }
-                                        .iso-schedule-table tr.hour-row td:not(.time-cell):not(.scheduled-cell) { border-bottom: 1px dashed #d1d5db; }
-                                        .iso-schedule-table tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) { border-top: none; }
+                                        .iso-schedule-table tr.hour-row td:not(.time-cell):not(.scheduled-cell) { border-bottom: none !important; }
+                                        .iso-schedule-table tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) { border-top: none !important; }
                                         .iso-schedule-table td.scheduled-cell { border: 1px solid #000 !important; }
                                         .iso-schedule-table .schedule-cell { padding: 0; overflow: hidden; }
                                         .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; line-height: 1.15; }

@@ -186,7 +186,7 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
                                                     <div 
                                                         key={cls.id || idx} 
                                                         className="cell-content" 
-                                                        style={idx > 0 ? { marginTop: '2px', borderTop: '1px dashed #ccc', paddingTop: '2px' } : {}}
+                                                        style={idx > 0 ? { marginTop: '2px', borderTop: '1px solid #000', paddingTop: '2px' } : {}}
                                                     >
                                                         <div className="cell-subject">{cls.subject?.code || '—'}{cls.component ? ` (${cls.component})` : ''}</div>
                                                         <div className="cell-professor">{profFormatted}</div>
