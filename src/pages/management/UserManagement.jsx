@@ -14,9 +14,9 @@ import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
 // Mock data to initialize database
 const initialUsers = [
-  { id: 1, username: '@admin', name: 'Dr. Jelly L. Paredes', role: 'Department Head' },
+  { id: 1, username: '@admin', name: 'Dr. Jelly L. Paredes', role: 'Admin' },
   { id: 2, username: '@olga', name: 'Prof. Olga Llanera', role: 'Faculty' },
-  { id: 3, username: '@ryan', name: 'Ryan James Mora', role: 'Student' },
+  { id: 3, username: '@ryan', name: 'Ryan James Mora', role: 'User' },
 ];
 
 const UserManagement = ({ user, onBack }) => {
@@ -226,10 +226,12 @@ const UserManagement = ({ user, onBack }) => {
   };
 
   const cleanUsername = (formData.username || '').replace(/^@+/, '').toLowerCase().trim();
-  const isUsernameDuplicate = Boolean(cleanUsername && users.some(u =>
-    (!editingUser || u.id !== editingUser.id) &&
-    (u.username || '').replace(/^@+/, '').toLowerCase().trim() === cleanUsername
-  ));
+  const isUsernameDuplicate = Boolean(
+    !isSaving && isModalOpen && cleanUsername && users.some(u =>
+      (!editingUser || u.id !== editingUser.id) &&
+      (u.username || '').replace(/^@+/, '').toLowerCase().trim() === cleanUsername
+    )
+  );
 
   const handleSaveUser = async () => {
     if (isSubmittingRef.current || isSaving) return;
@@ -562,9 +564,7 @@ const UserManagement = ({ user, onBack }) => {
                   >
                     <option value="Admin">Admin</option>
                     <option value="User">User</option>
-                    <option value="Department Head">Department Head</option>
                     <option value="Faculty">Faculty</option>
-                    <option value="Student">Student</option>
                   </select>
                 </div>
               </div>

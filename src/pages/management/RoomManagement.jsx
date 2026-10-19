@@ -54,13 +54,17 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
   const trimmedName = (formData.name || '').trim();
   const trimmedId = (formData.id || '').trim();
 
-  const isNameDuplicate = trimmedName && rooms.some(r =>
-    (!editMode || r.id !== currentId) &&
-    (r.name || '').trim().toLowerCase() === trimmedName.toLowerCase()
+  const isNameDuplicate = Boolean(
+    !isSaving && showModal && trimmedName && rooms.some(r =>
+      (!editMode || r.id !== currentId) &&
+      (r.name || '').trim().toLowerCase() === trimmedName.toLowerCase()
+    )
   );
 
-  const isIdDuplicate = !editMode && trimmedId && rooms.some(r =>
-    String(r.id).trim().toLowerCase() === trimmedId.toLowerCase()
+  const isIdDuplicate = Boolean(
+    !isSaving && showModal && !editMode && trimmedId && rooms.some(r =>
+      String(r.id).trim().toLowerCase() === trimmedId.toLowerCase()
+    )
   );
 
   const handleSave = async () => {
@@ -98,6 +102,7 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
         logActivity({ user, action: LOG_ACTIONS.ADD_ROOM, details: `Added new room: ${formData.name} (${formData.type})` });
       }
       setShowModal(false);
+      toast.success(`Room ${formData.name} saved successfully!`);
     } catch (err) {
       console.error("Error saving room:", err);
       setError("Failed to save room. Please try again.");

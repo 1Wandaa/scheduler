@@ -192,16 +192,16 @@ const QuickCreateModal = ({
   // Live duplicate checks
   const trimmedSubCode = (subjectData.code || '').trim();
   const trimmedSubName = (subjectData.name || '').trim();
-  const isSubCodeDuplicate = Boolean(trimmedSubCode && subjects.some(s => normalize(s.code) === normalize(trimmedSubCode)));
-  const isSubNameDuplicate = Boolean(trimmedSubName && subjects.some(s => normalize(s.name) === normalize(trimmedSubName)));
+  const isSubCodeDuplicate = Boolean(!isSaving && isOpen && trimmedSubCode && subjects.some(s => normalize(s.code) === normalize(trimmedSubCode)));
+  const isSubNameDuplicate = Boolean(!isSaving && isOpen && trimmedSubName && subjects.some(s => normalize(s.name) === normalize(trimmedSubName)));
 
   const trimmedSecName = (sectionData.name || '').trim();
-  const isSecNameDuplicate = Boolean(trimmedSecName && sections.some(s => normalize(s.name) === normalize(trimmedSecName)));
+  const isSecNameDuplicate = Boolean(!isSaving && isOpen && trimmedSecName && sections.some(s => normalize(s.name) === normalize(trimmedSecName)));
 
   const fNameTrim = (facultyData.firstName || '').trim();
   const lNameTrim = (facultyData.lastName || '').trim();
   const combinedFacName = `${lNameTrim}, ${fNameTrim}`;
-  const isFacNameDuplicate = Boolean(fNameTrim && lNameTrim && professors.some(p =>
+  const isFacNameDuplicate = Boolean(!isSaving && isOpen && fNameTrim && lNameTrim && professors.some(p =>
     normalizeFacultyName(p.name || `${p.firstName || ''} ${p.lastName || ''}`) === normalizeFacultyName(fNameTrim + lNameTrim)
   ));
 

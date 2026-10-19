@@ -51,13 +51,17 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
   const trimmedName = (formData.name || '').trim();
   const trimmedId = (formData.id || '').trim();
 
-  const isNameDuplicate = trimmedName && sections.some(s =>
-    (!editMode || s.id !== currentId) &&
-    normalizeSectionName(s.name) === normalizeSectionName(trimmedName)
+  const isNameDuplicate = Boolean(
+    !isSaving && showModal && trimmedName && sections.some(s =>
+      (!editMode || s.id !== currentId) &&
+      normalizeSectionName(s.name) === normalizeSectionName(trimmedName)
+    )
   );
 
-  const isIdDuplicate = !editMode && trimmedId && sections.some(s =>
-    String(s.id).trim().toLowerCase() === trimmedId.toLowerCase()
+  const isIdDuplicate = Boolean(
+    !isSaving && showModal && !editMode && trimmedId && sections.some(s =>
+      String(s.id).trim().toLowerCase() === trimmedId.toLowerCase()
+    )
   );
 
   const handleSave = async () => {

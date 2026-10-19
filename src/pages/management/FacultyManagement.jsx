@@ -107,9 +107,11 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
   const combinedName = `${lNameTrim}, ${fNameTrim}`;
   const newNameNormalized = normalizeFacultyName(fNameTrim + lNameTrim);
 
-  const isNameDuplicate = Boolean(fNameTrim && lNameTrim) && professors.some(p =>
-    p.id !== currentId &&
-    normalizeFacultyName(p.name || `${p.firstName || ''} ${p.lastName || ''}`) === newNameNormalized
+  const isNameDuplicate = Boolean(
+    !isSaving && showModal && fNameTrim && lNameTrim && professors.some(p =>
+      p.id !== currentId &&
+      normalizeFacultyName(p.name || `${p.firstName || ''} ${p.lastName || ''}`) === newNameNormalized
+    )
   );
 
   const handleSave = async () => {

@@ -207,18 +207,24 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
   const trimmedName = (formData.name || '').trim();
   const trimmedId = (formData.id || '').trim();
 
-  const isCodeDuplicate = trimmedCode && subjects.some(s =>
-    (!editMode || String(s.id) !== String(currentId)) &&
-    normalizeSubject(s.code) === normalizeSubject(trimmedCode)
+  const isCodeDuplicate = Boolean(
+    !isSaving && showModal && trimmedCode && subjects.some(s =>
+      (!editMode || String(s.id) !== String(currentId)) &&
+      normalizeSubject(s.code) === normalizeSubject(trimmedCode)
+    )
   );
 
-  const isNameDuplicate = trimmedName && subjects.some(s =>
-    (!editMode || String(s.id) !== String(currentId)) &&
-    normalizeSubject(s.name) === normalizeSubject(trimmedName)
+  const isNameDuplicate = Boolean(
+    !isSaving && showModal && trimmedName && subjects.some(s =>
+      (!editMode || String(s.id) !== String(currentId)) &&
+      normalizeSubject(s.name) === normalizeSubject(trimmedName)
+    )
   );
 
-  const isIdDuplicate = !editMode && trimmedId && subjects.some(s =>
-    String(s.id).trim().toLowerCase() === trimmedId.toLowerCase()
+  const isIdDuplicate = Boolean(
+    !isSaving && showModal && !editMode && trimmedId && subjects.some(s =>
+      String(s.id).trim().toLowerCase() === trimmedId.toLowerCase()
+    )
   );
 
   const handleSave = async () => {

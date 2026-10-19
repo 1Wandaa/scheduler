@@ -48,13 +48,17 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
   const trimmedId = (formData.id || '').trim();
   const trimmedName = (formData.name || '').trim();
 
-  const isIdDuplicate = !editMode && trimmedId && departments.some(d =>
-    d.id && d.id.trim().toLowerCase() === trimmedId.toLowerCase()
+  const isIdDuplicate = Boolean(
+    !isSaving && showModal && !editMode && trimmedId && departments.some(d =>
+      d.id && d.id.trim().toLowerCase() === trimmedId.toLowerCase()
+    )
   );
 
-  const isNameDuplicate = trimmedName && departments.some(d =>
-    (!editMode || d.id !== currentId) &&
-    d.name && d.name.trim().toLowerCase() === trimmedName.toLowerCase()
+  const isNameDuplicate = Boolean(
+    !isSaving && showModal && trimmedName && departments.some(d =>
+      (!editMode || d.id !== currentId) &&
+      d.name && d.name.trim().toLowerCase() === trimmedName.toLowerCase()
+    )
   );
 
   const handleSave = async () => {
@@ -90,6 +94,7 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
         logActivity({ user, action: LOG_ACTIONS.ADD_DEPARTMENT, details: `Added new department: ${formData.name}` });
       }
       setShowModal(false);
+      toast.success(`Department ${formData.name} saved successfully!`);
     } catch (err) {
       console.error("Error saving department:", err);
       setError("Failed to save department. Please try again.");

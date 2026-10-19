@@ -52,18 +52,24 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
   const trimmedCode = (formData.code || '').trim();
   const trimmedTitle = (formData.title || '').trim();
 
-  const isIdDuplicate = !editMode && trimmedId && courses.some(c =>
-    c.id && String(c.id).trim().toLowerCase() === trimmedId.toLowerCase()
+  const isIdDuplicate = Boolean(
+    !isSaving && showModal && !editMode && trimmedId && courses.some(c =>
+      c.id && String(c.id).trim().toLowerCase() === trimmedId.toLowerCase()
+    )
   );
 
-  const isCodeDuplicate = trimmedCode && courses.some(c =>
-    (!editMode || c.id !== currentId) &&
-    (c.code || '').trim().toLowerCase() === trimmedCode.toLowerCase()
+  const isCodeDuplicate = Boolean(
+    !isSaving && showModal && trimmedCode && courses.some(c =>
+      (!editMode || c.id !== currentId) &&
+      (c.code || '').trim().toLowerCase() === trimmedCode.toLowerCase()
+    )
   );
 
-  const isTitleDuplicate = trimmedTitle && courses.some(c =>
-    (!editMode || c.id !== currentId) &&
-    (c.title || '').trim().toLowerCase() === trimmedTitle.toLowerCase()
+  const isTitleDuplicate = Boolean(
+    !isSaving && showModal && trimmedTitle && courses.some(c =>
+      (!editMode || c.id !== currentId) &&
+      (c.title || '').trim().toLowerCase() === trimmedTitle.toLowerCase()
+    )
   );
 
   const handleSave = async () => {
@@ -108,6 +114,7 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
         logActivity({ user, action: LOG_ACTIONS.ADD_COURSE, details: `Added new course: ${formData.code} - ${formData.title}` });
       }
       setShowModal(false);
+      toast.success(`Course ${formData.code} saved successfully!`);
     } catch (err) {
       console.error("Error saving course:", err);
       setError("Failed to save course. Please try again.");
