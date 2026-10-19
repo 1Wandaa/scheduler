@@ -19,7 +19,9 @@ import {
   X,
   Plus,
   ArrowLeft,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Check,
+  FlaskConical
 } from 'lucide-react';
 import './AssignmentHub.css';
 
@@ -65,8 +67,8 @@ const InlineInstructorSelect = React.memo(({
 
   return (
     <select
-      className="form-select"
-      style={{ margin: 0, padding: '4px 8px', fontSize: '0.78rem', width: '100%' }}
+      className="hub-instructor-select"
+      style={{ margin: 0, padding: '4px 8px', width: '100%' }}
       value={assignedProf?.id || ''}
       onMouseEnter={handleExpand}
       onFocus={handleExpand}
@@ -80,20 +82,20 @@ const InlineInstructorSelect = React.memo(({
         // Ultra-minimal idle state (1 DOM option node instead of 100+)
         assignedProf ? (
           <option value={assignedProf.id}>
-            ✨ {assignedProf.name || `${assignedProf.lastName}, ${assignedProf.firstName}`} ({assignedProf.department})
+            {assignedProf.name || `${assignedProf.lastName}, ${assignedProf.firstName}`} ({assignedProf.department})
           </option>
         ) : (
-          <option value="">⚠️ Assign Faculty...</option>
+          <option value="">— Assign Faculty...</option>
         )
       ) : (
         // Expanded state with full categorized options
         <>
-          <option value="">⚠️ Assign Faculty...</option>
+          <option value="">— Assign Faculty...</option>
           {specProfs.length > 0 && (
             <optgroup label="Specialized in this Subject">
               {specProfs.map(p => (
                 <option key={p.id} value={p.id}>
-                  ✨ {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
+                  {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
                 </option>
               ))}
             </optgroup>
@@ -125,6 +127,7 @@ const AssignmentHub = ({
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [onlyNeedsAttention, setOnlyNeedsAttention] = useState(false);
+  const [onlyLecLab, setOnlyLecLab] = useState(false);
   const [quickCreateState, setQuickCreateState] = useState({ isOpen: false, type: 'subject' });
 
   // Modal state for editing an entity's assignments in-depth
@@ -411,15 +414,26 @@ const AssignmentHub = ({
       }
     });
 
+    const totalLecLabSubjects = subjects.filter(s => s.hasLecLab).length;
+    let totalLecLabEnrolled = 0;
+    sections.forEach(sec => {
+      (sec.subjects || []).forEach(subRef => {
+        const sub = getSubject(subRef);
+        if (sub?.hasLecLab) totalLecLabEnrolled++;
+      });
+    });
+
     return {
       totalSections: sections.length,
       totalProfessors: professors.length,
       totalSubjects: subjects.length,
+      totalLecLabSubjects,
+      totalLecLabEnrolled,
       totalEnrolledLinks,
       totalAssignedLinks,
       sectionsNeedingTeachers
     };
-  }, [sections, professors, subjects, getAssignedProf]);
+  }, [sections, professors, subjects, getAssignedProf, getSubject]);
 
   // --- Inline Instructor Change for a Section Subject ---
   const handleAssignInstructorInline = async (section, subRef, newProfId) => {
@@ -535,7 +549,7 @@ const AssignmentHub = ({
     }
   };
 
-  // ⚡ 1-Click Auto-Match Teachers for a Section
+  // Auto-Match Teachers for a Section
   const handleAutoMatchSectionTeachers = async (sec) => {
     const enrolled = sec.subjects || [];
     let matchCount = 0;
@@ -593,13 +607,13 @@ const AssignmentHub = ({
 
       await batch.commit();
       assignedProfCache.current.clear();
-      toast.success(`⚡ Automatically matched teachers for ${matchCount} subject(s) in ${sec.name}!`);
+      toast.success(`Automatically matched teachers for ${matchCount} subject(s) in ${sec.name}!`);
     } else {
       toast.info(`All subjects in ${sec.name} already have instructors or no specialized faculty were found.`);
     }
   };
 
-  // ⚡ 1-Click Auto-Match Teachers across ALL sections
+  // Auto-Match Teachers across ALL sections
   const handleAutoMatchAllSections = async () => {
     let totalMatches = 0;
     const batch = writeBatch(db);
@@ -661,7 +675,7 @@ const AssignmentHub = ({
 
       await batch.commit();
       assignedProfCache.current.clear();
-      toast.success(`⚡ Auto-matched ${totalMatches} teacher assignment(s) across all sections!`);
+      toast.success(`Auto-matched ${totalMatches} teacher assignment(s) across all sections!`);
     } else {
       toast.info("All sections are already fully assigned or no matching specialized faculty were found.");
     }
@@ -686,7 +700,7 @@ const AssignmentHub = ({
     });
     setStagedFacultyMap(nextMap);
     if (count > 0) {
-      toast.success(`⚡ Automatically filled ${count} instructor(s)!`);
+      toast.success(`Automatically filled ${count} instructor(s)!`);
     } else {
       toast.info("All subjects already have instructors or no specialized faculty were found.");
     }
@@ -1016,9 +1030,18 @@ const AssignmentHub = ({
         return hasMissing;
       }
 
+      if (onlyLecLab) {
+        const enrolled = sec.subjects || [];
+        const hasLecLabSubject = enrolled.some(subRef => {
+          const sub = getSubject(subRef);
+          return sub?.hasLecLab;
+        });
+        if (!hasLecLabSubject) return false;
+      }
+
       return true;
     }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [sections, departmentFilter, searchQuery, onlyNeedsAttention, getAssignedProf]);
+  }, [sections, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, getAssignedProf, getSubject]);
 
   const filteredFaculty = useMemo(() => {
     return professors.filter(prof => {
@@ -1034,13 +1057,27 @@ const AssignmentHub = ({
         return (prof.assignedSections || []).length === 0 || (prof.specialization || []).length === 0;
       }
 
+      if (onlyLecLab) {
+        const specs = prof.specialization || [];
+        const assignedSecs = prof.assignedSections || [];
+        const specHasLecLab = specs.some(sRef => getSubject(sRef)?.hasLecLab);
+        const teachesLecLab = assignedSecs.some(secId => {
+          const sec = sectionMap.get(String(secId).toLowerCase());
+          return (sec?.subjects || []).some(subRef => {
+            const sub = getSubject(subRef);
+            return sub?.hasLecLab && getAssignedProf(sec, subRef)?.id === prof.id;
+          });
+        });
+        if (!specHasLecLab && !teachesLecLab) return false;
+      }
+
       return true;
     }).sort((a, b) => {
       const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
       const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
       return nameA.localeCompare(nameB);
     });
-  }, [professors, departmentFilter, searchQuery, onlyNeedsAttention]);
+  }, [professors, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, getSubject, sectionMap, getAssignedProf]);
 
   const filteredSubjects = useMemo(() => {
     return subjects.filter(sub => {
@@ -1066,9 +1103,13 @@ const AssignmentHub = ({
         return !isEnrolled || !hasProf;
       }
 
+      if (onlyLecLab && !sub.hasLecLab) {
+        return false;
+      }
+
       return true;
     }).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-  }, [subjects, departmentFilter, searchQuery, onlyNeedsAttention, enrolledSubjectCodesSet, specializedSubjectCodesSet, activeSemester]);
+  }, [subjects, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, enrolledSubjectCodesSet, specializedSubjectCodesSet, activeSemester]);
 
   // Progressive windowing: start with 12 items for instant (<16ms) initial render
   const [visibleLimit, setVisibleLimit] = useState(12);
@@ -1076,7 +1117,7 @@ const AssignmentHub = ({
 
   useEffect(() => {
     setVisibleLimit(12);
-  }, [viewMode, departmentFilter, searchQuery, onlyNeedsAttention]);
+  }, [viewMode, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -1103,6 +1144,11 @@ const AssignmentHub = ({
       fontSize: '0.78rem', fontWeight: '600', color: 'var(--accent-primary, #5645ee)'
     }}>
       <span>{sub.code || sub.name}</span>
+      {sub.hasLecLab && (
+        <span style={{ fontSize: '0.62rem', background: 'rgba(147, 51, 234, 0.2)', color: '#7e22ce', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>
+          Lec+Lab
+        </span>
+      )}
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onRemove(); }}
@@ -1250,6 +1296,16 @@ const AssignmentHub = ({
             </div>
           </div>
 
+          <div className="hub-metric-card">
+            <div className="hub-metric-icon" style={{ background: 'rgba(147, 51, 234, 0.1)', color: '#7e22ce' }}>
+              <FlaskConical size={20} />
+            </div>
+            <div className="hub-metric-content">
+              <div className="hub-metric-value" style={{ color: '#7e22ce' }}>{stats.totalLecLabSubjects}</div>
+              <div className="hub-metric-label">Lec & Lab Subjects</div>
+            </div>
+          </div>
+
           <div className={`hub-metric-card ${stats.sectionsNeedingTeachers > 0 ? 'needs-attention' : 'all-good'}`}>
             <div className="hub-metric-icon" style={{
               background: stats.sectionsNeedingTeachers > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
@@ -1301,17 +1357,32 @@ const AssignmentHub = ({
               </button>
             </div>
 
-            <button
-              type="button"
-              className={`hub-attention-filter-btn ${onlyNeedsAttention ? 'active' : ''}`}
-              onClick={() => setOnlyNeedsAttention(!onlyNeedsAttention)}
-            >
-              <span className="hub-attention-dot"></span>
-              <span>Needs Attention Only</span>
-              {stats.sectionsNeedingTeachers > 0 && (
-                <span className="hub-attention-badge">{stats.sectionsNeedingTeachers}</span>
-              )}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className={`hub-leclab-filter-btn ${onlyLecLab ? 'active' : ''}`}
+                onClick={() => setOnlyLecLab(!onlyLecLab)}
+                title="Filter sections and subjects with both Lecture and Laboratory components"
+              >
+                <FlaskConical size={14} />
+                <span>Lec & Lab</span>
+                {stats.totalLecLabSubjects > 0 && (
+                  <span className="hub-leclab-count-badge">{stats.totalLecLabSubjects}</span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className={`hub-attention-filter-btn ${onlyNeedsAttention ? 'active' : ''}`}
+                onClick={() => setOnlyNeedsAttention(!onlyNeedsAttention)}
+              >
+                <span className="hub-attention-dot"></span>
+                <span>Needs Attention Only</span>
+                {stats.sectionsNeedingTeachers > 0 && (
+                  <span className="hub-attention-badge">{stats.sectionsNeedingTeachers}</span>
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="hub-control-bottom">
@@ -1376,18 +1447,24 @@ const AssignmentHub = ({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {missingCount > 0 ? (
                         <>
-                          <span className="hub-alert-chip">⚠️ {missingCount} unassigned</span>
+                          <span className="hub-alert-chip">
+                            <AlertTriangle size={12} style={{ flexShrink: 0 }} />
+                            {missingCount} unassigned
+                          </span>
                           <button
                             className="hub-quick-btn"
                             style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669', borderColor: 'rgba(16, 185, 129, 0.3)' }}
                             onClick={() => handleAutoMatchSectionTeachers(sec)}
                             title="Automatically assign specialized faculty to unassigned subjects"
                           >
-                            ⚡ Auto-Match
+                            <Sparkles size={12} /> Auto-Match
                           </button>
                         </>
                       ) : enrolled.length > 0 ? (
-                        <span className="hub-success-chip">✓ Fully Assigned</span>
+                        <span className="hub-success-chip">
+                          <CheckCircle2 size={12} style={{ flexShrink: 0 }} />
+                          Fully Assigned
+                        </span>
                       ) : (
                         <span className="hub-alert-chip">No subjects enrolled</span>
                       )}
@@ -1416,12 +1493,28 @@ const AssignmentHub = ({
                         return (
                           <div key={subRef} className="hub-mapping-row" style={isOrphan ? { background: 'rgba(239, 68, 68, 0.06)', borderLeft: '3px solid #dc2626' } : undefined}>
                             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                              <span style={{ fontWeight: '700', fontSize: '0.82rem', color: isOrphan ? '#dc2626' : 'var(--accent-dark)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {isOrphan ? `⚠️ ${sub.code}` : sub.code}
-                              </span>
-                              <span style={{ fontSize: '0.72rem', color: isOrphan ? '#b91c1c' : 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span className="hub-subject-code" style={{ color: isOrphan ? '#dc2626' : 'var(--accent-dark)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  {isOrphan && <AlertTriangle size={12} style={{ flexShrink: 0 }} />}
+                                  {sub.code}
+                                </span>
+                                {sub.hasLecLab && (
+                                  <span className="hub-tag-leclab" title="Requires separate Lecture and Laboratory sessions">
+                                    <FlaskConical size={10} />
+                                    Lec & Lab
+                                  </span>
+                                )}
+                              </div>
+                              <span className="hub-subject-name" style={isOrphan ? { color: '#b91c1c' } : undefined}>
                                 {isOrphan ? 'Legacy / Unmatched ID' : sub.name}
                               </span>
+                              {sub.hasLecLab && (
+                                <div className="hub-leclab-hours-strip">
+                                  <span>Lec: {sub.lectureHours || 2}h</span>
+                                  <span className="hub-leclab-divider">•</span>
+                                  <span>Lab: {sub.labHours || 3}h ({sub.isFoodLab ? 'Food Lab' : sub.requiredLab ? 'Comp Lab' : 'Lab Required'})</span>
+                                </div>
+                              )}
                             </div>
 
                             <div className="hub-mapping-actions">
@@ -1447,11 +1540,14 @@ const AssignmentHub = ({
                                   borderColor: isOrphan ? '#dc2626' : 'var(--border-color)',
                                   padding: '3px 8px',
                                   fontSize: '0.72rem',
-                                  fontWeight: '700'
+                                  fontWeight: '700',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
                                 }}
                                 title={isOrphan ? `Remove orphan ${subRef} from section` : `Unenroll ${sub.code} from section`}
                               >
-                                {isOrphan ? '🗑️ Remove' : '×'}
+                                {isOrphan ? 'Remove' : <X size={13} />}
                               </button>
                             </div>
                           </div>
@@ -1516,8 +1612,13 @@ const AssignmentHub = ({
                           specSubjects.map(subRef => {
                             const sub = getSubject(subRef) || { code: subRef };
                             return (
-                              <span key={subRef} style={{ fontSize: '0.72rem', fontWeight: '600', padding: '2px 8px', borderRadius: '12px', background: 'rgba(86, 69, 238, 0.1)', color: 'var(--accent-primary)' }}>
-                                {sub.code}
+                              <span key={subRef} style={{ fontSize: '0.72rem', fontWeight: '600', padding: '2px 8px', borderRadius: '12px', background: 'rgba(86, 69, 238, 0.1)', color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <span>{sub.code}</span>
+                                {sub.hasLecLab && (
+                                  <span style={{ fontSize: '0.62rem', background: 'rgba(147, 51, 234, 0.15)', color: '#7e22ce', padding: '0 4px', borderRadius: '4px', fontWeight: '700' }}>
+                                    Lec+Lab
+                                  </span>
+                                )}
                               </span>
                             );
                           })
@@ -1557,8 +1658,11 @@ const AssignmentHub = ({
                                     actuallyTaughtSubjects.map(mRef => {
                                       const mSub = getSubject(mRef);
                                       return (
-                                        <span key={mRef} style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.15)', color: '#059669', fontWeight: '700' }}>
-                                          {mSub?.code || mRef}
+                                        <span key={mRef} style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.15)', color: '#059669', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                          <span>{mSub?.code || mRef}</span>
+                                          {mSub?.hasLecLab && (
+                                            <span style={{ fontSize: '0.6rem', color: '#047857', opacity: 0.85 }}>(Lec+Lab)</span>
+                                          )}
                                         </span>
                                       );
                                     })
@@ -1604,11 +1708,17 @@ const AssignmentHub = ({
               return (
                 <div key={sub.id} className="hub-entity-card">
                   <div className="hub-entity-header">
-                    <div className="hub-entity-title">
+                    <div className="hub-entity-title" style={{ flexWrap: 'wrap', gap: '6px' }}>
                       <strong style={{ fontSize: '0.95rem', color: 'var(--accent-dark)' }}>{sub.code}</strong>
                       <span className="hub-entity-badge" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669' }}>
                         {sub.credits} Units • {sub.category}
                       </span>
+                      {sub.hasLecLab && (
+                        <span className="hub-tag-leclab">
+                          <FlaskConical size={10} />
+                          Lec & Lab
+                        </span>
+                      )}
                     </div>
 
                     <button
@@ -1622,6 +1732,22 @@ const AssignmentHub = ({
                   <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
                     {sub.name}
                   </div>
+
+                  {sub.hasLecLab ? (
+                    <div className="hub-subject-leclab-banner">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', fontSize: '0.75rem' }}>
+                        <span><strong>Lecture:</strong> {sub.lectureHours || 2} hrs/wk</span>
+                        <span className="hub-leclab-divider">•</span>
+                        <span><strong>Laboratory:</strong> {sub.labHours || 3} hrs/wk ({sub.isFoodLab ? 'Food Lab' : sub.requiredLab ? 'Computer Lab' : 'Lab Required'})</span>
+                        <span className="hub-leclab-divider">•</span>
+                        <span style={{ color: '#7e22ce', fontWeight: '700' }}>Total: {Number(sub.lectureHours || 2) + Number(sub.labHours || 3)} hrs/wk</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                      {sub.hoursPerMeeting || 1.5} hrs/meeting • {sub.requiredLab ? 'Requires Computer Lab' : sub.isFoodLab ? 'Requires Food Lab' : 'Standard Classroom'}
+                    </div>
+                  )}
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {/* Enrolled Sections & Assigned Instructors */}
@@ -1649,7 +1775,7 @@ const AssignmentHub = ({
                                 }}
                                 title={assignedProf ? `Taught by ${assignedProf.name}` : 'Needs instructor'}
                               >
-                                {sec.name} {assignedProf ? `(${assignedProf.name?.split(' ')[0] || assignedProf.lastName})` : '⚠️'}
+                                {sec.name} {assignedProf ? `(${assignedProf.name?.split(' ')[0] || assignedProf.lastName})` : '— Unassigned'}
                               </span>
                             );
                           })
@@ -1664,7 +1790,7 @@ const AssignmentHub = ({
                       </span>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                         {qualifiedProfs.length === 0 ? (
-                          <span style={{ fontSize: '0.75rem', fontStyle: 'italic', color: '#ef4444' }}>⚠️ No faculty specialized</span>
+                          <span style={{ fontSize: '0.75rem', fontStyle: 'italic', color: '#ef4444' }}>No faculty specialized</span>
                         ) : (
                           qualifiedProfs.map(prof => (
                             <span key={prof.id} style={{ fontSize: '0.72rem', fontWeight: '600', padding: '2px 8px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb' }}>
@@ -1748,7 +1874,7 @@ const AssignmentHub = ({
                         className="hub-quick-btn"
                         style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#059669', borderColor: 'rgba(16, 185, 129, 0.3)' }}
                       >
-                        <span style={{ color: '#f59e0b' }}>⚡</span> Auto-Assign Teachers
+                        <Sparkles size={13} /> Auto-Assign Teachers
                       </button>
                     </div>
                     {stagedAssignedSubjects.map(subRef => {
@@ -1770,8 +1896,21 @@ const AssignmentHub = ({
                       return (
                         <div key={subRef} className="hub-mapping-row">
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontWeight: '700', fontSize: '0.85rem', color: 'var(--accent-dark)' }}>{sub.code}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontWeight: '700', fontSize: '0.85rem', color: 'var(--accent-dark)' }}>{sub.code}</span>
+                              {sub.hasLecLab && (
+                                <span className="hub-tag-leclab">
+                                  <FlaskConical size={10} />
+                                  Lec & Lab
+                                </span>
+                              )}
+                            </div>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{sub.name}</span>
+                            {sub.hasLecLab && (
+                              <span style={{ fontSize: '0.7rem', color: '#7e22ce', fontWeight: 600, marginTop: '2px' }}>
+                                Lec: {sub.lectureHours || 2}h | Lab: {sub.labHours || 3}h ({sub.isFoodLab ? 'Food Lab' : sub.requiredLab ? 'Comp Lab' : 'Lab Required'})
+                              </span>
+                            )}
                           </div>
                           <select
                             className="form-select"
@@ -1791,7 +1930,7 @@ const AssignmentHub = ({
                               <optgroup label="Specialized in this subject">
                                 {specProfs.map(p => (
                                   <option key={p.id} value={p.id}>
-                                    ✨ {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
+                                    {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
                                   </option>
                                 ))}
                               </optgroup>
@@ -1882,6 +2021,9 @@ const AssignmentHub = ({
                                     });
                                   }}
                                   style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
                                     padding: '4px 10px',
                                     borderRadius: '16px',
                                     fontSize: '0.75rem',
@@ -1892,7 +2034,8 @@ const AssignmentHub = ({
                                     color: isChecked ? 'var(--accent-primary)' : 'var(--text-muted)'
                                   }}
                                 >
-                                  {isChecked ? '✓ ' : '+ '}{sub.code}
+                                  {isChecked ? <Check size={12} /> : <Plus size={11} />}
+                                  <span>{sub.code}</span>
                                 </button>
                               );
                             })}
@@ -1908,6 +2051,19 @@ const AssignmentHub = ({
             {/* SUBJECT EDITING */}
             {editingEntity.type === 'subject' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {editingEntity.item.hasLecLab && (
+                  <div className="hub-subject-leclab-banner">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', fontSize: '0.82rem', color: '#7e22ce', marginBottom: '4px' }}>
+                      <FlaskConical size={14} />
+                      <span>Lecture & Laboratory Course</span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-main)', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <span>Lecture: <strong>{editingEntity.item.lectureHours || 2} hrs/week</strong> (Standard Classroom)</span>
+                      <span>Laboratory: <strong>{editingEntity.item.labHours || 3} hrs/week</strong> ({editingEntity.item.isFoodLab ? 'Food Lab' : editingEntity.item.requiredLab ? 'Computer Lab' : 'Lab'})</span>
+                      <span style={{ color: '#7e22ce', fontWeight: '700' }}>Total: {Number(editingEntity.item.lectureHours || 2) + Number(editingEntity.item.labHours || 3)} hrs/wk</span>
+                    </div>
+                  </div>
+                )}
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: '8px', display: 'block' }}>Enrolled Sections</label>
                   <AutocompleteMultiSelect
@@ -1963,6 +2119,7 @@ const AssignmentHub = ({
       <QuickCreateModal
         isOpen={quickCreateState.isOpen}
         type={quickCreateState.type}
+        defaultDepartment={departmentFilter !== 'All' ? departmentFilter : undefined}
         onClose={() => setQuickCreateState({ isOpen: false, type: 'subject' })}
         departments={departments}
         courses={courses}

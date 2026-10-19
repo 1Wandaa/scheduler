@@ -577,6 +577,132 @@
 }
 
 /* ==========================================================================
+   Typography & Inline Control Enhancements
+   ========================================================================== */
+.hub-subject-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.hub-subject-name {
+  font-size: 0.74rem;
+  color: var(--text-muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.hub-instructor-select {
+  border: 1px solid var(--border-color, #cbd5e1);
+  background-color: var(--bg-surface, #ffffff);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-main, #334155);
+  transition: all 0.15s ease;
+  height: 30px;
+  cursor: pointer;
+  outline: none;
+}
+
+.hub-instructor-select:hover {
+  border-color: var(--accent-primary, #5645ee);
+}
+
+.hub-instructor-select:focus {
+  border-color: var(--accent-primary, #5645ee);
+  box-shadow: 0 0 0 2px rgba(86, 69, 238, 0.15);
+}
+
+/* ==========================================================================
+   Lecture & Laboratory Badges and Indicators
+   ========================================================================== */
+.hub-tag-leclab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(147, 51, 234, 0.1);
+  color: #7e22ce;
+  border: 1px solid rgba(147, 51, 234, 0.25);
+  letter-spacing: 0.02em;
+}
+
+.hub-leclab-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(147, 51, 234, 0.12) !important;
+  color: #7e22ce !important;
+  border: 1px solid rgba(147, 51, 234, 0.25) !important;
+}
+
+.hub-leclab-hours-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: #7e22ce;
+  margin-top: 3px;
+  font-weight: 600;
+}
+
+.hub-leclab-divider {
+  color: rgba(147, 51, 234, 0.35);
+  font-size: 0.65rem;
+}
+
+.hub-subject-leclab-banner {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(147, 51, 234, 0.06);
+  border: 1px solid rgba(147, 51, 234, 0.2);
+  margin-bottom: 8px;
+}
+
+.hub-leclab-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-surface, #ffffff);
+  color: var(--text-muted, #64748b);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hub-leclab-filter-btn:hover {
+  border-color: rgba(147, 51, 234, 0.4);
+  color: #7e22ce;
+}
+
+.hub-leclab-filter-btn.active {
+  background: rgba(147, 51, 234, 0.1);
+  border-color: rgba(147, 51, 234, 0.4);
+  color: #7e22ce;
+  font-weight: 700;
+}
+
+.hub-leclab-count-badge {
+  background: #7e22ce;
+  color: #ffffff;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+/* ==========================================================================
    Configuration Modal (Custom Fit without Wasted Space)
    ========================================================================== */
 .hub-modal-overlay {

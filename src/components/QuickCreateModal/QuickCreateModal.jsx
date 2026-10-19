@@ -5,6 +5,7 @@ import { collection, doc, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 import { DEPARTMENTS } from '../../config/constants';
+import { detectLabRequirement, suggestDepartmentFromCode } from '../../utils/subjectLabDetector';
 import './QuickCreateModal.css';
 
 const QuickCreateModal = ({
@@ -18,10 +19,14 @@ const QuickCreateModal = ({
   professors = [],
   user,
   activeSemester = '1st Semester',
+  defaultDepartment,
   onSuccess
 }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [autoSelectedDept, setAutoSelectedDept] = useState(null);
+  const [autoDetectedReason, setAutoDetectedReason] = useState(null);
+  const [userLabModified, setUserLabModified] = useState(false);
 
   // Subject Form State
   const [subjectData, setSubjectData] = useState({
@@ -33,7 +38,10 @@ const QuickCreateModal = ({
     category: 'Major',
     semester: activeSemester || '1st Semester',
     requiredLab: false,
-    isFoodLab: false
+    isFoodLab: false,
+    hasLecLab: false,
+    lectureHours: 2,
+    labHours: 3
   });
 
   // Section Form State
@@ -58,9 +66,19 @@ const QuickCreateModal = ({
   useEffect(() => {
     if (isOpen) {
       setError(null);
-      const defaultDept = departments[0]?.id || DEPARTMENTS[0] || 'BSCS';
+      setUserLabModified(false);
+      const defaultDept = (defaultDepartment && defaultDepartment !== 'All')
+        ? defaultDepartment
+        : (departments[0]?.id || DEPARTMENTS[0] || 'BSCS');
       const defaultProg = courses[0]?.code || defaultDept;
       
+      setAutoSelectedDept(defaultDept);
+      const detection = detectLabRequirement({
+        category: 'Major',
+        departments: [defaultDept]
+      }, subjects);
+      setAutoDetectedReason(detection.reason);
+
       setSubjectData({
         code: '',
         name: '',
@@ -69,8 +87,11 @@ const QuickCreateModal = ({
         hoursPerMeeting: 1.5,
         category: 'Major',
         semester: activeSemester || '1st Semester',
-        requiredLab: false,
-        isFoodLab: false
+        requiredLab: detection.requiredLab,
+        isFoodLab: detection.isFoodLab,
+        hasLecLab: false,
+        lectureHours: 2,
+        labHours: 3
       });
 
       setSectionData({
@@ -90,7 +111,74 @@ const QuickCreateModal = ({
         assignedSections: []
       });
     }
-  }, [isOpen, type, departments, courses, activeSemester]);
+  }, [isOpen, type, departments, courses, activeSemester, defaultDepartment, subjects]);
+
+  const handleCodeChange = (newCode) => {
+    const suggestedDept = suggestDepartmentFromCode(newCode);
+    setSubjectData(prev => {
+      let nextDepts = [...(prev.departments || [])];
+      if (autoSelectedDept && autoSelectedDept !== suggestedDept) {
+        nextDepts = nextDepts.filter(d => d !== autoSelectedDept);
+      }
+      if (suggestedDept && !nextDepts.includes(suggestedDept)) {
+        nextDepts = [...nextDepts, suggestedDept];
+      }
+      setAutoSelectedDept(suggestedDept || null);
+      setUserLabModified(false);
+
+      const nextForm = { ...prev, code: newCode, departments: nextDepts };
+      if (!newCode.trim() && nextDepts.length === 0) {
+        setAutoDetectedReason(null);
+        return { ...nextForm, requiredLab: false, isFoodLab: false };
+      }
+      const detection = detectLabRequirement(nextForm, subjects);
+      setAutoDetectedReason(detection.reason);
+      return { ...nextForm, requiredLab: detection.requiredLab, isFoodLab: detection.isFoodLab };
+    });
+  };
+
+  const handleNameChange = (newName) => {
+    setSubjectData(prev => {
+      const nextForm = { ...prev, name: newName };
+      if (!userLabModified) {
+        if (!nextForm.code?.trim() && (!nextForm.departments || nextForm.departments.length === 0) && !newName.trim()) {
+          setAutoDetectedReason(null);
+          return { ...nextForm, requiredLab: false, isFoodLab: false };
+        }
+        const detection = detectLabRequirement(nextForm, subjects);
+        setAutoDetectedReason(detection.reason);
+        return { ...nextForm, requiredLab: detection.requiredLab, isFoodLab: detection.isFoodLab };
+      }
+      return nextForm;
+    });
+  };
+
+  const handleCategoryChange = (newCategory) => {
+    setSubjectData(prev => {
+      const nextForm = { ...prev, category: newCategory };
+      if (!userLabModified) {
+        const detection = detectLabRequirement(nextForm, subjects);
+        setAutoDetectedReason(detection.reason);
+        return { ...nextForm, requiredLab: detection.requiredLab, isFoodLab: detection.isFoodLab };
+      }
+      return nextForm;
+    });
+  };
+
+  const handleDepartmentToggle = (dept) => {
+    setSubjectData(prev => {
+      const depts = prev.departments || [];
+      const isSelected = depts.includes(dept);
+      const nextDepts = isSelected ? depts.filter(d => d !== dept) : [...depts, dept];
+      const nextForm = { ...prev, departments: nextDepts };
+      if (!userLabModified) {
+        const detection = detectLabRequirement(nextForm, subjects);
+        setAutoDetectedReason(detection.reason);
+        return { ...nextForm, requiredLab: detection.requiredLab, isFoodLab: detection.isFoodLab };
+      }
+      return nextForm;
+    });
+  };
 
   if (!isOpen) return null;
 
@@ -152,7 +240,10 @@ const QuickCreateModal = ({
         credits: Number(subjectData.credits) || 3,
         hoursPerMeeting: Number(subjectData.hoursPerMeeting) || 1.5,
         requiredLab: Boolean(subjectData.requiredLab),
-        isFoodLab: Boolean(subjectData.isFoodLab)
+        isFoodLab: Boolean(subjectData.isFoodLab),
+        hasLecLab: Boolean(subjectData.hasLecLab),
+        lectureHours: Number(subjectData.lectureHours) || 2,
+        labHours: Number(subjectData.labHours) || 3
       };
 
       await setDoc(doc(db, 'subjects', newId), payload);
@@ -320,7 +411,7 @@ const QuickCreateModal = ({
                     className={`quick-form-input${isSubCodeDuplicate ? ' mgmt-input-duplicate' : ''}`}
                     placeholder="e.g. CS 101"
                     value={subjectData.code}
-                    onChange={e => setSubjectData({ ...subjectData, code: e.target.value.toUpperCase() })}
+                    onChange={e => handleCodeChange(e.target.value.toUpperCase())}
                     autoFocus
                   />
                   {isSubCodeDuplicate && (
@@ -337,7 +428,7 @@ const QuickCreateModal = ({
                     className={`quick-form-input${isSubNameDuplicate ? ' mgmt-input-duplicate' : ''}`}
                     placeholder="e.g. Introduction to Computing"
                     value={subjectData.name}
-                    onChange={e => setSubjectData({ ...subjectData, name: e.target.value })}
+                    onChange={e => handleNameChange(e.target.value)}
                   />
                   {isSubNameDuplicate && (
                     <div className="mgmt-field-duplicate-msg">
@@ -354,7 +445,7 @@ const QuickCreateModal = ({
                   <select
                     className="quick-form-select"
                     value={subjectData.category}
-                    onChange={e => setSubjectData({ ...subjectData, category: e.target.value })}
+                    onChange={e => handleCategoryChange(e.target.value)}
                   >
                     <option value="Major">Major</option>
                     <option value="Minor">Minor (Gen Ed)</option>
@@ -370,21 +461,57 @@ const QuickCreateModal = ({
                     onChange={e => setSubjectData({ ...subjectData, credits: e.target.value })}
                   />
                 </div>
-                <div className="quick-form-group" style={{ flex: 1 }}>
-                  <label className="quick-form-label">Hours / Meeting</label>
-                  <select
-                    className="quick-form-select"
-                    value={subjectData.hoursPerMeeting}
-                    onChange={e => setSubjectData({ ...subjectData, hoursPerMeeting: Number(e.target.value) })}
-                  >
-                    <option value={1}>1.0 Hour</option>
-                    <option value={1.5}>1.5 Hours</option>
-                    <option value={2}>2.0 Hours</option>
-                    <option value={2.5}>2.5 Hours</option>
-                    <option value={3}>3.0 Hours</option>
-                  </select>
-                </div>
+                {!subjectData.hasLecLab && (
+                  <div className="quick-form-group" style={{ flex: 1 }}>
+                    <label className="quick-form-label">Hours / Meeting</label>
+                    <select
+                      className="quick-form-select"
+                      value={subjectData.hoursPerMeeting}
+                      onChange={e => setSubjectData({ ...subjectData, hoursPerMeeting: Number(e.target.value) })}
+                    >
+                      <option value={1}>1.0 Hour</option>
+                      <option value={1.5}>1.5 Hours</option>
+                      <option value={2}>2.0 Hours</option>
+                      <option value={2.5}>2.5 Hours</option>
+                      <option value={3}>3.0 Hours</option>
+                    </select>
+                  </div>
+                )}
               </div>
+
+              {subjectData.hasLecLab && (
+                <div className="quick-form-row">
+                  <div className="quick-form-group" style={{ flex: 1 }}>
+                    <label className="quick-form-label">Lecture Hours</label>
+                    <select
+                      className="quick-form-select"
+                      value={subjectData.lectureHours || 2}
+                      onChange={e => setSubjectData({ ...subjectData, lectureHours: Number(e.target.value) })}
+                    >
+                      <option value={1}>1.0 Hour</option>
+                      <option value={1.5}>1.5 Hours</option>
+                      <option value={2}>2.0 Hours</option>
+                      <option value={2.5}>2.5 Hours</option>
+                      <option value={3}>3.0 Hours</option>
+                    </select>
+                  </div>
+                  <div className="quick-form-group" style={{ flex: 1 }}>
+                    <label className="quick-form-label">Lab Hours</label>
+                    <select
+                      className="quick-form-select"
+                      value={subjectData.labHours || 3}
+                      onChange={e => setSubjectData({ ...subjectData, labHours: Number(e.target.value) })}
+                    >
+                      <option value={1}>1.0 Hour</option>
+                      <option value={1.5}>1.5 Hours</option>
+                      <option value={2}>2.0 Hours</option>
+                      <option value={2.5}>2.5 Hours</option>
+                      <option value={3}>3.0 Hours</option>
+                      <option value={4}>4.0 Hours</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {subjectData.category !== 'Minor' && (
                 <div className="quick-form-group">
@@ -397,15 +524,7 @@ const QuickCreateModal = ({
                           key={dept}
                           type="button"
                           className={`quick-dept-chip ${isSelected ? 'selected' : ''}`}
-                          onClick={() => {
-                            setSubjectData(prev => {
-                              const depts = prev.departments || [];
-                              return {
-                                ...prev,
-                                departments: isSelected ? depts.filter(d => d !== dept) : [...depts, dept]
-                              };
-                            });
-                          }}
+                          onClick={() => handleDepartmentToggle(dept)}
                         >
                           {dept}
                         </button>
@@ -416,15 +535,35 @@ const QuickCreateModal = ({
               )}
 
               <div className="quick-checkbox-row">
+                <label className="quick-checkbox-label" style={{ gridColumn: '1 / -1' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(subjectData.hasLecLab)}
+                    onChange={e => {
+                      const checked = e.target.checked;
+                      setSubjectData(prev => ({
+                        ...prev,
+                        hasLecLab: checked,
+                        requiredLab: checked ? true : prev.requiredLab
+                      }));
+                    }}
+                  />
+                  <span>Requires Lecture and Laboratory separately</span>
+                </label>
                 <label className="quick-checkbox-label">
                   <input
                     type="checkbox"
                     checked={Boolean(subjectData.requiredLab)}
-                    onChange={e => setSubjectData({
-                      ...subjectData,
-                      requiredLab: e.target.checked,
-                      isFoodLab: e.target.checked ? false : subjectData.isFoodLab
-                    })}
+                    onChange={e => {
+                      const checked = e.target.checked;
+                      setUserLabModified(true);
+                      setAutoDetectedReason(null);
+                      setSubjectData(prev => ({
+                        ...prev,
+                        requiredLab: checked,
+                        isFoodLab: checked ? false : prev.isFoodLab
+                      }));
+                    }}
                   />
                   <span>Requires Computer Lab</span>
                 </label>
@@ -432,15 +571,69 @@ const QuickCreateModal = ({
                   <input
                     type="checkbox"
                     checked={Boolean(subjectData.isFoodLab)}
-                    onChange={e => setSubjectData({
-                      ...subjectData,
-                      isFoodLab: e.target.checked,
-                      requiredLab: e.target.checked ? false : subjectData.requiredLab
-                    })}
+                    onChange={e => {
+                      const checked = e.target.checked;
+                      setUserLabModified(true);
+                      setAutoDetectedReason(null);
+                      setSubjectData(prev => ({
+                        ...prev,
+                        isFoodLab: checked,
+                        requiredLab: checked ? false : prev.requiredLab
+                      }));
+                    }}
                   />
                   <span>Requires Food Lab</span>
                 </label>
               </div>
+
+              {autoDetectedReason && !userLabModified && (
+                <div style={{
+                  fontSize: '0.75rem',
+                  color: subjectData.isFoodLab ? '#b45309' : '#059669',
+                  fontWeight: 600,
+                  padding: '7px 12px',
+                  borderRadius: '6px',
+                  background: subjectData.isFoodLab ? 'rgba(234, 179, 8, 0.1)' : 'rgba(16, 185, 129, 0.08)',
+                  border: `1px solid ${subjectData.isFoodLab ? 'rgba(234, 179, 8, 0.3)' : 'rgba(16, 185, 129, 0.25)'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>Auto-detected: {autoDetectedReason}</span>
+                </div>
+              )}
+
+              {userLabModified && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserLabModified(false);
+                      const detection = detectLabRequirement(subjectData, subjects);
+                      setSubjectData(prev => ({
+                        ...prev,
+                        requiredLab: detection.requiredLab,
+                        isFoodLab: detection.isFoodLab
+                      }));
+                      setAutoDetectedReason(detection.reason);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent-primary, #5645ee)',
+                      fontSize: '0.72rem',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      fontWeight: 600
+                    }}
+                  >
+                    Reset to auto-detected
+                  </button>
+                </div>
+              )}
             </>
           )}
 
