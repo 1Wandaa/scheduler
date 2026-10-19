@@ -800,13 +800,10 @@
   box-shadow: 0 24px 72px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.2);
   max-height: calc(100dvh - 48px);
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: rgba(86, 69, 238, 0.15) transparent;
-  transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  will-change: transform, scroll-position;
 }
 
 .modal-content::-webkit-scrollbar {

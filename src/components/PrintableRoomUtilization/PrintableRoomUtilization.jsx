@@ -205,6 +205,12 @@ const PrintableRoomUtilization = ({
                 minHeight: '100%'
             }}>
             <style>{`
+                @media screen {
+                    .printable-room-utilization,
+                    .printable-room-utilization-wrapper {
+                        display: none !important;
+                    }
+                }
                 .printable-room-utilization-wrapper {
                     width: 100%;
                     overflow-x: auto;

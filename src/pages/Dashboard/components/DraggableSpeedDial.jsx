@@ -140,18 +140,17 @@ const DraggableSpeedDial = ({ onAddSchedule, onAutoScheduleAction, isHidden }) =
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         </button>
       </div>
+      <style>{`
+        /* Scale down the entire speed dial on mobile devices to look clean and uniform */
+        @media (max-width: 768px) {
+          .speed-dial-wrapper {
+            transform: scale(0.85);
+            transform-origin: bottom right;
+          }
+        }
+      `}</style>
     </>
   );
 };
 
 export default DraggableSpeedDial;
-
-<style>{`
-  /* Scale down the entire speed dial on mobile devices to look clean and uniform */
-  @media (max-width: 768px) {
-    .speed-dial-wrapper {
-      transform: scale(0.85);
-      transform-origin: bottom right;
-    }
-  }
-`}</style>

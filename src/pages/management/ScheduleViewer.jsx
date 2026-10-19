@@ -301,7 +301,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     }
 
     return (
-        <div className="card" style={{ backgroundImage: 'none', backgroundColor: '#ffffff' }}>
+        <div className="card" style={{ backgroundColor: '#ffffff' }}>
 
             {/* Header & Filters */}
             <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '20px' }}>

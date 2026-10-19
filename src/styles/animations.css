@@ -107,6 +107,7 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: -999;
+  pointer-events: none;
   /* Cache-bust so updated image shows immediately */
   background-image: url('/background2.jpg?v=1');
   /* Keep your background image */
@@ -115,9 +116,6 @@ body::before {
   background-repeat: no-repeat;
   image-rendering: high-quality;
   image-rendering: -webkit-optimize-contrast;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transform: translateZ(0);
 }
 
 h1,

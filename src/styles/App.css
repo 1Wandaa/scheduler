@@ -15,9 +15,8 @@
 @import './management.css';
 @import './dashboard-widgets.css';
 
-/* Global Smooth Navigation & HD Interaction System */
+/* Global Navigation & HD Interaction System */
 html {
-  scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
   text-rendering: optimizeLegibility !important;
@@ -36,7 +35,6 @@ body {
 button,
 a,
 .nav-item,
-.card,
 .kpi-tile,
 .btn,
 .mgmt-filter-pill,
@@ -50,16 +48,20 @@ a,
               transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.card {
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 input,
 select,
 textarea {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Page / Tab Smooth Entrance */
-.main-content > div,
-.mgmt-container,
-.schedule-viewer-container {
+/* Page / Tab Smooth Entrance - applied to explicit containers to avoid re-triggering on scroll or re-render */
+.tab-entrance-anim {
   animation: tabEntrance 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -77,13 +79,9 @@ textarea {
 /* HD Graphics, SVGs & High-DPI Image Rendering */
 img,
 video,
-canvas,
-*[style*="background-image"] {
+canvas {
   image-rendering: -webkit-optimize-contrast;
   image-rendering: high-quality;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transform: translateZ(0);
 }
 
 svg {

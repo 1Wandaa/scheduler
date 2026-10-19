@@ -361,6 +361,7 @@
   overflow-x: auto;
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   max-width: 100%;
   background: rgba(255, 255, 255, 0.97);
   border: 1px solid var(--border-color);
@@ -414,7 +415,6 @@
   position: sticky;
   left: 0;
   z-index: 3;
-  transform: translateZ(0);
 }
 
 .time-label {
@@ -432,7 +432,6 @@
   position: sticky;
   left: 0;
   z-index: 2;
-  transform: translateZ(0);
 }
 
 .schedule-cell {
