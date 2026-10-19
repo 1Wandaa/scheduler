@@ -196,6 +196,8 @@
 }
 .sig-name {
     font-weight: bold;
+    text-decoration: underline;
+    display: inline-block;
 }
 .sig-title {
     font-size: 11pt;

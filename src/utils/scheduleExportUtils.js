@@ -234,6 +234,123 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
 }
 
 /**
+ * Wraps HTML content into Microsoft Word Document standard envelope with Portrait Letter page formatting
+ * Uses strict fixed-width layout (570pt total) and portrait geometry for 1-page fit.
+ */
+function wrapPortraitWordHtml(bodyHtml, title = 'Room Utilization Schedule') {
+  return `<!DOCTYPE html>
+<html xmlns:v="urn:schemas-microsoft-com:vml"
+      xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>${title}</title>
+  <!--[if gte mso 9]>
+  <xml>
+    <w:WordDocument>
+      <w:View>Print</w:View>
+      <w:Zoom>100</w:Zoom>
+      <w:DoNotOptimizeForBrowser/>
+    </w:WordDocument>
+  </xml>
+  <![endif]-->
+  <style>
+    @page Section1 {
+      size: 8.5in 11.0in; /* Portrait letter: 612pt x 792pt */
+      mso-page-orientation: portrait;
+      margin: 0.1in 0.35in 0.1in 0.35in;
+      mso-header-margin: 0in;
+      mso-footer-margin: 0in;
+      mso-paper-source: 0;
+    }
+    div.Section1 {
+      page: Section1;
+      width: 560pt;
+      margin: 0 auto;
+    }
+    body {
+      font-family: Arial, Helvetica, sans-serif !important;
+      font-size: 8.5pt;
+      line-height: 1.0;
+      color: #000000;
+      background-color: #ffffff;
+      margin: 0;
+      padding: 0;
+      mso-pagination: none;
+    }
+    p, p.MsoNormal, div, h1, h2, h3, h4, h5, h6 {
+      margin: 0;
+      padding: 0;
+      line-height: 1.0;
+      font-family: Arial, Helvetica, sans-serif !important;
+      mso-pagination: none;
+      mso-line-height-rule: exactly;
+    }
+    table {
+      border-collapse: collapse;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+      mso-table-bspace: 0pt;
+      mso-table-tspace: 0pt;
+      table-layout: fixed;
+      page-break-inside: avoid;
+      mso-padding-alt: 0pt;
+      margin: 0 auto;
+      font-family: Arial, Helvetica, sans-serif !important;
+    }
+    table.room-util-timetable-grid {
+      border-collapse: collapse;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+      border: 1.0pt solid #000000;
+      mso-border-alt: solid #000000 1.0pt;
+    }
+    table.room-util-signatures-table {
+      border-collapse: collapse;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+      border: 0.5pt solid #ffffff;
+      mso-border-alt: solid #ffffff 0.5pt;
+    }
+    table.room-util-signatures-table td {
+      border: 0.5pt solid #ffffff;
+      mso-border-alt: solid #ffffff 0.5pt;
+      vertical-align: top;
+      padding: 0 4pt;
+      overflow: visible;
+    }
+    table.room-util-signatures-table p {
+      margin: 0;
+      padding: 0;
+      line-height: 1.25;
+      mso-line-height-rule: at-least;
+    }
+    tr {
+      mso-height-rule: at-least;
+      page-break-inside: avoid;
+    }
+    td, th {
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+    table.room-util-timetable-grid td {
+      overflow: visible;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+  </style>
+</head>
+<body>
+  <div class="Section1">
+    ${bodyHtml}
+  </div>
+</body>
+</html>`;
+}
+
+/**
  * Wraps HTML content into Microsoft Excel format
  */
 function wrapExcelHtml(bodyHtml, title = 'Class Schedule') {
@@ -528,6 +645,433 @@ export async function exportIsoToWord(user) {
   });
 
   toast.success('Downloaded 1-page editable Word document (.doc)!');
+}
+
+/**
+ * Export Room Utilization Schedule to fixed-geometry 1-Page Microsoft Word (.doc)
+ * Guaranteed to fit on exactly 1 Portrait Letter page when printed, saved, or converted to .docx.
+ */
+export async function exportRoomUtilizationToWord(user) {
+  try {
+    const roomDoc = document.querySelector('.printable-room-utilization');
+    if (!roomDoc) {
+      toast.error('Could not locate printable Room Utilization schedule. Please select a room first.');
+      return;
+    }
+
+    // 1. Fetch base64 logo if possible
+    const logoBase64 = await getImageAsBase64('/download.jpg') || await getImageAsBase64('/capsu-logo.jpg') || await getImageAsBase64('/logo.png');
+
+    // 2. Build Header (pure paragraph + float image, ZERO tables so Word CANNOT draw any dashed gridlines)
+    const headerHtml = `
+      <div style="width: 560pt; margin: 0 auto 2pt auto; border-bottom: 2.0pt solid #f2a900; padding-bottom: 1pt;">
+        ${logoBase64 ? `<img src="${logoBase64}" width="30" height="30" align="left" hspace="6" vspace="0" style="float: left; margin-right: 6pt;" alt="CapSU" />` : ''}
+        <div style="font-family: Arial, Helvetica, sans-serif;">
+          <div style="font-size: 7.5pt; color: #000000; line-height: 8.5pt;">Republic of the Philippines</div>
+          <div style="font-size: 11.5pt; font-weight: bold; color: #002060; letter-spacing: 0.5pt; line-height: 13pt;">CAPIZ STATE UNIVERSITY</div>
+          <div style="font-size: 7.5pt; font-weight: bold; color: #002060; line-height: 8.5pt;">MAMBUSAO SATELLITE COLLEGE</div>
+        </div>
+        <div style="clear: both; font-size: 1pt; line-height: 1pt;">&nbsp;</div>
+      </div>
+    `;
+
+    // 3. Titles Section (compact, perfectly aligned)
+    const deptName = roomDoc.querySelector('.room-util-titles h2')?.textContent.trim() || 'DEPARTMENT';
+    const titleText = roomDoc.querySelector('.room-util-titles h3')?.textContent.trim() || 'Room Utilization';
+    const semText = roomDoc.querySelector('.room-util-titles p')?.textContent.trim() || 'First Semester, School Year 2026-2027';
+    const titlesHtml = `
+      <div style="text-align: center; margin-bottom: 2pt;">
+        <div style="font-family: Arial, sans-serif; color: #2e5296; font-size: 8.5pt; font-weight: bold; text-transform: uppercase; line-height: 10pt;">${deptName}</div>
+        <div style="font-family: Arial, sans-serif; font-size: 9.5pt; font-weight: bold; line-height: 11pt; margin-top: 1pt;">${titleText}</div>
+        <div style="font-family: Arial, sans-serif; font-size: 7pt; line-height: 8.5pt; margin-top: 1pt;">${semText}</div>
+      </div>
+    `;
+
+    // 4. Room Badge
+    const roomBadgeText = roomDoc.querySelector('.room-util-room-name')?.textContent.trim() || 'Room: N/A';
+    const roomBadgeHtml = `
+      <div style="margin-bottom: 2pt;">
+        <span style="font-family: Arial, sans-serif; font-size: 7.5pt; font-weight: bold; background-color: #ffff00; border: 1.0pt solid #000000; padding: 0.5pt 4pt; display: inline-block;">${roomBadgeText}</span>
+      </div>
+    `;
+
+    // 5. Subjects Table (560pt width, solid 1.0pt borders, compact rows)
+    const srcSubjTable = roomDoc.querySelector('.room-util-subjects');
+    let subjTableHtml = '';
+    if (srcSubjTable) {
+      const rows = Array.from(srcSubjTable.querySelectorAll('tr'));
+      subjTableHtml = `
+        <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="0" style="width: 560pt; border-collapse: collapse; table-layout: fixed; margin-bottom: 2pt; border: 1.0pt solid #000000; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+          <colgroup>
+            <col width="75" style="width: 75pt;">
+            <col width="205" style="width: 205pt;">
+            <col width="40" style="width: 40pt;">
+            <col width="120" style="width: 120pt;">
+            <col width="120" style="width: 120pt;">
+          </colgroup>
+          ${rows.map((tr, rIdx) => {
+            const isHead = rIdx === 0;
+            const cells = Array.from(tr.children);
+            const rowHeight = isHead ? 11 : 9.5;
+            return `
+              <tr style="height: ${rowHeight}pt; mso-height-rule: at-least; page-break-inside: avoid;">
+                ${cells.map((cell, cIdx) => {
+                  const colSpan = cell.getAttribute('colspan') || '1';
+                  const isHeaderCell = cell.tagName === 'TH' || isHead;
+                  const isDesc = !isHeaderCell && cIdx === 1 && colSpan === '1';
+                  const bg = isHeaderCell ? 'background-color: #f2f2f2;' : '';
+                  const weight = isHeaderCell || cell.style.fontWeight === 'bold' ? 'font-weight: bold;' : '';
+                  const align = isDesc ? 'text-align: left; padding: 0.5pt 3pt;' : 'text-align: center; padding: 0.5pt 1pt;';
+                  return `
+                    <${cell.tagName.toLowerCase()} colspan="${colSpan}" style="border: 1.0pt solid #000000; font-family: Arial, sans-serif; font-size: 6.5pt; vertical-align: middle; line-height: 1.1; ${align} ${bg} ${weight}">
+                      ${cell.innerHTML}
+                    </${cell.tagName.toLowerCase()}>
+                  `;
+                }).join('')}
+              </tr>
+            `;
+          }).join('')}
+        </table>
+      `;
+    }
+
+    // 6. Timetable Grid: 14pt per slot (= 28pt/hour), compact, fits 100% on Page 1
+    const srcTimetable = roomDoc.querySelector('.room-util-timetable');
+    let timetableHtml = '';
+    if (srcTimetable) {
+      const ths = Array.from(srcTimetable.querySelectorAll('thead th'));
+      const totalCols = ths.length || 7;
+      const timetableWidth = 560;
+      const timeColWidth = 56;
+      const dayCount = totalCols > 1 ? totalCols - 1 : 6;
+      const dayColWidth = Math.floor((timetableWidth - timeColWidth) / dayCount);
+      const lastDayColWidth = timetableWidth - timeColWidth - (dayColWidth * (dayCount - 1));
+
+      const bodyRows = Array.from(srcTimetable.querySelectorAll('tbody tr'));
+      const totalRows = bodyRows.length || 22;
+      const slotHeight = 14; // 14pt per slot = 28pt per hour: guarantees complete Page 1 fit
+
+      // Build complete 2D matrix [totalRows][totalCols] from DOM
+      const gridMatrix = [];
+      for (let r = 0; r < totalRows; r++) {
+        gridMatrix[r] = new Array(totalCols).fill(null);
+      }
+
+      const occupiedUntil = new Array(totalCols).fill(-1);
+
+      bodyRows.forEach((tr, rIdx) => {
+        let cellChildIdx = 0;
+        for (let cIdx = 0; cIdx < totalCols; cIdx++) {
+          if (occupiedUntil[cIdx] >= rIdx) {
+            continue;
+          }
+
+          const td = tr.children[cellChildIdx++];
+          if (!td) continue;
+
+          const rowSpan = parseInt(td.getAttribute('rowspan') || '1', 10);
+          const isTime = td.classList.contains('time-cell') || td.classList.contains('time-col') || cIdx === 0;
+          const isScheduled = td.classList.contains('scheduled-cell') || td.classList.contains('cell-scheduled');
+
+          const classesList = [];
+          if (isScheduled) {
+            const contentBlocks = Array.from(td.querySelectorAll('.cell-content'));
+            if (contentBlocks.length > 0) {
+              contentBlocks.forEach(blk => {
+                const lines = Array.from(blk.querySelectorAll('.cell-line'));
+                let subj = '';
+                let comp = '';
+                let prof = '';
+                let rm = '';
+                let sec = '';
+                if (lines.length > 0) {
+                  const l0 = lines[0];
+                  const span = l0.querySelector('span');
+                  if (span) {
+                    comp = span.textContent.trim();
+                    subj = l0.textContent.replace(comp, '').trim();
+                  } else {
+                    subj = l0.textContent.trim();
+                  }
+                }
+                if (lines.length > 1) prof = lines[1].textContent.trim();
+                if (lines.length > 2) rm = lines[2].textContent.trim();
+                if (lines.length > 3) sec = lines[3].textContent.trim();
+                classesList.push({ subj, comp, prof, rm, sec });
+              });
+            } else {
+              const lines = Array.from(td.querySelectorAll('.cell-line'));
+              if (lines.length > 0) {
+                const subj = lines[0]?.textContent.trim() || '';
+                const prof = lines[1]?.textContent.trim() || '';
+                const rm = lines[2]?.textContent.trim() || '';
+                const sec = lines[3]?.textContent.trim() || '';
+                classesList.push({ subj, comp: '', prof, rm, sec });
+              } else {
+                classesList.push({ subj: td.textContent.trim(), comp: '', prof: '', rm: '', sec: '' });
+              }
+            }
+          }
+
+          const timeLabel = isTime ? td.textContent.trim() : '';
+
+          for (let s = 0; s < rowSpan; s++) {
+            const targetRow = rIdx + s;
+            if (targetRow < totalRows) {
+              gridMatrix[targetRow][cIdx] = {
+                isTime,
+                isScheduled,
+                timeLabel,
+                classesList,
+                spanOffset: s,
+                totalSpan: rowSpan,
+                isHead: s === 0
+              };
+            }
+          }
+
+          occupiedUntil[cIdx] = rIdx + rowSpan - 1;
+        }
+      });
+
+      const colgroupHtml = `
+        <colgroup>
+          <col width="${timeColWidth}" style="width: ${timeColWidth}pt;">
+          ${ths.slice(1).map((_, idx) => {
+            const w = idx === dayCount - 1 ? lastDayColWidth : dayColWidth;
+            return `<col width="${w}" style="width: ${w}pt;">`;
+          }).join('')}
+        </colgroup>
+      `;
+
+      const theadHtml = `
+        <thead>
+          <tr style="height: 12pt; mso-height-rule: at-least; page-break-inside: avoid;">
+            ${ths.map((th, idx) => {
+              const w = idx === 0 ? timeColWidth : (idx === totalCols - 1 ? lastDayColWidth : dayColWidth);
+              return `
+                <th width="${w}" style="width: ${w}pt; border: 1.0pt solid #000000; mso-border-alt: solid #000000 1.0pt; padding: 1pt 1pt; font-size: 7pt; font-weight: bold; text-align: center; vertical-align: middle; background-color: #f2f2f2; font-family: Arial, Helvetica, sans-serif; line-height: 8.5pt;">
+                  ${th.textContent.trim()}
+                </th>
+              `;
+            }).join('')}
+          </tr>
+        </thead>
+      `;
+
+      const coveredUntil = new Array(totalCols).fill(-1);
+      const rowsHtml = [];
+
+      for (let r = 0; r < totalRows; r++) {
+        const cellsHtml = [];
+
+        // Col 0: Time cell (merges 2 slots into 1-hour display block)
+        if (r % 2 === 0) {
+          const timeCellData = gridMatrix[r] ? gridMatrix[r][0] : null;
+          const timeLabel = timeCellData?.timeLabel || '';
+          const timeSpan = (r + 1 < totalRows) ? 2 : 1;
+          coveredUntil[0] = r + timeSpan - 1;
+          const timeHeight = slotHeight * timeSpan;
+
+          cellsHtml.push(`
+            <td rowspan="${timeSpan}" width="${timeColWidth}" style="width: ${timeColWidth}pt; height: ${timeHeight}pt; mso-height-rule: at-least; border: 1.0pt solid #000000; mso-border-alt: solid #000000 1.0pt; background-color: #f8fafc; font-size: 6.5pt; font-weight: bold; text-align: center; vertical-align: middle; font-family: Arial, Helvetica, sans-serif; padding: 0 1pt; line-height: 8pt;">
+              ${timeLabel}
+            </td>
+          `);
+        }
+
+        // Cols 1..6: Days (Monday to Saturday)
+        for (let c = 1; c < totalCols; c++) {
+          if (coveredUntil[c] >= r) {
+            // Word requires completely omitting <td> in covered rows
+            continue;
+          }
+
+          const w = c === totalCols - 1 ? lastDayColWidth : dayColWidth;
+          const cellData = gridMatrix[r] ? gridMatrix[r][c] : null;
+
+          if (cellData && cellData.isScheduled && cellData.classesList && cellData.classesList.length > 0) {
+            const cls = cellData.classesList[0];
+            const span = cellData.totalSpan || 1;
+            coveredUntil[c] = r + span - 1;
+            const totalCellHeight = slotHeight * span;
+
+            // Parse subject and component cleanly so they don't awkwardly wrap
+            let displaySubj = cls.subj || '';
+            let displayComp = cls.comp ? cls.comp.replace(/^\(|\)$/g, '').trim() : '';
+            if (!displayComp) {
+              const m = displaySubj.match(/\((Lecture|Laboratory|Lec|Lab)\)/i);
+              if (m) {
+                displayComp = m[1];
+                displaySubj = displaySubj.replace(m[0], '').trim();
+              }
+            }
+
+            let contentHtml = '';
+            if (span === 1) {
+              // 30-min slot (14pt)
+              contentHtml = `
+                <div style="font-weight: bold; font-size: 6pt; line-height: 6.8pt; font-family: Arial, sans-serif; text-align: center; color: #000000; margin: 0; padding: 0;">${displaySubj}${displayComp ? ` (${displayComp})` : ''}</div>
+                ${cls.prof ? `<div style="font-size: 5pt; font-weight: 600; line-height: 5.8pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0.5pt 0 0 0; padding: 0;">${cls.prof}</div>` : ''}
+              `;
+            } else if (span === 2) {
+              // 1-hour slot (28pt) - 4 compact lines that perfectly fit without clipping
+              contentHtml = `
+                <div style="font-weight: bold; font-size: 6pt; line-height: 6.8pt; font-family: Arial, sans-serif; text-align: center; color: #000000; margin: 0; padding: 0;">${displaySubj}</div>
+                ${displayComp ? `<div style="font-size: 5pt; line-height: 5.8pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0; padding: 0;">(${displayComp})</div>` : ''}
+                ${cls.prof ? `<div style="font-size: 5.5pt; font-weight: 600; line-height: 6.2pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0.5pt 0 0 0; padding: 0;">${cls.prof}</div>` : ''}
+                <div style="font-size: 5pt; line-height: 5.8pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0.5pt 0 0 0; padding: 0;">${cls.rm}${cls.sec ? ` - ${cls.sec}` : ''}</div>
+              `;
+            } else {
+              // 1.5-hour or more (42pt+) - spacious, crisp formatting
+              contentHtml = `
+                <div style="font-weight: bold; font-size: 7pt; line-height: 8pt; font-family: Arial, sans-serif; text-align: center; color: #000000; margin: 0; padding: 0;">${displaySubj}</div>
+                ${displayComp ? `<div style="font-size: 5.5pt; line-height: 6.5pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0; padding: 0;">(${displayComp})</div>` : ''}
+                ${cls.prof ? `<div style="font-size: 6pt; font-weight: 600; line-height: 7pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 1pt 0 0 0; padding: 0;">${cls.prof}</div>` : ''}
+                <div style="font-size: 5.5pt; line-height: 6.5pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0.5pt 0 0 0; padding: 0;">${cls.rm}</div>
+                ${cls.sec ? `<div style="font-weight: bold; font-size: 5.5pt; line-height: 6.5pt; font-family: Arial, sans-serif; text-align: center; color: #1e3a8a; margin: 0.5pt 0 0 0; padding: 0;">${cls.sec}</div>` : ''}
+              `;
+            }
+
+            cellsHtml.push(`
+              <td rowspan="${span}" width="${w}" bgcolor="#00b0f0" style="width: ${w}pt; height: ${totalCellHeight}pt; mso-height-rule: at-least; border: 1.0pt solid #000000; mso-border-alt: solid #000000 1.0pt; background-color: #00b0f0; text-align: center; vertical-align: middle; padding: 0.5pt 1pt; overflow: visible; font-family: Arial, Helvetica, sans-serif;">
+                ${contentHtml}
+              </td>
+            `);
+          } else {
+            // Empty slot: merge 2 half-hours of the same hour into 1 clean cell to eliminate internal dashed lines
+            let emptySpan = 1;
+            if (r % 2 === 0 && r + 1 < totalRows && (!gridMatrix[r + 1] || !gridMatrix[r + 1][c] || !gridMatrix[r + 1][c].isScheduled)) {
+              emptySpan = 2;
+            }
+            coveredUntil[c] = r + emptySpan - 1;
+            const emptyHeight = slotHeight * emptySpan;
+
+            cellsHtml.push(`
+              <td rowspan="${emptySpan}" width="${w}" style="width: ${w}pt; height: ${emptyHeight}pt; mso-height-rule: at-least; border: 1.0pt solid #000000; mso-border-alt: solid #000000 1.0pt; font-size: 1pt; line-height: 1pt; padding: 0; background-color: #ffffff;">
+                &nbsp;
+              </td>
+            `);
+          }
+        }
+
+        rowsHtml.push(`
+          <tr style="height: ${slotHeight}pt; mso-height-rule: at-least; page-break-inside: avoid;">
+            ${cellsHtml.join('')}
+          </tr>
+        `);
+      }
+
+      const tbodyHtml = `
+        <tbody>
+          ${rowsHtml.join('')}
+        </tbody>
+      `;
+
+      timetableHtml = `
+        <table class="room-util-timetable-grid" border="0" cellspacing="0" cellpadding="0" style="width: ${timetableWidth}pt; margin: 0 auto 3pt auto; border-collapse: collapse; table-layout: fixed; border: 1.0pt solid #000000; mso-border-alt: solid #000000 1.0pt; mso-table-lspace: 0pt; mso-table-rspace: 0pt; page-break-inside: avoid;">
+          ${colgroupHtml}
+          ${theadHtml}
+          ${tbodyHtml}
+        </table>
+      `;
+    }
+
+    // 7. Signatures: 3-column table with individual underlines, compact margins, and invisible borders (guaranteed Page 1 fit)
+    const sigBlocks = Array.from(roomDoc.querySelectorAll('.room-util-signatures .sig-block'));
+    let prepLabel = 'Prepared by:';
+    let prepName = 'CHERILYN G. VILLASIS';
+    let prepTitle = 'Department Secretary';
+    let notedLabel = 'Noted:';
+    let notedName = 'JELLY L. PAREDES, EdD';
+    let notedTitle = 'Program Chairman, BSCS';
+    let approvedLabel = 'Approved:';
+    let approvedName = 'RAMY LLOYD L. LOTILLA, EdD';
+    let approvedTitle = 'Satellite College Director';
+
+    if (sigBlocks.length >= 3) {
+      prepLabel = sigBlocks[0].querySelector('.sig-label')?.textContent.trim() || prepLabel;
+      prepName = sigBlocks[0].querySelector('.sig-name')?.textContent.trim() || prepName;
+      prepTitle = sigBlocks[0].querySelector('.sig-title')?.textContent.trim() || prepTitle;
+      notedLabel = sigBlocks[1].querySelector('.sig-label')?.textContent.trim() || notedLabel;
+      notedName = sigBlocks[1].querySelector('.sig-name')?.textContent.trim() || notedName;
+      notedTitle = sigBlocks[1].querySelector('.sig-title')?.textContent.trim() || notedTitle;
+      approvedLabel = sigBlocks[2].querySelector('.sig-label')?.textContent.trim() || approvedLabel;
+      approvedName = sigBlocks[2].querySelector('.sig-name')?.textContent.trim() || approvedName;
+      approvedTitle = sigBlocks[2].querySelector('.sig-title')?.textContent.trim() || approvedTitle;
+    }
+
+    const sigsHtml = `
+      <table class="room-util-signatures-table" border="1" bordercolor="#ffffff" cellspacing="0" cellpadding="0" style="width: 560pt; margin: 3pt auto 0 auto; border-collapse: collapse; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; table-layout: fixed; mso-table-lspace: 0pt; mso-table-rspace: 0pt; page-break-inside: avoid; page-break-after: avoid; page-break-before: avoid;">
+        <colgroup>
+          <col width="186" style="width: 186pt;">
+          <col width="186" style="width: 186pt;">
+          <col width="188" style="width: 188pt;">
+        </colgroup>
+        <tr style="page-break-inside: avoid;">
+          <td width="186" style="width: 186pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
+            <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 7pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+              ${prepLabel}
+            </p>
+            <p style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+              <u>${prepName}</u>
+            </p>
+            <p style="margin: 1pt 0 0 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 6.5pt; color: #4b5563; line-height: 1.15; mso-line-height-rule: at-least;">
+              ${prepTitle}
+            </p>
+          </td>
+          <td width="186" style="width: 186pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
+            <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 7pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+              ${notedLabel}
+            </p>
+            <p style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+              <u>${notedName}</u>
+            </p>
+            <p style="margin: 1pt 0 0 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 6.5pt; color: #4b5563; line-height: 1.15; mso-line-height-rule: at-least;">
+              ${notedTitle}
+            </p>
+          </td>
+          <td width="188" style="width: 188pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
+            <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 7pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+              ${approvedLabel}
+            </p>
+            <p style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+              <u>${approvedName}</u>
+            </p>
+            <p style="margin: 1pt 0 0 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 6.5pt; color: #4b5563; line-height: 1.15; mso-line-height-rule: at-least;">
+              ${approvedTitle}
+            </p>
+          </td>
+        </tr>
+      </table>
+    `;
+
+    // 8. Assemble full document body without trailing paragraph spacer to prevent empty Page 2
+    const bodyHtml = `
+      ${headerHtml}
+      ${titlesHtml}
+      ${roomBadgeHtml}
+      ${subjTableHtml}
+      ${timetableHtml}
+      ${sigsHtml}
+    `;
+
+    const cleanRoomName = (roomBadgeText.replace(/^Room:\s*/i, '') || 'Room').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fileName = `Room_Utilization_${cleanRoomName || 'Export'}_${Date.now()}.doc`;
+    const wordDocument = wrapPortraitWordHtml(bodyHtml, `Room Utilization - ${cleanRoomName}`);
+    downloadFile(wordDocument, fileName, 'application/msword;charset=utf-8');
+
+    logActivity({
+      user,
+      action: LOG_ACTIONS.EXPORT,
+      details: `Exported 1-page Room Utilization (${cleanRoomName}) to Word document: ${fileName}`
+    });
+
+    toast.success('Downloaded clean 1-page editable Word document (.doc)!');
+  } catch (err) {
+    console.error('Error exporting Room Utilization to Word:', err);
+    toast.error('Failed to export Word document: ' + (err?.message || 'Unknown error'));
+  }
 }
 
 /**
