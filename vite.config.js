@@ -23,13 +23,13 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: '/app-icon-192-v3.png',
+            src: '/app-icon-192-any.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/app-icon-512-v3.png',
+            src: '/app-icon-512-any.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
