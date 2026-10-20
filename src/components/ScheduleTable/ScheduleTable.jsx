@@ -320,109 +320,303 @@ const ScheduleTable = React.memo(function ScheduleTable({
     }, {});
   }, [schedules]);
 
-  // Helper: prepare a clean, desktop-like clone of the schedule for export
-  const prepareExportClone = useCallback((clone, isPrint = true) => {
-    const clonedToolbar = clone.querySelector('.schedule-toolbar');
-    if (clonedToolbar) clonedToolbar.style.display = 'none';
+  // Helper: prepare a clean, desktop-like clone of the schedule for export / print
+  const prepareExportClone = useCallback((clone) => {
+    // 1. Remove non-printable and interactive elements
+    clone.querySelectorAll('.schedule-toolbar, .floating-exit-btn, .rotate-device-hint, .schedule-card-view, .remove-btn, .dept-legend').forEach(el => el.remove());
 
-    const docMeta = clone.querySelector('.schedule-doc-meta');
-    if (docMeta) {
-      docMeta.style.display = 'flex';
-      docMeta.style.flex = '0 0 160px';
+    // 2. Base container styling
+    clone.style.width = '100%';
+    clone.style.maxWidth = '100%';
+    clone.style.margin = '0';
+    clone.style.padding = '0';
+    clone.style.background = '#ffffff';
+    clone.style.boxShadow = 'none';
+    clone.style.borderRadius = '0';
+    clone.style.overflow = 'visible';
+
+    // 3. Document header
+    const docHeader = clone.querySelector('.schedule-doc-header');
+    if (docHeader) {
+      docHeader.style.display = 'flex';
+      docHeader.style.width = '100%';
+      docHeader.style.border = '1px solid #cbd5e1';
+      docHeader.style.borderRadius = '8px';
+      docHeader.style.marginBottom = '8px';
+      docHeader.style.backgroundColor = '#ffffff';
+      docHeader.style.overflow = 'hidden';
     }
 
     const docLogo = clone.querySelector('.schedule-doc-logo');
     if (docLogo) {
-      docLogo.style.flex = '0 0 90px';
+      docLogo.style.display = 'flex';
+      docLogo.style.flex = '0 0 75px';
+      docLogo.style.padding = '6px';
+      docLogo.style.alignItems = 'center';
+      docLogo.style.justifyContent = 'center';
+      docLogo.style.borderRight = '1px solid #cbd5e1';
+      docLogo.style.backgroundColor = '#f8fafc';
+
       const logoImg = docLogo.querySelector('img');
-      if (logoImg) { logoImg.style.width = '58px'; logoImg.style.height = '58px'; }
-    }
-
-    const docTitle = clone.querySelector('.schedule-doc-title');
-    if (docTitle) {
-      const h2 = docTitle.querySelector('h2');
-      const h3 = docTitle.querySelector('h3');
-      if (h2) h2.style.fontSize = '1.05rem';
-      if (h3) h3.style.fontSize = '0.82rem';
-    }
-
-    const table = clone.querySelector('.schedule-table');
-    if (table) {
-      table.style.zoom = '1';
-      table.style.transform = 'none';
-      table.style.transformOrigin = 'unset';
-      table.style.minWidth = '680px';
-      table.style.width = '100%';
-    }
-
-    clone.style.padding = '1rem';
-    clone.querySelectorAll('.remove-btn').forEach(btn => btn.style.display = 'none');
-
-    if (isPrint) {
-      const summaryContainer = clone.querySelector('.schedule-summary-container');
-      if (summaryContainer) {
-        summaryContainer.style.margin = '5px 0';
-        summaryContainer.style.padding = '0';
-
-        const h3 = summaryContainer.querySelector('h3');
-        if (h3) h3.style.fontSize = '0.9rem';
-        const h4 = summaryContainer.querySelector('h4');
-        if (h4) {
-          h4.style.fontSize = '0.8rem';
-          h4.style.margin = '2px 0';
-        }
-        const p = summaryContainer.querySelector('p');
-        if (p) p.style.fontSize = '0.75rem';
-
-        const summaryTable = clone.querySelector('.schedule-summary-table');
-        if (summaryTable) {
-          summaryTable.style.fontSize = '0.65rem';
-          summaryTable.style.marginBottom = '5px';
-          summaryTable.querySelectorAll('th, td').forEach(cell => {
-            cell.style.padding = '2px';
-          });
-        }
-
-        const scheduleTable = clone.querySelector('.schedule-table');
-        if (scheduleTable) {
-          scheduleTable.style.fontSize = '0.7rem';
-          scheduleTable.querySelectorAll('th, td').forEach(cell => {
-            cell.style.padding = '2px';
-          });
-          scheduleTable.querySelectorAll('.schedule-item').forEach(item => {
-            item.style.padding = '2px';
-            const details = item.querySelector('.details');
-            if (details) details.style.marginTop = '2px';
-          });
+      if (logoImg) {
+        logoImg.style.width = '48px';
+        logoImg.style.height = '48px';
+        logoImg.style.borderRadius = '50%';
+        logoImg.style.objectFit = 'cover';
+        if (logoImg.complete && logoImg.naturalWidth > 0) {
+          try {
+            const c = document.createElement('canvas');
+            c.width = logoImg.naturalWidth;
+            c.height = logoImg.naturalHeight;
+            const ctx = c.getContext('2d');
+            ctx.drawImage(logoImg, 0, 0);
+            logoImg.src = c.toDataURL('image/png');
+          } catch {
+            // keep src as is
+          }
         }
       }
     }
 
-    const cardView = clone.querySelector('.schedule-card-view');
-    if (cardView) cardView.style.display = 'none';
+    const docTitle = clone.querySelector('.schedule-doc-title');
+    if (docTitle) {
+      docTitle.style.display = 'flex';
+      docTitle.style.flex = '1';
+      docTitle.style.flexDirection = 'column';
+      docTitle.style.justifyContent = 'center';
+      docTitle.style.textAlign = 'center';
+      docTitle.style.padding = '6px 12px';
+      docTitle.style.borderRight = '1px solid #cbd5e1';
+
+      const h2 = docTitle.querySelector('h2');
+      if (h2) {
+        h2.style.margin = '0 0 2px 0';
+        h2.style.fontSize = '1.0rem';
+        h2.style.fontWeight = '700';
+        h2.style.color = '#033279';
+        h2.style.letterSpacing = '0.5px';
+      }
+      const h3 = docTitle.querySelector('h3');
+      if (h3) {
+        h3.style.margin = '0';
+        h3.style.fontSize = '0.78rem';
+        h3.style.fontWeight = '600';
+        h3.style.color = '#475569';
+        h3.style.letterSpacing = '1px';
+        h3.style.textTransform = 'uppercase';
+      }
+    }
+
+    const docMeta = clone.querySelector('.schedule-doc-meta');
+    if (docMeta) {
+      docMeta.style.display = 'flex';
+      docMeta.style.flex = '0 0 150px';
+      docMeta.style.flexDirection = 'column';
+      docMeta.style.justifyContent = 'center';
+      docMeta.style.padding = '6px 10px';
+      docMeta.style.fontSize = '0.68rem';
+      docMeta.style.color = '#475569';
+      docMeta.style.gap = '2px';
+      docMeta.style.backgroundColor = '#f8fafc';
+      docMeta.querySelectorAll('div').forEach((d, idx, arr) => {
+        d.style.borderBottom = idx < arr.length - 1 ? '1px solid #cbd5e1' : 'none';
+        d.style.paddingBottom = '2px';
+      });
+    }
+
+    // 4. Subject summary container
+    const summaryContainer = clone.querySelector('.schedule-summary-container');
+    if (summaryContainer) {
+      summaryContainer.style.display = 'block';
+      summaryContainer.style.margin = '8px 0';
+      summaryContainer.style.padding = '0';
+      summaryContainer.style.overflow = 'visible';
+
+      const h3 = summaryContainer.querySelector('h3');
+      if (h3) {
+        h3.style.margin = '0';
+        h3.style.fontSize = '0.90rem';
+        h3.style.fontWeight = '700';
+        h3.style.color = '#033279';
+        h3.style.textTransform = 'uppercase';
+        h3.style.textAlign = 'center';
+      }
+      const h4 = summaryContainer.querySelector('h4');
+      if (h4) {
+        h4.style.margin = '2px 0';
+        h4.style.fontSize = '0.78rem';
+        h4.style.fontWeight = '700';
+        h4.style.color = '#000000';
+        h4.style.textAlign = 'center';
+      }
+      const p = summaryContainer.querySelector('p');
+      if (p) {
+        p.style.margin = '0 0 6px 0';
+        p.style.fontSize = '0.72rem';
+        p.style.color = '#000000';
+        p.style.textAlign = 'center';
+      }
+
+      const summaryTable = clone.querySelector('.schedule-summary-table');
+      if (summaryTable) {
+        summaryTable.style.width = '100%';
+        summaryTable.style.borderCollapse = 'collapse';
+        summaryTable.style.fontSize = '0.68rem';
+        summaryTable.style.color = '#000000';
+        summaryTable.style.marginBottom = '8px';
+        summaryTable.querySelectorAll('th, td').forEach(cell => {
+          cell.style.border = '1px solid #000000';
+          cell.style.padding = '3px 6px';
+          cell.style.boxSizing = 'border-box';
+        });
+        summaryTable.querySelectorAll('th').forEach(th => {
+          th.style.backgroundColor = '#f1f5f9';
+          th.style.fontWeight = 'bold';
+        });
+      }
+    }
+
+    // 5. Main table wrapper & schedule table
     const tableWrapper = clone.querySelector('.table-wrapper');
     if (tableWrapper) {
       tableWrapper.style.display = 'block';
       tableWrapper.style.overflow = 'visible';
+      tableWrapper.style.zoom = '1';
+      tableWrapper.style.transform = 'none';
+      tableWrapper.style.width = '100%';
+      tableWrapper.style.borderRadius = '0';
+      tableWrapper.style.boxShadow = 'none';
+      tableWrapper.style.border = 'none';
       tableWrapper.scrollLeft = 0;
     }
 
-    clone.querySelectorAll('.time-label').forEach(cell => {
-      cell.style.position = 'static';
-      cell.style.left = 'auto';
-      cell.style.zIndex = 'auto';
-    });
-    const firstTh = clone.querySelector('.schedule-table th');
-    if (firstTh) {
-      firstTh.style.position = 'static';
-      firstTh.style.left = 'auto';
-      firstTh.style.zIndex = 'auto';
-    }
+    const scheduleTable = clone.querySelector('.schedule-table');
+    if (scheduleTable) {
+      scheduleTable.style.width = '100%';
+      scheduleTable.style.minWidth = '100%';
+      scheduleTable.style.maxWidth = '100%';
+      scheduleTable.style.tableLayout = 'fixed';
+      scheduleTable.style.borderCollapse = 'separate';
+      scheduleTable.style.borderSpacing = '0';
+      scheduleTable.style.fontSize = '0.70rem';
+      scheduleTable.style.zoom = '1';
+      scheduleTable.style.transform = 'none';
+      scheduleTable.style.borderTop = '1px solid #cbd5e1';
+      scheduleTable.style.borderLeft = '1px solid #cbd5e1';
 
-    const floatingBtn = clone.querySelector('.floating-exit-btn');
-    if (floatingBtn) floatingBtn.style.display = 'none';
-    const rotateHint = clone.querySelector('.rotate-device-hint');
-    if (rotateHint) rotateHint.style.display = 'none';
+      scheduleTable.querySelectorAll('thead th').forEach(th => {
+        th.style.backgroundColor = '#f8fafc';
+        th.style.color = '#475569';
+        th.style.fontWeight = '700';
+        th.style.fontSize = '0.72rem';
+        th.style.textAlign = 'center';
+        th.style.padding = '4px 3px';
+        th.style.borderBottom = '1px solid #cbd5e1';
+        th.style.borderRight = '1px solid #cbd5e1';
+        th.style.position = 'static';
+        th.style.left = 'auto';
+        th.style.zIndex = 'auto';
+      });
+
+      const firstTh = scheduleTable.querySelector('thead th.sticky-col, thead th:first-child');
+      if (firstTh) {
+        firstTh.style.width = '80px';
+        firstTh.style.minWidth = '80px';
+        firstTh.style.maxWidth = '80px';
+      }
+
+      scheduleTable.querySelectorAll('tbody tr').forEach(tr => {
+        tr.style.height = '30px';
+      });
+
+      scheduleTable.querySelectorAll('.time-label').forEach(cell => {
+        cell.style.position = 'static';
+        cell.style.left = 'auto';
+        cell.style.zIndex = 'auto';
+        cell.style.width = '80px';
+        cell.style.minWidth = '80px';
+        cell.style.maxWidth = '80px';
+        cell.style.padding = '2px 4px';
+        cell.style.fontSize = '0.70rem';
+        cell.style.fontWeight = '700';
+        cell.style.textAlign = 'center';
+        cell.style.verticalAlign = 'middle';
+        cell.style.backgroundColor = '#f8fafc';
+        cell.style.color = '#1e293b';
+        cell.style.borderRight = '1px solid #cbd5e1';
+        cell.style.borderBottom = '1px solid #cbd5e1';
+      });
+
+      scheduleTable.querySelectorAll('.schedule-cell').forEach(cell => {
+        cell.style.height = '30px';
+        cell.style.padding = '0';
+        cell.style.verticalAlign = 'top';
+        cell.style.boxSizing = 'border-box';
+        cell.style.borderRight = '1px solid #e2e8f0';
+        cell.style.borderBottom = '1px solid #e2e8f0';
+        cell.style.position = 'relative';
+
+        if (cell.classList.contains('has-schedule')) {
+          cell.style.border = '2px solid #ffffff';
+          cell.style.borderRadius = '4px';
+        }
+      });
+
+      scheduleTable.querySelectorAll('.schedule-item').forEach(item => {
+        item.style.padding = '4px 6px';
+        item.style.height = '100%';
+        item.style.boxSizing = 'border-box';
+        item.style.display = 'flex';
+        item.style.flexDirection = 'column';
+        item.style.justifyContent = 'flex-start';
+        item.style.border = 'none';
+        item.style.backgroundColor = 'transparent';
+
+        const content = item.querySelector('.schedule-content');
+        if (content) {
+          content.style.display = 'flex';
+          content.style.flexDirection = 'column';
+          content.style.width = '100%';
+          content.style.padding = '0';
+        }
+
+        const subj = item.querySelector('.subject');
+        if (subj) {
+          subj.style.fontSize = '0.74rem';
+          subj.style.fontWeight = 'bold';
+          subj.style.lineHeight = '1.2';
+          subj.style.margin = '0';
+          subj.style.wordBreak = 'break-word';
+
+          const compSpan = subj.querySelector('span');
+          if (compSpan) {
+            compSpan.style.display = 'block';
+            compSpan.style.fontSize = '0.64rem';
+            compSpan.style.fontWeight = 'normal';
+            compSpan.style.opacity = '0.9';
+            compSpan.style.margin = '0';
+          }
+        }
+
+        const details = item.querySelector('.details');
+        if (details) {
+          details.style.marginTop = '4px';
+          details.style.display = 'flex';
+          details.style.flexDirection = 'column';
+          details.style.gap = '2px';
+        }
+
+        item.querySelectorAll('.professor, .room, .section').forEach(p => {
+          p.style.margin = '0';
+          p.style.fontSize = '0.67rem';
+          p.style.lineHeight = '1.2';
+          p.style.fontWeight = '600';
+          p.style.whiteSpace = 'nowrap';
+          p.style.overflow = 'hidden';
+          p.style.textOverflow = 'ellipsis';
+        });
+      });
+    }
   }, []);
 
   const handleExportImage = useCallback(async () => {
@@ -436,39 +630,33 @@ const ScheduleTable = React.memo(function ScheduleTable({
 
       const clone = containerRef.current.cloneNode(true);
       const wrapper = document.createElement('div');
+      wrapper.className = 'schedule-export-wrapper';
       wrapper.style.position = 'absolute';
       wrapper.style.top = '-10000px';
       wrapper.style.left = '-10000px';
-      wrapper.style.width = `${Math.max(containerRef.current.scrollWidth, 900)}px`;
+      wrapper.style.width = '880px';
+      wrapper.style.minWidth = '880px';
+      wrapper.style.maxWidth = '880px';
       wrapper.style.height = 'auto';
       wrapper.style.backgroundColor = '#ffffff';
-      wrapper.style.padding = '16px';
+      wrapper.style.padding = '12px 14px';
+      wrapper.style.boxSizing = 'border-box';
       wrapper.style.display = 'flex';
       wrapper.style.flexDirection = 'column';
 
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
-      prepareExportClone(clone, false);
-      clone.style.height = 'auto';
-      clone.style.display = 'flex';
-      clone.style.flexDirection = 'column';
-      const tableWrapper = clone.querySelector('.table-wrapper');
-      if (tableWrapper) {
-        tableWrapper.style.display = 'flex';
-        tableWrapper.style.flexDirection = 'column';
-      }
-      const table = clone.querySelector('.schedule-table');
-      if (table) table.style.height = 'auto';
+      prepareExportClone(clone);
 
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise(r => setTimeout(r, 150));
 
       const finalRect = wrapper.getBoundingClientRect();
-      const finalWidth = finalRect.width;
-      const finalHeight = finalRect.height;
+      const finalWidth = Math.round(finalRect.width) || 880;
+      const finalHeight = Math.round(finalRect.height) || 900;
 
       const canvas = await html2canvas(wrapper, {
-        scale: 3,
+        scale: 2.5,
         useCORS: true,
         backgroundColor: '#ffffff',
         width: finalWidth,
@@ -499,39 +687,33 @@ const ScheduleTable = React.memo(function ScheduleTable({
 
       const clone = containerRef.current.cloneNode(true);
       const wrapper = document.createElement('div');
+      wrapper.className = 'schedule-export-wrapper';
       wrapper.style.position = 'absolute';
       wrapper.style.top = '-10000px';
       wrapper.style.left = '-10000px';
-      wrapper.style.width = '1100px';
+      wrapper.style.width = '880px';
+      wrapper.style.minWidth = '880px';
+      wrapper.style.maxWidth = '880px';
       wrapper.style.height = 'auto';
       wrapper.style.backgroundColor = '#ffffff';
-      wrapper.style.padding = '16px';
+      wrapper.style.padding = '12px 14px';
+      wrapper.style.boxSizing = 'border-box';
       wrapper.style.display = 'flex';
       wrapper.style.flexDirection = 'column';
 
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
-      prepareExportClone(clone, true);
-      clone.style.height = 'auto';
-      clone.style.display = 'flex';
-      clone.style.flexDirection = 'column';
-      const tableWrapper = clone.querySelector('.table-wrapper');
-      if (tableWrapper) {
-        tableWrapper.style.display = 'flex';
-        tableWrapper.style.flexDirection = 'column';
-      }
-      const table = clone.querySelector('.schedule-table');
-      if (table) table.style.height = 'auto';
+      prepareExportClone(clone);
 
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise(r => setTimeout(r, 150));
 
       const finalRect = wrapper.getBoundingClientRect();
-      const finalWidth = finalRect.width;
-      const finalHeight = finalRect.height;
+      const finalWidth = Math.round(finalRect.width) || 880;
+      const finalHeight = Math.round(finalRect.height) || 900;
 
       const canvas = await html2canvas(wrapper, {
-        scale: 3,
+        scale: 2.5,
         useCORS: true,
         backgroundColor: '#ffffff',
         width: finalWidth,
@@ -546,38 +728,93 @@ const ScheduleTable = React.memo(function ScheduleTable({
       const imgData = canvas.toDataURL('image/png');
       const iframe = document.createElement('iframe');
       iframe.style.position = 'fixed';
-      iframe.style.top = '-10000px';
-      iframe.style.left = '-10000px';
+      iframe.style.top = '0';
+      iframe.style.left = '0';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.opacity = '0';
+      iframe.style.pointerEvents = 'none';
+      iframe.style.border = 'none';
       document.body.appendChild(iframe);
 
       const doc = iframe.contentDocument || iframe.contentWindow.document;
       doc.open();
       doc.write(`
+          <!DOCTYPE html>
           <html>
           <head>
               <title>Print Schedule</title>
               <style>
-                  @page { size: portrait; margin: 0; }
-                  * { margin: 0; padding: 0; box-sizing: border-box; }
-                  html, body { width: 100%; height: 100%; background: #fff; overflow: hidden; }
-                  body { display: flex; align-items: center; justify-content: center; }
-                  img { display: block; max-width: 100vw; max-height: 100vh; width: auto; height: auto; object-fit: contain; }
+                  @page {
+                      size: letter portrait;
+                      margin: 0.2in;
+                  }
+                  * {
+                      -webkit-print-color-adjust: exact !important;
+                      print-color-adjust: exact !important;
+                      box-sizing: border-box !important;
+                  }
+                  html, body {
+                      margin: 0 !important;
+                      padding: 0 !important;
+                      width: 100% !important;
+                      height: 100% !important;
+                      background: #ffffff !important;
+                      overflow: hidden !important;
+                  }
+                  body {
+                      display: flex !important;
+                      align-items: flex-start !important;
+                      justify-content: center !important;
+                  }
+                  .print-page {
+                      width: 100% !important;
+                      max-width: 100% !important;
+                      height: 100% !important;
+                      display: flex !important;
+                      align-items: flex-start !important;
+                      justify-content: center !important;
+                      page-break-inside: avoid !important;
+                      break-inside: avoid !important;
+                      page-break-after: avoid !important;
+                      break-after: avoid !important;
+                  }
+                  img {
+                      display: block !important;
+                      max-width: 100% !important;
+                      max-height: 10.5in !important;
+                      width: 100% !important;
+                      height: auto !important;
+                      object-fit: contain !important;
+                      page-break-inside: avoid !important;
+                      break-inside: avoid !important;
+                      page-break-after: avoid !important;
+                      break-after: avoid !important;
+                  }
               </style>
           </head>
           <body>
-              <img src="${imgData}" />
+              <div class="print-page">
+                  <img src="${imgData}" />
+              </div>
           </body>
           </html>
       `);
       doc.close();
 
-      iframe.contentWindow.focus();
       setTimeout(() => {
-        iframe.contentWindow.print();
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (printErr) {
+          console.error('Print trigger error', printErr);
+        }
         setTimeout(() => {
-          if (document.body.contains(iframe)) document.body.removeChild(iframe);
-        }, 1000);
-      }, 300);
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }, 2000);
+      }, 350);
 
     } catch (err) {
       console.error(err);
@@ -1056,10 +1293,10 @@ const ScheduleTable = React.memo(function ScheduleTable({
       {/* Preview Modal */}
       {previewImage && createPortal(
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 100000, display: 'flex', flexDirection: 'column', padding: '20px' }}>
-          <div style={{ backgroundColor: 'white', margin: 'auto', padding: '20px', borderRadius: '12px', maxWidth: '90vw', width: '1000px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Schedule Preview</h3>
-            <div style={{ maxHeight: '60vh', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#f9fafb', display: 'block', textAlign: 'center' }}>
-              <img src={previewImage} alt="Schedule Preview" style={{ width: '100%', minWidth: '1000px', maxWidth: '1400px', height: 'auto', margin: '0 auto', imageRendering: 'high-quality' }} />
+          <div style={{ backgroundColor: 'white', margin: 'auto', padding: '16px', borderRadius: '12px', maxWidth: '95vw', width: '900px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '12px', fontSize: '1.1rem' }}>Schedule Preview</h3>
+            <div style={{ maxHeight: '65vh', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '16px', backgroundColor: '#f9fafb', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '8px' }}>
+              <img src={previewImage} alt="Schedule Preview" style={{ maxWidth: '100%', width: 'auto', height: 'auto', display: 'block', margin: '0 auto', imageRendering: 'high-quality' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button className="btn btn-outline" onClick={() => setPreviewImage(null)}>Cancel</button>

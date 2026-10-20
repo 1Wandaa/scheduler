@@ -847,7 +847,12 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                     <button 
                         onClick={() => {
                             setIsExportOpen(false);
-                            exportGridToWord(null, user);
+                            window.dispatchEvent(new Event('export-ordinary-word'));
+                            logActivity({
+                                user,
+                                action: LOG_ACTIONS.EXPORT,
+                                details: 'Exported ordinary grid schedule to Word (.doc)'
+                            });
                         }} 
                         style={itemStyle}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}

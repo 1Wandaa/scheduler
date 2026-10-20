@@ -13,8 +13,8 @@ const PreviewModal = ({ previewImage, setPreviewImage, titleName }) => {
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
-                <div style={{ maxHeight: '60vh', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#f9fafb', display: 'block', textAlign: 'center' }}>
-                    <img src={previewImage} alt="Schedule Preview" style={{ width: '100%', minWidth: '1000px', maxWidth: '1400px', height: 'auto', margin: '0 auto' }} />
+                <div style={{ maxHeight: '65vh', overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#f9fafb', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '8px' }}>
+                    <img src={previewImage} alt="Schedule Preview" style={{ maxWidth: '100%', width: 'auto', height: 'auto', display: 'block', margin: '0 auto' }} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                     <button className="btn" style={{ background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)' }} onClick={() => setPreviewImage(null)}>

@@ -68,14 +68,14 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
     @page Section1 {
       size: 11.0in 8.5in; /* 792pt x 612pt landscape */
       mso-page-orientation: landscape;
-      margin: 0.15in 0.4in 0.15in 0.4in;
+      margin: 0.15in 0.25in 0.15in 0.25in;
       mso-header-margin: 0in;
       mso-footer-margin: 0in;
       mso-paper-source: 0;
     }
     div.Section1 {
       page: Section1;
-      width: 700pt;
+      width: 720pt;
       margin: 0 auto;
     }
     body {
@@ -101,7 +101,7 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
       mso-table-rspace: 0pt;
       mso-table-bspace: 0pt;
       mso-table-tspace: 0pt;
-      width: 700pt;
+      width: 720pt;
       table-layout: fixed;
       page-break-inside: avoid;
       mso-padding-alt: 0pt;
@@ -112,7 +112,7 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
       page-break-inside: avoid;
     }
     .iso-header-table, .grid-header-table {
-      width: 700pt;
+      width: 720pt;
       border-collapse: collapse;
       border: 1.0pt solid #000000;
       margin-bottom: 1pt;
@@ -1138,27 +1138,27 @@ export async function exportGridToWord(tableContainer, user) {
     else if (t.includes('Effectivity:')) effectivity = t.replace('Effectivity:', '').trim();
   });
 
-  // 3. Build Header Table (700pt fixed width: 75 + 475 + 150 = 700pt)
+  // 3. Build Header Table (720pt fixed width: 75 + 485 + 160 = 720pt)
   const logoHtml = logoBase64 
     ? `<img src="${logoBase64}" width="28" height="28" style="display: block; margin: 0 auto;" alt="Logo" />`
     : `<p align="center" style="font-weight: bold; font-size: 8pt; color: #1e3a8a; margin: 0;">CapSU</p><p align="center" style="font-size: 5.5pt; font-weight: bold; margin: 0;">Capiz State University</p>`;
 
   const headerHtml = `
-    <table class="grid-header-table" border="1" bordercolor="#000000" cellspacing="0" cellpadding="2">
+    <table class="grid-header-table" border="1" bordercolor="#000000" cellspacing="0" cellpadding="2" style="width: 720pt;">
       <colgroup>
         <col width="75" style="width: 75pt;">
-        <col width="475" style="width: 475pt;">
-        <col width="150" style="width: 150pt;">
+        <col width="485" style="width: 485pt;">
+        <col width="160" style="width: 160pt;">
       </colgroup>
       <tr>
         <td width="75" align="center" valign="middle" style="width: 75pt; text-align: center; vertical-align: middle; padding: 1pt;">
           ${logoHtml}
         </td>
-        <td width="475" align="center" valign="middle" style="width: 475pt; text-align: center; vertical-align: middle;">
+        <td width="485" align="center" valign="middle" style="width: 485pt; text-align: center; vertical-align: middle;">
           <h2 style="margin: 0; font-size: 8.5pt; font-family: 'Times New Roman', serif; font-weight: bold; line-height: 1.0;">CAPIZ STATE UNIVERSITY</h2>
           <h3 style="margin: 1pt 0 0 0; font-size: 7.5pt; font-family: 'Times New Roman', serif; font-weight: bold; color: #1e3a8a; line-height: 1.0;">${titleText}</h3>
         </td>
-        <td width="150" valign="middle" style="width: 150pt; font-size: 5.5pt; padding: 1pt 3pt; line-height: 1.0;">
+        <td width="160" valign="middle" style="width: 160pt; font-size: 5.5pt; padding: 1pt 3pt; line-height: 1.0;">
           <p style="margin: 0;"><b>Doc. Code:</b> ${docCode}</p>
           <p style="margin: 0.5pt 0 0 0;"><b>Revision No.:</b> ${revNo}</p>
           <p style="margin: 0.5pt 0 0 0;"><b>Effectivity:</b> ${effectivity}</p>
@@ -1190,19 +1190,19 @@ export async function exportGridToWord(tableContainer, user) {
       cloneSumTable.setAttribute('bordercolor', '#000000');
       cloneSumTable.setAttribute('cellspacing', '0');
       cloneSumTable.setAttribute('cellpadding', '1');
-      cloneSumTable.style.width = '700pt';
+      cloneSumTable.style.width = '720pt';
       cloneSumTable.style.borderCollapse = 'collapse';
       cloneSumTable.style.tableLayout = 'fixed';
       cloneSumTable.style.marginBottom = '1pt';
 
-      // Set fixed colgroup: 70pt + 280pt + 40pt + 180pt + 130pt = 700pt
+      // Set fixed colgroup: 70pt + 290pt + 40pt + 185pt + 135pt = 720pt
       const sumColgroup = document.createElement('colgroup');
       sumColgroup.innerHTML = `
         <col width="70" style="width: 70pt;">
-        <col width="280" style="width: 280pt;">
+        <col width="290" style="width: 290pt;">
         <col width="40" style="width: 40pt;">
-        <col width="180" style="width: 180pt;">
-        <col width="130" style="width: 130pt;">
+        <col width="185" style="width: 185pt;">
+        <col width="135" style="width: 135pt;">
       `;
       cloneSumTable.insertBefore(sumColgroup, cloneSumTable.firstChild);
 
@@ -1245,7 +1245,7 @@ export async function exportGridToWord(tableContainer, user) {
     `;
   }
 
-  // 5. Build Clean Dynamic 1-Page Main Schedule Grid Table (700pt fixed width)
+  // 5. Build Clean Dynamic 1-Page Main Schedule Grid Table (720pt fixed width)
   const originalGrid = container.querySelector('.schedule-table');
   let gridTableHtml = '';
 
@@ -1256,119 +1256,68 @@ export async function exportGridToWord(tableContainer, user) {
     // Calculate number of day columns
     const ths = cloneGrid.querySelectorAll('thead th');
     const dayCount = Math.max(1, ths.length - 1);
-    const timeWidth = 65;
-    const dayWidth = Math.floor((700 - timeWidth) / dayCount);
+    const timeWidth = 70;
+    const dayWidth = Math.floor((720 - timeWidth) / dayCount);
 
-    // 5b. Remove the middle dividing line within each 1-hour time slot
-    // by merging half-hour cells (rowspan=2) across each hour group
-    const rows = Array.from(cloneGrid.querySelectorAll('tbody tr'));
-    const rowCount = rows.length;
-    const cellMatrix = Array.from({ length: rowCount }, () => Array(dayCount).fill(null));
-
-    // Map all cells to their logical grid positions
-    for (let r = 0; r < rowCount; r++) {
-      const tr = rows[r];
-      const tds = Array.from(tr.querySelectorAll('td'));
-      let tdIdx = 0;
-
-      // Skip time-label cell if present in this row
-      if (tds.length > 0 && (tds[0].classList.contains('time-label') || (tds[0].hasAttribute('rowspan') && tds[0].querySelector('strong')))) {
-        tdIdx = 1;
-      }
-
-      for (let c = 0; c < dayCount; c++) {
-        if (cellMatrix[r][c] !== null) {
-          continue; // Cell position covered by a previous row's rowspan
-        }
-        if (tdIdx < tds.length) {
-          const td = tds[tdIdx++];
-          const rs = parseInt(td.getAttribute('rowspan') || '1', 10);
-          for (let span = 0; span < rs; span++) {
-            if (r + span < rowCount) {
-              cellMatrix[r + span][c] = (span === 0) ? td : 'SPAN';
-            }
-          }
-        }
-      }
-    }
-
-    // For every 1-hour pair (r, r+1), merge consecutive half-hour cells
-    for (let r = 0; r + 1 < rowCount; r += 2) {
-      for (let c = 0; c < dayCount; c++) {
-        const topCell = cellMatrix[r][c];
-        const bottomCell = cellMatrix[r + 1][c];
-
-        if (topCell && topCell !== 'SPAN' && bottomCell && bottomCell !== 'SPAN') {
-          const topRs = parseInt(topCell.getAttribute('rowspan') || '1', 10);
-          const bottomRs = parseInt(bottomCell.getAttribute('rowspan') || '1', 10);
-
-          if (topRs === 1 && bottomRs === 1) {
-            const topHasItem = topCell.querySelector('.subject, .professor, .room, .section') || topCell.textContent.trim().length > 0;
-            const bottomHasItem = bottomCell.querySelector('.subject, .professor, .room, .section') || bottomCell.textContent.trim().length > 0;
-
-            if (!bottomHasItem || (!topHasItem && !bottomHasItem)) {
-              topCell.setAttribute('rowspan', '2');
-              bottomCell.remove();
-              cellMatrix[r + 1][c] = 'SPAN';
-            }
-          }
-        }
-      }
-    }
-
-    // Apply header widths
+    // Apply header widths and styles
     if (ths.length > 0) {
       ths[0].setAttribute('width', `${timeWidth}`);
       ths[0].style.width = `${timeWidth}pt`;
       ths[0].style.backgroundColor = '#f2f2f2';
-      ths[0].style.fontSize = '6.5pt';
+      ths[0].style.fontSize = '7pt';
       ths[0].style.fontWeight = 'bold';
-      ths[0].style.height = '11pt';
+      ths[0].style.height = '14pt';
       ths[0].style.textAlign = 'center';
-      ths[0].style.padding = '0.5pt 1.5pt';
+      ths[0].style.padding = '1pt 2pt';
       ths[0].style.border = '1.0pt solid #000000';
 
       for (let i = 1; i < ths.length; i++) {
         ths[i].setAttribute('width', `${dayWidth}`);
         ths[i].style.width = `${dayWidth}pt`;
         ths[i].style.backgroundColor = '#f2f2f2';
-        ths[i].style.fontSize = '6.5pt';
+        ths[i].style.fontSize = '7pt';
         ths[i].style.fontWeight = 'bold';
-        ths[i].style.height = '11pt';
+        ths[i].style.height = '14pt';
         ths[i].style.textAlign = 'center';
-        ths[i].style.padding = '0.5pt 1.5pt';
+        ths[i].style.padding = '1pt 2pt';
         ths[i].style.border = '1.0pt solid #000000';
       }
     }
 
-    // Process tbody rows with 16.5pt height and atLeast rule to fit signatures cleanly on 1 page with square proportions
+    // Process tbody rows: exactly 18pt per slot so all 22 slots fit on 1 landscape page with square proportions
     cloneGrid.querySelectorAll('tbody tr').forEach(tr => {
-      tr.style.height = '16.5pt';
-      tr.style.msoHeightRule = 'atLeast';
+      tr.style.height = '18pt';
+      tr.style.msoHeightRule = 'exactly';
+
+      const isHourHead = tr.classList.contains('hour-row');
+      const isHalfHour = tr.classList.contains('half-hour-row');
 
       const tds = tr.querySelectorAll('td');
-      tds.forEach((td, idx) => {
-        td.style.border = '1.0pt solid #000000';
-        td.style.padding = '0.5pt 1pt';
+      tds.forEach((td) => {
         td.style.boxSizing = 'border-box';
         td.style.verticalAlign = 'middle';
+        td.style.padding = '1pt 2pt';
 
-        if (td.classList.contains('time-label') || (idx === 0 && td.hasAttribute('rowspan') && td.querySelector('strong'))) {
+        if (td.classList.contains('time-label')) {
           td.setAttribute('width', `${timeWidth}`);
           td.style.width = `${timeWidth}pt`;
           td.style.fontSize = '6.5pt';
           td.style.fontWeight = 'bold';
           td.style.backgroundColor = '#f8fafc';
+          td.setAttribute('bgcolor', '#f8fafc');
           td.style.textAlign = 'center';
           td.style.lineHeight = '1.0';
+          td.style.border = '1.0pt solid #000000';
         } else if (td.classList.contains('lunch-break')) {
           td.setAttribute('width', `${dayWidth}`);
           td.style.width = `${dayWidth}pt`;
           td.style.backgroundColor = '#d1d5db';
+          td.setAttribute('bgcolor', '#d1d5db');
           td.style.letterSpacing = '2.5pt';
           td.style.fontWeight = 'bold';
           td.style.fontSize = '6.5pt';
           td.style.textAlign = 'center';
+          td.style.border = '1.0pt solid #000000';
         } else {
           td.setAttribute('width', `${dayWidth}`);
           td.style.width = `${dayWidth}pt`;
@@ -1385,15 +1334,55 @@ export async function exportGridToWord(tableContainer, user) {
           const room = roomEl?.textContent.trim() || '';
           const sec = secEl?.textContent.trim().replace(/^\[|\]$/g, '') || '';
 
-          if (subj || prof || room || sec) {
+          if (subj || prof || room || sec || td.classList.contains('has-schedule')) {
+            // Determine background color
+            let bgColor = td.style.backgroundColor;
+            if (!bgColor || bgColor === 'transparent' || bgColor === 'rgba(0, 0, 0, 0)') {
+              const itemEl = td.querySelector('.schedule-item');
+              if (itemEl && itemEl.style.backgroundColor) {
+                bgColor = itemEl.style.backgroundColor;
+              }
+            }
+            // Convert to hex
+            let hexColor = '#109EEF';
+            if (bgColor) {
+              if (bgColor.startsWith('#')) {
+                hexColor = bgColor;
+              } else {
+                const rgbMatch = bgColor.match(/\d+/g);
+                if (rgbMatch && rgbMatch.length >= 3) {
+                  hexColor = '#' + ((1 << 24) + (Number(rgbMatch[0]) << 16) + (Number(rgbMatch[1]) << 8) + Number(rgbMatch[2])).toString(16).slice(1);
+                }
+              }
+            }
+
+            td.setAttribute('bgcolor', hexColor);
+            td.style.backgroundColor = hexColor;
+            td.style.color = '#ffffff';
+            td.style.border = '1.0pt solid #000000';
+
             td.innerHTML = `
-              <p style="font-weight: bold; font-size: 6.8pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.0;">${subj}</p>
-              ${prof ? `<p style="font-size: 5.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #111827; line-height: 1.0;">${prof}</p>` : ''}
-              ${room ? `<p style="font-size: 5.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #374151; line-height: 1.0;">${room}</p>` : ''}
-              ${sec ? `<p style="font-size: 5.5pt; font-weight: bold; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #1e3a8a; line-height: 1.0;">${sec}</p>` : ''}
+              <p style="font-weight: bold; font-size: 7.2pt; margin: 0; padding: 0; text-align: center; color: #ffffff; line-height: 1.1;">${subj || '—'}</p>
+              ${prof ? `<p style="font-size: 5.8pt; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.1;">${prof}</p>` : ''}
+              ${room ? `<p style="font-size: 5.8pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.1;">${room}</p>` : ''}
+              ${sec ? `<p style="font-size: 5.8pt; font-weight: bold; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.1;">${sec}</p>` : ''}
             `;
           } else {
-            td.innerHTML = '';
+            // Empty cell: keep clean, with border styling for 1-hour groups
+            td.style.backgroundColor = '#ffffff';
+            td.setAttribute('bgcolor', '#ffffff');
+            td.style.borderLeft = '1.0pt solid #000000';
+            td.style.borderRight = '1.0pt solid #000000';
+            if (isHourHead) {
+              td.style.borderTop = '1.0pt solid #000000';
+              td.style.borderBottom = '0.5pt dashed #cbd5e1';
+            } else if (isHalfHour) {
+              td.style.borderTop = 'none';
+              td.style.borderBottom = '1.0pt solid #000000';
+            } else {
+              td.style.border = '1.0pt solid #000000';
+            }
+            td.innerHTML = '&nbsp;';
           }
         }
       });
@@ -1404,10 +1393,10 @@ export async function exportGridToWord(tableContainer, user) {
     cloneGrid.setAttribute('cellspacing', '0');
     cloneGrid.setAttribute('cellpadding', '1');
     cloneGrid.className = 'ordinary-schedule-table';
-    cloneGrid.style.width = '700pt';
+    cloneGrid.style.width = '720pt';
     cloneGrid.style.tableLayout = 'fixed';
     cloneGrid.style.borderCollapse = 'collapse';
-    cloneGrid.style.marginBottom = '1pt';
+    cloneGrid.style.marginBottom = '2pt';
 
     // Insert colgroup for Word
     const colgroup = document.createElement('colgroup');
@@ -1421,7 +1410,7 @@ export async function exportGridToWord(tableContainer, user) {
     gridTableHtml = cloneGrid.outerHTML;
   }
 
-  // 6. Build Clean Dynamic Signatures Table (350pt + 350pt = 700pt)
+  // 6. Build Clean Dynamic Signatures Table (360pt + 360pt = 720pt)
   let prepName = 'PROGRAM CHAIRPERSON';
   let prepTitle = 'Program Chair';
   let appName = 'RAMY LLOYD LOTILLA, EdD';
@@ -1442,19 +1431,19 @@ export async function exportGridToWord(tableContainer, user) {
   }
 
   const signaturesTableHtml = `
-    <table class="signatures-table" border="0" cellspacing="0" cellpadding="1" style="page-break-inside: avoid; page-break-after: avoid; margin-top: 4pt;">
+    <table class="signatures-table" border="0" cellspacing="0" cellpadding="1" style="width: 720pt; page-break-inside: avoid; page-break-after: avoid; margin-top: 3pt;">
       <colgroup>
-        <col width="350" style="width: 350pt;">
-        <col width="350" style="width: 350pt;">
+        <col width="360" style="width: 360pt;">
+        <col width="360" style="width: 360pt;">
       </colgroup>
       <tr>
-        <td width="350" style="width: 350pt; text-align: left; vertical-align: top; padding: 0 10pt;">
-          <p style="margin: 0 0 3pt 0; font-size: 5.5pt;">Prepared by:</p>
+        <td width="360" style="width: 360pt; text-align: left; vertical-align: top; padding: 0 10pt;">
+          <p style="margin: 0 0 2pt 0; font-size: 5.5pt;">Prepared by:</p>
           <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 6.5pt;">${prepName}</p>
           <p style="margin: 0.5pt 0 0 0; font-size: 5.5pt;">${prepTitle}</p>
         </td>
-        <td width="350" style="width: 350pt; text-align: left; padding-left: 30pt; vertical-align: top;">
-          <p style="margin: 0 0 3pt 0; font-size: 5.5pt;">Approved:</p>
+        <td width="360" style="width: 360pt; text-align: left; padding-left: 30pt; vertical-align: top;">
+          <p style="margin: 0 0 2pt 0; font-size: 5.5pt;">Approved:</p>
           <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 6.5pt;">${appName}</p>
           <p style="margin: 0.5pt 0 0 0; font-size: 5.5pt;">${appTitle}</p>
         </td>
