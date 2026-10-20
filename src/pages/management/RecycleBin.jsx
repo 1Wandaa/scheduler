@@ -175,16 +175,73 @@ const RecycleBin = ({ onBack, user }) => {
     }
   };
 
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'Unknown Date';
-    return new Intl.DateTimeFormat('en-US', {
+  const formatDeletedAt = (timestamp) => {
+    if (!timestamp) return { date: 'Unknown', time: '' };
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return { date: 'Unknown', time: '' };
+    const date = new Intl.DateTimeFormat('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
+      year: 'numeric'
+    }).format(d);
+    const time = new Intl.DateTimeFormat('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
-    }).format(new Date(timestamp));
+    }).format(d);
+    return { date, time };
+  };
+
+  const getItemDetails = (item) => {
+    const data = item.data || {};
+    let title = data.name || data.code || data.username || data.title || item.originalId || 'Untitled Item';
+    if (data.code && data.title && data.code !== data.title) {
+      title = `${data.code} — ${data.title}`;
+    } else if (data.code && data.name && data.code !== data.name) {
+      title = `${data.code} — ${data.name}`;
+    }
+
+    const ignoredKeys = new Set([
+      'name', 'code', 'title', 'id', 'createdAt', 'updatedAt', 
+      'deletedAt', 'originalId', 'firstName', 'lastName', 
+      'searchKeywords', 'normalizedName'
+    ]);
+
+    const details = [];
+
+    if (data.program) details.push({ label: 'Program', value: data.program });
+    if (data.yearLevel) {
+      const yr = Number(data.yearLevel);
+      details.push({ 
+        label: 'Year Level', 
+        value: yr ? `${yr}${yr === 1 ? 'st' : yr === 2 ? 'nd' : yr === 3 ? 'rd' : 'th'} Year` : String(data.yearLevel) 
+      });
+    }
+    if (data.department) details.push({ label: 'Department', value: data.department });
+    if (data.building) details.push({ label: 'Building', value: data.building });
+    if (data.type && item.type === 'room') details.push({ label: 'Type', value: data.type });
+    if (data.capacity) details.push({ label: 'Capacity', value: data.capacity });
+    if (data.units !== undefined) details.push({ label: 'Units', value: data.units });
+    if (data.maxUnits !== undefined) details.push({ label: 'Max Units', value: data.maxUnits });
+    if (data.employmentType) details.push({ label: 'Employment', value: data.employmentType });
+    if (data.role) details.push({ label: 'Role', value: data.role });
+    if (data.email) details.push({ label: 'Email', value: data.email });
+
+    const handledKeys = new Set([
+      'program', 'yearLevel', 'department', 'building', 'type', 
+      'capacity', 'units', 'maxUnits', 'employmentType', 'role', 'email'
+    ]);
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (ignoredKeys.has(key) || handledKeys.has(key)) return;
+      if (value === null || value === undefined || typeof value === 'object') return;
+      const strVal = String(value).trim();
+      if (!strVal) return;
+      const formattedLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
+      details.push({ label: formattedLabel, value: strVal });
+    });
+
+    return { title, details };
   };
 
   const getTypeColor = (type) => {
@@ -283,102 +340,111 @@ const RecycleBin = ({ onBack, user }) => {
                         />
                       </th>
                     )}
-                    <th>Type</th>
+                    <th style={{ width: '120px' }}>Type</th>
                     <th>Item Details</th>
-                    <th>Deleted At</th>
-                    <th>Cascaded Impact</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
+                    <th style={{ width: '170px' }}>Deleted At</th>
+                    <th style={{ width: '160px' }}>Cascaded Impact</th>
+                    <th style={{ width: '150px', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {trashItems.map(item => {
                     const isSelected = selectionMode && selectedIds.includes(item.id);
+                    const { title, details } = getItemDetails(item);
+                    const { date, time } = formatDeletedAt(item.deletedAt);
+                    const typeColor = getTypeColor(item.type);
+
                     return (
-                    <tr key={item.id} className={isSelected ? 'table-row-selected' : ''}>
-                      {selectionMode && (
-                        <td className="table-checkbox-col" data-label="Select">
-                          <input
-                            type="checkbox"
-                            className="data-checkbox"
-                            checked={isSelected}
-                            onChange={() => handleToggleSelect(item.id)}
-                            aria-label={`Select ${item.type}`}
-                          />
-                        </td>
-                      )}
-                    <td data-label="Type">
-                      <span style={{ 
-                        background: `${getTypeColor(item.type)}20`, 
-                        color: getTypeColor(item.type), 
-                        padding: '4px 10px', 
-                        borderRadius: '12px', 
-                        fontSize: '0.75rem', 
-                        fontWeight: 'bold',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        {item.type}
-                      </span>
-                    </td>
-                    <td data-label="Item Details">
-                      <div className="td-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right' }}>
-                        <div style={{ fontWeight: '600', color: 'var(--text-main)' }}>
-                          {item.data.name || item.data.code || item.originalId}
-                        </div>
-                        {item.data && Object.keys(item.data).length > 0 && (
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                            {Object.entries(item.data)
-                            .filter(([key, value]) => !['name', 'code', 'id', 'createdAt', 'updatedAt'].includes(key) && value !== null && value !== undefined && typeof value !== 'object')
-                            .map(([key, value]) => (
-                              <span key={key}>
-                                <span style={{ textTransform: 'capitalize' }}>{key.replace(/([A-Z])/g, ' $1').trim()}</span>: {String(value)}
-                              </span>
-                            ))}
-                          </div>
+                      <tr key={item.id} className={isSelected ? 'table-row-selected' : ''}>
+                        {selectionMode && (
+                          <td className="table-checkbox-col" data-label="Select">
+                            <input
+                              type="checkbox"
+                              className="data-checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelect(item.id)}
+                              aria-label={`Select ${item.type}`}
+                            />
+                          </td>
                         )}
-                      </div>
-                    </td>
-                    <td data-label="Deleted At">
-                      <div className="td-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                        {formatDate(item.deletedAt)}
-                      </div>
-                    </td>
-                    <td data-label="Cascaded Impact">
-                      <div className="td-content" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'flex-end' }}>
-                        {item.cascadedSchedules?.length > 0 ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#f59e0b', fontWeight: '500' }}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                            {item.cascadedSchedules.length} Schedule(s)
+                        <td data-label="Type" className="recycle-bin-type-col">
+                          <span 
+                            className="recycle-type-pill" 
+                            style={{ 
+                              background: `${typeColor}15`, 
+                              color: typeColor, 
+                              borderColor: `${typeColor}30` 
+                            }}
+                          >
+                            {item.type}
                           </span>
-                        ) : 'None'}
-                      </div>
-                    </td>
-                    <td data-label="Actions">
-                      <div className="action-buttons-container" style={{ display: 'flex', gap: '8px' }}>
-                        <button 
-                          className="btn btn-sm" 
-                          onClick={() => handleRestore(item)}
-                          style={{ background: 'var(--success)', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
-                          title="Restore"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-                          Restore
-                        </button>
-                        <button 
-                          className="btn-icon btn-delete" 
-                          onClick={() => handlePermanentDelete(item)}
-                          title="Permanently Delete"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        </button>
-                      </div>
-                    </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td data-label="Item Details" className="recycle-bin-details-col">
+                          <div className="item-details-content">
+                            <div className="item-main-title">
+                              {title}
+                            </div>
+                            {details.length > 0 && (
+                              <div className="item-meta-chips">
+                                {details.map((d, idx) => (
+                                  <span key={idx} className="item-meta-chip">
+                                    <span className="item-meta-label">{d.label}:</span>
+                                    <span className="item-meta-val">{d.value}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td data-label="Deleted At" className="recycle-bin-date-col">
+                          <div className="deleted-at-content">
+                            <span className="deleted-date">{date}</span>
+                            {time && <span className="deleted-time">{time}</span>}
+                          </div>
+                        </td>
+                        <td data-label="Cascaded Impact" className="recycle-bin-impact-col">
+                          <div className="impact-content">
+                            {item.cascadedSchedules?.length > 0 ? (
+                              <span className="impact-badge warning" title={`${item.cascadedSchedules.length} schedule(s) affected`}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                  <line x1="12" y1="9" x2="12" y2="13" />
+                                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                                </svg>
+                                {item.cascadedSchedules.length} Schedule{item.cascadedSchedules.length > 1 ? 's' : ''}
+                              </span>
+                            ) : (
+                              <span className="impact-badge none">—</span>
+                            )}
+                          </div>
+                        </td>
+                        <td data-label="Actions" className="recycle-bin-actions-col">
+                          <div className="action-buttons-container">
+                            <button 
+                              type="button"
+                              className="btn btn-sm btn-restore-action" 
+                              onClick={() => handleRestore(item)}
+                              title="Restore"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                              <span>Restore</span>
+                            </button>
+                            <button 
+                              type="button"
+                              className="btn-icon btn-delete" 
+                              onClick={() => handlePermanentDelete(item)}
+                              title="Permanently Delete"
+                            >
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </>
         )}
       </div>

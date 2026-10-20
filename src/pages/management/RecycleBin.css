@@ -1,6 +1,225 @@
-/* Desktop styles for action buttons */
-@media (min-width: 769px) {
+/* src/pages/management/RecycleBin.css */
+
+/* Table Layout & Alignment */
+.recycle-bin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.recycle-bin-table th,
+.recycle-bin-table td {
+  vertical-align: middle;
+  padding: 14px 16px;
+}
+
+/* Checkbox Column */
+.recycle-bin-table .table-checkbox-col {
+  width: 44px;
+  text-align: center;
+  padding-left: 14px;
+  padding-right: 8px;
+}
+
+/* Type Column */
+.recycle-bin-type-col {
+  width: 120px;
+  white-space: nowrap;
+}
+
+.recycle-type-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* Item Details Column */
+.recycle-bin-details-col {
+  min-width: 220px;
+}
+
+.item-details-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.item-main-title {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text-main, #1e293b);
+  line-height: 1.35;
+}
+
+.item-meta-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.item-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-main, #f8fafc);
+  color: var(--text-muted, #64748b);
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  line-height: 1.25;
+}
+
+.item-meta-label {
+  font-weight: 500;
+  color: var(--text-muted, #64748b);
+}
+
+.item-meta-val {
+  font-weight: 600;
+  color: var(--text-main, #1e293b);
+}
+
+/* Deleted At Column */
+.recycle-bin-date-col {
+  width: 170px;
+  white-space: nowrap;
+}
+
+.deleted-at-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.deleted-date {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main, #1e293b);
+  white-space: nowrap;
+}
+
+.deleted-time {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+  white-space: nowrap;
+}
+
+/* Cascaded Impact Column */
+.recycle-bin-impact-col {
+  width: 160px;
+  white-space: nowrap;
+}
+
+.impact-content {
+  display: flex;
+  align-items: center;
+}
+
+.impact-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.impact-badge.warning {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  font-weight: 600;
+}
+
+.impact-badge.none {
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.85rem;
+}
+
+/* Actions Column */
+.recycle-bin-actions-col {
+  width: 150px;
+  white-space: nowrap;
+}
+
+.action-buttons-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn-restore-action {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-restore-action:hover {
+  background: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+.btn-restore-action:active {
+  transform: translateY(0);
+}
+
+/* Mobile Responsive Layout */
+@media (max-width: 768px) {
+  .recycle-bin-table td {
+    padding: 10px 0 !important;
+  }
+
+  .recycle-bin-table td[data-label="Item Details"] {
+    align-items: flex-start !important;
+  }
+
+  .recycle-bin-table td[data-label="Item Details"]::before {
+    margin-top: 2px;
+  }
+
+  .item-details-content {
+    align-items: flex-end !important;
+    text-align: right !important;
+    max-width: 65%;
+  }
+
+  .item-meta-chips {
+    justify-content: flex-end !important;
+  }
+
+  .deleted-at-content {
+    align-items: flex-end !important;
+    text-align: right !important;
+  }
+
+  .impact-content {
+    justify-content: flex-end !important;
+  }
+
   .action-buttons-container {
-    justify-content: flex-end;
+    justify-content: flex-end !important;
   }
 }
