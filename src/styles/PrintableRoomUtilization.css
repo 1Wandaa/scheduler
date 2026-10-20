@@ -203,10 +203,10 @@
     font-size: 11pt;
 }
 
-/* Print Settings */
+/* Screen Settings */
 @media screen {
     .printable-room-utilization {
-        display: none;
+        display: flex;
     }
 }
 

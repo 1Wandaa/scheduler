@@ -746,4 +746,85 @@
   .fullscreen-btn {
     padding: 6px 10px;
   }
+
+  /* Mobile Timetable Grid Shape Adjustments:
+     Make schedule blocks square instead of tall vertical rectangles (matching PC proportions)
+     without deforming or stretching rows */
+  .schedule-table {
+    min-width: 680px;
+    width: 100%;
+  }
+
+  .schedule-table th {
+    padding: 8px 4px !important;
+    font-size: 0.70rem !important;
+  }
+
+  .schedule-table th.sticky-col,
+  .schedule-table .time-label {
+    width: 90px !important;
+    min-width: 90px !important;
+    padding: 3px 4px !important;
+    font-size: 0.70rem !important;
+  }
+
+  .schedule-table td,
+  .schedule-table .schedule-cell {
+    height: 30px !important;
+    padding: 0 !important;
+  }
+
+  .schedule-table .schedule-item {
+    padding: 2px 4px !important;
+    box-sizing: border-box !important;
+  }
+
+  .schedule-table .schedule-content {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .schedule-table .schedule-content .subject {
+    font-size: 0.70rem !important;
+    line-height: 1.1 !important;
+    word-break: break-word !important;
+    margin: 0 !important;
+  }
+
+  .schedule-table .schedule-content .subject span {
+    display: inline !important;
+    margin-left: 2px !important;
+    font-size: 0.75em !important;
+  }
+
+  .schedule-table .schedule-content .details {
+    margin-top: 2px !important;
+    gap: 0 !important;
+  }
+
+  .schedule-table .schedule-content p {
+    margin: 0 !important;
+    font-size: 0.64rem !important;
+    line-height: 1.12 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .schedule-table .schedule-content .professor,
+  .schedule-table .schedule-content .room,
+  .schedule-table .schedule-content .section {
+    font-size: 0.64rem !important;
+    line-height: 1.12 !important;
+  }
+
+  .schedule-table .remove-btn {
+    top: 2px !important;
+    right: 2px !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
 }

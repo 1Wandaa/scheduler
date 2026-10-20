@@ -190,7 +190,7 @@ const PrintableRoomUtilization = ({
     }, [activeTimeSlots, displayDays, scheduleGridMap, scheduleMode]);
 
     return (
-        <div className="printable-room-utilization-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div className="printable-room-utilization-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginTop: '24px' }}>
             <div className="printable-room-utilization" style={{ 
                 fontFamily: '"Times New Roman", Times, serif', 
                 color: '#000', 
@@ -198,19 +198,16 @@ const PrintableRoomUtilization = ({
                 width: '100%', 
                 maxWidth: '8.5in', 
                 margin: '0 auto', 
-                padding: '20px 40px', 
+                padding: '24px 36px', 
                 boxSizing: 'border-box',
                 display: 'flex',
                 flexDirection: 'column',
-                minHeight: '100%'
+                minHeight: '100%',
+                boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px'
             }}>
             <style>{`
-                @media screen {
-                    .printable-room-utilization,
-                    .printable-room-utilization-wrapper {
-                        display: none !important;
-                    }
-                }
                 .printable-room-utilization-wrapper {
                     width: 100%;
                     overflow-x: auto;
@@ -259,10 +256,13 @@ const PrintableRoomUtilization = ({
                 @media (max-width: 768px) {
                     .printable-room-utilization-wrapper {
                         zoom: 0.5;
+                        margin-top: 16px !important;
                     }
                     .printable-room-utilization {
                         min-width: 680px !important;
-                        padding: 10px 15px !important;
+                        padding: 12px 16px !important;
+                        box-shadow: none !important;
+                        border: 1px solid #e2e8f0 !important;
                     }
                 }
                 @media print {
@@ -301,6 +301,7 @@ const PrintableRoomUtilization = ({
                         padding: 0 !important;
                         overflow: visible !important;
                         display: block !important;
+                        zoom: 1 !important;
                     }
                     .printable-room-utilization {
                         position: absolute !important;
@@ -311,6 +312,9 @@ const PrintableRoomUtilization = ({
                         margin: 0 !important;
                         padding: 0 !important;
                         display: block !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        border-radius: 0 !important;
                         page-break-inside: avoid !important;
                         page-break-after: avoid !important;
                         break-inside: avoid !important;
