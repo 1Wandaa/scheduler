@@ -321,7 +321,11 @@ const Login = ({ onLogin }) => {
               const userDocSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
               if (userDocSnap.exists()) {
                 firestoreUserDoc = userDocSnap;
-                break;
+                const r = (userDocSnap.data()?.role || '').toLowerCase();
+                // If UID doc is already Admin/Staff, break early
+                if (r === 'admin' || r === 'department head' || r === 'faculty') {
+                  break;
+                }
               }
             } catch (fetchErr) {
               console.warn('Could not fetch user by uid:', fetchErr);
@@ -332,11 +336,20 @@ const Login = ({ onLogin }) => {
           }
         }
 
-        // Fallback to username query if not found by UID
-        if (!firestoreUserDoc) {
+        // Query username if not found by UID, OR if UID doc does not have an Admin/Staff role
+        const uidRole = (firestoreUserDoc?.data()?.role || '').toLowerCase();
+        const isUidElevated = uidRole === 'admin' || uidRole === 'department head' || uidRole === 'faculty';
+
+        if (!firestoreUserDoc || !isUidElevated) {
           for (let attempt = 0; attempt < 3; attempt++) {
-            firestoreUserDoc = await findUserDocument(username, userCredential?.user?.uid);
-            if (firestoreUserDoc) break;
+            const usernameDoc = await findUserDocument(username, userCredential?.user?.uid);
+            if (usernameDoc) {
+              const uRole = (usernameDoc.data()?.role || '').toLowerCase();
+              if (uRole === 'admin' || uRole === 'department head' || uRole === 'faculty' || !firestoreUserDoc) {
+                firestoreUserDoc = usernameDoc;
+                break;
+              }
+            }
             if (attempt < 2) {
               await new Promise(resolve => setTimeout(resolve, 300));
             }
@@ -409,11 +422,26 @@ const Login = ({ onLogin }) => {
         }
       }
 
-      if (!firestoreUserDoc) {
-        firestoreUserDoc = await findUserDocument(cleanUsername);
+      const gUidRole = (firestoreUserDoc?.data()?.role || '').toLowerCase();
+      const isGUidElevated = gUidRole === 'admin' || gUidRole === 'department head' || gUidRole === 'faculty';
+
+      if (!firestoreUserDoc || !isGUidElevated) {
+        const byUsername = await findUserDocument(cleanUsername);
+        if (byUsername) {
+          const uRole = (byUsername.data()?.role || '').toLowerCase();
+          if (uRole === 'admin' || uRole === 'department head' || uRole === 'faculty' || !firestoreUserDoc) {
+            firestoreUserDoc = byUsername;
+          }
+        }
       }
-      if (!firestoreUserDoc) {
-        firestoreUserDoc = await findUserDocument(googleUser.email);
+      if (!firestoreUserDoc || !isGUidElevated) {
+        const byEmail = await findUserDocument(googleUser.email);
+        if (byEmail) {
+          const uRole = (byEmail.data()?.role || '').toLowerCase();
+          if (uRole === 'admin' || uRole === 'department head' || uRole === 'faculty' || !firestoreUserDoc) {
+            firestoreUserDoc = byEmail;
+          }
+        }
       }
 
       let role = 'Student';
