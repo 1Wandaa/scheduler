@@ -130,4 +130,29 @@ export const NAV_ICONS = {
     { type: 'circle', cx: 12, cy: 12, r: 10 },
     { type: 'polyline', points: "12 6 12 12 16 14" },
   ]},
+  assignments: "M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4",
+  activityLog: { elements: [
+    { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" },
+    { type: 'polyline', points: "14 2 14 8 20 8" },
+    { type: 'line', x1: 16, y1: 13, x2: 8, y2: 13 },
+    { type: 'line', x1: 16, y1: 17, x2: 8, y2: 17 },
+  ]},
+  recycleBin: { elements: [
+    { type: 'polyline', points: "3 6 5 6 21 6" },
+    { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" },
+    { type: 'line', x1: 10, y1: 11, x2: 10, y2: 17 },
+    { type: 'line', x1: 14, y1: 11, x2: 14, y2: 17 },
+  ]},
+  roomAvailability: { elements: [
+    { d: "M3 21h18" },
+    { d: "M5 21V7l8-4v18" },
+    { d: "M19 21V11l-6-3" },
+    { type: 'circle', cx: 9, cy: 12, r: 1.5 },
+  ]},
+  facultyAvailability: { elements: [
+    { d: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" },
+    { type: 'circle', cx: 9, cy: 7, r: 4 },
+    { type: 'circle', cx: 19, cy: 11, r: 3 },
+    { type: 'polyline', points: "19 9.5 19 11 20.5 11" },
+  ]},
 };

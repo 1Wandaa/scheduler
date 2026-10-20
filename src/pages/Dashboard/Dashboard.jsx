@@ -121,6 +121,14 @@ const Dashboard = ({ user, onLogout }) => {
   const [isFabHidden, setIsFabHidden] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
+  // Auto-expand Academic Data menu if an academic entity tab is active
+  useEffect(() => {
+    const academicTabs = ['departments', 'courses', 'sections', 'subjects', 'faculty', 'rooms', 'terms'];
+    if (academicTabs.includes(actualActiveTab)) {
+      setIsManageDataOpen(true);
+    }
+  }, [actualActiveTab]);
+
   // Term selection
   const [activeSemester, setActiveSemester] = useState(SEMESTERS[0]);
   const [activeSchoolYear, setActiveSchoolYear] = useState(SCHOOL_YEARS[1]);
@@ -382,48 +390,164 @@ const Dashboard = ({ user, onLogout }) => {
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, overflowY: 'auto', padding: '12px 8px' }}>
+        <nav className="sidebar-nav">
           <ul style={{ margin: 0, padding: 0 }}>
+            {/* OVERVIEW SECTION (Most Important) */}
+            <div className="nav-section-title">Overview</div>
             {!isStudent && (
-              <NavItem label="Dashboard" iconPath={NAV_ICONS.dashboard} active={activeTab === 'dashboard'} onClick={() => handleTabClick('dashboard')} />
+              <NavItem
+                label="Dashboard"
+                iconPath={NAV_ICONS.dashboard}
+                active={activeTab === 'dashboard'}
+                onClick={() => handleTabClick('dashboard')}
+              />
             )}
+            <NavItem
+              label="View Schedules"
+              iconPath={NAV_ICONS.viewSchedules}
+              active={activeTab === 'view-schedules'}
+              onClick={() => handleTabClick('view-schedules')}
+            />
 
             {isAdmin && (
               <>
-                <NavItem label={`Manage Data ${isManageDataOpen ? '▾' : '▸'}`} iconPath={NAV_ICONS.manage} onClick={() => setIsManageDataOpen(o => !o)} />
+                {/* SCHEDULING OPERATIONS */}
+                <div className="nav-section-title">Scheduling</div>
+                <NavItem
+                  label="Create Schedule"
+                  iconPath={NAV_ICONS.schedule}
+                  active={activeTab === 'schedule'}
+                  onClick={() => handleTabClick('schedule')}
+                />
+                <NavItem
+                  label="Assignment Hub"
+                  iconPath={NAV_ICONS.assignments}
+                  active={activeTab === 'assignments'}
+                  onClick={() => handleTabClick('assignments')}
+                />
+                <NavItem
+                  label="Faculty Workload"
+                  iconPath={NAV_ICONS.workload}
+                  active={activeTab === 'workload'}
+                  onClick={() => handleTabClick('workload')}
+                />
+                <NavItem
+                  label="Room Availability"
+                  iconPath={NAV_ICONS.roomAvailability}
+                  active={activeTab === 'availability'}
+                  onClick={() => handleTabClick('availability')}
+                />
+                <NavItem
+                  label="Faculty Availability"
+                  iconPath={NAV_ICONS.facultyAvailability}
+                  active={activeTab === 'faculty-availability'}
+                  onClick={() => handleTabClick('faculty-availability')}
+                />
+                <NavItem
+                  label="Schedule History"
+                  iconPath={NAV_ICONS.history}
+                  active={activeTab === 'history'}
+                  onClick={() => handleTabClick('history')}
+                />
+
+                {/* ACADEMIC DATA */}
+                <div className="nav-section-title">Academic Data</div>
+                <NavItem
+                  label={`Academic Records ${isManageDataOpen ? '▾' : '▸'}`}
+                  iconPath={NAV_ICONS.manage}
+                  onClick={() => setIsManageDataOpen((o) => !o)}
+                />
                 {isManageDataOpen && (
-                  <>
-                    <NavItem label="Departments" iconPath={NAV_ICONS.rooms} active={activeTab === 'departments'} onClick={() => handleTabClick('departments')} indent />
-                    <NavItem label="Courses / Programs" iconPath={NAV_ICONS.subjects} active={activeTab === 'courses'} onClick={() => handleTabClick('courses')} indent />
-                    <NavItem label="Assignments Hub" iconPath="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" active={activeTab === 'assignments'} onClick={() => handleTabClick('assignments')} indent />
-                    <NavItem label="Faculty Profiles" iconPath={NAV_ICONS.faculty} active={activeTab === 'faculty'} onClick={() => handleTabClick('faculty')} indent />
-                    <NavItem label="Sections" iconPath={NAV_ICONS.sections} active={activeTab === 'sections'} onClick={() => handleTabClick('sections')} indent />
-                    <NavItem label="Subject Constraints" iconPath={NAV_ICONS.subjects} active={activeTab === 'subjects'} onClick={() => handleTabClick('subjects')} indent />
-                    <NavItem label="Room List" iconPath={NAV_ICONS.rooms} active={activeTab === 'rooms'} onClick={() => handleTabClick('rooms')} indent />
-                    <NavItem label="Semesters & Years" iconPath={NAV_ICONS.calendar} active={activeTab === 'terms'} onClick={() => handleTabClick('terms')} indent />
-                    <NavItem label="Faculty Availability Matrix" iconPath={NAV_ICONS.faculty} active={activeTab === 'faculty-availability'} onClick={() => handleTabClick('faculty-availability')} indent />
-                    <NavItem label="Room Availability Matrix" iconPath={NAV_ICONS.rooms} active={activeTab === 'availability'} onClick={() => handleTabClick('availability')} indent />
-                    <NavItem label="User Management" iconPath={NAV_ICONS.users} active={activeTab === 'users'} onClick={() => handleTabClick('users')} indent />
-                    <NavItem label="Recycle Bin" iconPath="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" active={activeTab === 'recycle-bin'} onClick={() => handleTabClick('recycle-bin')} indent />
-                  </>
+                  <div className="nav-sub-group">
+                    <NavItem
+                      label="Departments"
+                      iconPath={NAV_ICONS.rooms}
+                      active={activeTab === 'departments'}
+                      onClick={() => handleTabClick('departments')}
+                      indent
+                    />
+                    <NavItem
+                      label="Courses / Programs"
+                      iconPath={NAV_ICONS.subjects}
+                      active={activeTab === 'courses'}
+                      onClick={() => handleTabClick('courses')}
+                      indent
+                    />
+                    <NavItem
+                      label="Sections"
+                      iconPath={NAV_ICONS.sections}
+                      active={activeTab === 'sections'}
+                      onClick={() => handleTabClick('sections')}
+                      indent
+                    />
+                    <NavItem
+                      label="Subject Constraints"
+                      iconPath={NAV_ICONS.subjects}
+                      active={activeTab === 'subjects'}
+                      onClick={() => handleTabClick('subjects')}
+                      indent
+                    />
+                    <NavItem
+                      label="Faculty Profiles"
+                      iconPath={NAV_ICONS.faculty}
+                      active={activeTab === 'faculty'}
+                      onClick={() => handleTabClick('faculty')}
+                      indent
+                    />
+                    <NavItem
+                      label="Room List"
+                      iconPath={NAV_ICONS.rooms}
+                      active={activeTab === 'rooms'}
+                      onClick={() => handleTabClick('rooms')}
+                      indent
+                    />
+                    <NavItem
+                      label="Semesters & Years"
+                      iconPath={NAV_ICONS.calendar}
+                      active={activeTab === 'terms'}
+                      onClick={() => handleTabClick('terms')}
+                      indent
+                    />
+                  </div>
                 )}
-                <NavItem label="Create Schedule" iconPath={NAV_ICONS.schedule} active={activeTab === 'schedule'} onClick={() => handleTabClick('schedule')} />
-                <NavItem label="Scheduling History" iconPath={NAV_ICONS.history} active={activeTab === 'history'} onClick={() => handleTabClick('history')} />
-                <NavItem label="Faculty Workload" iconPath={NAV_ICONS.workload} active={activeTab === 'workload'} onClick={() => handleTabClick('workload')} />
-                <NavItem label="Activity Log" iconPath="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H9H8" active={activeTab === 'activity-log'} onClick={() => handleTabClick('activity-log')} />
+
+                {/* SYSTEM & ADMINISTRATION */}
+                <div className="nav-section-title">Administration</div>
+                <NavItem
+                  label="User Management"
+                  iconPath={NAV_ICONS.users}
+                  active={activeTab === 'users'}
+                  onClick={() => handleTabClick('users')}
+                />
+                <NavItem
+                  label="Activity Log"
+                  iconPath={NAV_ICONS.activityLog}
+                  active={activeTab === 'activity-log'}
+                  onClick={() => handleTabClick('activity-log')}
+                />
+                <NavItem
+                  label="Recycle Bin"
+                  iconPath={NAV_ICONS.recycleBin}
+                  active={activeTab === 'recycle-bin'}
+                  onClick={() => handleTabClick('recycle-bin')}
+                />
               </>
             )}
-
-            <NavItem label="View Schedules" iconPath={NAV_ICONS.viewSchedules} active={activeTab === 'view-schedules'} onClick={() => handleTabClick('view-schedules')} />
           </ul>
 
-          {/* Divider + Logout */}
-          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', margin: '10px 0' }} />
+          {/* Divider + Account */}
+          <div className="nav-section-divider" />
           <ul style={{ margin: 0, padding: 0 }}>
-            <NavItem label="Profile" iconPath={NAV_ICONS.users} active={activeTab === 'profile'} onClick={() => {
-              setTargetProfileUsername(null);
-              handleTabClick('profile');
-            }} />
+            <div className="nav-section-title">Account</div>
+            <NavItem
+              label="Profile"
+              iconPath={NAV_ICONS.users}
+              active={activeTab === 'profile'}
+              onClick={() => {
+                setTargetProfileUsername(null);
+                handleTabClick('profile');
+              }}
+            />
             <NavItem label="Log Out" iconPath={NAV_ICONS.logout} danger onClick={onLogout} />
           </ul>
         </nav>
