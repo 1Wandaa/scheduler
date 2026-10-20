@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://scheduler-app2503.web.app/</loc>
-    <lastmod>2026-06-15</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-10-20</lastmod>
+    <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://scheduler-app2503.web.app/app-icon-512-any.png</image:loc>
+      <image:title>SMARTSCHED - Capiz State University (CAPSU) AI Scheduling System</image:title>
+      <image:caption>SMARTSCHED AI-powered timetable and academic scheduling platform for Capiz State University</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://scheduler-app2503.web.app/login</loc>
+    <lastmod>2026-10-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>

@@ -1,4 +1,11 @@
 User-agent: *
 Allow: /
 
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Sitemap Location
 Sitemap: https://scheduler-app2503.web.app/sitemap.xml
