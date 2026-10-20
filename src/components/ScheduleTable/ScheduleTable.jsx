@@ -245,7 +245,8 @@ const ScheduleTable = React.memo(function ScheduleTable({
             if (needed < 1) needed = 1;
             if (needed > rowSpan) rowSpan = needed;
           } else {
-            const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting, scheduleMode);
+            const sHours = Number(s.hours) || (s.subject?.hasLecLab ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2)) : (Number(s.subject?.hoursPerMeeting) || 1.5));
+            const needed = slotsNeededFromIndex(tIdx, sHours, scheduleMode);
             if (needed > rowSpan) rowSpan = needed;
           }
         }
@@ -282,21 +283,26 @@ const ScheduleTable = React.memo(function ScheduleTable({
     let units = 0;
 
     schedules.forEach(current => {
-      const subjId = current.subject?.id || current.id;
-      if (!uniqueSubjectsMap[subjId]) {
-        uniqueSubjectsMap[subjId] = {
+      const subjKey = `${current.subject?.id || current.id}${current.component ? '-' + current.component : ''}`;
+      const compHours = current.subject?.hasLecLab
+        ? (current.component === 'Lecture' ? (Number(current.subject.lectureHours) || 2) : (Number(current.subject.labHours) || 3))
+        : (Number(current.hours) || Number(current.subject?.credits) || 3);
+
+      if (!uniqueSubjectsMap[subjKey]) {
+        uniqueSubjectsMap[subjKey] = {
           ...current,
+          displayUnits: compHours,
           rooms: new Set([current.room?.name].filter(Boolean)),
         };
       } else {
-        if (current.room?.name) uniqueSubjectsMap[subjId].rooms.add(current.room.name);
+        if (current.room?.name) uniqueSubjectsMap[subjKey].rooms.add(current.room.name);
       }
 
       const range = getScheduleTimeRange(current, scheduleMode);
       if (range && range.start > 0 && range.end > 0) {
         units += (range.end - range.start) / 60;
       } else {
-        units += (Number(current.hours) || Number(current.subject?.hoursPerMeeting) || 1.5);
+        units += (Number(current.hours) || compHours);
       }
     });
 
@@ -1127,15 +1133,18 @@ const ScheduleTable = React.memo(function ScheduleTable({
             </tr>
           </thead>
           <tbody>
-            {uniqueSubjectsList.map(s => (
-              <tr key={s.subject?.id || s.id}>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.code || ''}{s.component ? ` (${s.component})` : ''}</td>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.title || s.subject?.description || ''}</td>
-                <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{s.subject?.credits || ''}</td>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{s.professor?.name || ''}</td>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{s.roomNameList}</td>
-              </tr>
-            ))}
+            {uniqueSubjectsList.map(s => {
+              const rowKey = `${s.subject?.id || s.id}${s.component ? '-' + s.component : ''}`;
+              return (
+                <tr key={rowKey}>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.code || ''}{s.component ? ` (${s.component})` : ''}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.title || s.subject?.description || ''}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{s.displayUnits ?? s.subject?.credits ?? ''}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>{s.professor?.name || ''}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>{s.roomNameList}</td>
+                </tr>
+              );
+            })}
             <tr>
               <td colSpan="2" style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>Total</td>
               <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>{totalUnits}</td>

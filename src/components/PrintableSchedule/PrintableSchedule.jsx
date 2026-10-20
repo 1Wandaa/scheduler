@@ -77,7 +77,8 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
                         if (needed < 1) needed = 1;
                         if (needed > rowSpan) rowSpan = needed;
                     } else {
-                        const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting || s.hours, scheduleMode);
+                        const sHours = Number(s.hours) || (s.subject?.hasLecLab ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2)) : (Number(s.subject?.hoursPerMeeting) || 1.5));
+                        const needed = slotsNeededFromIndex(tIdx, sHours, scheduleMode);
                         if (needed > rowSpan) rowSpan = needed;
                     }
                 }

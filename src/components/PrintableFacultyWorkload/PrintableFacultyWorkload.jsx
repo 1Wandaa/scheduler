@@ -14,14 +14,21 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
         const assignmentsMap = new Map();
         schedules.forEach(s => {
             if (!s.subject || !s.section) return;
-            const key = `${s.subject.id}-${s.section.id}`;
+            const comp = s.component || '';
+            const key = `${s.subject.id}-${s.section.id}${comp ? '-' + comp : ''}`;
+            const compHours = Number(s.hours) || (s.subject.hasLecLab 
+                ? (comp === 'Lecture' ? (Number(s.subject.lectureHours) || 2) : (Number(s.subject.labHours) || 3))
+                : (Number(s.subject.hoursPerMeeting) || 3));
+            const compUnit = s.subject.hasLecLab
+                ? (comp === 'Lecture' ? (Number(s.subject.lectureHours) || 2) : (Number(s.subject.labHours) || 3))
+                : (s.subject.units ?? s.subject.credits ?? 3);
             if (!assignmentsMap.has(key)) {
                 assignmentsMap.set(key, {
                     id: key,
-                    subjectCode: s.subject.code || 'N/A',
+                    subjectCode: (s.subject.code || 'N/A') + (comp ? ` (${comp})` : ''),
                     subjectName: s.subject.name || 'N/A',
-                    unit: s.subject.units ?? 3,
-                    hoursPerWeek: s.subject.hoursPerMeeting ?? 3,
+                    unit: compUnit,
+                    hoursPerWeek: compHours,
                     sectionName: s.section.name || 'N/A',
                     studentsCount: s.section.studentsCount || ''
                 });
@@ -39,7 +46,10 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
         const rawUniqueTimes = new Set();
         schedules.forEach(schedule => {
             if (!schedule.day || !schedule.timeSlot) return;
-            const label = getMeetingTimeLabel(schedule.timeSlot, schedule.subject?.hoursPerMeeting, 'standard');
+            const sHours = Number(schedule.hours) || (schedule.subject?.hasLecLab 
+                ? (schedule.component === 'Lecture' ? ((Number(schedule.subject.lectureHours) || 2) / 2) : ((Number(schedule.subject.labHours) || 3) / 2))
+                : (Number(schedule.subject?.hoursPerMeeting) || 1.5));
+            const label = getMeetingTimeLabel(schedule.timeSlot, sHours, 'standard');
             if (label) rawUniqueTimes.add(label);
         });
         return Array.from(rawUniqueTimes).map(label => {
@@ -266,7 +276,10 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
                             {days.map(day => {
                                 const classes = schedules.filter(s => {
                                     if (s.day !== day) return false;
-                                    const label = getMeetingTimeLabel(s.timeSlot, s.subject?.hoursPerMeeting, 'standard');
+                                    const sHours = Number(s.hours) || (s.subject?.hasLecLab 
+                                        ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2))
+                                        : (Number(s.subject?.hoursPerMeeting) || 1.5));
+                                    const label = getMeetingTimeLabel(s.timeSlot, sHours, 'standard');
                                     return label === block.label;
                                 });
                                 

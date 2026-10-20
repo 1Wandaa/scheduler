@@ -131,7 +131,10 @@ export function getOccupiedSlots(schedule, scheduleMode) {
   const startIdx = getTimeSlotIndex(schedule.timeSlot, scheduleMode);
   if (startIdx < 0) return [{ day: schedule.day, timeSlotId: schedule.timeSlot.id }];
 
-  const needed = slotsNeededFromIndex(startIdx, schedule.hours || schedule.subject?.hoursPerMeeting, scheduleMode);
+  const effectiveHours = Number(schedule.hours) || (schedule.subject?.hasLecLab
+    ? (schedule.component === 'Lecture' ? ((Number(schedule.subject.lectureHours) || 2) / 2) : ((Number(schedule.subject.labHours) || 3) / 2))
+    : (Number(schedule.subject?.hoursPerMeeting) || 1.5));
+  const needed = slotsNeededFromIndex(startIdx, effectiveHours, scheduleMode);
   if (needed === 0) return [{ day: schedule.day, timeSlotId: schedule.timeSlot.id }];
   const slotList = [];
   for (let i = 0; i < needed; i++) {
@@ -188,6 +191,10 @@ export function entitiesMatch(a, b) {
 export function getScheduleTimeRange(schedule, scheduleMode) {
   if (!schedule) return { start: 0, end: 0 };
 
+  const effectiveHours = Number(schedule.hours) || (schedule.subject?.hasLecLab
+    ? (schedule.component === 'Lecture' ? ((Number(schedule.subject.lectureHours) || 2) / 2) : ((Number(schedule.subject.labHours) || 3) / 2))
+    : (Number(schedule.subject?.hoursPerMeeting) || 1.5));
+
   // 0. Direct string timeSlot support
   if (typeof schedule.timeSlot === 'string') {
     const parts = schedule.timeSlot.split('-');
@@ -198,7 +205,7 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     }
     const start = parseTimeToMinutes(schedule.timeSlot);
     if (start !== null) {
-      const duration = (schedule.hours || schedule.subject?.hoursPerMeeting || 1.5) * 60;
+      const duration = effectiveHours * 60;
       return { start, end: start + duration };
     }
   }
@@ -213,13 +220,13 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     }
     const start = parseTimeToMinutes(schedule.timeSlot.customLabel);
     if (start !== null) {
-      const duration = (schedule.hours || schedule.subject?.hoursPerMeeting || 1.5) * 60;
+      const duration = effectiveHours * 60;
       return { start, end: start + duration };
     }
   }
 
   // 2. Try standard label resolution
-  const label = getMeetingTimeLabel(schedule.timeSlot, schedule.hours || schedule.subject?.hoursPerMeeting, scheduleMode);
+  const label = getMeetingTimeLabel(schedule.timeSlot, effectiveHours, scheduleMode);
   const parts = (label || '').split('-');
   if (parts.length === 2) {
     const start = parseTimeToMinutes(parts[0].trim());
@@ -233,9 +240,8 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     const start = parseTimeToMinutes(timeParts[0].trim());
     let end = parseTimeToMinutes(timeParts[1].trim());
     if (start !== null && end !== null && start < end) {
-      const meetingHours = schedule.hours || schedule.subject?.hoursPerMeeting;
-      if (meetingHours) {
-        end = Math.max(end, start + meetingHours * 60);
+      if (effectiveHours) {
+        end = Math.max(end, start + effectiveHours * 60);
       }
       return { start, end };
     }
@@ -247,9 +253,8 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     const start = parseTimeToMinutes(labelParts[0].trim());
     let end = parseTimeToMinutes(labelParts[1].trim());
     if (start !== null && end !== null && start < end) {
-      const meetingHours = schedule.hours || schedule.subject?.hoursPerMeeting;
-      if (meetingHours) {
-        end = Math.max(end, start + meetingHours * 60);
+      if (effectiveHours) {
+        end = Math.max(end, start + effectiveHours * 60);
       }
       return { start, end };
     }
@@ -855,9 +860,15 @@ export function getSmartScheduleRecommendations({
   const recommendations = [];
 
   for (const subject of candidateSubjects) {
-    const targetDuration = Number(subject?.hoursPerMeeting) || 1.5;
-    const credits = Number(subject?.credits) || 3;
-    const meetingsNeeded = Math.max(1, Math.round(credits / targetDuration));
+    const isLecLab = Boolean(subject?.hasLecLab);
+    const comp = formData.component || 'Lecture';
+    const targetDuration = isLecLab
+      ? (comp === 'Lecture' ? ((Number(subject.lectureHours) || 2) / 2) : ((Number(subject.labHours) || 3) / 2))
+      : (Number(subject?.hoursPerMeeting) || 1.5);
+    const credits = isLecLab
+      ? (comp === 'Lecture' ? (Number(subject.lectureHours) || 2) : (Number(subject.labHours) || 3))
+      : (Number(subject?.credits) || 3);
+    const meetingsNeeded = isLecLab ? 2 : Math.max(1, Math.round(credits / targetDuration));
 
     let subjectDayOptions = [];
     if (formData.day && (Array.isArray(formData.day) ? formData.day.length > 0 : !!formData.day)) {
@@ -930,7 +941,7 @@ export function getSmartScheduleRecommendations({
       if (candRooms.length === 0) continue;
 
       // 4. Candidate Time Slots
-      const eligibleSlots = slots.filter((slot, idx) => slotsNeededFromIndex(idx, subject.hoursPerMeeting, scheduleMode) > 0);
+      const eligibleSlots = slots.filter((slot, idx) => slotsNeededFromIndex(idx, targetDuration, scheduleMode) > 0);
 
       // Explore combinations
       for (const professor of candProfs.slice(0, 3)) {
@@ -939,8 +950,8 @@ export function getSmartScheduleRecommendations({
 
         for (const room of candRooms.slice(0, 5)) {
           if (!isProfessorAllowedInRoom(room, professor, subject, section, rooms)) continue;
-          if (subject.requiredLab && !room.hasComputers) continue;
-          if (subject.isFoodLab && !room.isFoodLab) continue;
+          if (subject.requiredLab && (!isLecLab || comp !== 'Lecture') && !room.hasComputers) continue;
+          if (subject.isFoodLab && (!isLecLab || comp !== 'Lecture') && !room.isFoodLab) continue;
 
           for (const pair of subjectDayOptions) {
             const pairNorm = pair.map(normalizeDay);
@@ -954,12 +965,14 @@ export function getSmartScheduleRecommendations({
               let isPairConflictFree = true;
               for (const day of pairNorm) {
                 const candidate = {
-                  subject,
+                  subject: { ...subject, hoursPerMeeting: targetDuration },
                   section,
                   professor,
                   room,
                   day,
                   timeSlot,
+                  hours: targetDuration,
+                  component: isLecLab ? comp : undefined
                 };
                 const conflicts = findScheduleConflicts(candidate, activeSchedules, { scheduleMode });
                 if (conflicts.room || conflicts.professor || conflicts.section) {
@@ -976,21 +989,21 @@ export function getSmartScheduleRecommendations({
               const sectionDept = getSectionDepartment(section);
               const roomDept = (room.department || '').toUpperCase();
               if (sectionDept && roomDept === sectionDept) score += 25;
-              if (subject.requiredLab && room.hasComputers) score += 20;
-              if (subject.isFoodLab && room.isFoodLab) score += 20;
+              if (subject.requiredLab && (!isLecLab || comp !== 'Lecture') && room.hasComputers) score += 20;
+              if (subject.isFoodLab && (!isLecLab || comp !== 'Lecture') && room.isFoodLab) score += 20;
               const slotIdx = getTimeSlotIndex(timeSlot, scheduleMode);
               if (slotIdx >= 1 && slotIdx <= 6) score += 10;
 
-              const timeLabel = getMeetingTimeLabel(timeSlot, subject.hoursPerMeeting, scheduleMode) || timeSlot.label;
+              const timeLabel = getMeetingTimeLabel(timeSlot, targetDuration, scheduleMode) || timeSlot.label;
               const dayLabel = pairNorm.map(d => d.slice(0, 3)).join(' / ');
 
               let badge = '✨ Best Match';
               if (profLoad.usedUnits === 0) badge = '🌟 Lowest Load';
-              else if (subject.requiredLab) badge = '💻 Dedicated Lab';
+              else if (subject.requiredLab && (!isLecLab || comp !== 'Lecture')) badge = '💻 Dedicated Lab';
               else if (sectionDept && roomDept === sectionDept) badge = '🏛️ Dept Room';
 
               recommendations.push({
-                subject,
+                subject: { ...subject, hoursPerMeeting: targetDuration },
                 section,
                 professor,
                 room,
@@ -998,6 +1011,8 @@ export function getSmartScheduleRecommendations({
                 day: pairNorm,
                 dayLabel,
                 timeSlot: { ...timeSlot, label: timeLabel },
+                hours: targetDuration,
+                component: isLecLab ? comp : undefined,
                 score,
                 badge,
                 reason: `Conflict-free on ${dayLabel} in ${room.name} with Prof. ${professor.name}.`

@@ -300,10 +300,10 @@ const Dashboard = ({ user, onLogout }) => {
   const schedulerContext = { professors, rooms, subjects, sections, activeSchedules: enrichedSchedules };
 
   const validator = {
-    validateAssignment: (room, professor, subject, section, day, timeSlot, scheduleMode = 'standard') =>
-      validateScheduleEntry({ room, professor, subject, section, day, timeSlot, scheduleMode }, enrichedSchedules, rooms),
-    addSchedule: (room, professor, subject, section, day, timeSlot) => ({
-      schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear }
+    validateAssignment: (room, professor, subject, section, day, timeSlot, scheduleMode = 'standard', hours, component) =>
+      validateScheduleEntry({ room, professor, subject, section, day, timeSlot, scheduleMode, hours, component }, enrichedSchedules, rooms),
+    addSchedule: (room, professor, subject, section, day, timeSlot, hours, component) => ({
+      schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear, hours, component }
     }),
     clearAllSchedules: handleClearAllSchedules,
     addSchedulesBatch: (schedules, scheduleMode) => handleAddSchedulesBatch(schedules, scheduleMode),

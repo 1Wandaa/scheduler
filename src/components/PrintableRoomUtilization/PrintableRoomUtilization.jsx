@@ -97,7 +97,7 @@ const PrintableRoomUtilization = ({
                     ...current,
                     code: subjCode + (comp ? ` (${comp})` : ''),
                     description: current.subject?.title || current.subject?.description || current.subject?.name || 'N/A',
-                    unit: current.subject?.credits || current.subject?.units || current.subject?.totalUnits || 3,
+                    unit: current.subject?.hasLecLab ? (comp === 'Lecture' ? (Number(current.subject.lectureHours) || 2) : (Number(current.subject.labHours) || 3)) : (current.subject?.credits || current.subject?.units || current.subject?.totalUnits || 3),
                     faculty: current.professor?.name || 'TBA',
                     sections: new Set([current.section?.name].filter(Boolean))
                 };
@@ -171,7 +171,8 @@ const PrintableRoomUtilization = ({
                         if (needed < 1) needed = 1;
                         if (needed > rowSpan) rowSpan = needed;
                     } else {
-                        const needed = slotsNeededFromIndex(tIdx, s.subject?.hoursPerMeeting || s.hours, scheduleMode);
+                        const sHours = Number(s.hours) || (s.subject?.hasLecLab ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2)) : (Number(s.subject?.hoursPerMeeting) || 1.5));
+                        const needed = slotsNeededFromIndex(tIdx, sHours, scheduleMode);
                         if (needed > rowSpan) rowSpan = needed;
                     }
                 }

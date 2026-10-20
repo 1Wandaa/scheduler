@@ -305,13 +305,34 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
 
   /** Schedules enriched with full object references via lookup maps. */
   const enrichedSchedules = useMemo(() => {
-    return activeSchedules.map((s) => ({
-      ...s,
-      professor: (s.professor?.id && professorById[s.professor.id]) || s.professor,
-      room: (s.room?.id && roomById[s.room.id]) || s.room,
-      section: (s.section?.id && sectionById[s.section.id]) || s.section,
-      subject: (s.subject?.id && subjectById[s.subject.id]) || s.subject,
-    }));
+    return activeSchedules.map((s) => {
+      const fullSubject = (s.subject?.id && subjectById[s.subject.id]) || s.subject;
+      let effectiveHours = Number(s.hours);
+      if (!effectiveHours && fullSubject?.hasLecLab) {
+        effectiveHours = s.component === 'Lecture'
+          ? ((Number(fullSubject.lectureHours) || 2) / 2)
+          : ((Number(fullSubject.labHours) || 3) / 2);
+      } else if (!effectiveHours) {
+        effectiveHours = Number(fullSubject?.hoursPerMeeting) || 1.5;
+      }
+
+      const enrichedSubject = fullSubject ? {
+        ...fullSubject,
+        hoursPerMeeting: effectiveHours,
+        ...(fullSubject.hasLecLab && s.component ? {
+          credits: s.component === 'Lecture' ? (Number(fullSubject.lectureHours) || 2) : (Number(fullSubject.labHours) || 3)
+        } : {})
+      } : fullSubject;
+
+      return {
+        ...s,
+        hours: effectiveHours,
+        professor: (s.professor?.id && professorById[s.professor.id]) || s.professor,
+        room: (s.room?.id && roomById[s.room.id]) || s.room,
+        section: (s.section?.id && sectionById[s.section.id]) || s.section,
+        subject: enrichedSubject,
+      };
+    });
   }, [activeSchedules, professorById, roomById, sectionById, subjectById]);
 
   return {

@@ -492,7 +492,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                           <div key={idx} className={`schedule-card ${item.prescriptionNote ? 'warning-border' : 'success-border'}`}>
                             <div className="schedule-card-header">
                               <span>{item.subject.code} {item.section ? `(${item.section.name})` : ''}</span>
-                              <span>{getMeetingTimeLabel(item.timeSlot, item.subject?.hoursPerMeeting) || item.timeSlot.label}</span>
+                              <span>{getMeetingTimeLabel(item.timeSlot, item.hours || item.subject?.hoursPerMeeting) || item.timeSlot.label}</span>
                             </div>
                             <div className="schedule-card-body">
                               {item.room.name} • Prof. {item.professor.name}

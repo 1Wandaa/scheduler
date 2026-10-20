@@ -9,7 +9,8 @@ import {
   findScheduleConflicts,
   findAlternativeSlots,
   getSmartScheduleRecommendations,
-  normalizeDay
+  normalizeDay,
+  resolveToDayPair
 } from '../../utils/scheduleUtils';
 import CustomSelect from '../CustomSelect/CustomSelect';
 import '../../styles/SchedulerForm.css';
@@ -64,6 +65,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
       if (name === 'subject') {
         newData.component = 'Lecture';
+        newData.timeSlot = {};
         if (!value) {
           newData.room = '';
         } else {
@@ -144,6 +146,8 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             }
           }
         }
+      } else if (name === 'component') {
+        newData.timeSlot = {};
       }
 
       return newData;
@@ -166,7 +170,9 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     }
 
     const subject = subjects.find(s => s.id === formData.subject);
-    const getSubjectHours = (sub, comp) => sub?.hasLecLab ? (comp === 'Lecture' ? sub.lectureHours / 2 : sub.labHours / 2) : sub?.hoursPerMeeting;
+    const getSubjectHours = (sub, comp) => sub?.hasLecLab 
+      ? (comp === 'Lecture' ? ((Number(sub.lectureHours) || 2) / 2) : ((Number(sub.labHours) || 3) / 2)) 
+      : (Number(sub?.hoursPerMeeting) || 1.5);
     const currentHours = getSubjectHours(subject, formData.component);
     const section = sections ? sections.find(s => s.id === formData.section) : null;
     const professor = professors.find(p => p.id === formData.professor);
@@ -230,7 +236,21 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
         continue;
       }
 
-      const result = validator.validateAssignment(room, professor, subject, section, day, timeSlotObj);
+      const meetingTimeLabel = getMeetingTimeLabel(timeSlotObj, currentHours, 'standard');
+      const enrichedTimeSlot = {
+        ...timeSlotObj,
+        customLabel: timeSlotObj.customLabel || meetingTimeLabel || timeSlotObj.label
+      };
+
+      const validationSubject = subject ? { 
+        ...subject, 
+        hoursPerMeeting: currentHours,
+        credits: subject.hasLecLab 
+          ? (formData.component === 'Lecture' ? (Number(subject.lectureHours) || 2) : (Number(subject.labHours) || 3))
+          : (Number(subject.credits) || 3)
+      } : subject;
+
+      const result = validator.validateAssignment(room, professor, validationSubject, section, day, enrichedTimeSlot, 'standard', currentHours, formData.component);
       if (!result.valid) {
         allValid = false;
         allErrors.push(`Failed for ${day}: ${result.errors.join(', ')}`);
@@ -238,7 +258,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
         allWarnings.push(...result.warnings.map(w => `${day}: ${w}`));
       }
 
-      resolvedSessions.push({ day, timeSlotObj, originalLabel: timeStr });
+      resolvedSessions.push({ day, timeSlotObj: enrichedTimeSlot, originalLabel: timeStr });
     }
 
     if (allValid) {
@@ -246,13 +266,20 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       const successfullyAdded = [];
 
       for (const sess of resolvedSessions) {
-        const validationSubject = subject ? { ...subject, hoursPerMeeting: currentHours } : subject;
-        const scheduleResult = validator.addSchedule(room, professor, validationSubject, section, sess.day, sess.timeSlotObj);
+        const validationSubject = subject ? { 
+          ...subject, 
+          hoursPerMeeting: currentHours,
+          credits: subject.hasLecLab 
+            ? (formData.component === 'Lecture' ? (Number(subject.lectureHours) || 2) : (Number(subject.labHours) || 3))
+            : (Number(subject.credits) || 3)
+        } : subject;
+        const scheduleResult = validator.addSchedule(room, professor, validationSubject, section, sess.day, sess.timeSlotObj, currentHours, formData.component);
         if (scheduleResult.schedule) {
           if (subject?.hasLecLab) {
             scheduleResult.schedule.component = formData.component;
           }
           scheduleResult.schedule.hours = currentHours;
+          scheduleResult.schedule.timeSlot = sess.timeSlotObj;
         }
         const addResult = await onSchedule(scheduleResult.schedule);
         if (addResult && addResult.ok === false) {
@@ -265,7 +292,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             professor: professor?.name || '',
             room: room?.name || '',
             day: sess.day,
-            timeSlot: getMeetingTimeLabel(sess.timeSlotObj, currentHours, 'standard') || sess.timeSlotObj?.label || sess.originalLabel
+            timeSlot: sess.timeSlotObj.customLabel || getMeetingTimeLabel(sess.timeSlotObj, currentHours, 'standard') || sess.timeSlotObj?.label || sess.originalLabel
           });
         }
       }
@@ -388,7 +415,9 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       })
       : professors;
 
-  const currentRenderHours = selectedSubject?.hasLecLab ? (formData.component === 'Lecture' ? selectedSubject.lectureHours / 2 : selectedSubject.labHours / 2) : selectedSubject?.hoursPerMeeting;
+  const currentRenderHours = selectedSubject?.hasLecLab 
+    ? (formData.component === 'Lecture' ? ((Number(selectedSubject.lectureHours) || 2) / 2) : ((Number(selectedSubject.labHours) || 3) / 2)) 
+    : (Number(selectedSubject?.hoursPerMeeting) || 1.5);
 
   const eligibleTimeSlots = selectedSubject
     ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, currentRenderHours) > 0)
@@ -434,11 +463,13 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     if (!selectedSubject || !activeSchedules) return false;
 
     const candidateBase = {
-      subject: selectedSubject,
+      subject: selectedSubject ? { ...selectedSubject, hoursPerMeeting: currentRenderHours } : null,
       section: selectedSection,
       professor: selectedProfessor,
       room: selectedRoom,
       day: formData.day,
+      hours: currentRenderHours,
+      component: formData.component,
       ...overrides
     };
 
@@ -458,7 +489,9 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
           professor: overrides.professor,
           day: d,
           timeSlot: timeSlot,
-          subject: candidateBase.subject
+          subject: candidateBase.subject,
+          hours: currentRenderHours,
+          component: formData.component
         };
         const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
         if (conf.professor) return true;
@@ -476,7 +509,9 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
           room: overrides.room,
           day: d,
           timeSlot: timeSlot,
-          subject: candidateBase.subject
+          subject: candidateBase.subject,
+          hours: currentRenderHours,
+          component: formData.component
         };
         const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
         if (conf.room) return true;
@@ -492,7 +527,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       const dayStr = normalizeDay(overrides.day);
       const timeSlot = resolveTimeSlotForDay(dayStr);
       if (!timeSlot) return false;
-      const candidate = { ...candidateBase, day: dayStr, timeSlot };
+      const candidate = { ...candidateBase, day: dayStr, timeSlot, hours: currentRenderHours, component: formData.component };
       const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
       return !!(conf.room || conf.professor || conf.section);
     }
@@ -501,7 +536,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       if (!d) continue;
       const timeSlot = resolveTimeSlotForDay(d);
       if (!timeSlot) continue;
-      const candidate = { ...candidateBase, day: d, timeSlot };
+      const candidate = { ...candidateBase, day: d, timeSlot, hours: currentRenderHours, component: formData.component };
       const conflicts = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
       if (conflicts.room || conflicts.professor || conflicts.section) {
         return true;
@@ -529,12 +564,14 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     for (const d of daysToCheck) {
       if (!d) continue;
       const candidate = {
-        subject: selectedSubject,
+        subject: selectedSubject ? { ...selectedSubject, hoursPerMeeting: currentRenderHours } : null,
         section: selectedSection,
         professor: selectedProfessor,
         room: selectedRoom,
         day: d,
-        timeSlot: slot
+        timeSlot: slot,
+        hours: currentRenderHours,
+        component: formData.component
       };
       const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
       if (conf.room) return `Room Booked (${d.slice(0, 3)})`;
@@ -591,12 +628,14 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       if (!timeSlot) continue;
 
       const cand = {
-        subject: selectedSubject,
+        subject: selectedSubject ? { ...selectedSubject, hoursPerMeeting: currentRenderHours } : null,
         section: selectedSection,
         professor: selectedProfessor,
         room: selectedRoom,
         day: d,
-        timeSlot: timeSlot
+        timeSlot: timeSlot,
+        hours: currentRenderHours,
+        component: formData.component
       };
       const conf = findScheduleConflicts(cand, activeSchedules, { scheduleMode: 'standard' });
       if (conf.room || conf.professor || conf.section) {
@@ -613,13 +652,15 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       const fallbackSlot = resolveTimeSlotForDay(firstConflictingDay);
 
       const alts = findAlternativeSlots({
-        subject: selectedSubject,
+        subject: selectedSubject ? { ...selectedSubject, hoursPerMeeting: currentRenderHours } : null,
         section: selectedSection,
         professor: selectedProfessor,
         room: selectedRoom,
         days: daysToCheck,
         day: daysToCheck,
-        timeSlot: fallbackSlot
+        timeSlot: fallbackSlot,
+        hours: currentRenderHours,
+        component: formData.component
       }, activeSchedules, rooms, eligibleTimeSlots, 'standard');
 
       const dayLabel = daysToCheck.map(d => d.slice(0, 3)).join(' / ');
@@ -859,7 +900,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                     onChange={handleChange}
                     style={{ accentColor: 'var(--accent-primary)' }}
                   />
-                  Lecture ({selectedSubject.lectureHours} hrs)
+                  Lecture ({selectedSubject.lectureHours || 2} hrs · 2 meetings of 1 hr)
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', cursor: 'pointer' }}>
                   <input 
@@ -870,7 +911,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                     onChange={handleChange}
                     style={{ accentColor: 'var(--accent-primary)' }}
                   />
-                  Laboratory ({selectedSubject.labHours} hrs)
+                  Laboratory ({selectedSubject.labHours || 3} hrs · 2 meetings of 1.5 hrs)
                 </label>
               </div>
             )}
@@ -1105,8 +1146,10 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                     label: building,
                     options: bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(room => {
                       const isConflict = checkConflict({ room });
-                      const isNonLabForCompSubject = selectedSubject?.requiredLab && !room.hasComputers;
-                      const isNonFoodForFoodSubject = selectedSubject?.isFoodLab && !room.isFoodLab;
+                      const isCompLabNeeded = selectedSubject?.requiredLab && (!selectedSubject.hasLecLab || formData.component !== 'Lecture');
+                      const isFoodLabNeeded = selectedSubject?.isFoodLab && (!selectedSubject.hasLecLab || formData.component !== 'Lecture');
+                      const isNonLabForCompSubject = isCompLabNeeded && !room.hasComputers;
+                      const isNonFoodForFoodSubject = isFoodLabNeeded && !room.isFoodLab;
                       let badge = null;
                       if (isConflict) badge = '(In Use)';
                       else if (isNonLabForCompSubject) badge = '(Not a Comp Lab)';
@@ -1125,10 +1168,12 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   }));
                   
                 let finalOptions = [];
-                if (selectedSubject && (selectedSubject.requiredLab || selectedSubject.isFoodLab)) {
+                const isCompLabNeeded = selectedSubject?.requiredLab && (!selectedSubject.hasLecLab || formData.component !== 'Lecture');
+                const isFoodLabNeeded = selectedSubject?.isFoodLab && (!selectedSubject.hasLecLab || formData.component !== 'Lecture');
+                if (selectedSubject && (isCompLabNeeded || isFoodLabNeeded)) {
                   const suggestedRooms = rooms.filter(r => {
-                    if (selectedSubject.requiredLab && !r.hasComputers) return false;
-                    if (selectedSubject.isFoodLab && !r.isFoodLab) return false;
+                    if (isCompLabNeeded && !r.hasComputers) return false;
+                    if (isFoodLabNeeded && !r.isFoodLab) return false;
                     return !checkConflict({ room: r });
                   }).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
@@ -1175,9 +1220,14 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                         const prevDays = Array.isArray(prev.day)
                           ? prev.day.map(normalizeDay)
                           : (prev.day ? [normalizeDay(prev.day)] : []);
-                        const newDays = prevDays.includes(day)
-                          ? prevDays.filter(d => d !== day)
-                          : [...prevDays, day];
+                        let newDays;
+                        if (prevDays.includes(day)) {
+                          newDays = prevDays.filter(d => d !== day);
+                        } else if (prevDays.length === 0 && selectedSubject?.hasLecLab) {
+                          newDays = resolveToDayPair(day);
+                        } else {
+                          newDays = [...prevDays, day];
+                        }
                         return { ...prev, day: newDays };
                       });
                       setValidation(null);
@@ -1257,10 +1307,18 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                         <div
                           key={slot.id}
                           onClick={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              timeSlot: { ...prev.timeSlot, [dayStr]: isSelected ? '' : rangeLabel }
-                            }));
+                            setFormData(prev => {
+                              const newTimeSlot = { ...prev.timeSlot, [dayStr]: isSelected ? '' : rangeLabel };
+                              if (!isSelected && Array.isArray(prev.day) && prev.day.length > 1) {
+                                prev.day.forEach(d => {
+                                  if (!newTimeSlot[d]) newTimeSlot[d] = rangeLabel;
+                                });
+                              }
+                              return {
+                                ...prev,
+                                timeSlot: newTimeSlot
+                              };
+                            });
                             setOpenTimeSlotDay(null);
                             setValidation(null);
                           }}
@@ -1325,7 +1383,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
         </button>
       </form>
 
-      {selectedSubject && selectedSubject.requiredLab && (
+      {selectedSubject && (selectedSubject.requiredLab && (!selectedSubject.hasLecLab || formData.component !== 'Lecture')) && (
         <div className="info-box">
           ⚠️ This subject requires a computer laboratory.
         </div>
