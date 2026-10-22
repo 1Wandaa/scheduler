@@ -60,11 +60,18 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
         }).sort((a, b) => a.startMinutes - b.startMinutes);
     }, [schedules]);
 
+    const schedRowHeight = useMemo(() => {
+        if (uniqueTimeBlocks.length <= 2) return '54px';
+        if (uniqueTimeBlocks.length <= 4) return '46px';
+        if (uniqueTimeBlocks.length <= 6) return '38px';
+        return '28px';
+    }, [uniqueTimeBlocks.length]);
+
     const rowsCount = uniqueAssignments.length + uniqueTimeBlocks.length;
     const densityClass = useMemo(() => {
-        if (rowsCount <= 10) return 'fw-density-normal';
-        if (rowsCount <= 15) return 'fw-density-compact';
-        if (rowsCount <= 20) return 'fw-density-dense';
+        if (rowsCount <= 8) return 'fw-density-normal';
+        if (rowsCount <= 13) return 'fw-density-compact';
+        if (rowsCount <= 18) return 'fw-density-dense';
         return 'fw-density-ultra';
     }, [rowsCount]);
 
@@ -73,27 +80,29 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
 
     React.useLayoutEffect(() => {
         if (!containerRef.current) return;
-        // Reset scale first to get accurate unscaled height
+        // Reset transform first to get accurate unscaled height
         containerRef.current.style.transform = 'none';
         
-        const MAX_PAGE_HEIGHT = 1000; // Roughly 10.5 inches at 96 DPI
+        // 10.3 inches at 96 DPI is ~988px
+        const MAX_PAGE_HEIGHT = 980;
         const actualHeight = containerRef.current.scrollHeight;
         
         if (actualHeight > MAX_PAGE_HEIGHT) {
-            // Give a tiny bit of buffer
-            const newScale = (MAX_PAGE_HEIGHT / actualHeight) * 0.96;
+            const newScale = Math.min(1, Number(((MAX_PAGE_HEIGHT / actualHeight) * 0.98).toFixed(3)));
             setScale(newScale);
         } else {
             setScale(1);
         }
-    }, [uniqueAssignments, uniqueTimeBlocks]);
+    }, [uniqueAssignments, uniqueTimeBlocks, densityClass, schedRowHeight]);
 
     return ReactDOM.createPortal(
         <div className={`faculty-workload-iso-document ${densityClass}`}>
             <div 
                 ref={containerRef} 
                 style={{ 
-                    zoom: scale < 1 ? scale : 1,
+                    '--fw-row-height': schedRowHeight,
+                    transform: scale < 1 ? `scale(${scale})` : 'none',
+                    transformOrigin: 'top center',
                     width: '100%' 
                 }}
             >
@@ -217,36 +226,36 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
                 <tbody>
                     {uniqueAssignments.map(a => (
                         <tr key={a.id}>
-                            <td>{a.subjectCode}</td>
-                            <td style={{textAlign: 'left', paddingLeft: '5px'}}>{a.subjectName}</td>
-                            <td style={{fontWeight: 'bold'}}>{a.unit}</td>
+                            <td className="fw-course-no">{a.subjectCode}</td>
+                            <td className="fw-course-title">{a.subjectName}</td>
+                            <td className="fw-bold">{a.unit}</td>
                             <td>{a.hoursPerWeek}</td>
                             <td>{a.sectionName}</td>
-                            <td style={{fontWeight: 'bold'}}>{a.studentsCount}</td>
+                            <td className="fw-bold">{a.studentsCount}</td>
                         </tr>
                     ))}
                     {uniqueAssignments.length === 0 && (
-                        <tr><td colSpan="6" style={{ height: '30px' }}></td></tr>
+                        <tr><td colSpan="6" style={{ height: '36px', fontStyle: 'italic', color: '#666' }}>No teaching assignments recorded</td></tr>
                     )}
-                    <tr>
-                        <td colSpan="2" style={{ fontWeight: 'bold', textAlign: 'left', paddingLeft: '5px' }}>TOTAL</td>
-                        <td style={{ fontWeight: 'bold' }}>{totalUnits > 0 ? totalUnits : ''}</td>
-                        <td style={{ fontWeight: 'bold' }}>{totalHours > 0 ? totalHours : ''}</td>
+                    <tr className="fw-total-row">
+                        <td colSpan="2" className="fw-total-label">TOTAL</td>
+                        <td className="fw-bold">{totalUnits > 0 ? totalUnits : ''}</td>
+                        <td className="fw-bold">{totalHours > 0 ? totalHours : ''}</td>
                         <td colSpan="2"></td>
                     </tr>
-                    <tr>
-                        <td colSpan="6" style={{ fontWeight: 'bold', textAlign: 'left', paddingLeft: '5px', backgroundColor: '#f9f9f9' }}>Other Assignments:</td>
+                    <tr className="fw-other-assign-header">
+                        <td colSpan="6">Other Assignments:</td>
                     </tr>
-                    <tr>
-                        <td><br/></td>
+                    <tr className="fw-blank-row">
+                        <td>&nbsp;</td>
                         <td></td>
                         <td></td>
                         <td></td>
                         <td></td>
                         <td></td>
                     </tr>
-                    <tr>
-                        <td><br/></td>
+                    <tr className="fw-blank-row">
+                        <td>&nbsp;</td>
                         <td></td>
                         <td></td>
                         <td></td>
@@ -256,7 +265,7 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
                 </tbody>
             </table>
 
-            <div className="fw-section-title" style={{marginTop: '10px'}}>Class Schedule:</div>
+            <div className="fw-section-title">Class Schedule:</div>
             
             <table className="fw-schedule-table">
                 <thead>
@@ -270,7 +279,7 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
                 <tbody>
                     {uniqueTimeBlocks.map((block, rowIdx) => (
                         <tr key={rowIdx}>
-                            <td style={{ textAlign: 'center' }}>
+                            <td className="fw-schedule-time-col">
                                 {block.label.replace('-', '–')}
                             </td>
                             {days.map(day => {
@@ -284,11 +293,11 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
                                 });
                                 
                                 return (
-                                    <td key={day} style={{ textAlign: 'center', verticalAlign: 'middle', height: '30px' }}>
+                                    <td key={day} className="fw-schedule-cell">
                                         {classes.map((cls, idx) => (
-                                            <div key={idx} style={{ marginBottom: idx < classes.length - 1 ? '4px' : '0' }}>
-                                                <div style={{ fontWeight: 'bold' }}>{cls.subject?.code}</div>
-                                                <div>
+                                            <div key={idx} className="fw-sched-class-item" style={{ marginBottom: idx < classes.length - 1 ? '4px' : '0' }}>
+                                                <div className="fw-sched-subj-code">{cls.subject?.code}</div>
+                                                <div className="fw-sched-room-sec">
                                                     {cls.room?.name ? cls.room.name.replace('Room', 'RM').replace('ROOM', 'RM') : 'TBA'}
                                                     {cls.section?.name ? ` - ${cls.section.name}` : ''}
                                                 </div>
@@ -300,7 +309,7 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
                         </tr>
                     ))}
                     {uniqueTimeBlocks.length === 0 && (
-                        <tr><td colSpan="6" style={{ height: '50px' }}></td></tr>
+                        <tr><td colSpan="6" className="fw-schedule-empty-cell">No scheduled classes</td></tr>
                     )}
                 </tbody>
             </table>
@@ -308,16 +317,21 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
             <div className="fw-signatures-container">
                 <div className="fw-sig-left">
                     <div className="fw-sig-label">Prepared by:</div>
+                    <div className="fw-sig-space"></div>
                     <div className="fw-sig-name"><u>JELLY L. PAREDES, EdD</u></div>
                     <div className="fw-sig-title">Program Chairperson</div>
                     
-                    <div className="fw-sig-label" style={{ marginTop: '10px' }}>Approved:</div>
-                    <div className="fw-sig-name"><u>RAMY LLOYD L. LOTILLA, EdD</u></div>
-                    <div className="fw-sig-title">Satellite College Director</div>
+                    <div className="fw-sig-approved-block">
+                        <div className="fw-sig-label">Approved:</div>
+                        <div className="fw-sig-space"></div>
+                        <div className="fw-sig-name"><u>RAMY LLOYD L. LOTILLA, EdD</u></div>
+                        <div className="fw-sig-title">Satellite College Director</div>
+                    </div>
                 </div>
                 
                 <div className="fw-sig-right">
                     <div className="fw-sig-label">Conforme:</div>
+                    <div className="fw-sig-space"></div>
                     <div className="fw-sig-name"><u>{profName}</u></div>
                     <div className="fw-sig-title">Faculty</div>
                 </div>

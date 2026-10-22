@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS, DAYS, FOUR_DAY_DAYS, getScheduleConfig, getProgramChairInfo } from '../../config/constants';
-import { slotsNeededFromIndex, getScheduleTimeRange, normalizeDay } from '../../utils/scheduleUtils';
+import { DAYS, getProgramChairInfo } from '../../config/constants';
+import { getScheduleTimeRange, normalizeDay } from '../../utils/scheduleUtils';
 import '../../styles/PrintableSchedule.css';
 
-// Helper: Format professor name compactly to match ScheduleTable
+// Helper: Format professor name compactly (e.g. "C. Bernabe")
 function formatProfessorName(name) {
     if (!name) return '—';
     const clean = name.trim();
@@ -19,10 +19,19 @@ function formatProfessorName(name) {
     return `${initial}. ${surname}`;
 }
 
+export const ISO_TIME_BLOCKS = [
+    { id: 'b1', label: '7:00   –   8:30', start: 420, end: 510 },
+    { id: 'b2', label: '8:30   –   10:00', start: 510, end: 600 },
+    { id: 'b3', label: '10:00  –   11:30', start: 600, end: 690 },
+    { id: 'lunch', label: '11:30  –  12:30', start: 690, end: 750, isLunch: true },
+    { id: 'b4', label: '12:30  –   2:00', start: 750, end: 840 },
+    { id: 'b5', label: '2:00   –   3:30', start: 840, end: 930 },
+    { id: 'b6', label: '3:30   –   5:00', start: 930, end: 1020 },
+    { id: 'b7', label: '5:00   –   6:00', start: 1020, end: 1080 }
+];
+
 const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, department, semesterInfo, scheduleMode = 'standard' }) => {
-    const config = useMemo(() => getScheduleConfig(scheduleMode), [scheduleMode]);
-    const activeTimeSlots = config.timeSlots || (scheduleMode === 'fourDay' ? FOUR_DAY_TIME_SLOTS : TIME_SLOTS);
-    const days = config.days || (scheduleMode === 'fourDay' ? FOUR_DAY_DAYS : DAYS);
+    const days = DAYS; // Always 5 days (Mon - Fri) to match the official INS-CLS-08 table
 
     const chairInfo = useMemo(() => {
         return getProgramChairInfo({
@@ -33,68 +42,106 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
         });
     }, [department, programName, sectionName, scheduleItems]);
 
-    // O(1) cell lookup map directly matching the main timetable (ScheduleTable)
-    const scheduleGridMap = useMemo(() => {
-        const map = new Map();
-        for (const s of scheduleItems) {
-            const dayName = normalizeDay(s.day) || s.day;
-            if (!dayName) continue;
-            let slotId = s.timeSlot?.id;
-            if (slotId == null && s.timeSlot) {
-                const matched = activeTimeSlots.find(ts => 
-                    String(ts.id) === String(s.timeSlot) || 
-                    ts.label === s.timeSlot || 
-                    ts.time === s.timeSlot?.time ||
-                    ts.label === s.timeSlot?.label
-                );
-                if (matched) slotId = matched.id;
-            }
-            if (slotId == null) continue;
-            const key = `${dayName}-${slotId}`;
-            if (!map.has(key)) map.set(key, []);
-            map.get(key).push(s);
-        }
-        return map;
-    }, [scheduleItems, activeTimeSlots]);
-
-    // Pre-calculate cell span mapping & skipped multi-slot cells EXACTLY like ScheduleTable
-    const { cellSpanMap, skippedCellsSet } = useMemo(() => {
+    // Map schedule items to the 8 ISO time blocks
+    const { blockGridMap, cellSpanMap, skippedCellsSet } = useMemo(() => {
+        const gridMap = new Map();
         const spanMap = new Map();
         const skipped = new Set();
 
-        activeTimeSlots.forEach((timeSlot, tIdx) => {
+        const nonLunchBlocks = ISO_TIME_BLOCKS.filter(b => !b.isLunch);
+
+        // Map items to block keys: `${day}-${block.id}`
+        scheduleItems.forEach(s => {
+            const dayName = normalizeDay(s.day) || s.day;
+            if (!dayName) return;
+
+            let range = getScheduleTimeRange(s, scheduleMode);
+            if (!range || (range.start === 0 && range.end === 0)) {
+                const slotId = Number(s.timeSlot?.id || s.timeSlot);
+                if (slotId >= 1 && slotId <= 3) range = { start: 420, end: 510 };
+                else if (slotId >= 4 && slotId <= 6) range = { start: 510, end: 600 };
+                else if (slotId >= 7 && slotId <= 9) range = { start: 600, end: 690 };
+                else if (slotId === 10 || slotId === 19) range = { start: 690, end: 750 };
+                else if (slotId >= 11 && slotId <= 13) range = { start: 750, end: 840 };
+                else if (slotId >= 14 && slotId <= 16) range = { start: 840, end: 930 };
+                else if (slotId >= 17 && slotId <= 20) range = { start: 930, end: 1020 };
+                else if (slotId >= 21 && slotId <= 22) range = { start: 1020, end: 1080 };
+                else range = { start: 420, end: 510 };
+            }
+
+            const effectiveHours = Number(s.hours) || (s.subject?.hasLecLab
+                ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2))
+                : (Number(s.subject?.hoursPerMeeting) || 1.5));
+
+            if (range.end <= range.start) {
+                range.end = range.start + effectiveHours * 60;
+            }
+
+            // Find matching start block
+            let matchedBlock = nonLunchBlocks.find(b => range.start >= b.start - 15 && range.start < b.end - 15);
+            if (!matchedBlock) {
+                let minDiff = Infinity;
+                nonLunchBlocks.forEach(b => {
+                    const diff = Math.abs(range.start - b.start);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        matchedBlock = b;
+                    }
+                });
+            }
+
+            if (!matchedBlock) return;
+
+            const key = `${dayName}-${matchedBlock.id}`;
+            if (!gridMap.has(key)) gridMap.set(key, []);
+            gridMap.get(key).push({ ...s, _range: range });
+        });
+
+        // Calculate spans and skips across ISO_TIME_BLOCKS
+        ISO_TIME_BLOCKS.forEach((block, bIdx) => {
+            if (block.isLunch) return;
+
             days.forEach(day => {
-                const cellKey = `${day}-${timeSlot.id}`;
+                const cellKey = `${day}-${block.id}`;
                 if (skipped.has(cellKey)) return;
 
-                const cellSchedules = scheduleGridMap.get(cellKey) || [];
+                const items = gridMap.get(cellKey) || [];
                 let rowSpan = 1;
-                for (const s of cellSchedules) {
-                    const range = getScheduleTimeRange(s, scheduleMode);
-                    if (range && range.start > 0 && range.end > 0) {
-                        const durationMins = range.end - range.start;
-                        let needed = Math.ceil(durationMins / 30);
-                        if (needed < 1) needed = 1;
-                        if (needed > rowSpan) rowSpan = needed;
-                    } else {
-                        const sHours = Number(s.hours) || (s.subject?.hasLecLab ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2)) : (Number(s.subject?.hoursPerMeeting) || 1.5));
-                        const needed = slotsNeededFromIndex(tIdx, sHours, scheduleMode);
-                        if (needed > rowSpan) rowSpan = needed;
+
+                items.forEach(item => {
+                    const range = item._range;
+                    if (range && range.end > block.end + 15) {
+                        let spanCount = 1;
+                        for (let nextIdx = bIdx + 1; nextIdx < ISO_TIME_BLOCKS.length; nextIdx++) {
+                            const nextBlock = ISO_TIME_BLOCKS[nextIdx];
+                            if (nextBlock.isLunch) break;
+                            if (range.end > nextBlock.start + 15) {
+                                spanCount++;
+                            } else {
+                                break;
+                            }
+                        }
+                        if (spanCount > rowSpan) rowSpan = spanCount;
                     }
-                }
+                });
+
                 spanMap.set(cellKey, rowSpan);
 
                 if (rowSpan > 1) {
-                    for (let skip = 1; skip < rowSpan; skip++) {
-                        const skipSlot = activeTimeSlots[tIdx + skip];
-                        if (skipSlot) skipped.add(`${day}-${skipSlot.id}`);
+                    let skippedCount = 0;
+                    for (let nextIdx = bIdx + 1; nextIdx < ISO_TIME_BLOCKS.length && skippedCount < rowSpan - 1; nextIdx++) {
+                        const nextBlock = ISO_TIME_BLOCKS[nextIdx];
+                        if (!nextBlock.isLunch) {
+                            skipped.add(`${day}-${nextBlock.id}`);
+                            skippedCount++;
+                        }
                     }
                 }
             });
         });
 
-        return { cellSpanMap: spanMap, skippedCellsSet: skipped };
-    }, [activeTimeSlots, days, scheduleGridMap, scheduleMode]);
+        return { blockGridMap: gridMap, cellSpanMap: spanMap, skippedCellsSet: skipped };
+    }, [scheduleItems, days, scheduleMode]);
 
     return (
         <div className="printable-iso-document">
@@ -102,8 +149,8 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
             <table className="iso-header-table">
                 <tbody>
                     <tr>
-                        <td rowSpan="4" className="center" style={{ width: '12%', verticalAlign: 'middle', padding: '6px' }}>
-                            <img src="/download.jpg" alt="Logo" style={{ width: '100%', maxWidth: '65px', height: 'auto', display: 'block', margin: '0 auto' }} />
+                        <td rowSpan="4" className="center logo-cell" style={{ width: '12%', verticalAlign: 'middle', padding: '4px' }}>
+                            <img src="/download.jpg" alt="Logo" style={{ width: '100%', maxWidth: '55px', maxHeight: '52px', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
                         </td>
                         <td style={{ width: '15%', verticalAlign: 'top', borderRight: 'none', paddingLeft: '8px' }}>Document Type:</td>
                         <td rowSpan="2" className="center" style={{ width: '43%', verticalAlign: 'middle' }}>
@@ -134,59 +181,59 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
             {/* Meta Info */}
             <div className="meta-info">
                 <span>DEGREE PROGRAM: <span className="meta-value underline bold">{chairInfo.programName}</span></span>
-                <span>COURSE &amp; YEAR: <span className="meta-value underline bold">{sectionName || 'BSCS 4C'}</span></span>
+                <span>COURSE &amp; YEAR: <span className="meta-value underline bold">{sectionName || 'BSCS 1A'}</span></span>
                 <span>SEMESTER &amp; AY: <span className="meta-value underline bold">{semesterInfo || '1st Sem 2026-2027'}</span></span>
             </div>
 
-            {/* Schedule Table: Built directly on main timetable grid */}
+            {/* Schedule Table: Built on 8 ISO time blocks in landscape */}
             <table className="iso-schedule-table">
                 <thead>
                     <tr>
-                        <th className="time-header" style={{ width: '12%' }}>TIME</th>
+                        <th className="time-header" style={{ width: '15%' }}>TIME</th>
                         {days.map(day => (
-                            <th key={day} style={{ width: `${88 / days.length}%` }}>{day.toUpperCase()}</th>
+                            <th key={day} style={{ width: `${85 / days.length}%` }}>{day.toUpperCase()}</th>
                         ))}
                     </tr>
                 </thead>
                 <tbody>
-                    {activeTimeSlots.map((timeSlot, tIdx) => {
-                        const isHourGroupHead = tIdx % 2 === 0;
-                        const nextSlot = activeTimeSlots[tIdx + 1];
-                        const timeRowSpan = isHourGroupHead ? (nextSlot ? 2 : 1) : 0;
-                        const hourLabel = isHourGroupHead
-                            ? (nextSlot ? `${timeSlot.label.split(' - ')[0]} - ${nextSlot.label.split(' - ')[1]}` : timeSlot.label)
-                            : '';
+                    {ISO_TIME_BLOCKS.map(block => {
+                        if (block.isLunch) {
+                            return (
+                                <tr key={block.id} className="lunch-row">
+                                    <td className="time-cell">{block.label}</td>
+                                    <td colSpan={days.length} className="lunch-break-cell">
+                                        LUNCH BREAK
+                                    </td>
+                                </tr>
+                            );
+                        }
 
                         return (
-                            <tr key={timeSlot.id} className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
-                                {isHourGroupHead && (
-                                    <td className="time-cell" rowSpan={timeRowSpan}>
-                                        {hourLabel}
-                                    </td>
-                                )}
+                            <tr key={block.id}>
+                                <td className="time-cell">{block.label}</td>
                                 {days.map(day => {
-                                    const cellKey = `${day}-${timeSlot.id}`;
+                                    const cellKey = `${day}-${block.id}`;
                                     if (skippedCellsSet.has(cellKey)) {
                                         return null;
                                     }
 
-                                    const cellSchedules = scheduleGridMap.get(cellKey) || [];
+                                    const cellSchedules = blockGridMap.get(cellKey) || [];
                                     const rowSpan = cellSpanMap.get(cellKey) || 1;
                                     const isScheduled = cellSchedules.length > 0;
 
                                     return (
-                                        <td 
-                                            key={cellKey} 
-                                            className={`schedule-cell ${isScheduled ? 'scheduled-cell' : ''}`} 
+                                        <td
+                                            key={cellKey}
+                                            className={`schedule-cell ${isScheduled ? 'scheduled-cell' : ''}`}
                                             rowSpan={rowSpan}
                                         >
                                             {cellSchedules.map((cls, idx) => {
                                                 const profFormatted = formatProfessorName(cls.professor?.name);
 
                                                 return (
-                                                    <div 
-                                                        key={cls.id || idx} 
-                                                        className="cell-content" 
+                                                    <div
+                                                        key={cls.id || idx}
+                                                        className="cell-content"
                                                         style={idx > 0 ? { marginTop: '2px', borderTop: '1px solid #000', paddingTop: '2px' } : {}}
                                                     >
                                                         <div className="cell-subject">{cls.subject?.code || '—'}{cls.component ? ` (${cls.component})` : ''}</div>

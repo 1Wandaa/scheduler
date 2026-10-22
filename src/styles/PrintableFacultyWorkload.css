@@ -1,3 +1,19 @@
+/* ==========================================================================
+   FACULTY WORKLOAD PRINTABLE ISO DOCUMENT (INS F22)
+   Calibrated for Single-Page Portrait Print (Letter / A4)
+   ========================================================================== */
+
+:root {
+  --fw-base-font-size: 9.5pt;
+  --fw-table-padding: 3.5px 6px;
+  --fw-row-height: 48px;
+  --fw-blank-row-height: 22px;
+  --fw-sig-gap: 28px;
+  --fw-sig-margin: 22px;
+  --fw-sig-block-margin: 16px;
+  --fw-section-gap: 8px;
+}
+
 .faculty-workload-iso-document {
   font-family: 'Times New Roman', Times, serif;
   color: #000;
@@ -5,9 +21,10 @@
   max-width: 8.5in;
   margin: 0 auto;
   background: white;
-  padding: 0.15in 0.4in;
+  padding: 0.35in 0.45in;
   box-sizing: border-box;
-  font-size: 8.5pt;
+  font-size: var(--fw-base-font-size);
+  line-height: 1.25;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -17,13 +34,13 @@
 .fw-header-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 8px;
+  margin-bottom: var(--fw-section-gap);
   border: 1.5px solid #000;
 }
 
 .fw-header-table td {
   border: 1px solid #000;
-  padding: 2px 4px;
+  padding: var(--fw-table-padding);
   vertical-align: middle;
 }
 
@@ -33,159 +50,262 @@
 }
 
 .fw-header-logo img {
-  width: 50px;
-  height: auto;
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
   display: block;
   margin: 0 auto;
 }
 
 .fw-header-middle {
   width: 45%;
-  vertical-align: top;
+  vertical-align: middle;
+  padding: 4px 8px;
 }
 
 .fw-header-doc-type {
-  font-size: 9pt;
+  font-size: 9.5pt;
   margin-top: 1px;
 }
 
 .fw-header-iso {
-  font-size: 8pt;
+  font-size: 8.5pt;
+  font-weight: bold;
   text-align: center;
   margin-top: 2px;
+  letter-spacing: 0.5px;
 }
 
 .fw-header-title {
-  font-size: 11pt;
+  font-size: 13pt;
   font-weight: bold;
   text-align: center;
-  margin-top: 4px;
+  margin-top: 3px;
+  letter-spacing: 0.5px;
 }
 
 .fw-header-label {
   width: 20%;
-  font-size: 8pt;
+  font-size: 8.5pt;
+  font-weight: 600;
+  padding-left: 6px;
 }
 
 .fw-header-value {
   width: 20%;
-  font-size: 8.5pt;
+  font-size: 9.5pt;
   text-align: center;
+  font-weight: bold;
 }
 
 /* Semester Info */
 .fw-semester-info {
   text-align: center;
-  margin: 8px 0;
-  font-size: 10pt;
+  margin: 10px 0 8px 0;
+  font-size: 11pt;
+  font-weight: bold;
+  letter-spacing: 0.5px;
 }
 
 /* Faculty Info */
 .fw-faculty-name {
-  margin-bottom: 6px;
-  font-size: 9.5pt;
+  margin-bottom: 8px;
+  font-size: 10.5pt;
+  font-weight: 600;
 }
 
 .fw-faculty-name-value {
   font-weight: bold;
   text-decoration: underline;
   text-transform: uppercase;
+  font-size: 11pt;
+  margin-left: 6px;
 }
 
 /* Profile Table */
 .fw-profile-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 6px;
+  margin-bottom: var(--fw-section-gap);
 }
 
 .fw-profile-table th,
 .fw-profile-table td {
   border: 1px solid #000;
-  padding: 2px 4px;
+  padding: var(--fw-table-padding);
   vertical-align: middle;
+  font-size: 9pt;
 }
 
 .fw-profile-title {
   font-weight: bold;
   text-align: center;
-  font-size: 9pt;
-  padding: 4px;
+  font-size: 10pt;
+  padding: 5px;
+  letter-spacing: 0.5px;
 }
 
 .fw-profile-level {
   font-weight: bold;
   width: 20%;
   text-align: center;
+  font-size: 8.5pt;
 }
 
 .fw-profile-field {
   width: 12%;
+  font-weight: 600;
+  font-size: 9pt;
 }
 
 .fw-profile-val {
-  width: 40%;
+  width: 38%;
   text-transform: uppercase;
+  font-size: 9pt;
 }
 
 .fw-profile-extra {
-  width: 28%;
+  width: 30%;
+  font-size: 9pt;
 }
 
 /* Section Titles */
 .fw-section-title {
   font-weight: bold;
   margin-bottom: 4px;
-  margin-top: 6px;
+  margin-top: var(--fw-section-gap);
   text-transform: uppercase;
-  font-size: 9pt;
+  font-size: 10pt;
+  letter-spacing: 0.3px;
 }
 
 /* Teaching Assignment Table */
 .fw-teaching-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 6px;
+  margin-bottom: var(--fw-section-gap);
   text-align: center;
 }
 
 .fw-teaching-table th,
 .fw-teaching-table td {
   border: 1px solid #000;
-  padding: 2px 4px;
+  padding: var(--fw-table-padding);
   vertical-align: middle;
+  font-size: 9pt;
 }
 
 .fw-teaching-table th {
   font-weight: bold;
+  font-size: 9pt;
+  background-color: transparent;
+}
+
+.fw-course-no {
+  font-weight: 600;
+  text-align: center;
+}
+
+.fw-course-title {
+  text-align: left;
+  padding-left: 8px !important;
+}
+
+.fw-bold {
+  font-weight: bold;
+}
+
+.fw-total-row td {
+  font-weight: bold;
+  font-size: 9pt;
+}
+
+.fw-total-label {
+  text-align: left;
+  padding-left: 8px !important;
+}
+
+.fw-other-assign-header td {
+  font-weight: bold;
+  text-align: left;
+  padding-left: 8px !important;
+  background-color: #fcfcfc !important;
+}
+
+.fw-blank-row td {
+  height: var(--fw-blank-row-height);
 }
 
 /* Class Schedule Table */
 .fw-schedule-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 8px;
+  margin-bottom: var(--fw-section-gap);
+  table-layout: fixed;
 }
 
 .fw-schedule-table th,
 .fw-schedule-table td {
   border: 1px solid #000;
-  padding: 2px 4px;
+  padding: var(--fw-table-padding);
   vertical-align: middle;
 }
 
 .fw-schedule-table th {
   font-weight: bold;
   text-align: center;
+  font-size: 8.5pt;
+  height: 24px;
+}
+
+.fw-schedule-time-col {
+  text-align: center;
+  font-weight: bold;
+  font-size: 8.5pt;
+  white-space: nowrap;
+}
+
+.fw-schedule-cell {
+  text-align: center;
+  vertical-align: middle;
+  height: var(--fw-row-height);
+  padding: 3px 4px !important;
+}
+
+.fw-sched-class-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.fw-sched-subj-code {
+  font-weight: bold;
+  font-size: 9.5pt;
+  line-height: 1.15;
+}
+
+.fw-sched-room-sec {
+  font-size: 8pt;
+  line-height: 1.15;
+  color: #111;
+}
+
+.fw-schedule-empty-cell {
+  text-align: center;
+  font-style: italic;
+  color: #666;
+  height: 60px;
 }
 
 /* Signatures */
 .fw-signatures-container {
   display: flex;
   justify-content: space-between;
-  margin-top: 15px;
+  margin-top: var(--fw-sig-margin);
   padding: 0 10px;
-  font-size: 9pt;
+  font-size: 9.5pt;
 }
 
 .fw-sig-left {
@@ -198,30 +318,51 @@
 }
 
 .fw-sig-label {
-  margin-bottom: 10px;
+  font-weight: 500;
+  font-size: 9.5pt;
+}
+
+.fw-sig-space {
+  height: var(--fw-sig-gap);
+}
+
+.fw-sig-approved-block {
+  margin-top: var(--fw-sig-block-margin);
 }
 
 .fw-sig-name {
   font-weight: bold;
   text-transform: uppercase;
+  font-size: 10pt;
 }
 
 .fw-sig-title {
   margin-top: 2px;
+  font-size: 9pt;
 }
 
-/* Hide internally when not printing */
+/* ==========================================================================
+   OFF-SCREEN RENDERING (Keeps dimensions measurable by useLayoutEffect)
+   ========================================================================== */
 @media screen {
   .faculty-workload-iso-document {
-    display: none;
+    position: fixed !important;
+    top: -99999px !important;
+    left: -99999px !important;
+    width: 8.5in !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: -9999 !important;
   }
 }
 
-/* Print Overrides */
+/* ==========================================================================
+   PRINT OVERRIDES
+   ========================================================================== */
 @media print {
   @page {
     size: portrait;
-    margin: 0mm !important;
+    margin: 0 !important;
   }
 
   *, *::before, *::after {
@@ -231,12 +372,13 @@
   }
 
   body {
-    padding: 0.15in 0.4in !important;
+    padding: 0 !important;
     margin: 0 !important;
     background: white !important;
   }
 
-  #root {
+  body.printing-faculty-workload #root,
+  body:has(.faculty-workload-iso-document) #root {
     display: none !important;
   }
 
@@ -246,61 +388,91 @@
   }
 
   .faculty-workload-iso-document {
+    position: static !important;
     display: block !important;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    padding: 0.15in 0.4in !important;
+    width: 100% !important;
+    max-width: 8.5in !important;
+    margin: 0 auto !important;
+    padding: 0.35in 0.45in !important;
     box-sizing: border-box !important;
-    max-width: 100%;
     background: white !important;
+    opacity: 1 !important;
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
-
 
 /* ==========================================================================
    DYNAMIC AUTO-SCALING TIERS (Ensures heavy workloads always fit on 1 page)
    ========================================================================== */
 
-/* Tier 2: Compact */
-.fw-density-compact { font-size: 8pt; }
-.fw-density-compact .fw-header-table { margin-bottom: 5px; }
-.fw-density-compact .fw-semester-info { margin: 5px 0; font-size: 9pt; }
-.fw-density-compact .fw-faculty-name { margin-bottom: 4px; font-size: 8.5pt; }
-.fw-density-compact .fw-profile-table, .fw-density-compact .fw-teaching-table { margin-bottom: 4px; }
-.fw-density-compact th, .fw-density-compact td { padding: 1.5px 3px; font-size: 7.5pt; }
-.fw-density-compact .fw-section-title { margin-top: 4px; margin-bottom: 2px; font-size: 8pt; }
-.fw-density-compact .fw-schedule-table td { height: 25px !important; font-size: 7.5pt; }
-.fw-density-compact .fw-signatures-container { margin-top: 10px; font-size: 8pt; }
+/* Tier 1: Normal (1 - 8 items) -> Fills page beautifully */
+.fw-density-normal {
+  --fw-base-font-size: 9.5pt;
+  --fw-table-padding: 3.5px 6px;
+  --fw-blank-row-height: 22px;
+  --fw-sig-gap: 28px;
+  --fw-sig-margin: 22px;
+  --fw-sig-block-margin: 16px;
+  --fw-section-gap: 8px;
+}
 
-/* Tier 3: Dense */
-.fw-density-dense { font-size: 7.5pt; }
-.fw-density-dense .fw-header-logo img { width: 40px; }
-.fw-density-dense .fw-header-title { font-size: 9.5pt; margin-top: 2px; }
-.fw-density-dense .fw-header-table { margin-bottom: 4px; }
-.fw-density-dense .fw-semester-info { margin: 3px 0; font-size: 8.5pt; }
-.fw-density-dense .fw-faculty-name { margin-bottom: 2px; font-size: 8pt; }
-.fw-density-dense .fw-profile-table, .fw-density-dense .fw-teaching-table { margin-bottom: 3px; }
-.fw-density-dense th, .fw-density-dense td { padding: 1px 2px; font-size: 7pt; }
-.fw-density-dense .fw-section-title { margin-top: 3px; margin-bottom: 1px; font-size: 7.5pt; }
-.fw-density-dense .fw-schedule-table td { height: 20px !important; font-size: 7pt; }
-.fw-density-dense .fw-signatures-container { margin-top: 8px; font-size: 7.5pt; }
-.fw-density-dense .fw-sig-label { margin-bottom: 6px; }
+/* Tier 2: Compact (9 - 13 items) */
+.fw-density-compact {
+  --fw-base-font-size: 8.8pt;
+  --fw-table-padding: 3px 5px;
+  --fw-blank-row-height: 18px;
+  --fw-sig-gap: 22px;
+  --fw-sig-margin: 16px;
+  --fw-sig-block-margin: 12px;
+  --fw-section-gap: 6px;
+}
+.fw-density-compact .fw-header-title { font-size: 11.5pt; }
+.fw-density-compact .fw-header-logo img { width: 50px; height: 50px; }
+.fw-density-compact .fw-profile-table th,
+.fw-density-compact .fw-profile-table td,
+.fw-density-compact .fw-teaching-table th,
+.fw-density-compact .fw-teaching-table td { font-size: 8.5pt; }
+.fw-density-compact .fw-sched-subj-code { font-size: 9pt; }
 
-/* Tier 4: Ultra Dense */
-.fw-density-ultra { font-size: 6.5pt; padding: 0.1in 0.3in !important; }
-.fw-density-ultra .fw-header-logo img { width: 32px; }
-.fw-density-ultra .fw-header-title { font-size: 8.5pt; margin-top: 1px; }
-.fw-density-ultra .fw-header-table { margin-bottom: 2px; border: 1px solid #000; }
-.fw-density-ultra .fw-semester-info { margin: 2px 0; font-size: 7.5pt; }
-.fw-density-ultra .fw-faculty-name { margin-bottom: 2px; font-size: 7.5pt; }
-.fw-density-ultra .fw-profile-table, .fw-density-ultra .fw-teaching-table { margin-bottom: 2px; }
-.fw-density-ultra th, .fw-density-ultra td { padding: 0px 1px; font-size: 6pt; }
-.fw-density-ultra .fw-section-title { margin-top: 2px; margin-bottom: 1px; font-size: 7pt; }
-.fw-density-ultra .fw-schedule-table td { height: 16px !important; font-size: 6pt; }
-.fw-density-ultra .fw-signatures-container { margin-top: 4px; font-size: 7pt; }
-.fw-density-ultra .fw-sig-label { margin-bottom: 4px; }
+/* Tier 3: Dense (14 - 18 items) */
+.fw-density-dense {
+  --fw-base-font-size: 8pt;
+  --fw-table-padding: 2px 4px;
+  --fw-blank-row-height: 14px;
+  --fw-sig-gap: 18px;
+  --fw-sig-margin: 12px;
+  --fw-sig-block-margin: 10px;
+  --fw-section-gap: 4px;
+}
+.fw-density-dense .fw-header-title { font-size: 10.5pt; }
+.fw-density-dense .fw-header-logo img { width: 44px; height: 44px; }
+.fw-density-dense .fw-profile-table th,
+.fw-density-dense .fw-profile-table td,
+.fw-density-dense .fw-teaching-table th,
+.fw-density-dense .fw-teaching-table td { font-size: 8pt; }
+.fw-density-dense .fw-sched-subj-code { font-size: 8.5pt; }
+.fw-density-dense .fw-sched-room-sec { font-size: 7.5pt; }
+
+/* Tier 4: Ultra Dense (19+ items) */
+.fw-density-ultra {
+  --fw-base-font-size: 7.5pt;
+  --fw-table-padding: 1.5px 3px;
+  --fw-blank-row-height: 12px;
+  --fw-sig-gap: 14px;
+  --fw-sig-margin: 10px;
+  --fw-sig-block-margin: 8px;
+  --fw-section-gap: 3px;
+}
+.fw-density-ultra .fw-header-title { font-size: 10pt; }
+.fw-density-ultra .fw-header-logo img { width: 38px; height: 38px; }
+.fw-density-ultra .fw-profile-table th,
+.fw-density-ultra .fw-profile-table td,
+.fw-density-ultra .fw-teaching-table th,
+.fw-density-ultra .fw-teaching-table td { font-size: 7.5pt; }
+.fw-density-ultra .fw-sched-subj-code { font-size: 8pt; }
+.fw-density-ultra .fw-sched-room-sec { font-size: 7pt; }
+
 

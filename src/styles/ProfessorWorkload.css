@@ -391,3 +391,163 @@
     padding: 0;
   }
 }
+
+/* --- Report Print Button --- */
+.pw-report-print-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg, #f8fafc);
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.pw-report-print-btn:hover {
+  background: var(--accent-primary, #6366f1);
+  color: #ffffff;
+  border-color: var(--accent-primary, #6366f1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.pw-report-print-btn svg {
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   PRINT STYLES FOR FACULTY WORKLOAD OVERVIEW REPORT
+   (Applies when printing the report directly, not a single faculty form)
+   ========================================================================== */
+@media print {
+  body:not(.printing-faculty-workload) {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body:not(.printing-faculty-workload) #root {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  body:not(.printing-faculty-workload) .professor-workload-container,
+  body:not(.printing-faculty-workload) .professor-workload-container * {
+    visibility: visible !important;
+  }
+
+  body:not(.printing-faculty-workload) .professor-workload-container {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Hide interactive / dashboard UI elements */
+  body:not(.printing-faculty-workload) .sidebar,
+  body:not(.printing-faculty-workload) .bottom-nav,
+  body:not(.printing-faculty-workload) .chatbot-container,
+  body:not(.printing-faculty-workload) .dashboard-header,
+  body:not(.printing-faculty-workload) .tab-bar,
+  body:not(.printing-faculty-workload) .pw-controls,
+  body:not(.printing-faculty-workload) .pw-print-btn,
+  body:not(.printing-faculty-workload) .pw-more-btn {
+    display: none !important;
+  }
+
+  /* Official Header Formatting */
+  body:not(.printing-faculty-workload) .pw-header {
+    border: 1.5px solid #000 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 20px !important;
+    border-radius: 4px !important;
+  }
+
+  body:not(.printing-faculty-workload) .pw-header-logo {
+    background: transparent !important;
+    border-right: 1px solid #000 !important;
+    padding: 12px !important;
+  }
+
+  body:not(.printing-faculty-workload) .pw-header-content {
+    padding: 12px 18px !important;
+  }
+
+  body:not(.printing-faculty-workload) .pw-header-title {
+    color: #000 !important;
+    font-size: 1.25rem !important;
+  }
+
+  body:not(.printing-faculty-workload) .pw-header-subtitle {
+    color: #333 !important;
+    font-size: 0.9rem !important;
+  }
+
+  body:not(.printing-faculty-workload) .pw-header-meta {
+    background: transparent !important;
+    border-left: 1px solid #000 !important;
+    color: #000 !important;
+    padding: 10px 14px !important;
+  }
+
+  body:not(.printing-faculty-workload) .pw-header-meta > div {
+    border-bottom: 1px solid #000 !important;
+    padding: 4px 0 !important;
+  }
+
+  /* 2-Column Balanced Grid that doesn't deform */
+  body:not(.printing-faculty-workload) .workload-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  body:not(.printing-faculty-workload) .pw-card {
+    background: #ffffff !important;
+    border: 1px solid #444 !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    padding: 16px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  body:not(.printing-faculty-workload) .pw-card::before {
+    height: 4px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body:not(.printing-faculty-workload) .pw-badge {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    border: 1px solid currentColor !important;
+  }
+
+  body:not(.printing-faculty-workload) .pw-progress-bg {
+    background: #e2e8f0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body:not(.printing-faculty-workload) .pw-progress-fill {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body:not(.printing-faculty-workload) .pw-assignment-item {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-left: 3px solid var(--status-color) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

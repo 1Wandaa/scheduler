@@ -803,7 +803,7 @@ const Dashboard = ({ user, onLogout }) => {
           {isAdmin && actualActiveTab === 'subjects' && <SubjectManagement subjects={subjects} professors={professors} sections={sections} schedules={displaySchedules} availableSemesters={availableSemesters} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
           {isAdmin && actualActiveTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} user={user} />}
           {isAdmin && actualActiveTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
-          {isAdmin && actualActiveTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} subjects={subjects} />}
+          {isAdmin && actualActiveTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} subjects={subjects} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} />}
           {isAdmin && actualActiveTab === 'recycle-bin' && <RecycleBin user={user} onBack={() => setActiveTab('dashboard')} />}
           {isAdmin && actualActiveTab === 'activity-log' && (
             <ActivityLog

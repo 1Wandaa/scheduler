@@ -547,6 +547,16 @@ export async function exportIsoToWord(user) {
           td.style.border = '1.0pt solid #000000';
           td.setAttribute('align', 'center');
           td.setAttribute('valign', 'middle');
+        } else if (td.classList.contains('lunch-break-cell')) {
+          td.setAttribute('width', `${dayWidth * dayCount}`);
+          td.style.width = `${dayWidth * dayCount}pt`;
+          td.style.fontSize = '8pt';
+          td.style.fontWeight = 'bold';
+          td.style.letterSpacing = '2pt';
+          td.style.border = '1.0pt solid #000000';
+          td.setAttribute('align', 'center');
+          td.setAttribute('valign', 'middle');
+          td.innerHTML = '<p style="font-weight: bold; font-size: 8pt; letter-spacing: 2pt; margin: 0; padding: 0; text-align: center; color: #000000;">LUNCH BREAK</p>';
         } else {
           td.setAttribute('width', `${dayWidth}`);
           td.style.width = `${dayWidth}pt`;

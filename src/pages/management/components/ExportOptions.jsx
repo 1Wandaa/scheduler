@@ -115,30 +115,33 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             tempContainer.style.backgroundColor = 'white';
                             
                             const isoStyles = `
+                                    .printable-iso-document { width: 100%; font-family: "Times New Roman", Times, serif; color: #000; background: #fff; }
                                     .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 8.5pt; font-family: "Times New Roman", Times, serif; color: #000; }
                                     .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 3px 6px; text-align: left; }
+                                    .iso-header-table img { max-width: 55px; max-height: 52px; object-fit: contain; display: block; margin: 0 auto; }
                                     .iso-header-table .bold { font-weight: bold; }
                                     .iso-header-table .center { text-align: center; }
-                                    .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
-                                    .meta-value { font-weight: normal; text-decoration: underline; }
-                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 8pt; font-family: "Times New Roman", Times, serif; color: #000; table-layout: fixed; border: 1px solid #000; }
-                                    .iso-schedule-table tr { height: 19px; }
-                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 19px; overflow: hidden; box-sizing: border-box; }
-                                    .iso-schedule-table th { background-color: #f0f0f0 !important; padding: 4px 2px; height: 22px; font-size: 8.5pt; font-weight: bold; }
-                                    .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 7.5pt; padding: 2px 4px; }
-                                    .iso-schedule-table tr.hour-row td:not(.time-cell):not(.scheduled-cell) { border-bottom: none !important; }
-                                    .iso-schedule-table tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) { border-top: none !important; }
+                                    .meta-info { display: flex; justify-content: space-between; align-items: center; font-size: 9.5pt; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    .meta-value { font-weight: bold; text-decoration: underline; }
+                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; font-family: "Times New Roman", Times, serif; color: #000; table-layout: fixed; border: 1px solid #000; margin-bottom: 8px; }
+                                    .iso-schedule-table tr { height: 44px; }
+                                    .iso-schedule-table tr.lunch-row { height: 26px; }
+                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 44px; overflow: hidden; box-sizing: border-box; }
+                                    .iso-schedule-table td.lunch-break-cell { height: 26px; font-weight: bold; font-size: 9.5pt; letter-spacing: 2px; text-align: center; vertical-align: middle; background-color: transparent; }
+                                    .iso-schedule-table th { background-color: transparent !important; padding: 4px 2px; height: 26px; font-size: 9pt; font-weight: bold; }
+                                    .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8.5pt; padding: 2px 4px; }
                                     .iso-schedule-table td.scheduled-cell { border: 1px solid #000 !important; }
                                     .iso-schedule-table .schedule-cell { padding: 0; overflow: hidden; }
-                                    .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; line-height: 1.15; }
-                                    .cell-subject { font-weight: bold; font-size: 8.5pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-                                    .cell-professor { font-size: 7.5pt; font-weight: 600; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                    .cell-room { font-size: 7.5pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                    .signatures-section { display: flex; justify-content: space-between; margin-top: 8px; padding: 0 40px; font-size: 8.5pt; font-family: "Times New Roman", Times, serif; color: #000; }
-                                    .signature-block { text-align: left; }
-                                    .signature-block.right-aligned { text-align: left; padding-right: 40px; }
-                                    .sig-label { margin-bottom: 16px; }
-                                    .sig-name { text-decoration: underline; font-weight: bold; }
+                                    .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 4px; height: 100%; overflow: hidden; box-sizing: border-box; line-height: 1.2; }
+                                    .cell-subject { font-weight: bold; font-size: 9pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+                                    .cell-professor { font-size: 8pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                    .cell-room { font-size: 8pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                    .signatures-section { display: flex; justify-content: space-between; margin-top: 10px; padding: 0 20px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
+                                    .signature-block { text-align: left; min-width: 250px; }
+                                    .signature-block.right-aligned { text-align: left; min-width: 280px; padding-right: 40px; }
+                                    .sig-label { margin-bottom: 22px; font-size: 9pt; }
+                                    .sig-name { text-decoration: underline; font-weight: bold; font-size: 9.5pt; }
+                                    .sig-title { font-size: 8.5pt; margin-top: 2px; }
                             `;
                             
                             const roomStyles = `
@@ -452,36 +455,198 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             doc.open();
                             
                             const isoPrintStyles = `
-                                        @page { size: letter landscape; margin: 0; }
-                                        html, body { margin: 0; padding: 0; height: 100vh; overflow: hidden; }
-                                        body { font-family: "Times New Roman", Times, serif; color: #000; padding: 0.25in; box-sizing: border-box; display: flex; flex-direction: column; }
-                                        .print-wrapper { width: 100%; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-                                        .printable-iso-document { display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden; }
-                                        .printable-iso-document > div:last-child { flex-shrink: 0; margin-top: 8px !important; }
-                                        .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 8.5pt; flex-shrink: 0; }
-                                        .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 3px 6px; text-align: left; }
-                                        .iso-header-table .bold { font-weight: bold; }
-                                        .iso-header-table .center { text-align: center; }
-                                        .meta-info { display: flex; justify-content: space-between; font-size: 9pt; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; flex-shrink: 0; }
-                                        .meta-value { font-weight: normal; text-decoration: underline; }
-                                        .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 8pt; table-layout: fixed; flex: 1; height: 100%; margin: 0; border: 1px solid #000; }
-                                        .iso-schedule-table tr { height: 19px; }
-                                        .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 19px; overflow: hidden; box-sizing: border-box; }
-                                        .iso-schedule-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 3px 2px; font-size: 8.5pt; height: 22px; }
-                                        .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 7.5pt; padding: 2px 4px; }
-                                        .iso-schedule-table tr.hour-row td:not(.time-cell):not(.scheduled-cell) { border-bottom: none !important; }
-                                        .iso-schedule-table tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) { border-top: none !important; }
-                                        .iso-schedule-table td.scheduled-cell { border: 1px solid #000 !important; }
-                                        .iso-schedule-table .schedule-cell { padding: 0; overflow: hidden; }
-                                        .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 3px; height: 100%; overflow: hidden; box-sizing: border-box; line-height: 1.15; }
-                                        .cell-subject { font-weight: bold; font-size: 8.5pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-                                        .cell-professor { font-size: 7.5pt; font-weight: 600; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                        .cell-room { font-size: 7.5pt; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                        .signatures-section { display: flex; justify-content: space-between; margin-top: 8px; padding: 0 40px; font-size: 8.5pt; font-family: "Times New Roman", Times, serif; color: #000; flex-shrink: 0; }
-                                        .signature-block { text-align: left; }
-                                        .signature-block.right-aligned { text-align: left; padding-right: 40px; }
-                                        .sig-label { margin-bottom: 16px; }
-                                        .sig-name { text-decoration: underline; font-weight: bold; }
+                                        @page { 
+                                            size: landscape; 
+                                            margin: 0.25in 0.35in; 
+                                        }
+                                        *, *::before, *::after {
+                                            box-sizing: border-box !important;
+                                            -webkit-print-color-adjust: exact !important;
+                                            print-color-adjust: exact !important;
+                                        }
+                                        html, body { 
+                                            margin: 0 !important; 
+                                            padding: 0 !important; 
+                                            background: #fff !important; 
+                                            color: #000 !important;
+                                            font-family: "Times New Roman", Times, serif !important;
+                                            height: auto !important;
+                                            min-height: 0 !important;
+                                            overflow: hidden !important;
+                                        }
+                                        .print-wrapper { 
+                                            width: 100% !important; 
+                                            max-width: 100% !important;
+                                            margin: 0 !important; 
+                                            padding: 0 !important; 
+                                            page-break-after: avoid !important;
+                                            break-after: avoid !important;
+                                            page-break-inside: avoid !important;
+                                            break-inside: avoid !important;
+                                        }
+                                        .printable-iso-document { 
+                                            display: block !important; 
+                                            width: 100% !important; 
+                                            max-width: 100% !important; 
+                                            margin: 0 !important; 
+                                            padding: 0 !important; 
+                                            page-break-after: avoid !important;
+                                            break-after: avoid !important;
+                                            page-break-inside: avoid !important;
+                                            break-inside: avoid !important;
+                                        }
+                                        .iso-header-table { 
+                                            width: 100% !important; 
+                                            border-collapse: collapse !important; 
+                                            margin-bottom: 6px !important; 
+                                            font-size: 8.5pt !important; 
+                                            font-family: "Times New Roman", Times, serif !important;
+                                            page-break-inside: avoid !important;
+                                            break-inside: avoid !important;
+                                        }
+                                        .iso-header-table td, .iso-header-table th { 
+                                            border: 1px solid #000 !important; 
+                                            padding: 3px 6px !important; 
+                                            text-align: left !important; 
+                                        }
+                                        .iso-header-table img {
+                                            max-width: 55px !important;
+                                            max-height: 52px !important;
+                                            height: auto !important;
+                                            display: block !important;
+                                            margin: 0 auto !important;
+                                            object-fit: contain !important;
+                                        }
+                                        .iso-header-table .bold { font-weight: bold !important; }
+                                        .iso-header-table .center { text-align: center !important; }
+                                        .meta-info { 
+                                            display: flex !important; 
+                                            justify-content: space-between !important; 
+                                            align-items: center !important;
+                                            font-size: 9.5pt !important; 
+                                            font-weight: bold !important; 
+                                            margin-top: 2px !important;
+                                            margin-bottom: 6px !important; 
+                                            text-transform: uppercase !important; 
+                                            font-family: "Times New Roman", Times, serif !important;
+                                            page-break-inside: avoid !important;
+                                            break-inside: avoid !important;
+                                        }
+                                        .meta-value { 
+                                            font-weight: bold !important; 
+                                            text-decoration: underline !important; 
+                                        }
+                                        .iso-schedule-table { 
+                                            width: 100% !important; 
+                                            border-collapse: collapse !important; 
+                                            font-size: 8.5pt !important; 
+                                            font-family: "Times New Roman", Times, serif !important;
+                                            table-layout: fixed !important; 
+                                            margin: 0 0 6px 0 !important; 
+                                            border: 1px solid #000 !important; 
+                                            page-break-inside: avoid !important;
+                                            break-inside: avoid !important;
+                                        }
+                                        .iso-schedule-table tr { 
+                                            height: 44px !important; 
+                                        }
+                                        .iso-schedule-table tr.lunch-row { 
+                                            height: 26px !important; 
+                                        }
+                                        .iso-schedule-table th, .iso-schedule-table td { 
+                                            border: 1px solid #000 !important; 
+                                            padding: 0 !important; 
+                                            text-align: center !important; 
+                                            vertical-align: middle !important; 
+                                            height: 44px !important; 
+                                            overflow: hidden !important; 
+                                            box-sizing: border-box !important; 
+                                        }
+                                        .iso-schedule-table td.lunch-break-cell { 
+                                            height: 26px !important; 
+                                            font-weight: bold !important; 
+                                            font-size: 9.5pt !important; 
+                                            letter-spacing: 2px !important; 
+                                            text-align: center !important; 
+                                            vertical-align: middle !important; 
+                                            background-color: transparent !important; 
+                                        }
+                                        .iso-schedule-table th { 
+                                            background-color: transparent !important; 
+                                            padding: 4px 2px !important; 
+                                            font-size: 9pt !important; 
+                                            font-weight: bold !important;
+                                            height: 24px !important; 
+                                        }
+                                        .iso-schedule-table .time-cell { 
+                                            white-space: nowrap !important; 
+                                            font-weight: bold !important; 
+                                            font-size: 8.5pt !important; 
+                                            padding: 2px 4px !important; 
+                                        }
+                                        .iso-schedule-table td.scheduled-cell { 
+                                            border: 1px solid #000 !important; 
+                                        }
+                                        .iso-schedule-table .schedule-cell { 
+                                            padding: 0 !important; 
+                                            overflow: hidden !important; 
+                                        }
+                                        .cell-content { 
+                                            display: flex !important; 
+                                            flex-direction: column !important; 
+                                            align-items: center !important; 
+                                            justify-content: center !important; 
+                                            padding: 2px 4px !important; 
+                                            height: 100% !important; 
+                                            overflow: hidden !important; 
+                                            box-sizing: border-box !important; 
+                                            line-height: 1.2 !important; 
+                                        }
+                                        .cell-subject { 
+                                            font-weight: bold !important; 
+                                            font-size: 9pt !important; 
+                                            line-height: 1.2 !important; 
+                                            white-space: nowrap !important; 
+                                            overflow: hidden !important; 
+                                            text-overflow: ellipsis !important; 
+                                            max-width: 100% !important; 
+                                        }
+                                        .cell-professor { 
+                                            font-size: 8pt !important; 
+                                            line-height: 1.2 !important; 
+                                            white-space: nowrap !important; 
+                                            overflow: hidden !important; 
+                                            text-overflow: ellipsis !important; 
+                                            max-width: 100% !important; 
+                                            margin-top: 1px !important; 
+                                        }
+                                        .cell-room { 
+                                            font-size: 8pt !important; 
+                                            line-height: 1.2 !important; 
+                                            white-space: nowrap !important; 
+                                            overflow: hidden !important; 
+                                            text-overflow: ellipsis !important; 
+                                            max-width: 100% !important; 
+                                            margin-top: 1px !important; 
+                                        }
+                                        .signatures-section { 
+                                            display: flex !important; 
+                                            justify-content: space-between !important; 
+                                            margin-top: 10px !important; 
+                                            padding: 0 20px !important; 
+                                            font-size: 9pt !important; 
+                                            font-family: "Times New Roman", Times, serif !important; 
+                                            color: #000 !important; 
+                                            page-break-inside: avoid !important;
+                                            break-inside: avoid !important;
+                                            page-break-after: avoid !important;
+                                            break-after: avoid !important; 
+                                        }
+                                        .signature-block { text-align: left !important; min-width: 250px !important; }
+                                        .signature-block.right-aligned { text-align: left !important; min-width: 280px !important; padding-right: 40px !important; }
+                                        .sig-label { margin-bottom: 22px !important; font-size: 9pt !important; }
+                                        .sig-name { text-decoration: underline !important; font-weight: bold !important; font-size: 9.5pt !important; }
+                                        .sig-title { font-size: 8.5pt !important; margin-top: 2px !important; }
                             `;
                             
                             const roomPrintStyles = `
@@ -784,19 +949,19 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             let printHtml = printContent.innerHTML;
                             if (isRoom) {
                                 printHtml = printHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-                                const origImg = printContent.querySelector('img');
-                                if (origImg && origImg.complete && origImg.naturalWidth > 0) {
-                                    try {
-                                        const c = document.createElement('canvas');
-                                        c.width = origImg.naturalWidth;
-                                        c.height = origImg.naturalHeight;
-                                        const ctx = c.getContext('2d');
-                                        ctx.drawImage(origImg, 0, 0);
-                                        const dataUrl = c.toDataURL('image/png');
-                                        printHtml = printHtml.replace(/<img[^>]+src="[^"]+"[^>]*>/i, (m) => m.replace(/src="[^"]+"/, `src="${dataUrl}"`));
-                                    } catch {
-                                        // Keep original src
-                                    }
+                            }
+                            const origImg = printContent.querySelector('img');
+                            if (origImg && origImg.complete && origImg.naturalWidth > 0) {
+                                try {
+                                    const c = document.createElement('canvas');
+                                    c.width = origImg.naturalWidth;
+                                    c.height = origImg.naturalHeight;
+                                    const ctx = c.getContext('2d');
+                                    ctx.drawImage(origImg, 0, 0);
+                                    const dataUrl = c.toDataURL('image/png');
+                                    printHtml = printHtml.replace(/<img[^>]+src="[^"]+"[^>]*>/i, (m) => m.replace(/src="[^"]+"/, `src="${dataUrl}"`));
+                                } catch {
+                                    // Keep original src
                                 }
                             }
                             

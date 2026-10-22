@@ -3,9 +3,19 @@ import '../../styles/ProfessorWorkload.css';
 import PrintableFacultyWorkload from '../PrintableFacultyWorkload/PrintableFacultyWorkload';
 import { getScheduleTimeRange } from '../../utils/scheduleUtils';
 
-function ProfessorWorkload({ professors, schedules, departments = [], subjects = [] }) {
+function ProfessorWorkload({ 
+  professors, 
+  schedules, 
+  departments = [], 
+  subjects = [],
+  activeSemester,
+  activeSchoolYear,
+  semesterInfo
+}) {
   const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
+
+  const derivedSemesterInfo = semesterInfo || (activeSemester && activeSchoolYear ? `${activeSemester}, School Year ${activeSchoolYear}` : '1st Semester, School Year 2026-2027');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('All');
@@ -15,6 +25,7 @@ function ProfessorWorkload({ professors, schedules, departments = [], subjects =
 
   useEffect(() => {
     const handleAfterPrint = () => {
+      document.body.classList.remove('printing-faculty-workload');
       setPrintingProf(null);
       document.title = "SMARTSCHED";
     };
@@ -24,10 +35,11 @@ function ProfessorWorkload({ professors, schedules, departments = [], subjects =
 
   const handlePrint = (prof) => {
     document.title = ""; // Strips "SMARTSCHED" from browser print header
+    document.body.classList.add('printing-faculty-workload');
     setPrintingProf(prof);
     setTimeout(() => {
       window.print();
-    }, 200);
+    }, 250);
   };
 
   const toggleExpanded = (profId) => {
@@ -185,6 +197,17 @@ function ProfessorWorkload({ professors, schedules, departments = [], subjects =
           <option value="name">Sort by Name</option>
           <option value="utilization">Sort by Highest Workload</option>
         </select>
+        <button 
+          className="pw-report-print-btn" 
+          onClick={() => {
+            document.title = "Faculty Workload Report - Capiz State University";
+            window.print();
+          }}
+          title="Print Faculty Workload Report"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          Print Report
+        </button>
       </div>
 
       {/* --- Cards Grid --- */}
@@ -287,6 +310,7 @@ function ProfessorWorkload({ professors, schedules, departments = [], subjects =
           professor={printingProf} 
           schedules={printingProf.profSchedules}
           departments={departments}
+          semesterInfo={derivedSemesterInfo}
         />
       )}
     </div>
