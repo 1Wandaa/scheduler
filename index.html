@@ -29,29 +29,31 @@
   <meta name="bingbot" content="index, follow">
   <meta name="google-site-verification" content="0kIa0PuknynjWYw5FssubGfvwVpow9PqE6s88-0HVoY" />
 
-  <!-- Structured Data (JSON-LD) for Google Rich Results & Knowledge Graph -->
+  <!-- Structured Data (JSON-LD) for Google Site Name (https://developers.google.com/search/docs/appearance/site-names) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "SMARTSCHED",
+    "alternateName": [
+      "CAPSU SMARTSCHED",
+      "SMART SCHED"
+    ],
+    "url": "https://scheduler-app2503.web.app/"
+  }
+  </script>
+
+  <!-- Structured Data (JSON-LD) for Application & Organization -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": "WebSite",
-        "@id": "https://scheduler-app2503.web.app/#website",
-        "url": "https://scheduler-app2503.web.app/",
-        "name": "SMARTSCHED",
-        "alternateName": [
-          "SMART SCHED",
-          "CAPSU SMARTSCHED",
-          "CAPSU AI Scheduler",
-          "CAPSU Timetable Generator"
-        ],
-        "description": "Official AI-powered academic scheduling and timetable system for Capiz State University (CAPSU).",
-        "publisher": {
-          "@type": "EducationalOrganization",
-          "name": "Capiz State University",
-          "url": "https://www.capsu.edu.ph",
-          "logo": "https://scheduler-app2503.web.app/app-icon-512-any.png"
-        }
+        "@type": "EducationalOrganization",
+        "@id": "https://scheduler-app2503.web.app/#organization",
+        "name": "Capiz State University",
+        "url": "https://www.capsu.edu.ph",
+        "logo": "https://scheduler-app2503.web.app/app-icon-512-any.png"
       },
       {
         "@type": "WebApplication",
