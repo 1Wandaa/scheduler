@@ -351,7 +351,18 @@ const AutocompleteMultiSelect = ({
                     </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      {renderOption ? renderOption(opt) : <span className="default-option">{opt.name || opt.code || opt.id}</span>}
+                      {renderOption ? renderOption(opt) : (
+                        <span className="default-option" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                          {opt.code && opt.name && opt.code !== opt.name ? (
+                            <>
+                              <strong style={{ color: 'var(--accent-dark, #0f172a)', minWidth: '70px', flexShrink: 0 }}>{opt.code}</strong>
+                              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opt.name}</span>
+                            </>
+                          ) : (
+                            <span>{opt.name || opt.code || opt.id}</span>
+                          )}
+                        </span>
+                      )}
                     </div>
 
                     {isSelected && (

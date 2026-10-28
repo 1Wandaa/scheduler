@@ -8,6 +8,7 @@ import { DEPARTMENTS, getDeptColor, PROGRAM_DEPARTMENTS } from '../../config/con
 import QuickCreateModal from '../../components/QuickCreateModal/QuickCreateModal';
 import AutocompleteMultiSelect from '../../components/AutocompleteMultiSelect/AutocompleteMultiSelect';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
+import { detectLabRequirement, suggestDepartmentFromCode } from '../../utils/subjectLabDetector';
 import {
   Building2,
   BookOpen,
@@ -21,7 +22,16 @@ import {
   ArrowLeft,
   ArrowRightLeft,
   Check,
-  FlaskConical
+  FlaskConical,
+  Monitor,
+  Utensils,
+  Clock,
+  Layers,
+  Sliders,
+  CheckSquare,
+  Square,
+  UserCheck,
+  GraduationCap
 } from 'lucide-react';
 import './AssignmentHub.css';
 
@@ -119,6 +129,7 @@ const AssignmentHub = ({
   subjects = [],
   departments = [],
   courses = [],
+  rooms = [],
   activeSemester,
   user,
   onBack
@@ -130,12 +141,25 @@ const AssignmentHub = ({
   const [onlyLecLab, setOnlyLecLab] = useState(false);
   const [quickCreateState, setQuickCreateState] = useState({ isOpen: false, type: 'subject' });
 
-  // Modal state for editing an entity's assignments in-depth
+  // Modal state for editing an entity's in-depth configuration & connections
   const [editingEntity, setEditingEntity] = useState(null); // { type: 'section'|'faculty'|'subject', item: obj }
+  const [stagedEntityForm, setStagedEntityForm] = useState({});
+  const [modalError, setModalError] = useState(null);
+  const [userLabModified, setUserLabModified] = useState(false);
+  const [autoDetectedReason, setAutoDetectedReason] = useState(null);
   const [stagedAssignedSubjects, setStagedAssignedSubjects] = useState([]);
   const [stagedAssignedSections, setStagedAssignedSections] = useState([]);
   const [stagedFacultyMap, setStagedFacultyMap] = useState({}); // for section: subjectRef -> profId, for faculty: secId -> [subjectRefs]
   const [isSaving, setIsSaving] = useState(false);
+
+  const availableDepts = useMemo(() => {
+    return departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
+  }, [departments]);
+
+  const availablePrograms = useMemo(() => {
+    if (courses.length > 0) return courses.map(c => c.code || c.name);
+    return availableDepts;
+  }, [courses, availableDepts]);
 
   // --- High-Performance Pre-Indexed Lookups (O(1)) ---
   const subjectLookup = useMemo(() => {
@@ -706,9 +730,54 @@ const AssignmentHub = ({
     }
   };
 
+  const handleSubjectCodeChange = (newCode) => {
+    const suggestedDept = suggestDepartmentFromCode(newCode);
+    setStagedEntityForm(prev => {
+      let nextDepts = [...(prev.departments || [])];
+      if (suggestedDept && !nextDepts.includes(suggestedDept)) {
+        nextDepts.push(suggestedDept);
+      }
+      const nextForm = {
+        ...prev,
+        code: newCode,
+        departments: nextDepts
+      };
+      if (!userLabModified) {
+        const detection = detectLabRequirement(nextForm, subjects);
+        setAutoDetectedReason(detection.reason);
+        return {
+          ...nextForm,
+          requiredLab: detection.requiredLab,
+          isFoodLab: detection.isFoodLab
+        };
+      }
+      return nextForm;
+    });
+  };
+
+  const handleSubjectDepartmentToggle = (dept) => {
+    setStagedEntityForm(prev => {
+      const cur = prev.departments || [];
+      const updated = cur.includes(dept) ? cur.filter(d => d !== dept) : [...cur, dept];
+      const nextForm = { ...prev, departments: updated };
+      if (!userLabModified) {
+        const detection = detectLabRequirement(nextForm, subjects);
+        setAutoDetectedReason(detection.reason);
+        return {
+          ...nextForm,
+          requiredLab: detection.requiredLab,
+          isFoodLab: detection.isFoodLab
+        };
+      }
+      return nextForm;
+    });
+  };
+
   // --- Open Edit Modal for an Entity ---
   const handleOpenEditModal = (type, item) => {
     setEditingEntity({ type, item });
+    setModalError(null);
+
     if (type === 'section') {
       const subInstructorMap = { ...(item.subjectInstructors || {}) };
       (item.subjects || []).forEach(subRef => {
@@ -734,8 +803,15 @@ const AssignmentHub = ({
         }
       });
 
+      setStagedEntityForm({
+        id: item.id || '',
+        name: item.name || '',
+        program: item.program || availablePrograms[0] || 'BSCS',
+        yearLevel: Number(item.yearLevel) || 1
+      });
       setStagedAssignedSubjects(uniqueSubs);
       setStagedFacultyMap(subInstructorMap);
+
     } else if (type === 'faculty') {
       const secSubjectMap = { ...(item.sectionSubjectMap || {}) };
       const assignedSecs = item.assignedSections || [];
@@ -772,10 +848,75 @@ const AssignmentHub = ({
         }
       });
 
+      let fName = item.firstName || '';
+      let lName = item.lastName || '';
+      if (!fName && !lName && item.name) {
+        if (item.name.includes(',')) {
+          const parts = item.name.split(',');
+          lName = parts[0].trim();
+          fName = parts.slice(1).join(',').trim();
+        } else {
+          const titles = ['Dr.', 'Prof.', 'Mr.', 'Mrs.', 'Ms.', 'Engr.', 'Atty.'];
+          let parts = item.name.trim().split(/\s+/);
+          let title = '';
+          if (parts.length > 0 && titles.includes(parts[0])) title = parts.shift();
+          if (parts.length >= 2) {
+            lName = parts.pop();
+            fName = (title ? title + ' ' : '') + parts.join(' ');
+          } else {
+            lName = item.name;
+          }
+        }
+      }
+
+      setStagedEntityForm({
+        id: item.id || '',
+        firstName: fName,
+        lastName: lName,
+        department: item.department || availableDepts[0] || 'BSCS',
+        maxUnits: item.maxUnits !== undefined ? Number(item.maxUnits) : 12,
+        preferredRooms: item.preferredRooms || []
+      });
       setStagedAssignedSections(uniqueSecs);
       setStagedAssignedSubjects(uniqueSpecs);
       setStagedFacultyMap(secSubjectMap);
+
     } else if (type === 'subject') {
+      const depts = Array.isArray(item.departments) && item.departments.length > 0
+        ? item.departments
+        : (item.department ? [item.department] : []);
+
+      const cat = item.category || 'Major';
+      const sem = (item.semester && item.semester !== 'Both')
+        ? item.semester
+        : (cat === 'Minor' ? 'Both' : (activeSemester || '1st Semester'));
+
+      const detection = detectLabRequirement({
+        code: item.code,
+        name: item.name,
+        category: cat,
+        departments: depts
+      }, subjects);
+
+      setAutoDetectedReason(detection.reason);
+      setUserLabModified(true);
+
+      setStagedEntityForm({
+        id: item.id || '',
+        code: item.code || '',
+        name: item.name || '',
+        category: cat,
+        departments: depts,
+        credits: item.credits !== undefined ? Number(item.credits) : 3,
+        hoursPerMeeting: item.hoursPerMeeting !== undefined ? Number(item.hoursPerMeeting) : 1.5,
+        semester: sem,
+        hasLecLab: Boolean(item.hasLecLab),
+        requiredLab: Boolean(item.requiredLab),
+        isFoodLab: Boolean(item.isFoodLab),
+        lectureHours: item.lectureHours !== undefined ? Number(item.lectureHours) : 2,
+        labHours: item.labHours !== undefined ? Number(item.labHours) : 3,
+      });
+
       const enrolled = sections.filter(s =>
         (s.subjects || []).some(sub => String(sub) === String(item.id) || String(sub) === String(item.code) || String(sub) === String(item.name))
       ).map(s => s.id);
@@ -790,14 +931,32 @@ const AssignmentHub = ({
   // --- Save Staged Entity in Modal ---
   const handleSaveModal = async () => {
     if (!editingEntity) return;
+    setModalError(null);
     setIsSaving(true);
     try {
       const batch = writeBatch(db);
       const { type, item } = editingEntity;
 
       if (type === 'section') {
-        // 1. Update section's subjects and subjectInstructors mapping
+        const name = (stagedEntityForm.name || '').trim();
+        const program = stagedEntityForm.program;
+        if (!name || !program) {
+          setModalError("Section name and program are required.");
+          setIsSaving(false);
+          return;
+        }
+        const isDuplicate = sections.some(s => String(s.id) !== String(item.id) && s.name?.trim().toUpperCase() === name.toUpperCase());
+        if (isDuplicate) {
+          setModalError(`A section named "${name}" already exists.`);
+          setIsSaving(false);
+          return;
+        }
+
+        // 1. Update section's document
         batch.update(doc(db, 'sections', String(item.id)), {
+          name,
+          program,
+          yearLevel: Number(stagedEntityForm.yearLevel) || 1,
           subjects: stagedAssignedSubjects,
           subjectInstructors: stagedFacultyMap
         });
@@ -816,7 +975,7 @@ const AssignmentHub = ({
           const prof = professors.find(p => p.id === pId);
           if (prof) {
             const curSecs = prof.assignedSections || [];
-            const newSecs = curSecs.some(id => String(id) === String(item.id) || (item.name && String(id) === String(item.name)))
+            const newSecs = curSecs.some(id => String(id) === String(item.id) || (name && String(id) === String(name)) || (item.name && String(id) === String(item.name)))
               ? curSecs
               : [...curSecs, item.id];
 
@@ -844,10 +1003,11 @@ const AssignmentHub = ({
         professors.forEach(prof => {
           const hadSec = (prof.assignedSections || []).some(id => String(id) === String(item.id) || (item.name && String(id) === String(item.name)));
           if (hadSec && !profToSubjects[prof.id]) {
-            const newSecs = (prof.assignedSections || []).filter(s => String(s) !== String(item.id) && String(s) !== String(item.name));
+            const newSecs = (prof.assignedSections || []).filter(s => String(s) !== String(item.id) && String(s) !== String(item.name) && String(s) !== String(name));
             const newMap = { ...(prof.sectionSubjectMap || {}) };
             delete newMap[item.id];
             delete newMap[item.name];
+            delete newMap[name];
 
             batch.update(doc(db, 'professors', String(prof.id)), {
               assignedSections: newSecs,
@@ -855,15 +1015,44 @@ const AssignmentHub = ({
             });
           }
         });
+
+        logActivity({
+          user,
+          action: LOG_ACTIONS.UPDATE_SECTION,
+          details: `Updated section: ${name} (${program})`
+        });
+        toast.success(`Section ${name} saved successfully!`);
+
       } else if (type === 'faculty') {
-        // 1. Update professor's assignedSections, specialization, and sectionSubjectMap
+        const fName = (stagedEntityForm.firstName || '').trim();
+        const lName = (stagedEntityForm.lastName || '').trim();
+        if (!fName || !lName) {
+          setModalError("First and last names are required.");
+          setIsSaving(false);
+          return;
+        }
+        const combinedName = `${lName}, ${fName}`;
+        const isDuplicate = professors.some(p => String(p.id) !== String(item.id) && (p.name || '').trim().toLowerCase() === combinedName.toLowerCase());
+        if (isDuplicate) {
+          setModalError(`A faculty member named "${combinedName}" already exists.`);
+          setIsSaving(false);
+          return;
+        }
+
+        // 1. Update professor doc
         batch.update(doc(db, 'professors', String(item.id)), {
+          firstName: fName,
+          lastName: lName,
+          name: combinedName,
+          department: stagedEntityForm.department,
+          maxUnits: Number(stagedEntityForm.maxUnits) || 12,
+          preferredRooms: stagedEntityForm.preferredRooms || [],
           specialization: stagedAssignedSubjects,
           assignedSections: stagedAssignedSections,
           sectionSubjectMap: stagedFacultyMap
         });
 
-        // 2. Synchronize the sections to reflect this professor's specific subject assignments
+        // 2. Synchronize sections to reflect this professor's specific subject assignments
         sections.forEach(sec => {
           const isNowAssignedSection = stagedAssignedSections.some(id => String(id) === String(sec.id) || String(id) === String(sec.name));
           const wasAssignedSection = (item.assignedSections || []).some(id => String(id) === String(sec.id) || String(id) === String(sec.name));
@@ -875,7 +1064,6 @@ const AssignmentHub = ({
           if (isNowAssignedSection) {
             const chosenSubs = stagedFacultyMap[sec.id] || [];
             
-            // Add new assignments
             chosenSubs.forEach(subRef => {
               const subObj = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
               const val = subObj?.id || subObj?.code || subRef;
@@ -884,7 +1072,6 @@ const AssignmentHub = ({
                 updatedSubjs.push(val);
                 secChanged = true;
               }
-              // Set this professor as the instructor for this subject in the section
               if (updatedSubjectInstructors[val] !== item.id) {
                 updatedSubjectInstructors[val] = item.id;
                 secChanged = true;
@@ -895,7 +1082,6 @@ const AssignmentHub = ({
               }
             });
 
-            // Remove assignments that were unchecked for this section
             const oldChosenSubs = item.sectionSubjectMap?.[sec.id] || [];
             oldChosenSubs.forEach(oldSubRef => {
               const subObj = subjects.find(s => String(s.id) === String(oldSubRef) || String(s.code) === String(oldSubRef) || String(s.name) === String(oldSubRef));
@@ -915,7 +1101,6 @@ const AssignmentHub = ({
             });
             
           } else if (wasAssignedSection) {
-            // Professor is completely removed from this section
             const oldChosenSubs = item.sectionSubjectMap?.[sec.id] || [];
             oldChosenSubs.forEach(oldSubRef => {
               const subObj = subjects.find(s => String(s.id) === String(oldSubRef) || String(s.code) === String(oldSubRef) || String(s.name) === String(oldSubRef));
@@ -938,19 +1123,71 @@ const AssignmentHub = ({
             });
           }
         });
+
+        logActivity({
+          user,
+          action: LOG_ACTIONS.UPDATE_FACULTY,
+          details: `Updated faculty: ${combinedName} (${stagedEntityForm.department})`
+        });
+        toast.success(`Faculty ${combinedName} saved successfully!`);
+
       } else if (type === 'subject') {
-        const code = item.code || item.id;
-        
-        // 1. Sync sections & update professors who might have been removed from these sections
+        const code = (stagedEntityForm.code || '').trim().toUpperCase();
+        const name = (stagedEntityForm.name || '').trim();
+        if (!code || !name) {
+          setModalError("Subject code and name are required.");
+          setIsSaving(false);
+          return;
+        }
+        if (stagedEntityForm.category !== 'Minor' && (!stagedEntityForm.departments || stagedEntityForm.departments.length === 0)) {
+          setModalError("Major subjects must have at least one department assigned.");
+          setIsSaving(false);
+          return;
+        }
+        const isCodeDuplicate = subjects.some(s => String(s.id) !== String(item.id) && s.code?.trim().toUpperCase() === code);
+        if (isCodeDuplicate) {
+          setModalError(`A subject with the code "${code}" already exists.`);
+          setIsSaving(false);
+          return;
+        }
+        const isNameDuplicate = subjects.some(s => String(s.id) !== String(item.id) && s.name?.trim().toLowerCase() === name.toLowerCase());
+        if (isNameDuplicate) {
+          setModalError(`A subject named "${name}" already exists.`);
+          setIsSaving(false);
+          return;
+        }
+
+        const subjectDocPayload = {
+          code,
+          name,
+          category: stagedEntityForm.category || 'Major',
+          departments: stagedEntityForm.departments || [],
+          department: stagedEntityForm.departments?.[0] || (stagedEntityForm.category === 'Minor' ? 'SHARED' : ''),
+          credits: Number(stagedEntityForm.credits) || 3,
+          semester: stagedEntityForm.semester || activeSemester || '1st Semester',
+          hasLecLab: Boolean(stagedEntityForm.hasLecLab),
+          requiredLab: Boolean(stagedEntityForm.requiredLab),
+          isFoodLab: Boolean(stagedEntityForm.isFoodLab),
+          lectureHours: Number(stagedEntityForm.lectureHours) || 2,
+          labHours: Number(stagedEntityForm.labHours) || 3,
+          hoursPerMeeting: Number(stagedEntityForm.hoursPerMeeting) || 1.5,
+        };
+
+        // 1. Update the subject document in Firestore!
+        batch.update(doc(db, 'subjects', String(item.id)), subjectDocPayload);
+
+        // 2. Sync sections
+        const oldCode = item.code || item.id;
         sections.forEach(sec => {
-          const wasEnrolled = (sec.subjects || []).some(s => String(s) === String(item.id) || String(s) === String(code));
+          const wasEnrolled = (sec.subjects || []).some(s => String(s) === String(item.id) || String(s) === String(oldCode) || String(s) === String(code));
           const isNowEnrolled = stagedAssignedSections.some(id => String(id) === String(sec.id) || String(id) === String(sec.name));
 
           if (!wasEnrolled && isNowEnrolled) {
             batch.update(doc(db, 'sections', String(sec.id)), { subjects: [...(sec.subjects || []), code] });
           } else if (wasEnrolled && !isNowEnrolled) {
-            const updated = (sec.subjects || []).filter(s => String(s) !== String(item.id) && String(s) !== String(code));
+            const updated = (sec.subjects || []).filter(s => String(s) !== String(item.id) && String(s) !== String(oldCode) && String(s) !== String(code));
             const updatedInst = { ...(sec.subjectInstructors || {}) };
+            delete updatedInst[oldCode];
             delete updatedInst[code];
             delete updatedInst[item.id];
             
@@ -959,13 +1196,12 @@ const AssignmentHub = ({
               subjectInstructors: updatedInst
             });
 
-            // If we unenroll a section from this subject, we must remove this subject from ANY professor's sectionSubjectMap
+            // Clean professor map
             professors.forEach(prof => {
               const curMap = { ...(prof.sectionSubjectMap || {}) };
               const secSubs = curMap[sec.id] || [];
-              if (secSubs.some(s => String(s) === String(item.id) || String(s) === String(code))) {
-                const newSecSubs = secSubs.filter(s => String(s) !== String(item.id) && String(s) !== String(code));
-                
+              if (secSubs.some(s => String(s) === String(item.id) || String(s) === String(oldCode) || String(s) === String(code))) {
+                const newSecSubs = secSubs.filter(s => String(s) !== String(item.id) && String(s) !== String(oldCode) && String(s) !== String(code));
                 let newSecs = [...(prof.assignedSections || [])];
                 if (newSecSubs.length === 0) {
                   delete curMap[sec.id];
@@ -973,39 +1209,59 @@ const AssignmentHub = ({
                 } else {
                   curMap[sec.id] = newSecSubs;
                 }
-                
                 batch.update(doc(db, 'professors', String(prof.id)), {
                   sectionSubjectMap: curMap,
                   assignedSections: newSecs
                 });
               }
             });
+          } else if (wasEnrolled && isNowEnrolled && oldCode !== code) {
+            const updated = (sec.subjects || []).map(s => (String(s) === String(oldCode) || String(s) === String(item.id)) ? code : s);
+            const updatedInst = { ...(sec.subjectInstructors || {}) };
+            if (updatedInst[oldCode]) {
+              updatedInst[code] = updatedInst[oldCode];
+              delete updatedInst[oldCode];
+            }
+            batch.update(doc(db, 'sections', String(sec.id)), {
+              subjects: updated,
+              subjectInstructors: updatedInst
+            });
           }
         });
 
-        // 2. Sync professors' specializations
+        // 3. Sync professors' specializations
         const profIds = stagedFacultyMap.assignedProfessors || [];
         professors.forEach(prof => {
-          const wasAssigned = (prof.specialization || []).some(s => String(s) === String(item.id) || String(s) === String(code));
+          const wasAssigned = (prof.specialization || []).some(s => String(s) === String(item.id) || String(s) === String(oldCode) || String(s) === String(code));
           const isNowAssigned = profIds.some(id => String(id) === String(prof.id));
 
           if (!wasAssigned && isNowAssigned) {
             batch.update(doc(db, 'professors', String(prof.id)), { specialization: [...(prof.specialization || []), code] });
           } else if (wasAssigned && !isNowAssigned) {
-            const updated = (prof.specialization || []).filter(s => String(s) !== String(item.id) && String(s) !== String(code));
+            const updated = (prof.specialization || []).filter(s => String(s) !== String(item.id) && String(s) !== String(oldCode) && String(s) !== String(code));
+            batch.update(doc(db, 'professors', String(prof.id)), { specialization: updated });
+          } else if (wasAssigned && isNowAssigned && oldCode !== code) {
+            const updated = (prof.specialization || []).map(s => (String(s) === String(oldCode) || String(s) === String(item.id)) ? code : s);
             batch.update(doc(db, 'professors', String(prof.id)), { specialization: updated });
           }
         });
+
+        logActivity({
+          user,
+          action: LOG_ACTIONS.UPDATE_SUBJECT,
+          details: `Updated subject: ${code} - ${name} (${subjectDocPayload.credits} units)`
+        });
+        toast.success(`Subject ${code} saved successfully!`);
       }
 
       await batch.commit();
       assignedProfCache.current.clear();
       subjectProfOptionsCache.current.clear();
-      toast.success("Assignments updated successfully!");
       setEditingEntity(null);
     } catch (err) {
       console.error("Error saving assignments modal:", err);
-      toast.error("Failed to save changes.");
+      toast.error("Failed to save changes. Please try again.");
+      setModalError("Failed to save changes. Please check fields and try again.");
     } finally {
       setIsSaving(false);
     }
@@ -1142,8 +1398,13 @@ const AssignmentHub = ({
       padding: '3px 10px', borderRadius: '16px',
       background: 'rgba(86, 69, 238, 0.12)', border: '1px solid rgba(86, 69, 238, 0.3)',
       fontSize: '0.78rem', fontWeight: '600', color: 'var(--accent-primary, #5645ee)'
-    }}>
-      <span>{sub.code || sub.name}</span>
+    }} title={sub.name ? `${sub.code ? `${sub.code} - ` : ''}${sub.name}` : undefined}>
+      <span style={{ fontWeight: '700' }}>{sub.code || sub.name}</span>
+      {sub.name && sub.code && sub.name !== sub.code && (
+        <span style={{ fontSize: '0.72rem', opacity: 0.85, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          ({sub.name})
+        </span>
+      )}
       {sub.hasLecLab && (
         <span style={{ fontSize: '0.62rem', background: 'rgba(147, 51, 234, 0.2)', color: '#7e22ce', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>
           Lec+Lab
@@ -1158,6 +1419,75 @@ const AssignmentHub = ({
       </button>
     </div>
   );
+
+  // Render option helper for AutocompleteMultiSelect in modal
+  const renderSubjectOption = (sub) => {
+    const hasDistinctCode = sub.code && sub.name && sub.code !== sub.name;
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', minWidth: 0 }}>
+        {hasDistinctCode ? (
+          <>
+            <span 
+              className="hub-subject-code" 
+              style={{ 
+                color: 'var(--accent-dark, #0f172a)', 
+                minWidth: '85px', 
+                flexShrink: 0,
+                fontWeight: '700'
+              }}
+            >
+              {sub.code}
+            </span>
+            <span 
+              style={{ 
+                flex: 1, 
+                minWidth: 0, 
+                color: 'var(--text-main, #1e293b)', 
+                fontSize: '0.82rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+              title={sub.name}
+            >
+              {sub.name}
+            </span>
+          </>
+        ) : (
+          <span 
+            style={{ 
+              flex: 1, 
+              minWidth: 0, 
+              color: 'var(--text-main, #1e293b)', 
+              fontSize: '0.84rem',
+              fontWeight: '600'
+            }}
+          >
+            {sub.code || sub.name || sub.id}
+          </span>
+        )}
+        {sub.hasLecLab && (
+          <span className="hub-tag-leclab" style={{ flexShrink: 0 }}>
+            <FlaskConical size={10} />
+            Lec & Lab
+          </span>
+        )}
+        {sub.credits && (
+          <span style={{ 
+            fontSize: '0.68rem', 
+            padding: '1px 6px', 
+            borderRadius: '4px', 
+            background: 'rgba(86, 69, 238, 0.08)', 
+            color: 'var(--accent-primary, #5645ee)', 
+            fontWeight: '700',
+            flexShrink: 0
+          }}>
+            {sub.credits}u
+          </span>
+        )}
+      </div>
+    );
+  };
 
   const renderSectionChip = (sec, onRemove) => (
     <div style={{
@@ -1177,6 +1507,22 @@ const AssignmentHub = ({
     </div>
   );
 
+  const renderSectionOption = (sec) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', minWidth: 0 }}>
+      <span style={{ fontWeight: '700', color: 'var(--accent-dark, #0f172a)', fontSize: '0.84rem' }}>{sec.name}</span>
+      {sec.program && (
+        <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.1)', color: '#059669', fontWeight: '600' }}>
+          {sec.program}
+        </span>
+      )}
+      {sec.yearLevel && (
+        <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'var(--bg-main)', color: 'var(--text-muted)', border: '1px solid var(--border-color)', fontWeight: '600' }}>
+          Y{sec.yearLevel}
+        </span>
+      )}
+    </div>
+  );
+
   const renderFacultyChip = (prof, onRemove) => (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '6px',
@@ -1192,6 +1538,52 @@ const AssignmentHub = ({
       >
         ×
       </button>
+    </div>
+  );
+
+  const renderFacultyOption = (prof) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', minWidth: 0 }}>
+      <span style={{ fontWeight: '600', color: 'var(--text-main, #1e293b)', fontSize: '0.84rem', flex: 1 }}>
+        {prof.name || `${prof.lastName}, ${prof.firstName}`}
+      </span>
+      {prof.department && (
+        <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb', fontWeight: '700' }}>
+          {prof.department}
+        </span>
+      )}
+    </div>
+  );
+
+  const renderRoomChip = (room, onRemove) => {
+    const r = typeof room === 'object' && room !== null ? room : { name: room, id: room };
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '6px',
+        padding: '3px 10px', borderRadius: '16px',
+        background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.25)',
+        fontSize: '0.78rem', fontWeight: '600', color: '#2563eb'
+      }}>
+        <span>{r.name || r.id}</span>
+        {r.type && <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>({r.type})</span>}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7 }}
+        >
+          ×
+        </button>
+      </div>
+    );
+  };
+
+  const renderRoomOption = (room) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%' }}>
+      <span style={{ fontWeight: '600', color: 'var(--text-main, #0f172a)', fontSize: '0.84rem' }}>{room.name || room.id}</span>
+      {room.type && (
+        <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'var(--bg-main)', color: 'var(--text-muted)', border: '1px solid var(--border-color)', fontWeight: '600' }}>
+          {room.type}
+        </span>
+      )}
     </div>
   );
 
@@ -1826,48 +2218,97 @@ const AssignmentHub = ({
         <div className="hub-modal-overlay">
           <div className="hub-modal-content" onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                Configure {editingEntity.type === 'section' ? `Section: ${editingEntity.item.name}` : editingEntity.type === 'faculty' ? `Faculty: ${editingEntity.item.name}` : `Subject: ${editingEntity.item.code}`}
-              </h3>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                  Configure {editingEntity.type === 'section'
+                    ? `Section: ${stagedEntityForm.name || editingEntity.item.name}`
+                    : editingEntity.type === 'faculty'
+                    ? `Faculty: ${stagedEntityForm.firstName ? `${stagedEntityForm.lastName}, ${stagedEntityForm.firstName}` : editingEntity.item.name}`
+                    : `Subject: ${stagedEntityForm.code || editingEntity.item.code}`}
+                </h3>
+                <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  Manage parameters, relations, and room preferences connected to the AI scheduling engine.
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => !isSaving && setEditingEntity(null)}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '6px', display: 'flex', alignItems: 'center', borderRadius: '6px' }}
                 title="Close"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <X size={20} />
               </button>
             </div>
 
-            {/* SECTION EDITING */}
+            {/* Error Banner */}
+            {modalError && (
+              <div className="hub-modal-error">
+                <AlertTriangle size={16} />
+                <span>{modalError}</span>
+              </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* SECTION EDITING FORM */}
+            {/* ========================================================================= */}
             {editingEntity.type === 'section' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: '8px', display: 'block' }}>Enrolled Subjects</label>
-                  <AutocompleteMultiSelect
-                    allOptions={subjects}
-                    options={subjects}
-                    selectedIds={stagedAssignedSubjects}
-                    onToggle={(item) => {
-                      const id = typeof item === 'object' && item !== null ? item.id : item;
-                      const code = typeof item === 'object' && item !== null ? item.code : null;
-                      const name = typeof item === 'object' && item !== null ? item.name : null;
-                      setStagedAssignedSubjects(prev => {
-                        const isSelected = prev.some(x => String(x) === String(id) || (code && String(x) === String(code)) || (name && String(x) === String(name)));
-                        if (isSelected) return prev.filter(x => String(x) !== String(id) && String(x) !== String(code) && String(x) !== String(name));
-                        return [...prev, id];
-                      });
-                    }}
-                    renderChip={renderSubjectChip}
-                    placeholder="Search subject to enroll..."
-                    matchIdOnly={true}
-                  />
+                {/* Card 1: Section Profile */}
+                <div className="hub-modal-section-card">
+                  <div className="hub-modal-section-header">
+                    <span className="hub-modal-section-title">
+                      <Layers size={16} color="var(--accent-primary)" />
+                      Section Details & Academic Level
+                    </span>
+                  </div>
+                  <div className="hub-form-grid-3">
+                    <div className="hub-form-field">
+                      <label className="hub-form-label">Section Name *</label>
+                      <input
+                        type="text"
+                        className="hub-form-input"
+                        value={stagedEntityForm.name || ''}
+                        onChange={e => setStagedEntityForm(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g. BSCS 3A"
+                      />
+                    </div>
+                    <div className="hub-form-field">
+                      <label className="hub-form-label">Academic Program *</label>
+                      <select
+                        className="hub-form-select"
+                        value={stagedEntityForm.program || ''}
+                        onChange={e => setStagedEntityForm(prev => ({ ...prev, program: e.target.value }))}
+                      >
+                        {availablePrograms.map(prog => (
+                          <option key={prog} value={prog}>{prog}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="hub-form-field">
+                      <label className="hub-form-label">Year Level *</label>
+                      <select
+                        className="hub-form-select"
+                        value={stagedEntityForm.yearLevel || 1}
+                        onChange={e => setStagedEntityForm(prev => ({ ...prev, yearLevel: Number(e.target.value) }))}
+                      >
+                        <option value={1}>1st Year</option>
+                        <option value={2}>2nd Year</option>
+                        <option value={3}>3rd Year</option>
+                        <option value={4}>4th Year</option>
+                        <option value={5}>5th Year</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                {stagedAssignedSubjects.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: 0 }}>Assigned Instructor per Subject</label>
+                {/* Card 2: Enrolled Subjects & Teacher Assignments */}
+                <div className="hub-modal-section-card">
+                  <div className="hub-modal-section-header">
+                    <span className="hub-modal-section-title">
+                      <BookOpen size={16} color="var(--accent-primary)" />
+                      Curriculum Enrollment ({stagedAssignedSubjects.length} Subjects)
+                    </span>
+                    {stagedAssignedSubjects.length > 0 && (
                       <button
                         type="button"
                         onClick={handleAutoAssignStagedTeachers}
@@ -1876,228 +2317,629 @@ const AssignmentHub = ({
                       >
                         <Sparkles size={13} /> Auto-Assign Teachers
                       </button>
-                    </div>
-                    {stagedAssignedSubjects.map(subRef => {
-                      const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef, name: subRef };
-                      const subKey = sub.id || sub.code;
-                      const curProfId = stagedFacultyMap[subKey] || stagedFacultyMap[subRef] || '';
-                      const specProfs = professors.filter(p => (p.specialization || []).some(sp => String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name))).sort((a, b) => {
-                        const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
-                        const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
-                        return nameA.localeCompare(nameB);
-                      });
-                      
-                      const otherProfs = professors.filter(p => !specProfs.some(sp => sp.id === p.id)).sort((a, b) => {
-                        const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
-                        const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
-                        return nameA.localeCompare(nameB);
-                      });
+                    )}
+                  </div>
 
-                      return (
-                        <div key={subRef} className="hub-mapping-row">
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ fontWeight: '700', fontSize: '0.85rem', color: 'var(--accent-dark)' }}>{sub.code}</span>
+                  <div className="hub-form-field">
+                    <label className="hub-form-label">Enrolled Subjects</label>
+                    <AutocompleteMultiSelect
+                      allOptions={subjects}
+                      options={subjects}
+                      selectedIds={stagedAssignedSubjects}
+                      onToggle={(item) => {
+                        const id = typeof item === 'object' && item !== null ? item.id : item;
+                        const code = typeof item === 'object' && item !== null ? item.code : null;
+                        const name = typeof item === 'object' && item !== null ? item.name : null;
+                        setStagedAssignedSubjects(prev => {
+                          const isSelected = prev.some(x => String(x) === String(id) || (code && String(x) === String(code)) || (name && String(x) === String(name)));
+                          if (isSelected) return prev.filter(x => String(x) !== String(id) && String(x) !== String(code) && String(x) !== String(name));
+                          return [...prev, id];
+                        });
+                      }}
+                      renderChip={renderSubjectChip}
+                      renderOption={renderSubjectOption}
+                      placeholder="Search subject code or name..."
+                      matchIdOnly={true}
+                    />
+                  </div>
+
+                  {stagedAssignedSubjects.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                      <label className="hub-form-label">Assigned Instructor per Subject</label>
+                      {stagedAssignedSubjects.map(subRef => {
+                        const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef, name: subRef };
+                        const subKey = sub.id || sub.code;
+                        const curProfId = stagedFacultyMap[subKey] || stagedFacultyMap[subRef] || '';
+                        const specProfs = professors.filter(p => (p.specialization || []).some(sp => String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name))).sort((a, b) => {
+                          const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
+                          const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
+                          return nameA.localeCompare(nameB);
+                        });
+                        
+                        const otherProfs = professors.filter(p => !specProfs.some(sp => sp.id === p.id)).sort((a, b) => {
+                          const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
+                          const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
+                          return nameA.localeCompare(nameB);
+                        });
+
+                        return (
+                          <div key={subRef} className="hub-mapping-row">
+                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: '700', fontSize: '0.85rem', color: 'var(--accent-dark)' }}>{sub.code}</span>
+                                {sub.hasLecLab && (
+                                  <span className="hub-tag-leclab">
+                                    <FlaskConical size={10} />
+                                    Lec & Lab
+                                  </span>
+                                )}
+                                {sub.credits && (
+                                  <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(86, 69, 238, 0.08)', color: 'var(--accent-primary)', fontWeight: '700' }}>
+                                    {sub.credits}u
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {sub.name}
+                              </span>
                               {sub.hasLecLab && (
-                                <span className="hub-tag-leclab">
-                                  <FlaskConical size={10} />
-                                  Lec & Lab
+                                <span style={{ fontSize: '0.7rem', color: '#7e22ce', fontWeight: 600, marginTop: '2px' }}>
+                                  Lec: {sub.lectureHours || 2}h/wk | Lab: {sub.labHours || 3}h/wk ({sub.isFoodLab ? 'Food Lab' : sub.requiredLab ? 'Comp Lab' : 'Lab Required'})
                                 </span>
                               )}
                             </div>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{sub.name}</span>
-                            {sub.hasLecLab && (
-                              <span style={{ fontSize: '0.7rem', color: '#7e22ce', fontWeight: 600, marginTop: '2px' }}>
-                                Lec: {sub.lectureHours || 2}h | Lab: {sub.labHours || 3}h ({sub.isFoodLab ? 'Food Lab' : sub.requiredLab ? 'Comp Lab' : 'Lab Required'})
-                              </span>
-                            )}
-                          </div>
-                          <select
-                            className="form-select"
-                            style={{ margin: 0, width: '220px', padding: '6px 10px', fontSize: '0.8rem' }}
-                            value={curProfId}
-                            onChange={e => {
-                              const val = e.target.value;
-                              setStagedFacultyMap(prev => ({
-                                ...prev,
-                                [subKey]: val,
-                                [subRef]: val
-                              }));
-                            }}
-                          >
-                            <option value="">No Instructor Assigned</option>
-                            {specProfs.length > 0 && (
-                              <optgroup label="Specialized in this subject">
-                                {specProfs.map(p => (
+                            <select
+                              className="hub-form-select"
+                              style={{ margin: 0, width: '240px', padding: '6px 10px', fontSize: '0.8rem', flexShrink: 0 }}
+                              value={curProfId}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setStagedFacultyMap(prev => ({
+                                  ...prev,
+                                  [subKey]: val,
+                                  [subRef]: val
+                                }));
+                              }}
+                            >
+                              <option value="">No Instructor Assigned</option>
+                              {specProfs.length > 0 && (
+                                <optgroup label="Specialized in this subject">
+                                  {specProfs.map(p => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              )}
+                              <optgroup label="All Faculty">
+                                {otherProfs.map(p => (
                                   <option key={p.id} value={p.id}>
                                     {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
                                   </option>
                                 ))}
                               </optgroup>
-                            )}
-                            <optgroup label="All Faculty">
-                              {otherProfs.map(p => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
-                                </option>
-                              ))}
-                            </optgroup>
-                          </select>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* FACULTY EDITING */}
+            {/* ========================================================================= */}
+            {/* FACULTY EDITING FORM */}
+            {/* ========================================================================= */}
             {editingEntity.type === 'faculty' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: '8px', display: 'block' }}>Specialization Subjects</label>
-                  <AutocompleteMultiSelect
-                    allOptions={subjects}
-                    options={subjects}
-                    selectedIds={stagedAssignedSubjects}
-                    onToggle={(item) => {
-                      const id = typeof item === 'object' && item !== null ? item.id : item;
-                      setStagedAssignedSubjects(prev => {
-                        const isSelected = prev.some(x => String(x) === String(id) || (item.code && String(x) === String(item.code)) || (item.name && String(x) === String(item.name)));
-                        if (isSelected) return prev.filter(x => String(x) !== String(id) && String(x) !== String(item.code) && String(x) !== String(item.name));
-                        return [...prev, id];
-                      });
-                    }}
-                    renderChip={renderSubjectChip}
-                    placeholder="Search subject..."
-                    matchIdOnly={true}
-                  />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: '8px', display: 'block' }}>Assigned Sections</label>
-                  <AutocompleteMultiSelect
-                    allOptions={sections}
-                    options={sections}
-                    selectedIds={stagedAssignedSections}
-                    onToggle={(item) => {
-                      const id = typeof item === 'object' && item !== null ? item.id : item;
-                      setStagedAssignedSections(prev =>
-                        prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-                      );
-                    }}
-                    renderChip={renderSectionChip}
-                    placeholder="Search section..."
-                  />
-                </div>
-
-                {stagedAssignedSections.length > 0 && stagedAssignedSubjects.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: 0 }}>Choose Specific Subject(s) Taught per Section</label>
-                    {stagedAssignedSections.map(secId => {
-                      const sec = sections.find(s => s.id === secId || s.name === secId) || { id: secId, name: secId };
-                      const chosenSubs = stagedFacultyMap[sec.id] || [];
-
-                      return (
-                        <div key={sec.id} style={{ padding: '10px 14px', background: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>{sec.name}</span>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                            {stagedAssignedSubjects.map(subRef => {
-                              const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef };
-                              const subKey = sub.id || sub.code;
-                              const isChecked = chosenSubs.some(s => String(s) === String(subKey) || String(s) === String(sub.id));
-
-                              return (
-                                <button
-                                  key={subKey}
-                                  type="button"
-                                  onClick={() => {
-                                    setStagedFacultyMap(prev => {
-                                      const current = prev[sec.id] || [];
-                                      const updated = current.some(s => String(s) === String(subKey) || String(s) === String(sub.id))
-                                        ? current.filter(s => String(s) !== String(subKey) && String(s) !== String(sub.id))
-                                        : [...current, subKey];
-                                      return { ...prev, [sec.id]: updated };
-                                    });
-                                  }}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    padding: '4px 10px',
-                                    borderRadius: '16px',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    border: isChecked ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                                    background: isChecked ? 'rgba(86, 69, 238, 0.12)' : 'var(--bg-surface)',
-                                    color: isChecked ? 'var(--accent-primary)' : 'var(--text-muted)'
-                                  }}
-                                >
-                                  {isChecked ? <Check size={12} /> : <Plus size={11} />}
-                                  <span>{sub.code}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
+                {/* Card 1: Faculty Identification & Load */}
+                <div className="hub-modal-section-card">
+                  <div className="hub-modal-section-header">
+                    <span className="hub-modal-section-title">
+                      <UserCheck size={16} color="var(--accent-primary)" />
+                      Faculty Profile & Workload Limits
+                    </span>
                   </div>
-                )}
+                  <div className="hub-form-grid-2">
+                    <div className="hub-form-field">
+                      <label className="hub-form-label">First Name *</label>
+                      <input
+                        type="text"
+                        className="hub-form-input"
+                        value={stagedEntityForm.firstName || ''}
+                        onChange={e => setStagedEntityForm(prev => ({ ...prev, firstName: e.target.value }))}
+                        placeholder="e.g. Maria"
+                      />
+                    </div>
+                    <div className="hub-form-field">
+                      <label className="hub-form-label">Last Name *</label>
+                      <input
+                        type="text"
+                        className="hub-form-input"
+                        value={stagedEntityForm.lastName || ''}
+                        onChange={e => setStagedEntityForm(prev => ({ ...prev, lastName: e.target.value }))}
+                        placeholder="e.g. Santos"
+                      />
+                    </div>
+                  </div>
+                  <div className="hub-form-grid-2">
+                    <div className="hub-form-field">
+                      <label className="hub-form-label">Primary Department *</label>
+                      <select
+                        className="hub-form-select"
+                        value={stagedEntityForm.department || ''}
+                        onChange={e => setStagedEntityForm(prev => ({ ...prev, department: e.target.value }))}
+                      >
+                        {availableDepts.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="hub-form-field">
+                      <label className="hub-form-label">Max Teaching Units (Weekly)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={36}
+                        className="hub-form-input"
+                        value={stagedEntityForm.maxUnits || 12}
+                        onChange={e => setStagedEntityForm(prev => ({ ...prev, maxUnits: Number(e.target.value) }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="hub-form-field">
+                    <label className="hub-form-label">Preferred Rooms (Scheduling Guide)</label>
+                    <AutocompleteMultiSelect
+                      allOptions={rooms}
+                      options={rooms}
+                      selectedIds={stagedEntityForm.preferredRooms || []}
+                      onToggle={(item) => {
+                        const id = typeof item === 'object' && item !== null ? (item.id || item.name) : item;
+                        setStagedEntityForm(prev => {
+                          const cur = prev.preferredRooms || [];
+                          const updated = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
+                          return { ...prev, preferredRooms: updated };
+                        });
+                      }}
+                      renderChip={renderRoomChip}
+                      renderOption={renderRoomOption}
+                      placeholder="Search and select preferred rooms..."
+                    />
+                  </div>
+                </div>
+
+                {/* Card 2: Specializations & Assigned Sections */}
+                <div className="hub-modal-section-card">
+                  <div className="hub-modal-section-header">
+                    <span className="hub-modal-section-title">
+                      <GraduationCap size={16} color="var(--accent-primary)" />
+                      Specializations & Assigned Sections
+                    </span>
+                  </div>
+
+                  <div className="hub-form-field">
+                    <label className="hub-form-label">Specialization Subjects (Qualified to Teach)</label>
+                    <AutocompleteMultiSelect
+                      allOptions={subjects}
+                      options={subjects}
+                      selectedIds={stagedAssignedSubjects}
+                      onToggle={(item) => {
+                        const id = typeof item === 'object' && item !== null ? item.id : item;
+                        setStagedAssignedSubjects(prev => {
+                          const isSelected = prev.some(x => String(x) === String(id) || (item.code && String(x) === String(item.code)) || (item.name && String(x) === String(item.name)));
+                          if (isSelected) return prev.filter(x => String(x) !== String(id) && String(x) !== String(item.code) && String(x) !== String(item.name));
+                          return [...prev, id];
+                        });
+                      }}
+                      renderChip={renderSubjectChip}
+                      renderOption={renderSubjectOption}
+                      placeholder="Search subject code or name..."
+                      matchIdOnly={true}
+                    />
+                  </div>
+
+                  <div className="hub-form-field">
+                    <label className="hub-form-label">Assigned Sections</label>
+                    <AutocompleteMultiSelect
+                      allOptions={sections}
+                      options={sections}
+                      selectedIds={stagedAssignedSections}
+                      onToggle={(item) => {
+                        const id = typeof item === 'object' && item !== null ? item.id : item;
+                        setStagedAssignedSections(prev =>
+                          prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                        );
+                      }}
+                      renderChip={renderSectionChip}
+                      renderOption={renderSectionOption}
+                      placeholder="Search section..."
+                    />
+                  </div>
+
+                  {stagedAssignedSections.length > 0 && stagedAssignedSubjects.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+                      <label className="hub-form-label">Choose Specific Subject(s) Taught per Section</label>
+                      {stagedAssignedSections.map(secId => {
+                        const sec = sections.find(s => s.id === secId || s.name === secId) || { id: secId, name: secId };
+                        const chosenSubs = stagedFacultyMap[sec.id] || [];
+
+                        return (
+                          <div key={sec.id} style={{ padding: '10px 14px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <span style={{ fontWeight: '700', fontSize: '0.85rem' }}>{sec.name}</span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {stagedAssignedSubjects.map(subRef => {
+                                const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef };
+                                const subKey = sub.id || sub.code;
+                                const isChecked = chosenSubs.some(s => String(s) === String(subKey) || String(s) === String(sub.id));
+
+                                return (
+                                  <button
+                                    key={subKey}
+                                    type="button"
+                                    onClick={() => {
+                                      setStagedFacultyMap(prev => {
+                                        const current = prev[sec.id] || [];
+                                        const updated = current.some(s => String(s) === String(subKey) || String(s) === String(sub.id))
+                                          ? current.filter(s => String(s) !== String(subKey) && String(s) !== String(sub.id))
+                                          : [...current, subKey];
+                                        return { ...prev, [sec.id]: updated };
+                                      });
+                                    }}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
+                                      padding: '4px 10px',
+                                      borderRadius: '16px',
+                                      fontSize: '0.75rem',
+                                      fontWeight: '600',
+                                      cursor: 'pointer',
+                                      border: isChecked ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                                      background: isChecked ? 'rgba(86, 69, 238, 0.12)' : 'var(--bg-main)',
+                                      color: isChecked ? 'var(--accent-primary)' : 'var(--text-muted)'
+                                    }}
+                                    title={sub.name ? `${sub.code ? `${sub.code}: ` : ''}${sub.name}` : sub.code}
+                                  >
+                                    {isChecked ? <Check size={12} /> : <Plus size={11} />}
+                                    <span style={{ fontWeight: '700' }}>{sub.code}</span>
+                                    {sub.name && sub.name !== sub.code && (
+                                      <span style={{ opacity: 0.8, fontSize: '0.72rem', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {sub.name}
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* SUBJECT EDITING */}
+            {/* ========================================================================= */}
+            {/* SUBJECT EDITING FORM */}
+            {/* ========================================================================= */}
             {editingEntity.type === 'subject' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {editingEntity.item.hasLecLab && (
-                  <div className="hub-subject-leclab-banner">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', fontSize: '0.82rem', color: '#7e22ce', marginBottom: '4px' }}>
-                      <FlaskConical size={14} />
-                      <span>Lecture & Laboratory Course</span>
+                {/* Card 1: Subject Identification & Curriculum */}
+                <div className="hub-modal-section-card">
+                  <div className="hub-modal-section-header">
+                    <span className="hub-modal-section-title">
+                      <BookOpen size={16} color="var(--accent-primary)" />
+                      Subject Identification & Academic Offering
+                    </span>
+                  </div>
+                  <div className="hub-form-grid-2">
+                    <div className="hub-form-field">
+                      <label className="hub-form-label">Course Code * (e.g. CS 101, IT 204)</label>
+                      <input
+                        type="text"
+                        className="hub-form-input"
+                        value={stagedEntityForm.code || ''}
+                        onChange={e => handleSubjectCodeChange(e.target.value)}
+                        placeholder="e.g. CS 101"
+                      />
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-main)', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                      <span>Lecture: <strong>{editingEntity.item.lectureHours || 2} hrs/week</strong> (Standard Classroom)</span>
-                      <span>Laboratory: <strong>{editingEntity.item.labHours || 3} hrs/week</strong> ({editingEntity.item.isFoodLab ? 'Food Lab' : editingEntity.item.requiredLab ? 'Computer Lab' : 'Lab'})</span>
-                      <span style={{ color: '#7e22ce', fontWeight: '700' }}>Total: {Number(editingEntity.item.lectureHours || 2) + Number(editingEntity.item.labHours || 3)} hrs/wk</span>
+                    <div className="hub-form-field">
+                      <label className="hub-form-label">Subject Title *</label>
+                      <input
+                        type="text"
+                        className="hub-form-input"
+                        value={stagedEntityForm.name || ''}
+                        onChange={e => setStagedEntityForm(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g. Data Structures and Algorithms"
+                      />
                     </div>
                   </div>
-                )}
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: '8px', display: 'block' }}>Enrolled Sections</label>
-                  <AutocompleteMultiSelect
-                    allOptions={sections}
-                    options={sections}
-                    selectedIds={stagedAssignedSections}
-                    onToggle={(item) => {
-                      const id = typeof item === 'object' && item !== null ? item.id : item;
-                      setStagedAssignedSections(prev =>
-                        prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-                      );
-                    }}
-                    renderChip={renderSectionChip}
-                    placeholder="Search section..."
-                  />
+
+                  <div className="hub-form-grid-3">
+                    <div className="hub-form-field">
+                      <label className="hub-form-label">Category *</label>
+                      <select
+                        className="hub-form-select"
+                        value={stagedEntityForm.category || 'Major'}
+                        onChange={e => {
+                          const cat = e.target.value;
+                          setStagedEntityForm(prev => ({
+                            ...prev,
+                            category: cat,
+                            semester: cat === 'Minor' ? 'Both' : (prev.semester === 'Both' ? (activeSemester || '1st Semester') : prev.semester)
+                          }));
+                        }}
+                      >
+                        <option value="Major">Major</option>
+                        <option value="Minor">Minor / General Education</option>
+                      </select>
+                    </div>
+                    <div className="hub-form-field">
+                      <label className="hub-form-label">Credits / Units *</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={10}
+                        className="hub-form-input"
+                        value={stagedEntityForm.credits || 3}
+                        onChange={e => setStagedEntityForm(prev => ({ ...prev, credits: Number(e.target.value) }))}
+                      />
+                    </div>
+                    <div className="hub-form-field">
+                      <label className="hub-form-label">Target Semester</label>
+                      <select
+                        className="hub-form-select"
+                        value={stagedEntityForm.semester || '1st Semester'}
+                        onChange={e => setStagedEntityForm(prev => ({ ...prev, semester: e.target.value }))}
+                      >
+                        <option value="1st Semester">1st Semester</option>
+                        <option value="2nd Semester">2nd Semester</option>
+                        <option value="Summer">Summer</option>
+                        <option value="Both">Both Semesters</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="hub-form-field">
+                    <label className="hub-form-label">Offering Department(s)</label>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {availableDepts.map(dept => {
+                        const isSelected = (stagedEntityForm.departments || []).includes(dept);
+                        return (
+                          <button
+                            key={dept}
+                            type="button"
+                            className={`hub-dept-pill ${isSelected ? 'active' : ''}`}
+                            onClick={() => handleSubjectDepartmentToggle(dept)}
+                          >
+                            {dept}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.04em', marginBottom: '8px', display: 'block' }}>Specialized Faculty</label>
-                  <AutocompleteMultiSelect
-                    allOptions={professors}
-                    options={professors}
-                    selectedIds={stagedFacultyMap.assignedProfessors || []}
-                    onToggle={(item) => {
-                      const profId = typeof item === 'object' && item !== null ? item.id : item;
-                      setStagedFacultyMap(prev => {
-                        const cur = prev.assignedProfessors || [];
-                        const updated = cur.includes(profId) ? cur.filter(id => id !== profId) : [...cur, profId];
-                        return { ...prev, assignedProfessors: updated };
-                      });
+                {/* Card 2: Laboratory & Lecture Setup */}
+                <div className="hub-modal-section-card">
+                  <div className="hub-modal-section-header">
+                    <span className="hub-modal-section-title">
+                      <Sliders size={16} color="var(--accent-primary)" />
+                      Lecture & Laboratory Configuration (Scheduling Engine Guide)
+                    </span>
+                  </div>
+
+                  {autoDetectedReason && (
+                    <div className="hub-ai-banner">
+                      <Sparkles size={14} />
+                      <span>AI / Heuristic Detection: {autoDetectedReason}</span>
+                    </div>
+                  )}
+
+                  {/* Lec & Lab Split Toggle */}
+                  <label
+                    className={`hub-checkbox-card ${stagedEntityForm.hasLecLab ? 'active' : ''}`}
+                    onClick={() => {
+                      setUserLabModified(true);
+                      setStagedEntityForm(prev => ({
+                        ...prev,
+                        hasLecLab: !prev.hasLecLab,
+                        requiredLab: !prev.hasLecLab ? (prev.requiredLab || !prev.isFoodLab) : prev.requiredLab
+                      }));
                     }}
-                    renderChip={renderFacultyChip}
-                    placeholder="Search faculty..."
-                  />
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Boolean(stagedEntityForm.hasLecLab)}
+                      onChange={() => {}}
+                      style={{ marginTop: '3px' }}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <strong style={{ fontSize: '0.86rem', color: 'var(--text-main)' }}>Lecture & Laboratory Split Course</strong>
+                        <span className="hub-tag-leclab" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>
+                          <FlaskConical size={10} />
+                          Splits into 2 Class Sessions
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                        Generates separate lecture (standard classroom) and laboratory meeting slots for the scheduler algorithm.
+                      </span>
+                    </div>
+                  </label>
+
+                  {/* Hours Breakdown */}
+                  {stagedEntityForm.hasLecLab ? (
+                    <div className="hub-form-grid-3">
+                      <div className="hub-form-field">
+                        <label className="hub-form-label">Lecture Hours (Weekly)</label>
+                        <select
+                          className="hub-form-select"
+                          value={stagedEntityForm.lectureHours || 2}
+                          onChange={e => setStagedEntityForm(prev => ({ ...prev, lectureHours: Number(e.target.value) }))}
+                        >
+                          <option value={1}>1.0 Hour</option>
+                          <option value={2}>2.0 Hours (Standard)</option>
+                          <option value={3}>3.0 Hours</option>
+                          <option value={4}>4.0 Hours</option>
+                        </select>
+                      </div>
+                      <div className="hub-form-field">
+                        <label className="hub-form-label">Laboratory Hours (Weekly)</label>
+                        <select
+                          className="hub-form-select"
+                          value={stagedEntityForm.labHours || 3}
+                          onChange={e => setStagedEntityForm(prev => ({ ...prev, labHours: Number(e.target.value) }))}
+                        >
+                          <option value={2}>2.0 Hours</option>
+                          <option value={3}>3.0 Hours (Standard)</option>
+                          <option value={4}>4.0 Hours</option>
+                          <option value={5}>5.0 Hours</option>
+                          <option value={6}>6.0 Hours</option>
+                        </select>
+                      </div>
+                      <div className="hub-form-field">
+                        <label className="hub-form-label">Weekly Contact Total</label>
+                        <div style={{ padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '700', color: '#7e22ce', display: 'flex', alignItems: 'center', height: '38px' }}>
+                          {Number(stagedEntityForm.lectureHours || 2) + Number(stagedEntityForm.labHours || 3)} Hours/Week
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="hub-form-grid-2">
+                      <div className="hub-form-field">
+                        <label className="hub-form-label">Hours Per Meeting</label>
+                        <select
+                          className="hub-form-select"
+                          value={stagedEntityForm.hoursPerMeeting || 1.5}
+                          onChange={e => setStagedEntityForm(prev => ({ ...prev, hoursPerMeeting: Number(e.target.value) }))}
+                        >
+                          <option value={1}>1.0 Hour (e.g. 3x weekly)</option>
+                          <option value={1.5}>1.5 Hours (e.g. 2x weekly TTh / WF)</option>
+                          <option value={2}>2.0 Hours</option>
+                          <option value={3}>3.0 Hours (1x weekly block)</option>
+                        </select>
+                      </div>
+                      <div className="hub-form-field">
+                        <label className="hub-form-label">Classroom Mode</label>
+                        <div style={{ padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', height: '38px' }}>
+                          Single classroom session schedule
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Laboratory Room Type Requirements */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                    <label className="hub-form-label">Laboratory Room Allocation Guide (Used by AI Scheduler)</label>
+                    <div className="hub-form-grid-2">
+                      <label
+                        className={`hub-checkbox-card ${stagedEntityForm.requiredLab ? 'active' : ''}`}
+                        onClick={() => {
+                          setUserLabModified(true);
+                          setStagedEntityForm(prev => ({
+                            ...prev,
+                            requiredLab: !prev.requiredLab,
+                            isFoodLab: !prev.requiredLab ? false : prev.isFoodLab
+                          }));
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={Boolean(stagedEntityForm.requiredLab)}
+                          onChange={() => {}}
+                          style={{ marginTop: '3px' }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Monitor size={14} color="#059669" />
+                            <strong style={{ fontSize: '0.84rem', color: 'var(--text-main)' }}>Requires Computer Lab</strong>
+                          </div>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                            Must be scheduled in a room with PC workstations and network setup.
+                          </span>
+                        </div>
+                      </label>
+
+                      <label
+                        className={`hub-checkbox-card ${stagedEntityForm.isFoodLab ? 'active' : ''}`}
+                        onClick={() => {
+                          setUserLabModified(true);
+                          setStagedEntityForm(prev => ({
+                            ...prev,
+                            isFoodLab: !prev.isFoodLab,
+                            requiredLab: !prev.isFoodLab ? false : prev.requiredLab
+                          }));
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={Boolean(stagedEntityForm.isFoodLab)}
+                          onChange={() => {}}
+                          style={{ marginTop: '3px' }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Utensils size={14} color="#d97706" />
+                            <strong style={{ fontSize: '0.84rem', color: 'var(--text-main)' }}>Requires Food Laboratory</strong>
+                          </div>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                            Must be scheduled in HM / Culinary cooking kitchen and food lab.
+                          </span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 3: Enrolled Sections & Specialized Faculty */}
+                <div className="hub-modal-section-card">
+                  <div className="hub-modal-section-header">
+                    <span className="hub-modal-section-title">
+                      <Layers size={16} color="var(--accent-primary)" />
+                      Enrolled Sections & Specialized Faculty
+                    </span>
+                  </div>
+
+                  <div className="hub-form-field">
+                    <label className="hub-form-label">Enrolled Sections (Offering this Subject)</label>
+                    <AutocompleteMultiSelect
+                      allOptions={sections}
+                      options={sections}
+                      selectedIds={stagedAssignedSections}
+                      onToggle={(item) => {
+                        const id = typeof item === 'object' && item !== null ? item.id : item;
+                        setStagedAssignedSections(prev =>
+                          prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                        );
+                      }}
+                      renderChip={renderSectionChip}
+                      renderOption={renderSectionOption}
+                      placeholder="Search section..."
+                    />
+                  </div>
+
+                  <div className="hub-form-field">
+                    <label className="hub-form-label">Specialized Faculty (Eligible Instructors)</label>
+                    <AutocompleteMultiSelect
+                      allOptions={professors}
+                      options={professors}
+                      selectedIds={stagedFacultyMap.assignedProfessors || []}
+                      onToggle={(item) => {
+                        const profId = typeof item === 'object' && item !== null ? item.id : item;
+                        setStagedFacultyMap(prev => {
+                          const cur = prev.assignedProfessors || [];
+                          const updated = cur.includes(profId) ? cur.filter(id => id !== profId) : [...cur, profId];
+                          return { ...prev, assignedProfessors: updated };
+                        });
+                      }}
+                      renderChip={renderFacultyChip}
+                      renderOption={renderFacultyOption}
+                      placeholder="Search faculty..."
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -2107,7 +2949,7 @@ const AssignmentHub = ({
                 Cancel
               </button>
               <button className="btn" onClick={handleSaveModal} disabled={isSaving}>
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? 'Saving Changes...' : 'Save Changes'}
               </button>
             </div>
           </div>
