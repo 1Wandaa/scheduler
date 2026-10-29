@@ -21,6 +21,8 @@
   z-index: 10;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
   border-right: 1px solid rgba(86, 69, 238, 0.15);

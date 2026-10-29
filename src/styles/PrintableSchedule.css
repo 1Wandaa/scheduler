@@ -230,11 +230,21 @@
         margin: 0.25in 0.35in;
     }
 
+    *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        box-sizing: border-box !important;
+    }
+
     body {
         padding: 0 !important;
         margin: 0 !important;
         background: #fff !important;
         color: #000 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        text-rendering: optimizeLegibility !important;
+        image-rendering: -webkit-optimize-contrast !important;
     }
 
     body * {
@@ -244,6 +254,10 @@
     .printable-iso-document,
     .printable-iso-document * {
         visibility: visible;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        text-rendering: optimizeLegibility !important;
+        image-rendering: -webkit-optimize-contrast !important;
     }
 
     .printable-iso-document {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { logActivity, LOG_ACTIONS } from '../../../utils/activityLogger';
-import { exportIsoToWord, exportGridToWord, exportRoomUtilizationToWord } from '../../../utils/scheduleExportUtils';
+import { exportIsoToWord, exportGridToWord, exportRoomUtilizationToWord, exportFacultyWorkloadToWord } from '../../../utils/scheduleExportUtils';
 
 const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user }) => {
     const [isExportOpen, setIsExportOpen] = useState(false);
@@ -68,9 +68,12 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             setIsExportOpen(false);
                             const roomContent = document.querySelector('.printable-room-utilization');
                             const isoContent = document.querySelector('.printable-iso-document');
+                            const workloadContent = document.querySelector('.faculty-workload-iso-document');
                             
                             if (roomContent) {
                                 exportRoomUtilizationToWord(user);
+                            } else if (workloadContent) {
+                                exportFacultyWorkloadToWord({ user });
                             } else if (isoContent) {
                                 exportIsoToWord(user);
                             } else {
@@ -446,10 +449,15 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             const isRoom = !!roomContent;
                             const iframe = document.createElement('iframe');
                             iframe.style.position = 'fixed';
-                            iframe.style.top = '-10000px';
-                            iframe.style.left = '-10000px';
-                            iframe.style.width = '0';
-                            iframe.style.height = '0';
+                            iframe.style.top = '0';
+                            iframe.style.left = '0';
+                            iframe.style.width = '100vw';
+                            iframe.style.height = '100vh';
+                            iframe.style.visibility = 'hidden';
+                            iframe.style.opacity = '0';
+                            iframe.style.pointerEvents = 'none';
+                            iframe.style.zIndex = '-99999';
+                            iframe.style.border = 'none';
                             document.body.appendChild(iframe);
                             const doc = iframe.contentDocument || iframe.contentWindow.document;
                             doc.open();
@@ -473,6 +481,10 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             height: auto !important;
                                             min-height: 0 !important;
                                             overflow: hidden !important;
+                                            -webkit-font-smoothing: antialiased !important;
+                                            -moz-osx-font-smoothing: grayscale !important;
+                                            text-rendering: optimizeLegibility !important;
+                                            image-rendering: -webkit-optimize-contrast !important;
                                         }
                                         .print-wrapper { 
                                             width: 100% !important; 
@@ -668,6 +680,10 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     height: auto !important;
                                     min-height: 0 !important;
                                     overflow: hidden !important;
+                                    -webkit-font-smoothing: antialiased !important;
+                                    -moz-osx-font-smoothing: grayscale !important;
+                                    text-rendering: optimizeLegibility !important;
+                                    image-rendering: -webkit-optimize-contrast !important;
                                 }
                                 .print-wrapper { 
                                     width: 100% !important; 
@@ -953,11 +969,14 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             const origImg = printContent.querySelector('img');
                             if (origImg && origImg.complete && origImg.naturalWidth > 0) {
                                 try {
+                                    const factor = Math.max(3, Math.ceil(300 / origImg.naturalWidth));
                                     const c = document.createElement('canvas');
-                                    c.width = origImg.naturalWidth;
-                                    c.height = origImg.naturalHeight;
+                                    c.width = origImg.naturalWidth * factor;
+                                    c.height = origImg.naturalHeight * factor;
                                     const ctx = c.getContext('2d');
-                                    ctx.drawImage(origImg, 0, 0);
+                                    ctx.imageSmoothingEnabled = true;
+                                    ctx.imageSmoothingQuality = 'high';
+                                    ctx.drawImage(origImg, 0, 0, c.width, c.height);
                                     const dataUrl = c.toDataURL('image/png');
                                     printHtml = printHtml.replace(/<img[^>]+src="[^"]+"[^>]*>/i, (m) => m.replace(/src="[^"]+"/, `src="${dataUrl}"`));
                                 } catch {

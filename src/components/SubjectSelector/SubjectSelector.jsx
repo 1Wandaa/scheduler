@@ -186,13 +186,25 @@ const SubjectSelector = ({
   };
 
   const renderOption = (sub) => {
+    const codeVal = sub.code || sub.courseCode || sub.subjectCode;
+    const nameVal = sub.name || sub.title;
+    const hasDistinctCode = codeVal && nameVal && String(codeVal).trim().toLowerCase() !== String(nameVal).trim().toLowerCase();
+
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
-        <span style={{ fontWeight: '700', color: 'var(--accent-dark)', minWidth: '75px', fontSize: '0.85rem' }}>{sub.code}</span>
-        <span style={{ flex: 1, color: 'var(--text-main)', fontSize: '0.82rem' }}>{sub.name}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', minWidth: 0 }}>
+        {hasDistinctCode ? (
+          <>
+            <span style={{ fontWeight: '700', color: 'var(--accent-dark)', minWidth: '75px', fontSize: '0.82rem', flexShrink: 0 }}>{codeVal}</span>
+            <span style={{ flex: 1, minWidth: 0, color: 'var(--text-main)', fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={nameVal}>{nameVal}</span>
+          </>
+        ) : (
+          <span style={{ flex: 1, minWidth: 0, color: 'var(--text-main)', fontSize: '0.82rem', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={nameVal || codeVal || sub.id}>
+            {nameVal || codeVal || sub.id}
+          </span>
+        )}
         
         {sub.yearLevel && (
-          <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'var(--bg-main)', color: 'var(--text-muted)', border: '1px solid var(--border-color)', fontWeight: '600' }}>
+          <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'var(--bg-main)', color: 'var(--text-muted)', border: '1px solid var(--border-color)', fontWeight: '600', flexShrink: 0 }}>
             Year {sub.yearLevel}
           </span>
         )}
@@ -208,13 +220,14 @@ const SubjectSelector = ({
             border: '1px solid rgba(16, 185, 129, 0.35)',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '3px'
+            gap: '3px',
+            flexShrink: 0
           }}>
             ✨ Recommended
           </span>
         )}
 
-        <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(86, 69, 238, 0.08)', color: 'var(--accent-primary)', fontWeight: '700' }}>
+        <span style={{ fontSize: '0.70rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(86, 69, 238, 0.08)', color: 'var(--accent-primary)', fontWeight: '700', flexShrink: 0 }}>
           {sub.credits || 3}u
         </span>
       </div>

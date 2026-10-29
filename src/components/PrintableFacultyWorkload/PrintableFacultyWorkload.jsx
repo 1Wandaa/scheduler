@@ -101,8 +101,7 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
                 ref={containerRef} 
                 style={{ 
                     '--fw-row-height': schedRowHeight,
-                    transform: scale < 1 ? `scale(${scale})` : 'none',
-                    transformOrigin: 'top center',
+                    zoom: scale < 1 ? scale : undefined,
                     width: '100%' 
                 }}
             >

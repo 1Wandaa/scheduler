@@ -213,12 +213,24 @@
 @media print {
     @page {
         size: letter portrait;
-        margin: 0;
+        margin: 0.2in 0.25in;
+    }
+
+    *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        box-sizing: border-box !important;
     }
 
     body {
         padding: 0 !important;
         margin: 0 !important;
+        background: #fff !important;
+        color: #000 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        text-rendering: optimizeLegibility !important;
+        image-rendering: -webkit-optimize-contrast !important;
     }
 
     body * {
@@ -227,14 +239,21 @@
 
     .printable-room-utilization,
     .printable-room-utilization * {
-        visibility: visible;
+        visibility: visible !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        text-rendering: optimizeLegibility !important;
+        image-rendering: -webkit-optimize-contrast !important;
     }
 
     .printable-room-utilization {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        display: block;
+        position: static !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        display: block !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
 }

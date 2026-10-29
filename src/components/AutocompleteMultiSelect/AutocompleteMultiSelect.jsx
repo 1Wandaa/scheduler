@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './AutocompleteMultiSelect.css';
-import { Search, ChevronDown, X, CheckSquare, Square } from 'lucide-react';
+import { Search, ChevronDown, X, CheckSquare, Square, Check } from 'lucide-react';
 
 const AutocompleteMultiSelect = ({ 
   options = [], 
@@ -191,17 +191,19 @@ const AutocompleteMultiSelect = ({
               {renderChip ? (
                 renderChip(opt, () => onToggle(opt))
               ) : (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '3px 10px', borderRadius: '16px',
-                  background: 'rgba(86, 69, 238, 0.1)', border: '1px solid rgba(86, 69, 238, 0.25)',
-                  fontSize: '0.78rem', fontWeight: '600', color: 'var(--accent-primary, #5645ee)'
-                }}>
-                  <span>{opt.code || opt.name || opt.id}</span>
+                <div className="autocomplete-default-chip">
+                  <span className="autocomplete-chip-label">
+                    {opt.code || opt.courseCode || opt.subjectCode || opt.name || opt.id}
+                  </span>
+                  {opt.name && (opt.code || opt.courseCode || opt.subjectCode) && (opt.code || opt.courseCode || opt.subjectCode) !== opt.name && (
+                    <span className="autocomplete-chip-sublabel">
+                      ({opt.name})
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onToggle(opt); }}
-                    style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7 }}
+                    className="autocomplete-chip-remove-btn"
                     title="Remove"
                   >
                     <X size={12} />
@@ -214,17 +216,12 @@ const AutocompleteMultiSelect = ({
           {/* Unmatched / Legacy Orphan IDs (like S18) rendered with clear warning and working remove button */}
           {unmatchedIds.map(orphanId => (
             <div key={orphanId} className="autocomplete-chip-wrapper">
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '3px 10px', borderRadius: '16px',
-                background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.4)',
-                fontSize: '0.78rem', fontWeight: '700', color: '#dc2626'
-              }}>
-                <span title="Unmatched/Legacy subject not found in subjects list">⚠️ {orphanId}</span>
+              <div className="autocomplete-orphan-chip">
+                <span title="Unmatched/Legacy item not found in registered records">⚠️ {orphanId}</span>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onToggle(orphanId); }}
-                  style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.85 }}
+                  className="autocomplete-orphan-remove-btn"
                   title={`Remove ${orphanId}`}
                 >
                   <X size={13} />
@@ -351,23 +348,37 @@ const AutocompleteMultiSelect = ({
                     </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      {renderOption ? renderOption(opt) : (
-                        <span className="default-option" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                          {opt.code && opt.name && opt.code !== opt.name ? (
-                            <>
-                              <strong style={{ color: 'var(--accent-dark, #0f172a)', minWidth: '70px', flexShrink: 0 }}>{opt.code}</strong>
-                              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opt.name}</span>
-                            </>
-                          ) : (
-                            <span>{opt.name || opt.code || opt.id}</span>
-                          )}
-                        </span>
-                      )}
+                      {renderOption ? renderOption(opt) : (() => {
+                        const codeVal = opt.code || opt.courseCode || opt.subjectCode;
+                        const nameVal = opt.name || opt.title || opt.label;
+                        const hasDistinctCode = codeVal && nameVal && String(codeVal).trim().toLowerCase() !== String(nameVal).trim().toLowerCase();
+
+                        return (
+                          <div className="autocomplete-default-row">
+                            {hasDistinctCode ? (
+                              <>
+                                <span className="autocomplete-code-badge">{codeVal}</span>
+                                <span className="autocomplete-name-text" title={nameVal}>{nameVal}</span>
+                              </>
+                            ) : (
+                              <span className="autocomplete-name-text" title={nameVal || codeVal || opt.id}>
+                                {nameVal || codeVal || opt.id}
+                              </span>
+                            )}
+                            {opt.credits && (
+                              <span className="autocomplete-credits-badge">{opt.credits}u</span>
+                            )}
+                            {opt.department && (
+                              <span className="autocomplete-dept-badge">{opt.department}</span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {isSelected && (
-                      <div className="autocomplete-check-indicator">
-                        ✓
+                      <div className="autocomplete-check-indicator" title="Selected">
+                        <Check size={12} strokeWidth={2.8} />
                       </div>
                     )}
                   </div>
