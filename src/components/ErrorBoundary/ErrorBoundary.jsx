@@ -75,23 +75,32 @@ class ErrorBoundary extends React.Component {
             }}>
               SMARTSCHED encountered an unexpected error. This has been logged automatically. You can try recovering or reload the page.
             </p>
-            {import.meta.env.DEV && this.state.error && (
-              <pre style={{
+            {this.state.error && (
+              <details style={{
                 textAlign: 'left',
                 background: 'rgba(255, 255, 255, 0.05)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '10px',
-                padding: '16px',
-                fontSize: '0.75rem',
+                padding: '12px 16px',
+                fontSize: '0.8rem',
                 color: '#f87171',
-                overflow: 'auto',
-                maxHeight: '200px',
                 marginBottom: '24px',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
+                cursor: 'pointer'
               }}>
-                {this.state.error.toString()}
-              </pre>
+                <summary style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.8)', marginBottom: '8px' }}>
+                  View technical error details
+                </summary>
+                <pre style={{
+                  margin: 0,
+                  fontSize: '0.75rem',
+                  overflow: 'auto',
+                  maxHeight: '200px',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}>
+                  {this.state.error.toString()}
+                </pre>
+              </details>
             )}
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button

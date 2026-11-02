@@ -88,40 +88,40 @@ export const deleteSubjectBatchCascade = async (subjectList, professors = [], se
   }
 
   // 2. Remove from professors' specializations
-  professors.forEach(prof => {
+  for (const prof of professors) {
     if (prof.specialization && Array.isArray(prof.specialization)) {
       const hasMatch = prof.specialization.some(s => subjectIds.has(String(s)) || subjectCodes.has(s) || subjectNames.has(s));
       if (hasMatch) {
         const newSpecs = prof.specialization.filter(s => !subjectIds.has(String(s)) && !subjectCodes.has(s) && !subjectNames.has(s));
-        safeBatch.update(doc(db, 'professors', String(prof.id)), { specialization: newSpecs });
+        await safeBatch.update(doc(db, 'professors', String(prof.id)), { specialization: newSpecs });
       }
     }
-  });
+  }
 
   // 3. Remove from sections' subjects
-  sections.forEach(sec => {
+  for (const sec of sections) {
     if (sec.subjects && Array.isArray(sec.subjects)) {
       const hasMatch = sec.subjects.some(s => subjectIds.has(String(s)) || subjectCodes.has(s) || subjectNames.has(s));
       if (hasMatch) {
         const newSubjs = sec.subjects.filter(s => !subjectIds.has(String(s)) && !subjectCodes.has(s) && !subjectNames.has(s));
-        safeBatch.update(doc(db, 'sections', String(sec.id)), { subjects: newSubjs });
+        await safeBatch.update(doc(db, 'sections', String(sec.id)), { subjects: newSubjs });
       }
     }
-  });
+  }
 
   // 4. Delete schedules referencing these subjects
   const deletedScheduleIds = new Set();
   const subjectCascadedMap = new Map();
   subjectList.forEach(s => subjectCascadedMap.set(String(s.id), []));
 
-  schedules.forEach(sched => {
+  for (const sched of schedules) {
     if (sched.subject) {
       const subId = String(sched.subject.id);
       const subCode = sched.subject.code;
       if (subjectIds.has(subId) || subjectCodes.has(subCode)) {
         if (!deletedScheduleIds.has(String(sched.id))) {
           deletedScheduleIds.add(String(sched.id));
-          safeBatch.delete(doc(db, 'schedules', String(sched.id)));
+          await safeBatch.delete(doc(db, 'schedules', String(sched.id)));
           const targetId = subjectIds.has(subId) ? subId : subjectList.find(s => s.code === subCode)?.id;
           if (targetId && subjectCascadedMap.has(String(targetId))) {
             subjectCascadedMap.get(String(targetId)).push(sched);
@@ -129,7 +129,7 @@ export const deleteSubjectBatchCascade = async (subjectList, professors = [], se
         }
       }
     }
-  });
+  }
 
   // 5. Create trash records
   for (const subject of subjectList) {
@@ -165,29 +165,29 @@ export const deleteRoomBatchCascade = async (roomList, professors = [], schedule
   }
 
   // 2. Remove from professors' preferred rooms
-  professors.forEach(prof => {
+  for (const prof of professors) {
     if (prof.preferredRooms && Array.isArray(prof.preferredRooms)) {
       const hasMatch = prof.preferredRooms.some(r => roomIds.has(String(r)) || roomNames.has(r));
       if (hasMatch) {
         const newPrefs = prof.preferredRooms.filter(r => !roomIds.has(String(r)) && !roomNames.has(r));
-        safeBatch.update(doc(db, 'professors', String(prof.id)), { preferredRooms: newPrefs });
+        await safeBatch.update(doc(db, 'professors', String(prof.id)), { preferredRooms: newPrefs });
       }
     }
-  });
+  }
 
   // 3. Delete schedules referencing these rooms
   const deletedScheduleIds = new Set();
   const roomCascadedMap = new Map();
   roomList.forEach(r => roomCascadedMap.set(String(r.id), []));
 
-  schedules.forEach(sched => {
+  for (const sched of schedules) {
     if (sched.room) {
       const rId = String(sched.room.id);
       const rName = sched.room.name;
       if (roomIds.has(rId) || roomNames.has(rName)) {
         if (!deletedScheduleIds.has(String(sched.id))) {
           deletedScheduleIds.add(String(sched.id));
-          safeBatch.delete(doc(db, 'schedules', String(sched.id)));
+          await safeBatch.delete(doc(db, 'schedules', String(sched.id)));
           const targetId = roomIds.has(rId) ? rId : roomList.find(r => r.name === rName)?.id;
           if (targetId && roomCascadedMap.has(String(targetId))) {
             roomCascadedMap.get(String(targetId)).push(sched);
@@ -195,7 +195,7 @@ export const deleteRoomBatchCascade = async (roomList, professors = [], schedule
         }
       }
     }
-  });
+  }
 
   // 4. Create trash records
   for (const room of roomList) {
@@ -231,29 +231,29 @@ export const deleteSectionBatchCascade = async (sectionList, professors = [], sc
   }
 
   // 2. Remove from professors' assigned sections
-  professors.forEach(prof => {
+  for (const prof of professors) {
     if (prof.assignedSections && Array.isArray(prof.assignedSections)) {
       const hasMatch = prof.assignedSections.some(s => sectionIds.has(String(s)) || sectionNames.has(s));
       if (hasMatch) {
         const newSecs = prof.assignedSections.filter(s => !sectionIds.has(String(s)) && !sectionNames.has(s));
-        safeBatch.update(doc(db, 'professors', String(prof.id)), { assignedSections: newSecs });
+        await safeBatch.update(doc(db, 'professors', String(prof.id)), { assignedSections: newSecs });
       }
     }
-  });
+  }
 
   // 3. Delete schedules referencing these sections
   const deletedScheduleIds = new Set();
   const sectionCascadedMap = new Map();
   sectionList.forEach(s => sectionCascadedMap.set(String(s.id), []));
 
-  schedules.forEach(sched => {
+  for (const sched of schedules) {
     if (sched.section) {
       const secId = String(sched.section.id);
       const secName = sched.section.name;
       if (sectionIds.has(secId) || sectionNames.has(secName)) {
         if (!deletedScheduleIds.has(String(sched.id))) {
           deletedScheduleIds.add(String(sched.id));
-          safeBatch.delete(doc(db, 'schedules', String(sched.id)));
+          await safeBatch.delete(doc(db, 'schedules', String(sched.id)));
           const targetId = sectionIds.has(secId) ? secId : sectionList.find(s => s.name === secName)?.id;
           if (targetId && sectionCascadedMap.has(String(targetId))) {
             sectionCascadedMap.get(String(targetId)).push(sched);
@@ -261,7 +261,7 @@ export const deleteSectionBatchCascade = async (sectionList, professors = [], sc
         }
       }
     }
-  });
+  }
 
   // 4. Create trash records
   for (const sec of sectionList) {
@@ -294,13 +294,13 @@ export const deleteFacultyBatchCascade = async (facultyList, schedules = []) => 
 
     // 2. Delete schedules referencing this faculty
     const cascadedSchedules = [];
-    schedules.forEach(sched => {
+    for (const sched of schedules) {
       const profId = sched.professor?.id ?? sched.professorId;
       if (profId != null && String(profId) === fId) {
-        safeBatch.delete(doc(db, 'schedules', String(sched.id)));
+        await safeBatch.delete(doc(db, 'schedules', String(sched.id)));
         cascadedSchedules.push(sched);
       }
-    });
+    }
 
     // 3. Create trash record
     await createTrashRecord(safeBatch, 'faculty', faculty, cascadedSchedules, {});

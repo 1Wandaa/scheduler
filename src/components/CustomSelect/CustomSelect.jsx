@@ -7,7 +7,10 @@ const CustomSelect = ({ options = [], value, onChange, placeholder = 'Select...'
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) setIsOpen(false);
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setSearch('');
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -16,10 +19,6 @@ const CustomSelect = ({ options = [], value, onChange, placeholder = 'Select...'
   const safeOptions = Array.isArray(options) ? options : [];
   const flatOptions = safeOptions.flatMap(o => (o && o.options) ? o.options : (o ? [o] : []));
   const selectedOption = flatOptions.find(o => o && String(o.value) === String(value));
-
-  useEffect(() => {
-    if (!isOpen) setSearch(selectedOption ? selectedOption.label : '');
-  }, [isOpen, selectedOption]);
 
   const query = (search || '').toLowerCase();
   const filteredOptions = safeOptions.map(group => {

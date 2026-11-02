@@ -19,7 +19,7 @@ function formatProfessorName(name) {
     return `${initial}. ${surname}`;
 }
 
-export const ISO_TIME_BLOCKS = [
+const ISO_TIME_BLOCKS = [
     { id: 'b1', label: '7:00   –   8:30', start: 420, end: 510 },
     { id: 'b2', label: '8:30   –   10:00', start: 510, end: 600 },
     { id: 'b3', label: '10:00  –   11:30', start: 600, end: 690 },

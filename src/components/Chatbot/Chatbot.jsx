@@ -155,7 +155,7 @@ const Chatbot = ({ schedules, professors = [], subjects = [], sections = [], roo
         }
         greeting += "\n\nWhat would you like to know?";
 
-        setMessages([{ id: nextMsgId(), role: 'model', text: greeting, timestamp: Date.now() }]);
+        setMessages(prev => (prev && prev.length > 0) ? prev : [{ id: nextMsgId(), role: 'model', text: greeting, timestamp: Date.now() }]);
         setFailedMessage(null);
       } catch (error) {
         console.error("Failed to initialize chat:", error);

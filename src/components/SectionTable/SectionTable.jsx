@@ -1,8 +1,7 @@
 import React from 'react';
 import { PROGRAM_DEPARTMENTS } from '../../config/constants';
 
-const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, subjects = [], professors = [], departments = [], courses = [], selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
-  if (!sectionList || sectionList.length === 0) return null;
+const SectionTable = ({ sectionList = [], title, titleColor = 'var(--accent-primary)', onEdit, onDelete, subjects = [], professors = [], departments = [], courses = [], selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
 
   const allSelected = sectionList.length > 0 && sectionList.every(sec => selectedIds.includes(sec.id));
   const someSelected = sectionList.some(sec => selectedIds.includes(sec.id)) && !allSelected;
@@ -13,6 +12,8 @@ const SectionTable = ({ sectionList, title, titleColor = 'var(--accent-primary)'
       headerCheckboxRef.current.indeterminate = someSelected;
     }
   }, [someSelected]);
+
+  if (!sectionList || sectionList.length === 0) return null;
 
   const getSubjectName = (subId) => {
     const s = subjects.find(sub => sub.id === subId || sub.code === subId);

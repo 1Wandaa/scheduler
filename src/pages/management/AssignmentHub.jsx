@@ -262,11 +262,10 @@ const AssignmentHub = ({
   }, [professors]);
 
   // On-demand lazy cache for specialized & other faculty per subject (computed only when needed)
-  const subjectProfOptionsCacheMap = useMemo(() => {
-    void subjects; void professors; void profsBySubjectKey;
-    return new Map();
+  const subjectProfOptionsCache = useRef(new Map());
+  useEffect(() => {
+    subjectProfOptionsCache.current.clear();
   }, [subjects, professors, profsBySubjectKey]);
-  const subjectProfOptionsCache = { current: subjectProfOptionsCacheMap };
 
   const getSubjectProfessors = useCallback((subRef) => {
     if (!subRef) return { specProfs: [], otherProfs: professors };
@@ -301,7 +300,7 @@ const AssignmentHub = ({
     keys.forEach(k => subjectProfOptionsCache.current.set(String(k).toLowerCase(), result));
     subjectProfOptionsCache.current.set(cacheKey, result);
     return result;
-  }, [getSubject, profsBySubjectKey, professors, subjectProfOptionsCache]);
+  }, [getSubject, profsBySubjectKey, professors]);
 
   // Pre-indexed set of enrolled and specialized subject keys for instant O(1) attention filtering
   const enrolledSubjectCodesSet = useMemo(() => {
@@ -355,11 +354,10 @@ const AssignmentHub = ({
   }, [sectionsBySubjectKey]);
 
   // Fast memoized cache for assigned professors: `${sec.id}_${subRef}` -> prof
-  const assignedProfCacheMap = useMemo(() => {
-    void sections; void professors; void subjects;
-    return new Map();
+  const assignedProfCache = useRef(new Map());
+  useEffect(() => {
+    assignedProfCache.current.clear();
   }, [sections, professors, subjects]);
-  const assignedProfCache = { current: assignedProfCacheMap };
 
   // Helper to accurately resolve assigned professor for a specific section and subject in O(1)
   const getAssignedProf = useCallback((sec, subRef) => {

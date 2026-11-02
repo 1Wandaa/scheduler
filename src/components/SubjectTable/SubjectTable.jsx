@@ -9,8 +9,7 @@ export const getSubjectDepts = (subject) => {
   return [];
 };
 
-const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)', onEdit, onDelete, onViewDetails, departments = [], selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
-  if (!subjectList || subjectList.length === 0) return null;
+const SubjectTable = ({ subjectList = [], title, titleColor = 'var(--accent-primary)', onEdit, onDelete, onViewDetails, departments = [], selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
 
   const allSelected = subjectList.length > 0 && subjectList.every(s => selectedIds.includes(s.id));
   const someSelected = subjectList.some(s => selectedIds.includes(s.id)) && !allSelected;
@@ -21,6 +20,8 @@ const SubjectTable = ({ subjectList, title, titleColor = 'var(--accent-primary)'
       headerCheckboxRef.current.indeterminate = someSelected;
     }
   }, [someSelected]);
+
+  if (!subjectList || subjectList.length === 0) return null;
 
   return (
     <div style={{ marginBottom: '30px' }}>

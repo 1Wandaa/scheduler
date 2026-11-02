@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { suggestProfessorMatches } from '../../utils/scheduleAI';
-import { TIME_SLOTS, DAYS, SCHEDULE_MODES, getScheduleConfig } from '../../config/constants';
+import { TIME_SLOTS, DAYS, SCHEDULE_MODES } from '../../config/constants';
 import { getMeetingTimeLabel } from '../../utils/scheduleUtils';
 import '../../styles/AutoScheduler.css';
 import { toast } from 'sonner';
@@ -9,6 +10,7 @@ import CustomSelect from '../CustomSelect/CustomSelect';
 
 // 1. ADDED 'schedules', 'onLogHistory', and 'onAutoScheduleBatch' to the props list
 function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, activeSemester, onLogHistory }) {
+  const navigate = useNavigate();
   const { confirm } = useGlobalDialog();
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -165,7 +167,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           toast.success(`Successfully saved ${batchResult.writtenCount} schedules.`, {
             action: {
               label: 'View Schedules',
-              onClick: () => window.location.href = '/dashboard/view-schedules'
+              onClick: () => navigate('/dashboard/view-schedules')
             }
           });
         }

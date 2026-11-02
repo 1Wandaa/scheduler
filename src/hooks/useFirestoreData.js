@@ -76,8 +76,10 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
   const [availableSemesters, setAvailableSemesters] = useState(SEMESTERS);
   const [availableSchoolYears, setAvailableSchoolYears] = useState(SCHOOL_YEARS);
   const [publishedTerms, setPublishedTerms] = useState({});
+  const [loading, setLoading] = useState(true);
 
   const seedDone = useRef(false);
+  const loadedSnapshots = useRef(new Set());
 
  // One-time data seeding & migration
   useEffect(() => {
@@ -166,26 +168,37 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
 
  // Real-time listeners
   useEffect(() => {
-    const unsubRooms = onSnapshot(collection(db, 'rooms'), (snap) =>
-      setRooms(snap.docs.map((d) => ({ ...d.data(), id: d.id })))
-    );
+    const checkAllLoaded = (key) => {
+      loadedSnapshots.current.add(key);
+      if (['rooms', 'professors', 'subjects', 'sections'].every(k => loadedSnapshots.current.has(k))) {
+        setLoading(false);
+      }
+    };
 
-    const unsubProfs = onSnapshot(collection(db, 'professors'), (snap) =>
-      setProfessors(snap.docs.map((d) => ({ ...d.data(), id: d.id })))
-    );
+    const unsubRooms = onSnapshot(collection(db, 'rooms'), (snap) => {
+      setRooms(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
+      checkAllLoaded('rooms');
+    });
 
-    const unsubSubj = onSnapshot(collection(db, 'subjects'), (snap) =>
-      setSubjects(snap.docs.map((d) => ({ ...d.data(), id: d.id })))
-    );
+    const unsubProfs = onSnapshot(collection(db, 'professors'), (snap) => {
+      setProfessors(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
+      checkAllLoaded('professors');
+    });
 
-    const unsubSec = onSnapshot(collection(db, 'sections'), (snap) =>
+    const unsubSubj = onSnapshot(collection(db, 'subjects'), (snap) => {
+      setSubjects(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
+      checkAllLoaded('subjects');
+    });
+
+    const unsubSec = onSnapshot(collection(db, 'sections'), (snap) => {
       setSections(
         snap.docs.map((d) => {
           const data = d.data();
           return { ...data, program: normalizeProgram(data.program), id: d.id };
         })
-      )
-    );
+      );
+      checkAllLoaded('sections');
+    });
 
     // We removed unsubSched from here so it can be in its own useEffect
     const unsubHist = onSnapshot(collection(db, 'scheduleHistory'), (snap) =>
@@ -238,7 +251,7 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
       const termKey = `${activeSemester}_${activeSchoolYear}`;
       if (publishedTerms[termKey] !== true) {
         setSchedules([]);
-        return;
+        return () => {};
       }
     }
 
@@ -336,6 +349,7 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
   }, [activeSchedules, professorById, roomById, sectionById, subjectById]);
 
   return {
+    loading,
     // Core collections
     rooms,
     professors,

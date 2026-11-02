@@ -1,20 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../../config/firebase';
-import { collection, addDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import { deleteSectionCascade, deleteSectionBatchCascade } from '../../services/cascadeDeleteService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, PROGRAM_DEPARTMENTS, getDeptColor } from '../../config/constants';
 import SectionTable from '../../components/SectionTable/SectionTable';
 import BatchActionBar from '../../components/common/BatchActionBar';
-import SubjectSelector from '../../components/SubjectSelector/SubjectSelector';
 import QuickCreateModal from '../../components/QuickCreateModal/QuickCreateModal';
 import CustomSelect from '../../components/CustomSelect/CustomSelect';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
-import { getColorNameAndCode } from '../../utils/colorUtils';
 
-const SectionManagement = ({ sections, professors, schedules, subjects, activeSemester, departments = [], courses = [], user, onBack, onNavigateToHub }) => {
+const SectionManagement = ({ sections, professors, schedules, subjects, departments = [], courses = [], user, onBack, onNavigateToHub }) => {
   const { confirm } = useGlobalDialog();
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -235,141 +233,6 @@ const SectionManagement = ({ sections, professors, schedules, subjects, activeSe
         console.error("Error deleting all sections:", err);
         toast.error('Failed to delete sections', { id: toastId });
       }
-    }
-  };
-
-  const handleSubjectToggle = (subjectId) => {
-    setFormData(prev => {
-      const current = prev.subjects || [];
-      if (subjectId === 'CLEAR_ALL') {
-        return { ...prev, subjects: [] };
-      }
-
-      if (Array.isArray(subjectId)) {
-        const targetTokens = subjectId.flatMap(id => {
-          const sObj = subjects.find(s => 
-            String(s.id).toLowerCase() === String(id).toLowerCase() || 
-            String(s.code).toLowerCase() === String(id).toLowerCase() || 
-            String(s.name).toLowerCase() === String(id).toLowerCase()
-          );
-          return sObj ? [sObj.id, sObj.code, sObj.name].filter(Boolean) : [id];
-        }).map(t => String(t).toLowerCase());
-
-        const allPresent = subjectId.every(id => {
-          const sObj = subjects.find(s => 
-            String(s.id).toLowerCase() === String(id).toLowerCase() || 
-            String(s.code).toLowerCase() === String(id).toLowerCase() || 
-            String(s.name).toLowerCase() === String(id).toLowerCase()
-          );
-          const tokens = sObj ? [sObj.id, sObj.code, sObj.name].filter(Boolean) : [id];
-          return current.some(c => tokens.map(t => String(t).toLowerCase()).includes(String(c).toLowerCase()));
-        });
-
-        if (allPresent) {
-          return { ...prev, subjects: current.filter(c => !targetTokens.includes(String(c).toLowerCase())) };
-        } else {
-          const toAdd = [];
-          subjectId.forEach(id => {
-            const sObj = subjects.find(s => 
-              String(s.id).toLowerCase() === String(id).toLowerCase() || 
-              String(s.code).toLowerCase() === String(id).toLowerCase() || 
-              String(s.name).toLowerCase() === String(id).toLowerCase()
-            );
-            const tokens = sObj ? [sObj.id, sObj.code, sObj.name].filter(Boolean) : [id];
-            if (!current.some(c => tokens.map(t => String(t).toLowerCase()).includes(String(c).toLowerCase()))) {
-              toAdd.push(sObj?.id || id);
-            }
-          });
-          return { ...prev, subjects: [...current, ...toAdd] };
-        }
-      }
-
-      const searchKey = typeof subjectId === 'object' && subjectId !== null
-        ? (subjectId.id || subjectId.code || subjectId.name)
-        : subjectId;
-
-      const subObj = subjects.find(s => 
-        String(s.id).toLowerCase() === String(searchKey).toLowerCase() || 
-        String(s.code).toLowerCase() === String(searchKey).toLowerCase() || 
-        String(s.name).toLowerCase() === String(searchKey).toLowerCase()
-      );
-
-      const tokensSet = new Set();
-      if (typeof subjectId === 'object' && subjectId !== null) {
-        if (subjectId.id) tokensSet.add(String(subjectId.id).toLowerCase());
-        if (subjectId.code) tokensSet.add(String(subjectId.code).toLowerCase());
-        if (subjectId.name) tokensSet.add(String(subjectId.name).toLowerCase());
-      }
-      if (subObj) {
-        if (subObj.id) tokensSet.add(String(subObj.id).toLowerCase());
-        if (subObj.code) tokensSet.add(String(subObj.code).toLowerCase());
-        if (subObj.name) tokensSet.add(String(subObj.name).toLowerCase());
-      }
-      if (searchKey) tokensSet.add(String(searchKey).toLowerCase());
-
-      const tokens = Array.from(tokensSet);
-      const isPresent = current.some(c => tokens.includes(String(c).toLowerCase()));
-
-      if (isPresent) {
-        return { ...prev, subjects: current.filter(c => !tokens.includes(String(c).toLowerCase())) };
-      } else {
-        return { ...prev, subjects: [...current, subObj?.id || searchKey] };
-      }
-    });
-  };
-
-  const orphanSubjects = useMemo(() => {
-    const currentSubjs = formData.subjects || [];
-    return currentSubjs.filter(subRef => {
-      const found = subjects.some(s => 
-        String(s.id).toLowerCase() === String(subRef).toLowerCase() || 
-        String(s.code).toLowerCase() === String(subRef).toLowerCase() || 
-        String(s.name).toLowerCase() === String(subRef).toLowerCase()
-      );
-      return !found;
-    });
-  }, [formData.subjects, subjects]);
-
-  const handleRemoveOrphanSubjects = () => {
-    const toClean = [...orphanSubjects];
-    setFormData(prev => ({
-      ...prev,
-      subjects: (prev.subjects || []).filter(s => !toClean.includes(s))
-    }));
-    toast.success(`Removed legacy subject(s): ${toClean.join(', ')}`);
-  };
-
-  const handleAutoAssignTeachers = () => {
-    const nextMap = { ...subjectInstructorMap };
-    let countAssigned = 0;
-
-    (formData.subjects || []).forEach(subRef => {
-      if (!nextMap[subRef]) {
-        const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef);
-        // Find professors who specialize in this subject
-        const matchingProfs = professors.filter(p => {
-          return sub && (p.specialization || []).some(sp => sp === sub.id || sp === sub.code || sp === sub.name);
-        });
-
-        if (matchingProfs.length > 0) {
-          // Sort by lowest current section load
-          const bestProf = [...matchingProfs].sort((a, b) => {
-            const loadA = (a.assignedSections || []).length;
-            const loadB = (b.assignedSections || []).length;
-            return loadA - loadB;
-          })[0];
-
-          nextMap[subRef] = bestProf.id;
-          countAssigned++;
-        }
-      }
-    });
-
-    setSubjectInstructorMap(nextMap);
-    if (countAssigned > 0) {
-      toast.success(`⚡ Automatically assigned specialized instructors for ${countAssigned} subject(s)!`);
-    } else {
-      toast.info("All enrolled subjects already have instructors or no specialized faculty were found.");
     }
   };
 

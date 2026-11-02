@@ -369,6 +369,19 @@ const Login = ({ onLogin }) => {
             setError('Invalid username or password. Please try again.');
             return;
           }
+        } else if (userCredential?.user?.uid && firestoreUserDoc.id !== userCredential.user.uid) {
+          // Sync profile to Auth UID document so Firestore security rules recognize the role
+          try {
+            await setDoc(doc(db, 'users', userCredential.user.uid), {
+              ...userData,
+              id: userCredential.user.uid,
+              username: userData.username || cleanUsername,
+              name: userData.name || username,
+              role: userData.role || 'User',
+            }, { merge: true });
+          } catch (syncErr) {
+            console.warn('Could not sync user profile to Auth UID:', syncErr);
+          }
         }
 
         onLogin({
@@ -461,6 +474,20 @@ const Login = ({ onLogin }) => {
         role = userData.role || 'Student';
         name = userData.name || name;
         finalUsername = userData.username || finalUsername;
+
+        if (firestoreUserDoc.id !== googleUser.uid) {
+          try {
+            await setDoc(doc(db, 'users', googleUser.uid), {
+              ...userData,
+              id: googleUser.uid,
+              name,
+              role,
+              username: finalUsername
+            }, { merge: true });
+          } catch (syncErr) {
+            console.warn('Could not sync Google user profile to Auth UID:', syncErr);
+          }
+        }
 
         onLogin({
           ...userData,

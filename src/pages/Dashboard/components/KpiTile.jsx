@@ -10,13 +10,14 @@ const KpiTile = ({ label, value, iconPath, color, onClick }) => {
   const gradEnd = lighten(color, 60);
 
   // Animated count-up
-  const [displayValue, setDisplayValue] = useState(0);
-  const prevValue = useRef(0);
+  const isNumeric = typeof value === 'number' || (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value)));
+  const numericValue = isNumeric ? Number(value) : 0;
+  const [displayValue, setDisplayValue] = useState(numericValue);
+  const prevValue = useRef(numericValue);
 
   useEffect(() => {
-    const target = typeof value === 'number' ? value : parseInt(value, 10);
-    if (isNaN(target)) { setDisplayValue(value); return; }
-
+    if (!isNumeric) return;
+    const target = Number(value);
     const start = prevValue.current;
     const diff = target - start;
     if (diff === 0) return;
@@ -36,7 +37,7 @@ const KpiTile = ({ label, value, iconPath, color, onClick }) => {
 
     requestAnimationFrame(animate);
     prevValue.current = target;
-  }, [value]);
+  }, [value, isNumeric]);
 
   return (
     <div
@@ -54,7 +55,7 @@ const KpiTile = ({ label, value, iconPath, color, onClick }) => {
         <Icon d={iconPath} size={22} />
       </div>
       <div>
-        <div className="kpi-value">{displayValue}</div>
+        <div className="kpi-value">{isNumeric ? displayValue : value}</div>
         <div className="kpi-label">{label}</div>
       </div>
     </div>
