@@ -67,11 +67,11 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
   <![endif]-->
   <style>
     @page Section1 {
-      size: 11.69in 8.27in; /* A4 / Letter Landscape matching reference (16838 x 11906 dxa) */
+      size: 11.0in 8.5in; /* Letter / A4 Landscape matching reference (16838 x 11906 dxa) */
       mso-page-orientation: landscape;
-      margin: 0.35in 0.45in 0.35in 0.45in;
-      mso-header-margin: 0.35in;
-      mso-footer-margin: 0.35in;
+      margin: 0.25in 0.35in 0.25in 0.35in;
+      mso-header-margin: 0in;
+      mso-footer-margin: 0in;
       mso-paper-source: 0;
     }
     div.Section1 {
@@ -81,7 +81,7 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
     }
     body {
       font-family: "Times New Roman", Times, serif;
-      font-size: 6pt;
+      font-size: 8pt;
       line-height: 1.0;
       color: #000000;
       background-color: #ffffff;
@@ -94,7 +94,7 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
       padding: 0;
       line-height: 1.0;
       mso-pagination: none;
-      mso-line-height-rule: exactly;
+      mso-line-height-rule: at-least;
     }
     table {
       border-collapse: collapse;
@@ -102,41 +102,41 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
       mso-table-rspace: 0pt;
       mso-table-bspace: 0pt;
       mso-table-tspace: 0pt;
-      width: 720pt;
+      width: 730pt;
       table-layout: fixed;
       page-break-inside: avoid;
       mso-padding-alt: 0pt;
       margin: 0;
     }
     tr {
-      mso-height-rule: exactly;
+      mso-height-rule: at-least;
       page-break-inside: avoid;
     }
     .iso-header-table, .grid-header-table {
-      width: 720pt;
+      width: 730pt;
       border-collapse: collapse;
       border: 1.0pt solid #000000;
-      margin-bottom: 1pt;
+      margin-bottom: 3pt;
       table-layout: fixed;
     }
     .iso-header-table td, .iso-header-table th, .grid-header-table td, .grid-header-table th {
       border: 1.0pt solid #000000;
-      padding: 1pt 2.5pt;
+      padding: 2pt 4pt;
       font-family: "Times New Roman", Times, serif;
       vertical-align: middle;
     }
     .meta-table {
-      width: 700pt;
+      width: 730pt;
       border: none;
-      margin-bottom: 1pt;
+      margin-bottom: 3pt;
       border-collapse: collapse;
       table-layout: fixed;
     }
     .meta-table td {
       border: none;
-      padding: 0.5pt 0;
+      padding: 1pt 0;
       font-family: "Times New Roman", Times, serif;
-      font-size: 9pt;
+      font-size: 9.5pt;
       font-weight: bold;
     }
     .meta-value {
@@ -144,71 +144,78 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
       text-decoration: underline;
     }
     .summary-section {
-      width: 700pt;
-      margin: 0.5pt 0 1pt 0;
+      width: 730pt;
+      margin: 1pt 0 2pt 0;
       text-align: center;
     }
     .summary-table {
-      width: 700pt;
+      width: 730pt;
       border-collapse: collapse;
       border: 1.0pt solid #000000;
-      margin-bottom: 1pt;
+      margin-bottom: 2pt;
       table-layout: fixed;
     }
     .summary-table th, .summary-table td {
       border: 1.0pt solid #000000;
-      padding: 0.5pt 1.5pt;
+      padding: 1pt 2pt;
       font-family: "Times New Roman", Times, serif;
-      font-size: 5.5pt;
-      line-height: 1.0;
+      font-size: 7.5pt;
+      line-height: 1.1;
       vertical-align: middle;
     }
     .summary-table th {
       background-color: #f2f2f2;
       font-weight: bold;
-      height: 8.5pt;
+      font-size: 8pt;
+      height: 11pt;
     }
     .iso-schedule-table, .ordinary-schedule-table {
-      width: 700pt;
+      width: 730pt;
       border-collapse: collapse;
       border: 1.0pt solid #000000;
       table-layout: fixed;
-      margin-bottom: 1pt;
+      margin-bottom: 4pt;
     }
     .iso-schedule-table th, .iso-schedule-table td, .ordinary-schedule-table th, .ordinary-schedule-table td {
       border: 1.0pt solid #000000;
-      padding: 0.5pt 1.5pt;
+      padding: 1pt 2pt;
       text-align: center;
       vertical-align: middle;
       font-family: "Times New Roman", Times, serif;
       box-sizing: border-box;
-      overflow: hidden;
+      overflow: visible;
     }
-    .iso-schedule-table th, .ordinary-schedule-table th {
+    .iso-schedule-table th {
       background-color: #f2f2f2;
       font-weight: bold;
-      font-size: 10pt;
+      font-size: 11pt;
+      height: 24pt;
+    }
+    .ordinary-schedule-table th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+      font-size: 9pt;
       height: 16pt;
     }
     .time-cell {
       font-weight: bold;
-      font-size: 6pt;
+      font-size: 11pt;
       white-space: nowrap;
       background-color: #f8fafc;
     }
     .lunch-break {
       background-color: #d1d5db;
       font-weight: bold;
-      letter-spacing: 2pt;
-      font-size: 6pt;
+      letter-spacing: 2.5pt;
+      font-size: 11pt;
       text-align: center;
-      height: 10pt;
-      padding: 0.5pt;
+      height: 22pt;
+      padding: 1pt;
     }
     .signatures-table {
-      width: 700pt;
+      width: 730pt;
       border: none;
-      margin-top: 4pt;
+      margin-top: 8pt;
       border-collapse: collapse;
       table-layout: fixed;
       page-break-inside: avoid;
@@ -218,8 +225,8 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
       border: none;
       padding: 0 10pt;
       font-family: "Times New Roman", Times, serif;
-      font-size: 5.5pt;
-      line-height: 1.0;
+      font-size: 10pt;
+      line-height: 1.2;
       vertical-align: top;
     }
     .bold { font-weight: bold; }
@@ -273,7 +280,7 @@ function wrapPortraitWordHtml(bodyHtml, title = 'Room Utilization Schedule') {
     }
     body {
       font-family: Arial, Helvetica, sans-serif !important;
-      font-size: 8.5pt;
+      font-size: 8pt;
       line-height: 1.0;
       color: #000000;
       background-color: #ffffff;
@@ -299,6 +306,7 @@ function wrapPortraitWordHtml(bodyHtml, title = 'Room Utilization Schedule') {
       page-break-inside: avoid;
       mso-padding-alt: 0pt;
       margin: 0 auto;
+      width: 500pt;
       font-family: Arial, Helvetica, sans-serif !important;
     }
     table.room-util-timetable-grid {
@@ -416,7 +424,7 @@ function wrapFacultyWorkloadWordHtml(bodyHtml, title = 'Faculty Workload') {
       page-break-inside: avoid;
       mso-padding-alt: 0pt;
       margin: 0 auto;
-      width: 540pt;
+      width: 525pt;
     }
     td, th {
       font-family: "Times New Roman", Times, serif !important;
@@ -527,17 +535,17 @@ export async function exportIsoToWord(user) {
     }
   }
 
-  // 4. Build ISO Header Table (Exact 700pt fixed width: 90 + 110 + 280 + 110 + 110 = 700pt)
+  // 4. Build ISO Header Table (Exact 730pt fixed width matching reference docx: 90 + 115 + 305 + 110 + 110 = 730pt)
   const logoHtml = logoBase64 
-    ? `<img src="${logoBase64}" width="40" height="40" style="display: block; margin: 0 auto;" alt="Logo" />`
-    : `<p align="center" style="font-weight: bold; font-size: 8.5pt; color: #1e3a8a; margin: 0;">CapSU</p><p align="center" style="font-size: 6pt; font-weight: bold; margin: 0;">Capiz State University</p>`;
+    ? `<img src="${logoBase64}" width="42" height="42" style="display: block; margin: 0 auto;" alt="Logo" />`
+    : `<p align="center" style="font-weight: bold; font-size: 9pt; color: #1e3a8a; margin: 0;">CapSU</p><p align="center" style="font-size: 6.5pt; font-weight: bold; margin: 0;">Capiz State University</p>`;
 
   const headerTableHtml = `
-    <table class="iso-header-table" border="1" bordercolor="#000000" cellspacing="0" cellpadding="2">
+    <table class="iso-header-table" border="1" bordercolor="#000000" cellspacing="0" cellpadding="2" style="width: 730pt;">
       <colgroup>
         <col width="90" style="width: 90pt;">
-        <col width="110" style="width: 110pt;">
-        <col width="280" style="width: 280pt;">
+        <col width="115" style="width: 115pt;">
+        <col width="305" style="width: 305pt;">
         <col width="110" style="width: 110pt;">
         <col width="110" style="width: 110pt;">
       </colgroup>
@@ -545,56 +553,56 @@ export async function exportIsoToWord(user) {
         <td rowspan="4" align="center" valign="middle" width="90" style="width: 90pt; text-align: center; vertical-align: middle; padding: 1pt;">
           ${logoHtml}
         </td>
-        <td width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">Document Type:</td>
-        <td rowspan="2" align="center" valign="middle" width="280" style="width: 280pt; font-weight: bold; font-size: 11pt; text-align: center; vertical-align: middle;">
+        <td width="115" style="width: 115pt; font-weight: bold; font-size: 8.5pt;">Document Type:</td>
+        <td rowspan="2" align="center" valign="middle" width="305" style="width: 305pt; font-weight: bold; font-size: 12pt; text-align: center; vertical-align: middle;">
           DOCUMENTED INFORMATION
         </td>
-        <td width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">Document Code</td>
-        <td width="110" style="width: 110pt; font-size: 9pt;">INS-CLS-08</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 8.5pt;">Document Code</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 8.5pt; text-align: center;">INS-CLS-08</td>
       </tr>
       <tr>
-        <td width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">ISO 9001:2015</td>
-        <td width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">Revision No.</td>
-        <td width="110" style="width: 110pt; font-size: 9pt;">00</td>
+        <td width="115" style="width: 115pt; font-weight: bold; font-size: 8.5pt;">ISO 9001:2015</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 8.5pt;">Revision No.</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 8.5pt; text-align: center;">00</td>
       </tr>
       <tr>
-        <td rowspan="2" width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">Document Title:</td>
-        <td rowspan="2" align="center" valign="middle" width="280" style="width: 280pt; font-weight: bold; font-size: 12pt; text-align: center; vertical-align: middle;">
+        <td rowspan="2" width="115" style="width: 115pt; font-weight: bold; font-size: 8.5pt; vertical-align: top;">Document Title:</td>
+        <td rowspan="2" align="center" valign="middle" width="305" style="width: 305pt; font-weight: bold; font-size: 12pt; text-align: center; vertical-align: middle; letter-spacing: 1px;">
           CLASS SCHEDULE
         </td>
-        <td width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">Effective Date</td>
-        <td width="110" style="width: 110pt; font-size: 9pt;">June 25, 2018</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 8.5pt;">Effective Date</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 8.5pt; text-align: center;">June 25, 2018</td>
       </tr>
       <tr>
-        <td width="110" style="width: 110pt; font-weight: bold; font-size: 9pt;">Page</td>
-        <td width="110" style="width: 110pt; font-size: 9pt;">1 of 1</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 8.5pt;">Page</td>
+        <td width="110" style="width: 110pt; font-weight: bold; font-size: 8.5pt; text-align: center;">1 of 1</td>
       </tr>
     </table>
   `;
 
-  // 5. Build Meta Table (Exact 700pt fixed width: 280 + 220 + 200 = 700pt)
+  // 5. Build Meta Table (Exact 730pt fixed width: 350 + 185 + 195 = 730pt)
   const metaTableHtml = `
-    <table class="meta-table" border="0" cellspacing="0" cellpadding="1">
+    <table class="meta-table" border="0" cellspacing="0" cellpadding="1" style="width: 730pt;">
       <colgroup>
-        <col width="280" style="width: 280pt;">
-        <col width="220" style="width: 220pt;">
-        <col width="200" style="width: 200pt;">
+        <col width="350" style="width: 350pt;">
+        <col width="185" style="width: 185pt;">
+        <col width="195" style="width: 195pt;">
       </colgroup>
       <tr>
-        <td align="left" width="280" style="width: 280pt; text-align: left;">
+        <td align="left" width="350" style="width: 350pt; text-align: left; font-size: 9pt; white-space: nowrap;">
           ${col1Html}
         </td>
-        <td align="center" width="220" style="width: 220pt; text-align: center;">
+        <td align="center" width="185" style="width: 185pt; text-align: center; font-size: 9pt; white-space: nowrap;">
           ${col2Html}
         </td>
-        <td align="right" width="200" style="width: 200pt; text-align: right;">
+        <td align="right" width="195" style="width: 195pt; text-align: right; font-size: 9pt; white-space: nowrap;">
           ${col3Html}
         </td>
       </tr>
     </table>
   `;
 
-  // 6. Build Schedule Grid Table based on main timetable geometry (Exact 700pt fixed width)
+  // 6. Build Schedule Grid Table based on reference geometry (Exact 730pt fixed width: 115pt time + 5x123pt days)
   const originalTable = isoDoc.querySelector('.iso-schedule-table');
   let scheduleTableHtml = '';
 
@@ -603,33 +611,39 @@ export async function exportIsoToWord(user) {
 
     const ths = cloneTable.querySelectorAll('thead th');
     const dayCount = ths.length > 1 ? ths.length - 1 : 5;
-    const timeWidth = 75;
-    const dayWidth = (700 - timeWidth) / dayCount;
+    const timeWidth = 115;
+    const dayWidth = Math.floor((730 - timeWidth) / dayCount);
 
-    // Apply strict column widths on header
+    // Apply strict column widths on header matching reference (115pt TIME, 123pt days, 11pt bold)
     if (ths.length > 0) {
       ths[0].setAttribute('width', `${timeWidth}`);
       ths[0].style.width = `${timeWidth}pt`;
-      ths[0].style.fontSize = '8pt';
-      ths[0].style.height = '14pt';
+      ths[0].style.fontSize = '11pt';
+      ths[0].style.fontWeight = 'bold';
+      ths[0].style.height = '24pt';
 
       for (let i = 1; i < ths.length; i++) {
         ths[i].setAttribute('width', `${dayWidth}`);
         ths[i].style.width = `${dayWidth}pt`;
-        ths[i].style.fontSize = '8pt';
-        ths[i].style.height = '14pt';
+        ths[i].style.fontSize = '11pt';
+        ths[i].style.fontWeight = 'bold';
+        ths[i].style.height = '24pt';
       }
     }
 
     const tbodyRows = cloneTable.querySelectorAll('tbody tr');
-    const totalRows = tbodyRows.length || 22;
-    // Allocate ~350pt for table body so all rows + header + signatures fit strictly on 1 landscape page
-    const dynamicRowHeight = Math.max(11, Math.min(16, Math.floor(350 / totalRows)));
+    const totalRows = tbodyRows.length || 8;
+    const isIso8Block = totalRows <= 10;
+    // Set 48pt for class rows to give ample room for 4-line items (Code, Component, Prof, Room)
+    const regularRowHeight = isIso8Block ? 48 : Math.max(16, Math.floor(370 / totalRows));
+    const lunchRowHeight = isIso8Block ? 20 : 18;
 
-    // Transform cell contents to crisp, fixed-width Word cells
+    // Transform cell contents to crisp, fixed-width Word cells matching reference typography
     tbodyRows.forEach(tr => {
-      tr.style.height = `${dynamicRowHeight}pt`;
-      tr.style.msoHeightRule = 'exactly';
+      const isLunchRow = tr.classList.contains('lunch-row') || !!tr.querySelector('.lunch-break-cell');
+      const currentRowHeight = isLunchRow ? lunchRowHeight : regularRowHeight;
+      tr.style.height = `${currentRowHeight}pt`;
+      tr.style.msoHeightRule = 'at-least';
 
       const isHourRow = tr.classList.contains('hour-row');
       const isHalfHourRow = tr.classList.contains('half-hour-row');
@@ -639,21 +653,23 @@ export async function exportIsoToWord(user) {
         if (td.classList.contains('time-cell')) {
           td.setAttribute('width', `${timeWidth}`);
           td.style.width = `${timeWidth}pt`;
-          td.style.fontSize = '7pt';
+          td.style.fontSize = '10.5pt';
           td.style.fontWeight = 'bold';
           td.style.border = '1.0pt solid #000000';
           td.setAttribute('align', 'center');
           td.setAttribute('valign', 'middle');
+          td.style.verticalAlign = 'middle';
         } else if (td.classList.contains('lunch-break-cell')) {
           td.setAttribute('width', `${dayWidth * dayCount}`);
           td.style.width = `${dayWidth * dayCount}pt`;
-          td.style.fontSize = '8pt';
+          td.style.fontSize = '11pt';
           td.style.fontWeight = 'bold';
-          td.style.letterSpacing = '2pt';
+          td.style.letterSpacing = '2.5pt';
           td.style.border = '1.0pt solid #000000';
           td.setAttribute('align', 'center');
           td.setAttribute('valign', 'middle');
-          td.innerHTML = '<p style="font-weight: bold; font-size: 8pt; letter-spacing: 2pt; margin: 0; padding: 0; text-align: center; color: #000000;">LUNCH BREAK</p>';
+          td.style.verticalAlign = 'middle';
+          td.innerHTML = '<p style="font-weight: bold; font-size: 11pt; letter-spacing: 2.5pt; margin: 0; padding: 0; text-align: center; color: #000000;">L U N C H &nbsp;&nbsp; B R E A K</p>';
         } else {
           td.setAttribute('width', `${dayWidth}`);
           td.style.width = `${dayWidth}pt`;
@@ -670,21 +686,90 @@ export async function exportIsoToWord(user) {
             }
           }
 
-          const subj = td.querySelector('.cell-subject')?.textContent.trim() || '';
-          const prof = td.querySelector('.cell-professor')?.textContent.trim() || '';
-          const room = td.querySelector('.cell-room')?.textContent.trim() || '';
+          const contentBlocks = Array.from(td.querySelectorAll('.cell-content'));
+          const isMultiClass = contentBlocks.length > 1;
 
-          if (subj || prof || room) {
-            td.innerHTML = `
-              <p style="font-weight: bold; font-size: 7.5pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.1;">${subj}</p>
-              ${prof ? `<p style="font-size: 6.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #111827; line-height: 1.1;">${prof}</p>` : ''}
-              ${room ? `<p style="font-size: 6.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #374151; line-height: 1.1;">${room}</p>` : ''}
-            `;
+          if (contentBlocks.length > 0) {
+            const itemsHtml = contentBlocks.map((blk, bIdx) => {
+              const rawSubj = blk.querySelector('.cell-subject')?.textContent.trim() || '';
+              const rawProf = blk.querySelector('.cell-professor')?.textContent.trim() || '';
+              const rawRoom = blk.querySelector('.cell-room')?.textContent.trim() || '';
+
+              // Extract component like (Lecture), (Laboratory), (Lec), (Lab)
+              let subjCode = rawSubj;
+              let subjComp = '';
+              const compMatch = rawSubj.match(/\s*(\((?:Lecture|Laboratory|Lec|Lab)\))/i);
+              if (compMatch) {
+                subjComp = compMatch[1];
+                subjCode = rawSubj.replace(compMatch[0], '').trim();
+              }
+
+              if (isMultiClass) {
+                return `
+                  <div style="${bIdx > 0 ? 'border-top: 0.5pt solid #000000; margin-top: 1.5pt; padding-top: 1.5pt;' : ''}">
+                    <p style="font-weight: bold; font-size: 8.5pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.05;">${subjCode}${subjComp ? ' ' + subjComp : ''}</p>
+                    ${rawProf ? `<p style="font-size: 7.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #111827; line-height: 1.05;">${rawProf}</p>` : ''}
+                    ${rawRoom ? `<p style="font-size: 7.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #374151; line-height: 1.05;">${rawRoom}</p>` : ''}
+                  </div>
+                `;
+              }
+
+              if (subjComp) {
+                // 4 lines: Code, Component, Prof, Room
+                return `
+                  <p style="font-weight: bold; font-size: 10pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.1;">${subjCode}</p>
+                  <p style="font-size: 8.5pt; font-weight: bold; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #1f2937; line-height: 1.05;">${subjComp}</p>
+                  ${rawProf ? `<p style="font-size: 8.5pt; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #111827; line-height: 1.1;">${rawProf}</p>` : ''}
+                  ${rawRoom ? `<p style="font-size: 8.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #374151; line-height: 1.1;">${rawRoom}</p>` : ''}
+                `;
+              } else {
+                // Standard 3 lines: Code, Prof, Room (e.g. CS 122, C. Palomar, Room 204)
+                return `
+                  <p style="font-weight: bold; font-size: 10.5pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.15;">${subjCode}</p>
+                  ${rawProf ? `<p style="font-size: 9.5pt; margin: 1.5pt 0 0 0; padding: 0; text-align: center; color: #111827; line-height: 1.15;">${rawProf}</p>` : ''}
+                  ${rawRoom ? `<p style="font-size: 9.5pt; margin: 1.5pt 0 0 0; padding: 0; text-align: center; color: #374151; line-height: 1.15;">${rawRoom}</p>` : ''}
+                `;
+              }
+            }).join('');
+
+            td.innerHTML = itemsHtml;
           } else {
-            td.innerHTML = '';
+            // Fallback for direct elements
+            const rawSubj = td.querySelector('.cell-subject')?.textContent.trim() || '';
+            const rawProf = td.querySelector('.cell-professor')?.textContent.trim() || '';
+            const rawRoom = td.querySelector('.cell-room')?.textContent.trim() || '';
+
+            if (rawSubj || rawProf || rawRoom) {
+              let subjCode = rawSubj;
+              let subjComp = '';
+              const compMatch = rawSubj.match(/\s*(\((?:Lecture|Laboratory|Lec|Lab)\))/i);
+              if (compMatch) {
+                subjComp = compMatch[1];
+                subjCode = rawSubj.replace(compMatch[0], '').trim();
+              }
+
+              if (subjComp) {
+                td.innerHTML = `
+                  <p style="font-weight: bold; font-size: 10pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.1;">${subjCode}</p>
+                  <p style="font-size: 8.5pt; font-weight: bold; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #1f2937; line-height: 1.05;">${subjComp}</p>
+                  ${rawProf ? `<p style="font-size: 8.5pt; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #111827; line-height: 1.1;">${rawProf}</p>` : ''}
+                  ${rawRoom ? `<p style="font-size: 8.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #374151; line-height: 1.1;">${rawRoom}</p>` : ''}
+                `;
+              } else {
+                td.innerHTML = `
+                  <p style="font-weight: bold; font-size: 10.5pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.15;">${subjCode}</p>
+                  ${rawProf ? `<p style="font-size: 9.5pt; margin: 1.5pt 0 0 0; padding: 0; text-align: center; color: #111827; line-height: 1.15;">${rawProf}</p>` : ''}
+                  ${rawRoom ? `<p style="font-size: 9.5pt; margin: 1.5pt 0 0 0; padding: 0; text-align: center; color: #374151; line-height: 1.15;">${rawRoom}</p>` : ''}
+                `;
+              }
+            } else {
+              td.innerHTML = '';
+            }
           }
           td.setAttribute('align', 'center');
           td.setAttribute('valign', 'middle');
+          td.style.verticalAlign = 'middle';
+          td.style.padding = '2pt 3pt';
         }
       });
     });
@@ -694,9 +779,10 @@ export async function exportIsoToWord(user) {
     cloneTable.setAttribute('cellspacing', '0');
     cloneTable.setAttribute('cellpadding', '1');
     cloneTable.className = 'iso-schedule-table';
+    cloneTable.style.width = '730pt';
     cloneTable.style.borderCollapse = 'collapse';
 
-    // Insert Colgroup for Word
+    // Insert Colgroup for Word matching reference (115pt time + 5x123pt days = 730pt)
     const colgroup = document.createElement('colgroup');
     let colsHtml = `<col width="${timeWidth}" style="width: ${timeWidth}pt;">`;
     for (let i = 0; i < dayCount; i++) {
@@ -708,23 +794,23 @@ export async function exportIsoToWord(user) {
     scheduleTableHtml = cloneTable.outerHTML;
   }
 
-  // 7. Build Signatures Table (Exact 700pt fixed width: 350 + 350 = 700pt)
+  // 7. Build Signatures Table (Exact 730pt fixed width: 365 + 365 = 730pt)
   const signaturesTableHtml = `
-    <table class="signatures-table" border="0" cellspacing="0" cellpadding="1" style="page-break-inside: avoid; page-break-after: avoid; margin-top: 4pt;">
+    <table class="signatures-table" border="0" cellspacing="0" cellpadding="1" style="width: 730pt; page-break-inside: avoid; page-break-after: avoid; margin-top: 8pt;">
       <colgroup>
-        <col width="350" style="width: 350pt;">
-        <col width="350" style="width: 350pt;">
+        <col width="365" style="width: 365pt;">
+        <col width="365" style="width: 365pt;">
       </colgroup>
       <tr>
-        <td width="350" style="width: 350pt; text-align: left; vertical-align: top; padding: 0 10pt;">
-          <p style="margin: 0 0 3pt 0; font-size: 10pt;">Prepared by:</p>
-          <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 11pt;">${prepName}</p>
-          <p style="margin: 0.5pt 0 0 0; font-size: 10pt;">${prepTitle}</p>
+        <td width="365" style="width: 365pt; text-align: left; vertical-align: top; padding: 0 10pt;">
+          <p style="margin: 0 0 4pt 0; font-size: 10pt;">Prepared by:</p>
+          <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 12pt;">${prepName}</p>
+          <p style="margin: 1pt 0 0 0; font-size: 10pt;">${prepTitle}</p>
         </td>
-        <td width="350" style="width: 350pt; text-align: left; padding-left: 30pt; vertical-align: top;">
-          <p style="margin: 0 0 3pt 0; font-size: 10pt;">Approved:</p>
-          <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 11pt;">${appName}</p>
-          <p style="margin: 0.5pt 0 0 0; font-size: 10pt;">${appTitle}</p>
+        <td width="365" style="width: 365pt; text-align: left; padding-left: 30pt; vertical-align: top;">
+          <p style="margin: 0 0 4pt 0; font-size: 10pt;">Approved:</p>
+          <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 12pt;">${appName}</p>
+          <p style="margin: 1pt 0 0 0; font-size: 10pt;">${appTitle}</p>
         </td>
       </tr>
     </table>
@@ -771,44 +857,44 @@ export async function exportRoomUtilizationToWord(user) {
 
     // 2. Build Header (pure paragraph + float image, ZERO tables so Word CANNOT draw any dashed gridlines)
     const headerHtml = `
-      <div style="width: 560pt; margin: 0 auto 2pt auto; border-bottom: 2.0pt solid #f2a900; padding-bottom: 1pt;">
-        ${logoBase64 ? `<img src="${logoBase64}" width="30" height="30" align="left" hspace="6" vspace="0" style="float: left; margin-right: 6pt;" alt="CapSU" />` : ''}
+      <div style="width: 500pt; margin: 0 auto 3pt auto; border-bottom: 2.5pt solid #f2a900; padding-bottom: 2pt;">
+        ${logoBase64 ? `<img src="${logoBase64}" width="34" height="34" align="left" hspace="8" vspace="0" style="float: left; margin-right: 8pt;" alt="CapSU" />` : ''}
         <div style="font-family: Arial, Helvetica, sans-serif;">
-          <div style="font-size: 7.5pt; color: #000000; line-height: 8.5pt;">Republic of the Philippines</div>
-          <div style="font-size: 11.5pt; font-weight: bold; color: #002060; letter-spacing: 0.5pt; line-height: 13pt;">CAPIZ STATE UNIVERSITY</div>
-          <div style="font-size: 7.5pt; font-weight: bold; color: #002060; line-height: 8.5pt;">MAMBUSAO SATELLITE COLLEGE</div>
+          <div style="font-size: 8pt; color: #000000; line-height: 9.5pt;">Republic of the Philippines</div>
+          <div style="font-size: 13.5pt; font-weight: bold; color: #002060; letter-spacing: 0.5pt; line-height: 15pt;">CAPIZ STATE UNIVERSITY</div>
+          <div style="font-size: 9pt; font-weight: bold; color: #002060; line-height: 10pt;">MAMBUSAO SATELLITE COLLEGE</div>
         </div>
         <div style="clear: both; font-size: 1pt; line-height: 1pt;">&nbsp;</div>
       </div>
     `;
 
-    // 3. Titles Section (compact, perfectly aligned)
+    // 3. Titles Section (matching reference docx)
     const deptName = roomDoc.querySelector('.room-util-titles h2')?.textContent.trim() || 'DEPARTMENT';
     const titleText = roomDoc.querySelector('.room-util-titles h3')?.textContent.trim() || 'Room Utilization';
     const semText = roomDoc.querySelector('.room-util-titles p')?.textContent.trim() || 'First Semester, School Year 2026-2027';
     const titlesHtml = `
-      <div style="text-align: center; margin-bottom: 2pt;">
-        <div style="font-family: Arial, sans-serif; color: #2e5296; font-size: 8.5pt; font-weight: bold; text-transform: uppercase; line-height: 10pt;">${deptName}</div>
-        <div style="font-family: Arial, sans-serif; font-size: 9.5pt; font-weight: bold; line-height: 11pt; margin-top: 1pt;">${titleText}</div>
-        <div style="font-family: Arial, sans-serif; font-size: 7pt; line-height: 8.5pt; margin-top: 1pt;">${semText}</div>
+      <div style="text-align: center; margin-bottom: 3pt;">
+        <div style="font-family: Arial, sans-serif; color: #2e5296; font-size: 10.5pt; font-weight: bold; text-transform: uppercase; line-height: 12pt;">${deptName}</div>
+        <div style="font-family: Arial, sans-serif; font-size: 10.5pt; font-weight: bold; line-height: 12pt; margin-top: 1pt;">${titleText}</div>
+        <div style="font-family: Arial, sans-serif; font-size: 8.5pt; line-height: 10pt; margin-top: 1pt;">${semText}</div>
       </div>
     `;
 
     // 4. Room Badge
     const roomBadgeText = roomDoc.querySelector('.room-util-room-name')?.textContent.trim() || 'Room: N/A';
     const roomBadgeHtml = `
-      <div style="margin-bottom: 2pt;">
-        <span style="font-family: Arial, sans-serif; font-size: 7.5pt; font-weight: bold; background-color: #ffff00; border: 1.0pt solid #000000; padding: 0.5pt 4pt; display: inline-block;">${roomBadgeText}</span>
+      <div style="margin-bottom: 3pt;">
+        <span style="font-family: Arial, sans-serif; font-size: 9.5pt; font-weight: bold; background-color: #ffff00; border: 1.0pt solid #000000; padding: 1pt 5pt; display: inline-block;">${roomBadgeText}</span>
       </div>
     `;
 
-    // 5. Subjects Table (560pt width, solid 1.0pt borders, compact rows)
+    // 5. Subjects Table (Exact 500pt width matching Table 0 of ROOM UTILIZATION.docx)
     const srcSubjTable = roomDoc.querySelector('.room-util-subjects');
     let subjTableHtml = '';
     if (srcSubjTable) {
       const rows = Array.from(srcSubjTable.querySelectorAll('tr'));
       subjTableHtml = `
-        <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="0" style="width: 500pt; border-collapse: collapse; table-layout: fixed; margin-bottom: 2pt; border: 1.0pt solid #000000; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+        <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="0" style="width: 500pt; border-collapse: collapse; table-layout: fixed; margin-bottom: 3pt; border: 1.0pt solid #000000; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
           <colgroup>
             <col width="60" style="width: 60pt;">
             <col width="160" style="width: 160pt;">
@@ -819,7 +905,7 @@ export async function exportRoomUtilizationToWord(user) {
           ${rows.map((tr, rIdx) => {
             const isHead = rIdx === 0;
             const cells = Array.from(tr.children);
-            const rowHeight = isHead ? 11 : 9.5;
+            const rowHeight = isHead ? 13 : 11;
             return `
               <tr style="height: ${rowHeight}pt; mso-height-rule: at-least; page-break-inside: avoid;">
                 ${cells.map((cell, cIdx) => {
@@ -828,9 +914,10 @@ export async function exportRoomUtilizationToWord(user) {
                   const isDesc = !isHeaderCell && cIdx === 1 && colSpan === '1';
                   const bg = isHeaderCell ? 'background-color: #f2f2f2;' : '';
                   const weight = isHeaderCell || cell.style.fontWeight === 'bold' ? 'font-weight: bold;' : '';
-                  const align = isDesc ? 'text-align: left; padding: 0.5pt 3pt;' : 'text-align: center; padding: 0.5pt 1pt;';
+                  const align = isDesc ? 'text-align: left; padding: 1pt 4pt;' : 'text-align: center; padding: 1pt 2pt;';
+                  const fontSize = isHeaderCell ? '8pt' : '7.5pt';
                   return `
-                    <${cell.tagName.toLowerCase()} colspan="${colSpan}" style="border: 1.0pt solid #000000; font-family: Arial, sans-serif; font-size: 6.5pt; vertical-align: middle; line-height: 1.1; ${align} ${bg} ${weight}">
+                    <${cell.tagName.toLowerCase()} colspan="${colSpan}" style="border: 1.0pt solid #000000; font-family: Arial, sans-serif; font-size: ${fontSize}; vertical-align: middle; line-height: 1.15; ${align} ${bg} ${weight}">
                       ${cell.innerHTML}
                     </${cell.tagName.toLowerCase()}>
                   `;
@@ -842,21 +929,21 @@ export async function exportRoomUtilizationToWord(user) {
       `;
     }
 
-    // 6. Timetable Grid: 14pt per slot (= 28pt/hour), compact, fits 100% on Page 1
+    // 6. Timetable Grid (Exact 500pt width matching reference)
     const srcTimetable = roomDoc.querySelector('.room-util-timetable');
     let timetableHtml = '';
     if (srcTimetable) {
       const ths = Array.from(srcTimetable.querySelectorAll('thead th'));
       const totalCols = ths.length || 7;
       const timetableWidth = 500;
-      const timeColWidth = 65;
+      const timeColWidth = 68;
       const dayCount = totalCols > 1 ? totalCols - 1 : 6;
       const dayColWidth = Math.floor((timetableWidth - timeColWidth) / dayCount);
       const lastDayColWidth = timetableWidth - timeColWidth - (dayColWidth * (dayCount - 1));
 
       const bodyRows = Array.from(srcTimetable.querySelectorAll('tbody tr'));
       const totalRows = bodyRows.length || 22;
-      const slotHeight = 14; // 14pt per slot = 28pt per hour: guarantees complete Page 1 fit
+      const slotHeight = 15; // 15pt per slot = 30pt per hour: guarantees complete Page 1 fit matching reference docx
 
       // Build complete 2D matrix [totalRows][totalCols] from DOM
       const gridMatrix = [];
@@ -953,11 +1040,11 @@ export async function exportRoomUtilizationToWord(user) {
 
       const theadHtml = `
         <thead>
-          <tr style="height: 12pt; mso-height-rule: at-least; page-break-inside: avoid;">
+          <tr style="height: 14pt; mso-height-rule: at-least; page-break-inside: avoid;">
             ${ths.map((th, idx) => {
               const w = idx === 0 ? timeColWidth : (idx === totalCols - 1 ? lastDayColWidth : dayColWidth);
               return `
-                <th width="${w}" style="width: ${w}pt; border: 1.0pt solid #000000; mso-border-alt: solid #000000 1.0pt; padding: 1pt 1pt; font-size: 7pt; font-weight: bold; text-align: center; vertical-align: middle; background-color: #f2f2f2; font-family: Arial, Helvetica, sans-serif; line-height: 8.5pt;">
+                <th width="${w}" style="width: ${w}pt; border: 1.0pt solid #000000; mso-border-alt: solid #000000 1.0pt; padding: 1pt 1pt; font-size: 8.5pt; font-weight: bold; text-align: center; vertical-align: middle; background-color: #f2f2f2; font-family: Arial, Helvetica, sans-serif; line-height: 10pt;">
                   ${th.textContent.trim()}
                 </th>
               `;
@@ -981,7 +1068,7 @@ export async function exportRoomUtilizationToWord(user) {
           const timeHeight = slotHeight * timeSpan;
 
           cellsHtml.push(`
-            <td rowspan="${timeSpan}" width="${timeColWidth}" style="width: ${timeColWidth}pt; height: ${timeHeight}pt; mso-height-rule: at-least; border: 1.0pt solid #000000; mso-border-alt: solid #000000 1.0pt; background-color: #f8fafc; font-size: 6.5pt; font-weight: bold; text-align: center; vertical-align: middle; font-family: Arial, Helvetica, sans-serif; padding: 0 1pt; line-height: 8pt;">
+            <td rowspan="${timeSpan}" width="${timeColWidth}" style="width: ${timeColWidth}pt; height: ${timeHeight}pt; mso-height-rule: at-least; border: 1.0pt solid #000000; mso-border-alt: solid #000000 1.0pt; background-color: #f8fafc; font-size: 7.5pt; font-weight: bold; text-align: center; vertical-align: middle; font-family: Arial, Helvetica, sans-serif; padding: 0 1pt; line-height: 9pt;">
               ${timeLabel}
             </td>
           `);
@@ -1016,27 +1103,27 @@ export async function exportRoomUtilizationToWord(user) {
 
             let contentHtml = '';
             if (span === 1) {
-              // 30-min slot (14pt)
+              // 30-min slot (15pt)
               contentHtml = `
-                <div style="font-weight: bold; font-size: 6pt; line-height: 6.8pt; font-family: Arial, sans-serif; text-align: center; color: #000000; margin: 0; padding: 0;">${displaySubj}${displayComp ? ` (${displayComp})` : ''}</div>
-                ${cls.prof ? `<div style="font-size: 5pt; font-weight: 600; line-height: 5.8pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0.5pt 0 0 0; padding: 0;">${cls.prof}</div>` : ''}
+                <div style="font-weight: bold; font-size: 7.5pt; line-height: 8.5pt; font-family: Arial, sans-serif; text-align: center; color: #000000; margin: 0; padding: 0;">${displaySubj}${displayComp ? ` (${displayComp})` : ''}</div>
+                ${cls.prof ? `<div style="font-size: 6.5pt; font-weight: 600; line-height: 7.5pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0.5pt 0 0 0; padding: 0;">${cls.prof}</div>` : ''}
               `;
             } else if (span === 2) {
-              // 1-hour slot (28pt) - 4 compact lines that perfectly fit without clipping
+              // 1-hour slot (30pt) - clear lines that fit comfortably
               contentHtml = `
-                <div style="font-weight: bold; font-size: 6pt; line-height: 6.8pt; font-family: Arial, sans-serif; text-align: center; color: #000000; margin: 0; padding: 0;">${displaySubj}</div>
-                ${displayComp ? `<div style="font-size: 5pt; line-height: 5.8pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0; padding: 0;">(${displayComp})</div>` : ''}
-                ${cls.prof ? `<div style="font-size: 5.5pt; font-weight: 600; line-height: 6.2pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0.5pt 0 0 0; padding: 0;">${cls.prof}</div>` : ''}
-                <div style="font-size: 5pt; line-height: 5.8pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0.5pt 0 0 0; padding: 0;">${cls.rm}${cls.sec ? ` - ${cls.sec}` : ''}</div>
+                <div style="font-weight: bold; font-size: 7.5pt; line-height: 8.5pt; font-family: Arial, sans-serif; text-align: center; color: #000000; margin: 0; padding: 0;">${displaySubj}</div>
+                ${displayComp ? `<div style="font-size: 6.5pt; line-height: 7.5pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0; padding: 0;">(${displayComp})</div>` : ''}
+                ${cls.prof ? `<div style="font-size: 7pt; font-weight: 600; line-height: 8pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0.5pt 0 0 0; padding: 0;">${cls.prof}</div>` : ''}
+                <div style="font-size: 6.5pt; line-height: 7.5pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0.5pt 0 0 0; padding: 0;">${cls.rm}${cls.sec ? ` - ${cls.sec}` : ''}</div>
               `;
             } else {
-              // 1.5-hour or more (42pt+) - spacious, crisp formatting
+              // 1.5-hour or more (45pt+) - spacious, crisp formatting
               contentHtml = `
-                <div style="font-weight: bold; font-size: 7pt; line-height: 8pt; font-family: Arial, sans-serif; text-align: center; color: #000000; margin: 0; padding: 0;">${displaySubj}</div>
-                ${displayComp ? `<div style="font-size: 5.5pt; line-height: 6.5pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0; padding: 0;">(${displayComp})</div>` : ''}
-                ${cls.prof ? `<div style="font-size: 6pt; font-weight: 600; line-height: 7pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 1pt 0 0 0; padding: 0;">${cls.prof}</div>` : ''}
-                <div style="font-size: 5.5pt; line-height: 6.5pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0.5pt 0 0 0; padding: 0;">${cls.rm}</div>
-                ${cls.sec ? `<div style="font-weight: bold; font-size: 5.5pt; line-height: 6.5pt; font-family: Arial, sans-serif; text-align: center; color: #1e3a8a; margin: 0.5pt 0 0 0; padding: 0;">${cls.sec}</div>` : ''}
+                <div style="font-weight: bold; font-size: 8.5pt; line-height: 9.5pt; font-family: Arial, sans-serif; text-align: center; color: #000000; margin: 0; padding: 0;">${displaySubj}</div>
+                ${displayComp ? `<div style="font-size: 7.5pt; line-height: 8.5pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0; padding: 0;">(${displayComp})</div>` : ''}
+                ${cls.prof ? `<div style="font-size: 7.5pt; font-weight: 600; line-height: 8.5pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 1pt 0 0 0; padding: 0;">${cls.prof}</div>` : ''}
+                <div style="font-size: 7pt; line-height: 8pt; font-family: Arial, sans-serif; text-align: center; color: #111827; margin: 0.5pt 0 0 0; padding: 0;">${cls.rm}</div>
+                ${cls.sec ? `<div style="font-weight: bold; font-size: 7.5pt; line-height: 8.5pt; font-family: Arial, sans-serif; text-align: center; color: #1e3a8a; margin: 0.5pt 0 0 0; padding: 0;">${cls.sec}</div>` : ''}
               `;
             }
 
@@ -1117,35 +1204,35 @@ export async function exportRoomUtilizationToWord(user) {
         </colgroup>
         <tr style="page-break-inside: avoid;">
           <td width="166" style="width: 166pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
-            <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 7pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               ${prepLabel}
             </p>
-            <p style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               <u>${prepName}</u>
             </p>
-            <p style="margin: 1pt 0 0 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 6.5pt; color: #4b5563; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 1pt 0 0 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #4b5563; line-height: 1.15; mso-line-height-rule: at-least;">
               ${prepTitle}
             </p>
           </td>
-          <td width="186" style="width: 186pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
-            <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 7pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+          <td width="166" style="width: 166pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
+            <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               ${notedLabel}
             </p>
-            <p style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               <u>${notedName}</u>
             </p>
-            <p style="margin: 1pt 0 0 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 6.5pt; color: #4b5563; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 1pt 0 0 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #4b5563; line-height: 1.15; mso-line-height-rule: at-least;">
               ${notedTitle}
             </p>
           </td>
-          <td width="188" style="width: 188pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
-            <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 7pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+          <td width="168" style="width: 168pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
+            <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               ${approvedLabel}
             </p>
-            <p style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               <u>${approvedName}</u>
             </p>
-            <p style="margin: 1pt 0 0 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 6.5pt; color: #4b5563; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 1pt 0 0 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #4b5563; line-height: 1.15; mso-line-height-rule: at-least;">
               ${approvedTitle}
             </p>
           </td>
@@ -1296,28 +1383,28 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
           <td rowspan="4" align="center" valign="middle" width="75" style="width: 75pt; text-align: center; vertical-align: middle; padding: 1pt;">
             ${logoHtml}
           </td>
-          <td rowspan="2" valign="middle" width="230" style="width: 230pt; padding: 2pt 4pt; font-size: 8pt; vertical-align: middle;">
-            <div style="font-size: 8pt;">Document Type: <span style="font-weight: bold; margin-left: 12pt;">FORM</span></div>
-            <div style="font-size: 8pt; font-weight: bold; text-align: center; margin-top: 1pt;">ISO 9001:2015</div>
+          <td rowspan="2" valign="middle" width="230" style="width: 230pt; padding: 2pt 4pt; font-size: 8.5pt; vertical-align: middle;">
+            <div style="font-size: 8.5pt;">Document Type: <span style="font-weight: bold; margin-left: 12pt;">FORM</span></div>
+            <div style="font-size: 8.5pt; font-weight: bold; text-align: center; margin-top: 1pt;">ISO 9001:2015</div>
           </td>
-          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: left; padding-left: 4pt;">Document Code</td>
-          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: center;">INS F22</td>
+          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: left; padding-left: 4pt;">Document Code</td>
+          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: center;">INS F22</td>
         </tr>
         <tr>
-          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: left; padding-left: 4pt;">Revision No.</td>
-          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: center;">00</td>
+          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: left; padding-left: 4pt;">Revision No.</td>
+          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: center;">00</td>
         </tr>
         <tr>
-          <td rowspan="2" valign="middle" width="230" style="width: 230pt; padding: 2pt 4pt; font-size: 8pt; vertical-align: middle;">
-            <div style="font-size: 8pt;">Document Type:</div>
-            <div style="font-size: 11pt; font-weight: bold; text-align: center; margin-top: 1pt;">FACULTY WORKLOAD</div>
+          <td rowspan="2" valign="middle" width="230" style="width: 230pt; padding: 2pt 4pt; font-size: 8.5pt; vertical-align: middle;">
+            <div style="font-size: 8.5pt;">Document Type:</div>
+            <div style="font-size: 11.5pt; font-weight: bold; text-align: center; margin-top: 1pt;">FACULTY WORKLOAD</div>
           </td>
-          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: left; padding-left: 4pt;">Effective Date</td>
-          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: center;">August 5, 2024</td>
+          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: left; padding-left: 4pt;">Effective Date</td>
+          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: center;">August 5, 2024</td>
         </tr>
         <tr>
-          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: left; padding-left: 4pt;">Page</td>
-          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: center;">1 of 1</td>
+          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: left; padding-left: 4pt;">Page</td>
+          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: center;">1 of 1</td>
         </tr>
       </table>
     `;
@@ -1334,7 +1421,7 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
 
     // 6. Faculty Profile Table (525pt)
     const profileTableHtml = `
-      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7pt;">
+      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7.5pt;">
         <colgroup>
           <col width="122" style="width: 122pt;">
           <col width="45" style="width: 45pt;">
@@ -1342,7 +1429,7 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
           <col width="151" style="width: 151pt;">
         </colgroup>
         <tr style="background-color: #f2f2f2;">
-          <th colspan="4" style="font-weight: bold; font-size: 7.5pt; text-align: center; padding: 1.5pt;">FACULTY PROFILE</th>
+          <th colspan="4" style="font-weight: bold; font-size: 8pt; text-align: center; padding: 2pt;">FACULTY PROFILE</th>
         </tr>
         <tr>
           <td rowspan="3" style="font-weight: bold; text-align: center; vertical-align: middle;">BACCALAUREATE</td>
@@ -1364,12 +1451,12 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
           <td rowspan="3" style="font-weight: bold; text-align: center; vertical-align: middle;">MASTER'S DEGREE</td>
           <td style="text-align: left; padding-left: 4pt;">Degree</td>
           <td></td>
-          <td style="text-align: left; padding-left: 4pt; font-size: 7pt;">Rank/Position: <b>${profRank}</b></td>
+          <td style="text-align: left; padding-left: 4pt; font-size: 7.5pt;">Rank/Position: <b>${profRank}</b></td>
         </tr>
         <tr>
           <td style="text-align: left; padding-left: 4pt;">School</td>
           <td></td>
-          <td style="text-align: left; padding-left: 4pt; font-size: 7pt;">Designation:</td>
+          <td style="text-align: left; padding-left: 4pt; font-size: 7.5pt;">Designation:</td>
         </tr>
         <tr>
           <td style="text-align: left; padding-left: 4pt;">Major</td>
@@ -1397,8 +1484,8 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
 
     // 7. Teaching Assignment Table (525pt matching reference docx)
     const teachingAssignmentHtml = `
-      <p style="font-size: 7.5pt; font-weight: bold; margin: 3pt 0 1pt 0;">TEACHING ASSIGNMENT:</p>
-      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7pt;">
+      <p style="font-size: 8pt; font-weight: bold; margin: 3pt 0 1pt 0;">TEACHING ASSIGNMENT:</p>
+      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7.5pt;">
         <colgroup>
           <col width="72" style="width: 72pt;">
           <col width="203" style="width: 203pt;">
@@ -1416,11 +1503,11 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
           <th rowspan="2" style="width: 52pt; vertical-align: middle;">No. of<br/>Students</th>
         </tr>
         <tr style="background-color: #f2f2f2; font-weight: bold;">
-          <th style="font-size: 6.5pt;">Lec/Lab</th>
+          <th style="font-size: 7pt;">Lec/Lab</th>
         </tr>
         ${uniqueAssignments.map(a => `
           <tr>
-            <td style="text-align: center;">${a.subjectCode}</td>
+            <td style="text-align: center; font-weight: bold;">${a.subjectCode}</td>
             <td style="text-align: left; padding-left: 3pt;">${a.subjectName}</td>
             <td style="text-align: center; font-weight: bold;">${a.unit}</td>
             <td style="text-align: center;">${a.hoursPerWeek}</td>
@@ -1436,7 +1523,7 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
           <td colspan="2"></td>
         </tr>
         <tr>
-          <td colspan="6" style="text-align: left; font-weight: bold; padding-left: 3pt; font-size: 6.5pt;">Other Assignments:</td>
+          <td colspan="6" style="text-align: left; font-weight: bold; padding-left: 3pt; font-size: 7pt;">Other Assignments:</td>
         </tr>
         <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
         <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
@@ -1445,8 +1532,8 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
 
     // 8. Class Schedule Table (525pt matching reference docx)
     const classScheduleHtml = `
-      <p style="font-size: 7.5pt; font-weight: bold; margin: 3pt 0 1pt 0;">Class Schedule:</p>
-      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7pt;">
+      <p style="font-size: 8pt; font-weight: bold; margin: 3pt 0 1pt 0;">Class Schedule:</p>
+      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7.5pt;">
         <colgroup>
           <col width="89" style="width: 89pt;">
           <col width="87" style="width: 87pt;">
@@ -1465,7 +1552,7 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
         </tr>
         ${uniqueTimeBlocks.map(block => `
           <tr>
-            <td style="text-align: center; font-weight: bold; font-size: 6.5pt; white-space: nowrap;">${block.label.replace('-', '–')}</td>
+            <td style="text-align: center; font-weight: bold; font-size: 7.5pt; white-space: nowrap;">${block.label.replace('-', '–')}</td>
             ${days.map(day => {
               const classes = (schedules || []).filter(s => {
                 if (s.day !== day) return false;
@@ -1481,10 +1568,10 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
               }
 
               return `
-                <td style="text-align: center; vertical-align: middle; padding: 1pt;">
+                <td style="text-align: center; vertical-align: middle; padding: 1.5pt;">
                   ${classes.map(cls => `
-                    <div style="font-weight: bold; font-size: 6.5pt;">${cls.subject?.code || ''}</div>
-                    <div style="font-size: 6pt; color: #111;">${cls.room?.name ? cls.room.name.replace('Room', 'RM').replace('ROOM', 'RM') : 'TBA'}${cls.section?.name ? ' - ' + cls.section.name : ''}</div>
+                    <div style="font-weight: bold; font-size: 8pt;">${cls.subject?.code || ''}</div>
+                    <div style="font-size: 7pt; color: #111;">${cls.room?.name ? cls.room.name.replace('Room', 'RM').replace('ROOM', 'RM') : 'TBA'}${cls.section?.name ? ' - ' + cls.section.name : ''}</div>
                   `).join('<div style="height: 1.5pt;"></div>')}
                 </td>
               `;
@@ -1504,22 +1591,22 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
         </colgroup>
         <tr>
           <td style="border: none; text-align: left; vertical-align: top; padding: 0;">
-            <div style="font-size: 7.5pt;">Prepared by:</div>
+            <div style="font-size: 8pt;">Prepared by:</div>
             <div style="height: 14pt;"></div>
-            <div style="font-size: 8pt; font-weight: bold;"><u>JELLY L. PAREDES, EdD</u></div>
-            <div style="font-size: 7pt; color: #333;">Program Chairperson</div>
+            <div style="font-size: 9pt; font-weight: bold;"><u>JELLY L. PAREDES, EdD</u></div>
+            <div style="font-size: 7.5pt; color: #333;">Program Chairperson</div>
             
             <div style="height: 8pt;"></div>
-            <div style="font-size: 7.5pt;">Approved:</div>
+            <div style="font-size: 8pt;">Approved:</div>
             <div style="height: 14pt;"></div>
-            <div style="font-size: 8pt; font-weight: bold;"><u>RAMY LLOYD L. LOTILLA, EdD</u></div>
-            <div style="font-size: 7pt; color: #333;">Satellite College Director</div>
+            <div style="font-size: 9pt; font-weight: bold;"><u>RAMY LLOYD L. LOTILLA, EdD</u></div>
+            <div style="font-size: 7.5pt; color: #333;">Satellite College Director</div>
           </td>
           <td style="border: none; text-align: left; vertical-align: top; padding: 0 0 0 20pt;">
-            <div style="font-size: 7.5pt;">Conforme:</div>
+            <div style="font-size: 8pt;">Conforme:</div>
             <div style="height: 14pt;"></div>
-            <div style="font-size: 8pt; font-weight: bold;"><u>${profName}</u></div>
-            <div style="font-size: 7pt; color: #333;">Faculty</div>
+            <div style="font-size: 9pt; font-weight: bold;"><u>${profName}</u></div>
+            <div style="font-size: 7.5pt; color: #333;">Faculty</div>
           </td>
         </tr>
       </table>
@@ -1616,31 +1703,31 @@ export async function exportGridToWord(tableContainer, user) {
     else if (t.includes('Effectivity:')) effectivity = t.replace('Effectivity:', '').trim();
   });
 
-  // 3. Build Header Table (720pt fixed width: 75 + 485 + 160 = 720pt)
+  // 3. Build Header Table (730pt fixed width matching landscape standard: 80 + 480 + 170 = 730pt)
   const logoHtml = logoBase64 
-    ? `<img src="${logoBase64}" width="28" height="28" style="display: block; margin: 0 auto;" alt="Logo" />`
-    : `<p align="center" style="font-weight: bold; font-size: 8pt; color: #1e3a8a; margin: 0;">CapSU</p><p align="center" style="font-size: 5.5pt; font-weight: bold; margin: 0;">Capiz State University</p>`;
+    ? `<img src="${logoBase64}" width="38" height="38" style="display: block; margin: 0 auto;" alt="Logo" />`
+    : `<p align="center" style="font-weight: bold; font-size: 9pt; color: #1e3a8a; margin: 0;">CapSU</p><p align="center" style="font-size: 6.5pt; font-weight: bold; margin: 0;">Capiz State University</p>`;
 
   const headerHtml = `
-    <table class="grid-header-table" border="1" bordercolor="#000000" cellspacing="0" cellpadding="2" style="width: 720pt;">
+    <table class="grid-header-table" border="1" bordercolor="#000000" cellspacing="0" cellpadding="2" style="width: 730pt;">
       <colgroup>
-        <col width="75" style="width: 75pt;">
-        <col width="485" style="width: 485pt;">
-        <col width="160" style="width: 160pt;">
+        <col width="80" style="width: 80pt;">
+        <col width="480" style="width: 480pt;">
+        <col width="170" style="width: 170pt;">
       </colgroup>
       <tr>
-        <td width="75" align="center" valign="middle" style="width: 75pt; text-align: center; vertical-align: middle; padding: 1pt;">
+        <td width="80" align="center" valign="middle" style="width: 80pt; text-align: center; vertical-align: middle; padding: 1pt;">
           ${logoHtml}
         </td>
-        <td width="485" align="center" valign="middle" style="width: 485pt; text-align: center; vertical-align: middle;">
-          <h2 style="margin: 0; font-size: 8.5pt; font-family: 'Times New Roman', serif; font-weight: bold; line-height: 1.0;">CAPIZ STATE UNIVERSITY</h2>
-          <h3 style="margin: 1pt 0 0 0; font-size: 7.5pt; font-family: 'Times New Roman', serif; font-weight: bold; color: #1e3a8a; line-height: 1.0;">${titleText}</h3>
+        <td width="480" align="center" valign="middle" style="width: 480pt; text-align: center; vertical-align: middle;">
+          <h2 style="margin: 0; font-size: 11pt; font-family: 'Times New Roman', serif; font-weight: bold; line-height: 1.1;">CAPIZ STATE UNIVERSITY</h2>
+          <h3 style="margin: 2pt 0 0 0; font-size: 10pt; font-family: 'Times New Roman', serif; font-weight: bold; color: #1e3a8a; line-height: 1.1;">${titleText}</h3>
         </td>
-        <td width="160" valign="middle" style="width: 160pt; font-size: 5.5pt; padding: 1pt 3pt; line-height: 1.0;">
+        <td width="170" valign="middle" style="width: 170pt; font-size: 8pt; padding: 1.5pt 4pt; line-height: 1.2;">
           <p style="margin: 0;"><b>Doc. Code:</b> ${docCode}</p>
-          <p style="margin: 0.5pt 0 0 0;"><b>Revision No.:</b> ${revNo}</p>
-          <p style="margin: 0.5pt 0 0 0;"><b>Effectivity:</b> ${effectivity}</p>
-          <p style="margin: 0.5pt 0 0 0;"><b>Page:</b> 1 of 1</p>
+          <p style="margin: 1pt 0 0 0;"><b>Revision No.:</b> ${revNo}</p>
+          <p style="margin: 1pt 0 0 0;"><b>Effectivity:</b> ${effectivity}</p>
+          <p style="margin: 1pt 0 0 0;"><b>Page:</b> 1 of 1</p>
         </td>
       </tr>
     </table>
@@ -1653,10 +1740,10 @@ export async function exportGridToWord(tableContainer, user) {
 
   if (summaryContainer || summaryTableEl) {
     const summaryHeadHtml = `
-      <div class="summary-section" style="text-align: center; margin: 0.5pt 0;">
-        ${deptText ? `<p style="margin: 0; font-size: 6.5pt; font-family: 'Times New Roman', serif; font-weight: bold; color: #033279; text-transform: uppercase; line-height: 1.0;">${deptText}</p>` : ''}
-        <p style="margin: 0.5pt 0 0 0; font-size: 6pt; font-family: 'Times New Roman', serif; font-weight: bold; color: #000000; line-height: 1.0;">SCHEDULE OF CLASSES</p>
-        <p style="margin: 0.5pt 0 1pt 0; font-size: 5.5pt; font-family: 'Times New Roman', serif; color: #333333; line-height: 1.0;">${semText}</p>
+      <div class="summary-section" style="width: 730pt; text-align: center; margin: 1pt 0 2pt 0;">
+        ${deptText ? `<p style="margin: 0; font-size: 9pt; font-family: 'Times New Roman', serif; font-weight: bold; color: #033279; text-transform: uppercase; line-height: 1.15;">${deptText}</p>` : ''}
+        <p style="margin: 1pt 0 0 0; font-size: 9pt; font-family: 'Times New Roman', serif; font-weight: bold; color: #000000; line-height: 1.15;">SCHEDULE OF CLASSES</p>
+        <p style="margin: 1pt 0 2pt 0; font-size: 8.5pt; font-family: 'Times New Roman', serif; color: #333333; line-height: 1.15;">${semText}</p>
       </div>
     `;
 
@@ -1668,19 +1755,19 @@ export async function exportGridToWord(tableContainer, user) {
       cloneSumTable.setAttribute('bordercolor', '#000000');
       cloneSumTable.setAttribute('cellspacing', '0');
       cloneSumTable.setAttribute('cellpadding', '1');
-      cloneSumTable.style.width = '720pt';
+      cloneSumTable.style.width = '730pt';
       cloneSumTable.style.borderCollapse = 'collapse';
       cloneSumTable.style.tableLayout = 'fixed';
-      cloneSumTable.style.marginBottom = '1pt';
+      cloneSumTable.style.marginBottom = '2pt';
 
-      // Set fixed colgroup: 70pt + 290pt + 40pt + 185pt + 135pt = 720pt
+      // Set fixed colgroup: 75pt + 285pt + 45pt + 185pt + 140pt = 730pt
       const sumColgroup = document.createElement('colgroup');
       sumColgroup.innerHTML = `
-        <col width="70" style="width: 70pt;">
-        <col width="290" style="width: 290pt;">
-        <col width="40" style="width: 40pt;">
+        <col width="75" style="width: 75pt;">
+        <col width="285" style="width: 285pt;">
+        <col width="45" style="width: 45pt;">
         <col width="185" style="width: 185pt;">
-        <col width="135" style="width: 135pt;">
+        <col width="140" style="width: 140pt;">
       `;
       cloneSumTable.insertBefore(sumColgroup, cloneSumTable.firstChild);
 
@@ -1688,25 +1775,25 @@ export async function exportGridToWord(tableContainer, user) {
       cloneSumTable.querySelectorAll('thead th').forEach((th, idx) => {
         th.style.backgroundColor = '#f2f2f2';
         th.style.border = '1.0pt solid #000000';
-        th.style.padding = '0.5pt 1.5pt';
-        th.style.fontSize = '5.5pt';
+        th.style.padding = '1.5pt 2pt';
+        th.style.fontSize = '8.5pt';
         th.style.fontWeight = 'bold';
-        th.style.height = '8.5pt';
-        th.style.lineHeight = '1.0';
+        th.style.height = '13pt';
+        th.style.lineHeight = '1.1';
         if (idx === 2) th.style.textAlign = 'center';
         else th.style.textAlign = 'left';
       });
 
       // Format rows
       cloneSumTable.querySelectorAll('tbody tr').forEach(tr => {
-        tr.style.height = '7.5pt';
+        tr.style.height = '11pt';
         tr.style.msoHeightRule = 'exactly';
         const tds = tr.querySelectorAll('td');
         tds.forEach((td, idx) => {
           td.style.border = '1.0pt solid #000000';
-          td.style.padding = '0.5pt 1.5pt';
-          td.style.fontSize = '5.5pt';
-          td.style.lineHeight = '1.0';
+          td.style.padding = '1pt 2pt';
+          td.style.fontSize = '8pt';
+          td.style.lineHeight = '1.1';
           td.style.verticalAlign = 'middle';
           if (idx === 2) {
             td.style.textAlign = 'center';
@@ -1723,7 +1810,7 @@ export async function exportGridToWord(tableContainer, user) {
     `;
   }
 
-  // 5. Build Clean Dynamic 1-Page Main Schedule Grid Table (720pt fixed width)
+  // 5. Build Clean Dynamic 1-Page Main Schedule Grid Table (730pt fixed width)
   const originalGrid = container.querySelector('.schedule-table');
   let gridTableHtml = '';
 
@@ -1734,44 +1821,46 @@ export async function exportGridToWord(tableContainer, user) {
     // Calculate number of day columns
     const ths = cloneGrid.querySelectorAll('thead th');
     const dayCount = Math.max(1, ths.length - 1);
-    const timeWidth = 70;
-    const dayWidth = Math.floor((720 - timeWidth) / dayCount);
+    const timeWidth = 100;
+    const dayWidth = Math.floor((730 - timeWidth) / dayCount);
+    const lastDayWidth = 730 - timeWidth - (dayWidth * (dayCount - 1));
 
     // Apply header widths and styles
     if (ths.length > 0) {
       ths[0].setAttribute('width', `${timeWidth}`);
       ths[0].style.width = `${timeWidth}pt`;
       ths[0].style.backgroundColor = '#f2f2f2';
-      ths[0].style.fontSize = '7pt';
+      ths[0].style.fontSize = '10.5pt';
       ths[0].style.fontWeight = 'bold';
-      ths[0].style.height = '14pt';
+      ths[0].style.height = '20pt';
       ths[0].style.textAlign = 'center';
       ths[0].style.padding = '1pt 2pt';
       ths[0].style.border = '1.0pt solid #000000';
 
       for (let i = 1; i < ths.length; i++) {
-        ths[i].setAttribute('width', `${dayWidth}`);
-        ths[i].style.width = `${dayWidth}pt`;
+        const curWidth = (i === ths.length - 1) ? lastDayWidth : dayWidth;
+        ths[i].setAttribute('width', `${curWidth}`);
+        ths[i].style.width = `${curWidth}pt`;
         ths[i].style.backgroundColor = '#f2f2f2';
-        ths[i].style.fontSize = '7pt';
+        ths[i].style.fontSize = '10.5pt';
         ths[i].style.fontWeight = 'bold';
-        ths[i].style.height = '14pt';
+        ths[i].style.height = '20pt';
         ths[i].style.textAlign = 'center';
         ths[i].style.padding = '1pt 2pt';
         ths[i].style.border = '1.0pt solid #000000';
       }
     }
 
-    // Process tbody rows: exactly 18pt per slot so all 22 slots fit on 1 landscape page with square proportions
+    // Process tbody rows: at least 18pt per slot so all 22 slots fit on 1 landscape page with the header & signatures
     cloneGrid.querySelectorAll('tbody tr').forEach(tr => {
       tr.style.height = '18pt';
-      tr.style.msoHeightRule = 'exactly';
+      tr.style.msoHeightRule = 'at-least';
 
       const isHourHead = tr.classList.contains('hour-row');
       const isHalfHour = tr.classList.contains('half-hour-row');
 
       const tds = tr.querySelectorAll('td');
-      tds.forEach((td) => {
+      tds.forEach((td, tdIdx) => {
         td.style.boxSizing = 'border-box';
         td.style.verticalAlign = 'middle';
         td.style.padding = '1pt 2pt';
@@ -1779,12 +1868,12 @@ export async function exportGridToWord(tableContainer, user) {
         if (td.classList.contains('time-label')) {
           td.setAttribute('width', `${timeWidth}`);
           td.style.width = `${timeWidth}pt`;
-          td.style.fontSize = '6.5pt';
+          td.style.fontSize = '9.5pt';
           td.style.fontWeight = 'bold';
           td.style.backgroundColor = '#f8fafc';
           td.setAttribute('bgcolor', '#f8fafc');
           td.style.textAlign = 'center';
-          td.style.lineHeight = '1.0';
+          td.style.lineHeight = '1.15';
           td.style.border = '1.0pt solid #000000';
         } else if (td.classList.contains('lunch-break')) {
           td.setAttribute('width', `${dayWidth}`);
@@ -1793,7 +1882,7 @@ export async function exportGridToWord(tableContainer, user) {
           td.setAttribute('bgcolor', '#d1d5db');
           td.style.letterSpacing = '2.5pt';
           td.style.fontWeight = 'bold';
-          td.style.fontSize = '6.5pt';
+          td.style.fontSize = '11pt';
           td.style.textAlign = 'center';
           td.style.border = '1.0pt solid #000000';
         } else {
@@ -1839,11 +1928,12 @@ export async function exportGridToWord(tableContainer, user) {
             td.style.color = '#ffffff';
             td.style.border = '1.0pt solid #000000';
 
+            const roomSecLine = (room && sec) ? `${room} • ${sec}` : (room || sec);
+
             td.innerHTML = `
-              <p style="font-weight: bold; font-size: 7.2pt; margin: 0; padding: 0; text-align: center; color: #ffffff; line-height: 1.1;">${subj || '—'}</p>
-              ${prof ? `<p style="font-size: 5.8pt; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.1;">${prof}</p>` : ''}
-              ${room ? `<p style="font-size: 5.8pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.1;">${room}</p>` : ''}
-              ${sec ? `<p style="font-size: 5.8pt; font-weight: bold; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.1;">${sec}</p>` : ''}
+              <p style="font-weight: bold; font-size: 10pt; margin: 0; padding: 0; text-align: center; color: #ffffff; line-height: 1.15;">${subj || '—'}</p>
+              ${prof ? `<p style="font-size: 8.5pt; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.15;">${prof}</p>` : ''}
+              ${roomSecLine ? `<p style="font-size: 8.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.15;">${roomSecLine}</p>` : ''}
             `;
           } else {
             // Empty cell: keep clean, with border styling for 1-hour groups
@@ -1871,16 +1961,17 @@ export async function exportGridToWord(tableContainer, user) {
     cloneGrid.setAttribute('cellspacing', '0');
     cloneGrid.setAttribute('cellpadding', '1');
     cloneGrid.className = 'ordinary-schedule-table';
-    cloneGrid.style.width = '720pt';
+    cloneGrid.style.width = '730pt';
     cloneGrid.style.tableLayout = 'fixed';
     cloneGrid.style.borderCollapse = 'collapse';
     cloneGrid.style.marginBottom = '2pt';
 
-    // Insert colgroup for Word
+    // Insert colgroup for Word (strictly summing to 730pt)
     const colgroup = document.createElement('colgroup');
     let colsHtml = `<col width="${timeWidth}" style="width: ${timeWidth}pt;">`;
     for (let i = 0; i < dayCount; i++) {
-      colsHtml += `<col width="${dayWidth}" style="width: ${dayWidth}pt;">`;
+      const curWidth = (i === dayCount - 1) ? lastDayWidth : dayWidth;
+      colsHtml += `<col width="${curWidth}" style="width: ${curWidth}pt;">`;
     }
     colgroup.innerHTML = colsHtml;
     cloneGrid.insertBefore(colgroup, cloneGrid.firstChild);
@@ -1888,7 +1979,7 @@ export async function exportGridToWord(tableContainer, user) {
     gridTableHtml = cloneGrid.outerHTML;
   }
 
-  // 6. Build Clean Dynamic Signatures Table (360pt + 360pt = 720pt)
+  // 6. Build Clean Dynamic Signatures Table (365pt + 365pt = 730pt)
   let prepName = 'PROGRAM CHAIRPERSON';
   let prepTitle = 'Program Chair';
   let appName = 'RAMY LLOYD LOTILLA, EdD';
@@ -1909,21 +2000,21 @@ export async function exportGridToWord(tableContainer, user) {
   }
 
   const signaturesTableHtml = `
-    <table class="signatures-table" border="0" cellspacing="0" cellpadding="1" style="width: 720pt; page-break-inside: avoid; page-break-after: avoid; margin-top: 3pt;">
+    <table class="signatures-table" border="0" cellspacing="0" cellpadding="1" style="width: 730pt; page-break-inside: avoid; page-break-after: avoid; margin-top: 6pt;">
       <colgroup>
-        <col width="360" style="width: 360pt;">
-        <col width="360" style="width: 360pt;">
+        <col width="365" style="width: 365pt;">
+        <col width="365" style="width: 365pt;">
       </colgroup>
       <tr>
-        <td width="360" style="width: 360pt; text-align: left; vertical-align: top; padding: 0 10pt;">
-          <p style="margin: 0 0 2pt 0; font-size: 5.5pt;">Prepared by:</p>
-          <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 6.5pt;">${prepName}</p>
-          <p style="margin: 0.5pt 0 0 0; font-size: 5.5pt;">${prepTitle}</p>
+        <td width="365" style="width: 365pt; text-align: left; vertical-align: top; padding: 0 10pt;">
+          <p style="margin: 0 0 3pt 0; font-size: 9.5pt;">Prepared by:</p>
+          <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 11.5pt;">${prepName}</p>
+          <p style="margin: 0.5pt 0 0 0; font-size: 9.5pt;">${prepTitle}</p>
         </td>
-        <td width="360" style="width: 360pt; text-align: left; padding-left: 30pt; vertical-align: top;">
-          <p style="margin: 0 0 2pt 0; font-size: 5.5pt;">Approved:</p>
-          <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 6.5pt;">${appName}</p>
-          <p style="margin: 0.5pt 0 0 0; font-size: 5.5pt;">${appTitle}</p>
+        <td width="365" style="width: 365pt; text-align: left; padding-left: 30pt; vertical-align: top;">
+          <p style="margin: 0 0 3pt 0; font-size: 9.5pt;">Approved:</p>
+          <p style="margin: 0; font-weight: bold; text-decoration: underline; font-size: 11.5pt;">${appName}</p>
+          <p style="margin: 0.5pt 0 0 0; font-size: 9.5pt;">${appTitle}</p>
         </td>
       </tr>
     </table>
