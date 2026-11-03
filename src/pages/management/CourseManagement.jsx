@@ -285,7 +285,7 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
               <p>Configure academic courses</p>
             </div>
           </div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div className="mgmt-header-actions">
               <button
                 className={`select-mode-btn${selectionMode ? ' active' : ''}`}
                 onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}

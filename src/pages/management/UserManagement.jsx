@@ -418,7 +418,7 @@ const UserManagement = ({ user, onBack }) => {
               <p>Manage system users and permissions</p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div className="mgmt-header-actions">
             <button
               className={`select-mode-btn${selectionMode ? ' active' : ''}`}
               onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}

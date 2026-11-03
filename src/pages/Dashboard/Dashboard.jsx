@@ -568,7 +568,7 @@ const Dashboard = ({ user, onLogout }) => {
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           marginBottom: '28px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, flex: '1 1 auto' }}>
             <button
               className="sidebar-toggle-btn"
               onClick={() => setIsSidebarCollapsed(c => !c)}
@@ -589,16 +589,16 @@ const Dashboard = ({ user, onLogout }) => {
                 }}
               />
             )}
-            <div>
+            <div style={{ minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: '0.76rem', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                 Capiz State University · Mambusao Satellite College
               </p>
-              <h1 style={{ margin: '4px 0 0', fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>
+              <h1 style={{ margin: '4px 0 0', fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em', wordBreak: 'break-word' }}>
                 Welcome, {firstName} <span style={{ fontSize: '1.3rem' }}>👋</span>
               </h1>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', maxWidth: '100%' }}>
             <div style={{
               display: 'flex', gap: '8px', alignItems: 'center',
               background: 'rgba(255, 255, 255, 0.08)',
@@ -607,10 +607,9 @@ const Dashboard = ({ user, onLogout }) => {
               borderRadius: '10px',
               border: '1px solid rgba(255, 255, 255, 0.12)',
               transition: 'background 0.2s ease',
-            }}
-              
-              
-            >
+              maxWidth: '100%',
+              boxSizing: 'border-box',
+            }}>
               <CustomDropdown
                 options={availableSemesters}
                 value={activeSemester}

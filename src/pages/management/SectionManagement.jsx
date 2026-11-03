@@ -307,7 +307,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, departme
               <p>Manage student sections and their enrolled subjects</p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div className="mgmt-header-actions">
             {onNavigateToHub && (
               <button 
                 className="btn" 

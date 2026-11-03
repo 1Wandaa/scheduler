@@ -45,7 +45,10 @@ const CustomDropdown = ({ options, value, onChange, title, alignRight = false })
           border: '1px solid rgba(255, 255, 255, 0.15)',
           borderRadius: '12px',
           padding: '6px',
-          minWidth: '200px',
+          minWidth: '180px',
+          maxWidth: 'calc(100vw - 32px)',
+          maxHeight: 'min(300px, 60vh)',
+          overflowY: 'auto',
           boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)',
           zIndex: 9999,
           

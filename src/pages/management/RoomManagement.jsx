@@ -267,7 +267,7 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
                 <p>Configure campus facilities</p>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div className="mgmt-header-actions">
               <button
                 className={`select-mode-btn${selectionMode ? ' active' : ''}`}
                 onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}

@@ -183,14 +183,14 @@ function TermManagement({ availableSemesters, availableSchoolYears, onBack, publ
                         <p>Manage the predefined options available in the global term selector</p>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="mgmt-header-actions">
                     <button className="btn" onClick={() => handleAddTerm('semester')}>+ Add Semester</button>
                     <button className="btn" onClick={() => handleAddTerm('schoolYear')}>+ Add Year</button>
                 </div>
             </div>
 
             {/* --- CONTENT SECTION --- */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '25px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 350px), 1fr))', gap: '25px' }}>
                 
                 {/* Semesters Table */}
                 <div>

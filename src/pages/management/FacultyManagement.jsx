@@ -342,7 +342,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
                 <p>Manage instructors, their departments, and constraints</p>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div className="mgmt-header-actions">
               {onNavigateToHub && (
                 <button 
                   className="btn" 

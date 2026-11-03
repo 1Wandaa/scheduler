@@ -273,7 +273,7 @@ const RecycleBin = ({ onBack, user }) => {
             <p>Restore or permanently delete removed items</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div className="mgmt-header-actions">
           {trashItems.length > 0 && (
             <button
               className={`select-mode-btn${selectionMode ? ' active' : ''}`}

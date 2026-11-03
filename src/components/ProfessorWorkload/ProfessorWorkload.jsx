@@ -244,16 +244,16 @@ function ProfessorWorkload({
                     {prof.department}
                   </p>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                <div className="pw-card-header-actions">
                   <div className="pw-badge">
                     {prof.utilization.toFixed(0)}%
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div className="pw-card-btn-group">
                     <button 
                       className="pw-print-btn" 
                       onClick={() => handlePrint(prof)}
                       title="Print Workload"
-                      style={{ background: 'none', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-main)' }}
+                      style={{ background: 'none', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-main)', whiteSpace: 'nowrap' }}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                       Print
@@ -262,7 +262,7 @@ function ProfessorWorkload({
                       className="pw-word-btn" 
                       onClick={() => handleExportWord(prof)}
                       title="Save Faculty Workload as Word document (.doc)"
-                      style={{ background: 'var(--accent-primary, #2563eb)', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '500' }}
+                      style={{ background: 'var(--accent-primary, #2563eb)', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '500', whiteSpace: 'nowrap' }}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>

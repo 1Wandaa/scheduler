@@ -677,11 +677,13 @@
   .schedule-toolbar {
     gap: 8px;
     margin-bottom: 10px;
+    flex-wrap: wrap;
   }
 
   .schedule-toolbar-actions {
     width: 100%;
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
   }
 
@@ -697,6 +699,13 @@
   .schedule-toolbar .fullscreen-btn {
     width: 100%;
     justify-content: center;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .schedule-toolbar .fullscreen-btn span {
+    display: inline !important;
   }
 
   .schedule-doc-meta {
@@ -830,6 +839,12 @@
     right: 2px !important;
     width: 18px !important;
     height: 18px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .schedule-toolbar-actions .btn {
+    flex: 1 1 100% !important;
   }
 }
 

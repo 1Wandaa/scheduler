@@ -528,7 +528,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               <p>Manage courses and their scheduling constraints</p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div className="mgmt-header-actions">
             {onNavigateToHub && (
               <button 
                 className="btn" 
