@@ -251,8 +251,8 @@ const SectionManagement = ({ sections, professors, schedules, subjects, departme
     const updates = { name: newName };
 
     // Auto-detect program/department from section name
-    const programCodes = courses.length > 0 
-      ? courses.map(c => c.code) 
+    const programCodes = courses.length > 0
+      ? courses.map(c => c.code)
       : (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS);
 
     const sortedCodes = [...programCodes].sort((a, b) => b.length - a.length);
@@ -290,7 +290,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, departme
 
   return (
     <>
-      <div className="card" style={{  position: 'relative' }}>
+      <div className="card" style={{ position: 'relative' }}>
         <div className="mgmt-header">
           <div className="mgmt-header-left">
             {onBack && (
@@ -309,8 +309,8 @@ const SectionManagement = ({ sections, professors, schedules, subjects, departme
           </div>
           <div className="mgmt-header-actions">
             {onNavigateToHub && (
-              <button 
-                className="btn" 
+              <button
+                className="btn"
                 onClick={onNavigateToHub}
                 style={{ background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-color)', boxShadow: 'none' }}
               >
@@ -445,9 +445,9 @@ const SectionManagement = ({ sections, professors, schedules, subjects, departme
 
       {showModal && createPortal(
         <div className="modal-overlay">
-          <div 
-            className="modal-content" 
-            style={{ width: '500px', maxWidth: '100%' }} 
+          <div
+            className="modal-content"
+            style={{ width: '500px', maxWidth: '100%' }}
             onClick={e => e.stopPropagation()}
             onKeyDown={handleKeyDown}
           >
@@ -455,7 +455,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, departme
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main)' }}>
                 {editMode ? 'Edit Section' : 'Add New Section'}
               </h3>
-              <button 
+              <button
                 type="button"
                 onClick={() => !isSaving && setShowModal(false)}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}
@@ -519,7 +519,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, departme
                 <option value={4}>4th Year</option>
               </select>
             </div>
-            
+
             <div className="mgmt-modal-actions">
               <button className="mgmt-cancel-btn" onClick={() => setShowModal(false)} disabled={isSaving}>Cancel</button>
               <button className="btn" onClick={handleSave} disabled={isSaving}>
