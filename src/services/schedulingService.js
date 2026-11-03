@@ -399,6 +399,26 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 
         // 4. Prefer earlier slots slightly
         score -= (startIdx * 0.5);
+
+        // 5. Prefer standard institutional ISO period start times
+        const targetHours = group.targetDuration || subject?.hoursPerMeeting || 1.5;
+        const candidateSlotId = Number(candidateTimeSlot.id);
+        if (targetHours === 1.5) {
+          // Standard 1.5-hour blocks start at: 7:00 (1), 8:30 (4), 10:00 (7), 12:30 (11), 2:00 (14), 3:30 (17)
+          if ([1, 4, 7, 11, 14, 17].includes(candidateSlotId)) {
+            score += 25;
+          }
+        } else if (targetHours >= 2.5) {
+          // Standard lab blocks start at: 7:00 (1), 8:30 (4), 12:30 (11), 2:00 (14)
+          if ([1, 4, 11, 14].includes(candidateSlotId)) {
+            score += 25;
+          }
+        } else if (targetHours === 1.0) {
+          // 1-hour evening block starts at 5:00 (21)
+          if (candidateSlotId === 21) {
+            score += 20;
+          }
+        }
       }
       return score;
     };

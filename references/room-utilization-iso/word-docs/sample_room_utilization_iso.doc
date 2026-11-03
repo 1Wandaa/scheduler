@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html xmlns:v="urn:schemas-microsoft-com:vml"
+      xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Room Utilization Reference</title>
+  <!--[if gte mso 9]>
+  <xml>
+    <w:WordDocument>
+      <w:View>Print</w:View>
+      <w:Zoom>100</w:Zoom>
+      <w:DoNotOptimizeForBrowser/>
+    </w:WordDocument>
+  </xml>
+  <![endif]-->
+  <style>
+    @page Section1 {
+      size: 8.5in 13.0in; /* Folio / Legal (12242 x 18722 dxa matching ROOM UTILIZATION.docx) */
+      mso-page-orientation: portrait;
+      margin: 0.35in 0.5in 0.35in 0.5in;
+      mso-header-margin: 0.35in;
+      mso-footer-margin: 0.35in;
+      mso-paper-source: 0;
+    }
+    div.Section1 {
+      page: Section1;
+      width: 500pt;
+      margin: 0 auto;
+    }
+    body {
+      font-family: Arial, Helvetica, sans-serif !important;
+      font-size: 8pt;
+      line-height: 1.0;
+      color: #000000;
+      background-color: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+    table {
+      border-collapse: collapse;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+      width: 500pt;
+      table-layout: fixed;
+      page-break-inside: avoid;
+    }
+    .header-table {
+      width: 500pt;
+      border-bottom: 2.5pt solid #f2a900;
+      margin-bottom: 6pt;
+    }
+    .header-table td {
+      border: none;
+      vertical-align: middle;
+      padding-bottom: 3pt;
+    }
+    .room-badge {
+      display: inline-block;
+      background-color: #ffff00;
+      border: 1pt solid #000000;
+      padding: 2pt 6pt;
+      font-weight: bold;
+      font-size: 9.5pt;
+      margin-bottom: 4pt;
+    }
+    .subj-table {
+      width: 500pt;
+      border: 1pt solid #000000;
+      margin-bottom: 4pt;
+    }
+    .subj-table th, .subj-table td {
+      border: 1pt solid #000000;
+      padding: 2pt 4pt;
+      font-size: 7.5pt;
+      text-align: center;
+    }
+    .subj-table th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+    .grid-table {
+      width: 500pt;
+      border: 1pt solid #000000;
+      margin-bottom: 6pt;
+    }
+    .grid-table th, .grid-table td {
+      border: 1pt solid #000000;
+      padding: 1pt 2pt;
+      text-align: center;
+      font-size: 7pt;
+      height: 15pt;
+    }
+    .grid-table th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+      height: 18pt;
+    }
+    .time-col {
+      background-color: #f8fafc;
+      font-weight: bold;
+      font-size: 7pt;
+    }
+    .booked-cell {
+      background-color: #00b0f0;
+      font-weight: bold;
+      color: #000000;
+    }
+    .sig-table {
+      width: 500pt;
+      border: none;
+      margin-top: 8pt;
+    }
+    .sig-table td {
+      border: none;
+      font-size: 8pt;
+      vertical-align: top;
+    }
+  </style>
+</head>
+<body>
+  <div class="Section1">
+    <!-- University Header -->
+    <table class="header-table">
+      <tr>
+        <td width="55" style="width: 55pt; text-align: left;">
+          <b>[LOGO]</b>
+        </td>
+        <td style="text-align: left; padding-left: 8pt;">
+          <div style="font-size: 8pt;">Republic of the Philippines</div>
+          <div style="font-size: 13.5pt; font-weight: bold; color: #002060;">CAPIZ STATE UNIVERSITY</div>
+          <div style="font-size: 9pt; font-weight: bold; color: #002060;">MAMBUSAO SATELLITE COLLEGE</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Department & Subtitle -->
+    <div style="text-align: center; margin-bottom: 4pt;">
+      <div style="font-size: 10.5pt; font-weight: bold; color: #2e5296; text-transform: uppercase;">
+        BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT
+      </div>
+      <div style="font-size: 10.5pt; font-weight: bold;">Room Utilization</div>
+      <div style="font-size: 8.5pt;">First Semester, School Year 2026-2027</div>
+    </div>
+
+    <!-- Room Badge -->
+    <div style="margin-bottom: 4pt;">
+      <span class="room-badge" bgcolor="#ffff00">Room: NB 06</span>
+    </div>
+
+    <!-- Subjects Table (500pt: 60 + 160 + 40 + 145 + 95) -->
+    <table class="subj-table">
+      <colgroup>
+        <col width="60" style="width: 60pt;">
+        <col width="160" style="width: 160pt;">
+        <col width="40" style="width: 40pt;">
+        <col width="145" style="width: 145pt;">
+        <col width="95" style="width: 95pt;">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Description</th>
+          <th>Unit</th>
+          <th>Faculty</th>
+          <th>Course/Section</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>CS 112</b></td>
+          <td align="left" style="padding-left: 3pt;">Algorithms and Complexity</td>
+          <td>3</td>
+          <td>Prof. Judith Vista</td>
+          <td>BSCS 3A, 3B, 3C &amp; 3D</td>
+        </tr>
+        <tr>
+          <td><b>CS 102</b></td>
+          <td align="left" style="padding-left: 3pt;">Introduction to Computing</td>
+          <td>3</td>
+          <td>Prof. Art Jayson Osuyos</td>
+          <td>BSCS 1A, 1B, 1C &amp; 1D</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Timetable Grid (500pt: 65 + 5 * 87) -->
+    <table class="grid-table">
+      <colgroup>
+        <col width="65" style="width: 65pt;">
+        <col width="87" style="width: 87pt;">
+        <col width="87" style="width: 87pt;">
+        <col width="87" style="width: 87pt;">
+        <col width="87" style="width: 87pt;">
+        <col width="87" style="width: 87pt;">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>TIME</th>
+          <th>MONDAY</th>
+          <th>TUESDAY</th>
+          <th>WEDNESDAY</th>
+          <th>THURSDAY</th>
+          <th>FRIDAY</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="time-col">7:00 – 7:30</td>
+          <td rowspan="3" class="booked-cell" bgcolor="#00b0f0">
+            CS 102<br><span style="font-size: 6pt;">Prof. A. Osuyos</span><br><span style="font-size: 6pt;">BSCS 1A</span>
+          </td>
+          <td></td>
+          <td rowspan="3" class="booked-cell" bgcolor="#00b0f0">
+            CS 102<br><span style="font-size: 6pt;">Prof. A. Osuyos</span><br><span style="font-size: 6pt;">BSCS 1A</span>
+          </td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="time-col">7:30 – 8:00</td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="time-col">8:00 – 8:30</td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="time-col">8:30 – 9:00</td>
+          <td></td>
+          <td rowspan="3" class="booked-cell" bgcolor="#00b0f0">
+            CS 112<br><span style="font-size: 6pt;">Prof. J. Vista</span><br><span style="font-size: 6pt;">BSCS 3A</span>
+          </td>
+          <td></td>
+          <td rowspan="3" class="booked-cell" bgcolor="#00b0f0">
+            CS 112<br><span style="font-size: 6pt;">Prof. J. Vista</span><br><span style="font-size: 6pt;">BSCS 3A</span>
+          </td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="time-col">9:00 – 9:30</td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="time-col">9:30 – 10:00</td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 3 Official Signatures (500pt: 166 + 166 + 168) -->
+    <table class="sig-table">
+      <colgroup>
+        <col width="166" style="width: 166pt;">
+        <col width="166" style="width: 166pt;">
+        <col width="168" style="width: 168pt;">
+      </colgroup>
+      <tr>
+        <td style="text-align: left;">
+          <div style="font-size: 7pt;">Prepared by:</div>
+          <div style="height: 12pt;"></div>
+          <div style="font-size: 8pt; font-weight: bold;"><u>CHERILYN G. VILLASIS</u></div>
+          <div style="font-size: 6.5pt; color: #4b5563;">Department Secretary</div>
+        </td>
+        <td style="text-align: left;">
+          <div style="font-size: 7pt;">Noted:</div>
+          <div style="height: 12pt;"></div>
+          <div style="font-size: 8pt; font-weight: bold;"><u>JELLY L. PAREDES, EdD</u></div>
+          <div style="font-size: 6.5pt; color: #4b5563;">Program Coordinator, BSCS</div>
+        </td>
+        <td style="text-align: left;">
+          <div style="font-size: 7pt;">Approved:</div>
+          <div style="height: 12pt;"></div>
+          <div style="font-size: 8pt; font-weight: bold;"><u>RAMY LLOYD L. LOTILLA, EdD</u></div>
+          <div style="font-size: 6.5pt; color: #4b5563;">Satellite College Director</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

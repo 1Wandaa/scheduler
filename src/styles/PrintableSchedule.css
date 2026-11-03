@@ -101,18 +101,22 @@
 
 .iso-schedule-table tr {
     height: 44px;
+    max-height: 44px;
 }
 
 .iso-schedule-table tr.lunch-row {
     height: 26px;
+    max-height: 26px;
 }
 
 .iso-schedule-table td {
     height: 44px;
+    max-height: 44px;
 }
 
 .iso-schedule-table td.lunch-break-cell {
     height: 26px;
+    max-height: 26px;
     font-weight: bold;
     font-size: 9.5pt;
     letter-spacing: 2px;
@@ -131,6 +135,8 @@
 .iso-schedule-table .schedule-cell {
     padding: 0;
     overflow: hidden;
+    height: 44px;
+    max-height: 44px;
 }
 
 .iso-schedule-table .cell-content {
@@ -140,9 +146,15 @@
     justify-content: center;
     padding: 2px 4px;
     height: 100%;
+    max-height: 44px;
     overflow: hidden;
     box-sizing: border-box;
     line-height: 1.2;
+}
+
+.iso-schedule-table .cell-content.compact {
+    padding: 1px 2px;
+    line-height: 1.05;
 }
 
 .iso-schedule-table .cell-subject {
@@ -155,6 +167,11 @@
     max-width: 100%;
 }
 
+.iso-schedule-table .cell-content.compact .cell-subject {
+    font-size: 7.5pt;
+    line-height: 1.05;
+}
+
 .iso-schedule-table .cell-professor {
     font-size: 8pt;
     line-height: 1.2;
@@ -165,6 +182,12 @@
     margin-top: 1px;
 }
 
+.iso-schedule-table .cell-content.compact .cell-professor {
+    font-size: 6.5pt;
+    line-height: 1.05;
+    margin-top: 0;
+}
+
 .iso-schedule-table .cell-room {
     font-size: 8pt;
     line-height: 1.2;
@@ -173,6 +196,12 @@
     text-overflow: ellipsis;
     max-width: 100%;
     margin-top: 1px;
+}
+
+.iso-schedule-table .cell-content.compact .cell-room {
+    font-size: 6.5pt;
+    line-height: 1.05;
+    margin-top: 0;
 }
 
 /* SIGNATURES SECTION */
@@ -230,7 +259,9 @@
         margin: 0.25in 0.35in;
     }
 
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
         box-sizing: border-box !important;
@@ -298,25 +329,45 @@
         margin: 0 0 6px 0 !important;
         page-break-inside: avoid;
         break-inside: avoid;
+        table-layout: fixed !important;
+        width: 100% !important;
     }
 
     .iso-schedule-table tr {
         height: 44px !important;
+        max-height: 44px !important;
     }
 
     .iso-schedule-table tr.lunch-row {
         height: 26px !important;
+        max-height: 26px !important;
     }
 
     .iso-schedule-table td {
         height: 44px !important;
+        max-height: 44px !important;
     }
 
     .iso-schedule-table td.lunch-break-cell {
         height: 26px !important;
+        max-height: 26px !important;
         font-weight: bold !important;
         font-size: 9.5pt !important;
         letter-spacing: 2px !important;
+    }
+
+    .iso-schedule-table .schedule-cell {
+        height: 44px !important;
+        max-height: 44px !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .iso-schedule-table .cell-content {
+        height: 100% !important;
+        max-height: 44px !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
     }
 
     .iso-schedule-table th {

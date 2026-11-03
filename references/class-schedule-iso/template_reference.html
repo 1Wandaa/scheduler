@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Class Schedule Reference Template (INS-CLS-08)</title>
+  <style>
+    @page {
+      size: letter landscape;
+      margin: 0.25in 0.35in;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      font-family: "Times New Roman", Times, serif;
+      background: #f8fafc;
+      color: #000;
+      margin: 0;
+      padding: 20px;
+    }
+    .page-container {
+      width: 100%;
+      max-width: 10.5in;
+      background: #fff;
+      margin: 0 auto;
+      padding: 0.25in 0.35in;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border: 1px solid #cbd5e1;
+    }
+    .iso-header-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #000;
+      margin-bottom: 6px;
+      font-size: 8.5pt;
+    }
+    .iso-header-table td {
+      border: 1px solid #000;
+      padding: 3px 6px;
+      vertical-align: middle;
+    }
+    .iso-header-table .bold { font-weight: bold; }
+    .iso-header-table .center { text-align: center; }
+    .meta-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin: 4px 0 8px 0;
+    }
+    .meta-value { text-decoration: underline; font-weight: bold; }
+    .iso-schedule-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #000;
+      font-size: 8.5pt;
+      table-layout: fixed;
+      margin-bottom: 12px;
+    }
+    .iso-schedule-table th, .iso-schedule-table td {
+      border: 1px solid #000;
+      text-align: center;
+      vertical-align: middle;
+      padding: 0;
+    }
+    .iso-schedule-table th {
+      height: 26px;
+      font-size: 9pt;
+      font-weight: bold;
+      background: #f1f5f9;
+    }
+    .iso-schedule-table tr { height: 44px; }
+    .iso-schedule-table tr.lunch-row { height: 26px; }
+    .iso-schedule-table td.lunch-cell {
+      font-weight: bold;
+      letter-spacing: 2px;
+      font-size: 9pt;
+    }
+    .cell-content {
+      padding: 2px 4px;
+      line-height: 1.2;
+    }
+    .cell-subj { font-weight: bold; font-size: 9pt; }
+    .cell-prof { font-size: 8pt; }
+    .cell-room { font-size: 8pt; }
+    .signatures {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+      padding: 0 20px;
+      font-size: 9pt;
+    }
+    .sig-block { min-width: 250px; }
+    .sig-label { margin-bottom: 24px; }
+    .sig-name { font-weight: bold; text-decoration: underline; }
+    .sig-title { font-size: 8.5pt; margin-top: 2px; }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page-container {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <!-- Header -->
+    <table class="iso-header-table">
+      <tr>
+        <td rowspan="4" class="center" style="width: 12%;">
+          <div style="font-weight: bold; font-size: 11pt;">[LOGO]</div>
+          <div style="font-size: 7.5pt; font-weight: bold;">CapSU</div>
+        </td>
+        <td style="width: 15%;">Document Type:</td>
+        <td rowspan="2" class="center" style="width: 43%;">
+          <div class="bold" style="font-size: 11pt;">DOCUMENTED INFORMATION</div>
+          <div class="bold" style="font-size: 8.5pt;">ISO 9001:2015</div>
+        </td>
+        <td style="width: 15%; text-align: right;">Document Code</td>
+        <td class="bold center" style="width: 15%;">INS-CLS-08</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td style="text-align: right;">Revision No.</td>
+        <td class="bold center">00</td>
+      </tr>
+      <tr>
+        <td rowspan="2">Document Title:</td>
+        <td rowspan="2" class="bold center" style="font-size: 12pt; letter-spacing: 1px;">CLASS SCHEDULE</td>
+        <td style="text-align: right;">Effective Date</td>
+        <td class="bold center">June 25, 2018</td>
+      </tr>
+      <tr>
+        <td style="text-align: right;">Page</td>
+        <td class="bold center">1 of 1</td>
+      </tr>
+    </table>
+
+    <!-- Meta Info -->
+    <div class="meta-info">
+      <span>DEGREE PROGRAM: <span class="meta-value">BACHELOR OF SCIENCE IN COMPUTER SCIENCE</span></span>
+      <span>COURSE &amp; YEAR: <span class="meta-value">BSCS 1A</span></span>
+      <span>SEMESTER &amp; AY: <span class="meta-value">1ST SEM 2026-2027</span></span>
+    </div>
+
+    <!-- Table -->
+    <table class="iso-schedule-table">
+      <thead>
+        <tr>
+          <th style="width: 15%;">TIME</th>
+          <th style="width: 17%;">MONDAY</th>
+          <th style="width: 17%;">TUESDAY</th>
+          <th style="width: 17%;">WEDNESDAY</th>
+          <th style="width: 17%;">THURSDAY</th>
+          <th style="width: 17%;">FRIDAY</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>7:00 – 8:30</b></td>
+          <td><div class="cell-content"><div class="cell-subj">CC 101</div><div class="cell-prof">Prof. J. Doe</div><div class="cell-room">CL 1</div></div></td>
+          <td></td>
+          <td><div class="cell-content"><div class="cell-subj">CC 101</div><div class="cell-prof">Prof. J. Doe</div><div class="cell-room">CL 1</div></div></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><b>8:30 – 10:00</b></td>
+          <td><div class="cell-content"><div class="cell-subj">MATH 101</div><div class="cell-prof">Prof. M. Santos</div><div class="cell-room">RM 201</div></div></td>
+          <td></td>
+          <td><div class="cell-content"><div class="cell-subj">MATH 101</div><div class="cell-prof">Prof. M. Santos</div><div class="cell-room">RM 201</div></div></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><b>10:00 – 11:30</b></td>
+          <td><div class="cell-content"><div class="cell-subj">ENG 101</div><div class="cell-prof">Prof. A. Cruz</div><div class="cell-room">RM 202</div></div></td>
+          <td></td>
+          <td><div class="cell-content"><div class="cell-subj">ENG 101</div><div class="cell-prof">Prof. A. Cruz</div><div class="cell-room">RM 202</div></div></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr class="lunch-row">
+          <td><b>11:30 – 12:30</b></td>
+          <td colspan="5" class="lunch-cell">L U N C H &nbsp;&nbsp; B R E A K</td>
+        </tr>
+        <tr>
+          <td><b>12:30 – 2:00</b></td>
+          <td></td>
+          <td><div class="cell-content"><div class="cell-subj">CS 102</div><div class="cell-prof">Prof. R. Ramos</div><div class="cell-room">CL 2</div></div></td>
+          <td></td>
+          <td><div class="cell-content"><div class="cell-subj">CS 102</div><div class="cell-prof">Prof. R. Ramos</div><div class="cell-room">CL 2</div></div></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><b>2:00 – 3:30</b></td>
+          <td></td>
+          <td><div class="cell-content"><div class="cell-subj">GE 101</div><div class="cell-prof">Prof. L. Perez</div><div class="cell-room">RM 204</div></div></td>
+          <td></td>
+          <td><div class="cell-content"><div class="cell-subj">GE 101</div><div class="cell-prof">Prof. L. Perez</div><div class="cell-room">RM 204</div></div></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><b>3:30 – 5:00</b></td>
+          <td><div class="cell-content"><div class="cell-subj">PE 101</div><div class="cell-prof">Prof. G. Diaz</div><div class="cell-room">GYM</div></div></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><b>5:00 – 6:00</b></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Signatures -->
+    <div class="signatures">
+      <div class="sig-block">
+        <div class="sig-label">Prepared by:</div>
+        <div class="sig-name">PROF. PROGRAM CHAIR</div>
+        <div class="sig-title">Program Chair</div>
+      </div>
+      <div class="sig-block" style="text-align: right;">
+        <div class="sig-label">Approved:</div>
+        <div class="sig-name">RAMY LLOYD LOTILLA, EdD</div>
+        <div class="sig-title">Campus Administrator</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

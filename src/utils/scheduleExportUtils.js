@@ -67,16 +67,16 @@ function wrapWordHtml(bodyHtml, title = 'Class Schedule') {
   <![endif]-->
   <style>
     @page Section1 {
-      size: 11.0in 8.5in; /* 792pt x 612pt landscape */
+      size: 11.69in 8.27in; /* A4 / Letter Landscape matching reference (16838 x 11906 dxa) */
       mso-page-orientation: landscape;
-      margin: 0.15in 0.25in 0.15in 0.25in;
-      mso-header-margin: 0in;
-      mso-footer-margin: 0in;
+      margin: 0.35in 0.45in 0.35in 0.45in;
+      mso-header-margin: 0.35in;
+      mso-footer-margin: 0.35in;
       mso-paper-source: 0;
     }
     div.Section1 {
       page: Section1;
-      width: 720pt;
+      width: 730pt;
       margin: 0 auto;
     }
     body {
@@ -259,16 +259,16 @@ function wrapPortraitWordHtml(bodyHtml, title = 'Room Utilization Schedule') {
   <![endif]-->
   <style>
     @page Section1 {
-      size: 8.5in 11.0in; /* Portrait letter: 612pt x 792pt */
+      size: 8.5in 13.0in; /* Folio / Legal (12242 x 18722 dxa matching ROOM UTILIZATION.docx) */
       mso-page-orientation: portrait;
-      margin: 0.1in 0.35in 0.1in 0.35in;
-      mso-header-margin: 0in;
-      mso-footer-margin: 0in;
+      margin: 0.35in 0.5in 0.35in 0.5in;
+      mso-header-margin: 0.35in;
+      mso-footer-margin: 0.35in;
       mso-paper-source: 0;
     }
     div.Section1 {
       page: Section1;
-      width: 560pt;
+      width: 500pt;
       margin: 0 auto;
     }
     body {
@@ -376,16 +376,16 @@ function wrapFacultyWorkloadWordHtml(bodyHtml, title = 'Faculty Workload') {
   <![endif]-->
   <style>
     @page Section1 {
-      size: 8.5in 11.0in; /* Portrait letter: 612pt x 792pt */
+      size: 8.28in 11.71in; /* A4 Portrait matching reference docx (11918 x 16858 dxa) */
       mso-page-orientation: portrait;
-      margin: 0.25in 0.35in 0.25in 0.35in;
-      mso-header-margin: 0in;
-      mso-footer-margin: 0in;
+      margin: 0.35in 0.5in 0.4in 0.5in;
+      mso-header-margin: 0.35in;
+      mso-footer-margin: 0.4in;
       mso-paper-source: 0;
     }
     div.Section1 {
       page: Section1;
-      width: 540pt;
+      width: 525pt;
       margin: 0 auto;
     }
     body {
@@ -508,10 +508,10 @@ export async function exportIsoToWord(user) {
   }
 
   // 3. Extract Signatures
-  let prepName = 'PROF. PROGRAM CHAIR';
-  let prepTitle = 'Program Chair';
-  let appName = 'RAMY LLOYD LOTILLA, EdD';
-  let appTitle = 'Campus Administrator';
+  let prepName = 'JELLY L. PAREDES, EdD';
+  let prepTitle = 'Program Chairman, BSCS';
+  let appName = 'RAMY LLOYD L. LOTILLA, EdD';
+  let appTitle = 'Satellite College Director';
 
   const sigBlocks = isoDoc.querySelectorAll('.printable-iso-document > div:last-child > div');
   if (sigBlocks.length >= 2) {
@@ -808,13 +808,13 @@ export async function exportRoomUtilizationToWord(user) {
     if (srcSubjTable) {
       const rows = Array.from(srcSubjTable.querySelectorAll('tr'));
       subjTableHtml = `
-        <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="0" style="width: 560pt; border-collapse: collapse; table-layout: fixed; margin-bottom: 2pt; border: 1.0pt solid #000000; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+        <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="0" style="width: 500pt; border-collapse: collapse; table-layout: fixed; margin-bottom: 2pt; border: 1.0pt solid #000000; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
           <colgroup>
-            <col width="75" style="width: 75pt;">
-            <col width="205" style="width: 205pt;">
+            <col width="60" style="width: 60pt;">
+            <col width="160" style="width: 160pt;">
             <col width="40" style="width: 40pt;">
-            <col width="120" style="width: 120pt;">
-            <col width="120" style="width: 120pt;">
+            <col width="145" style="width: 145pt;">
+            <col width="95" style="width: 95pt;">
           </colgroup>
           ${rows.map((tr, rIdx) => {
             const isHead = rIdx === 0;
@@ -848,8 +848,8 @@ export async function exportRoomUtilizationToWord(user) {
     if (srcTimetable) {
       const ths = Array.from(srcTimetable.querySelectorAll('thead th'));
       const totalCols = ths.length || 7;
-      const timetableWidth = 560;
-      const timeColWidth = 56;
+      const timetableWidth = 500;
+      const timeColWidth = 65;
       const dayCount = totalCols > 1 ? totalCols - 1 : 6;
       const dayColWidth = Math.floor((timetableWidth - timeColWidth) / dayCount);
       const lastDayColWidth = timetableWidth - timeColWidth - (dayColWidth * (dayCount - 1));
@@ -1109,14 +1109,14 @@ export async function exportRoomUtilizationToWord(user) {
     }
 
     const sigsHtml = `
-      <table class="room-util-signatures-table" border="1" bordercolor="#ffffff" cellspacing="0" cellpadding="0" style="width: 560pt; margin: 3pt auto 0 auto; border-collapse: collapse; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; table-layout: fixed; mso-table-lspace: 0pt; mso-table-rspace: 0pt; page-break-inside: avoid; page-break-after: avoid; page-break-before: avoid;">
+      <table class="room-util-signatures-table" border="1" bordercolor="#ffffff" cellspacing="0" cellpadding="0" style="width: 500pt; margin: 3pt auto 0 auto; border-collapse: collapse; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; table-layout: fixed; mso-table-lspace: 0pt; mso-table-rspace: 0pt; page-break-inside: avoid; page-break-after: avoid; page-break-before: avoid;">
         <colgroup>
-          <col width="186" style="width: 186pt;">
-          <col width="186" style="width: 186pt;">
-          <col width="188" style="width: 188pt;">
+          <col width="166" style="width: 166pt;">
+          <col width="166" style="width: 166pt;">
+          <col width="168" style="width: 168pt;">
         </colgroup>
         <tr style="page-break-inside: avoid;">
-          <td width="186" style="width: 186pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
+          <td width="166" style="width: 166pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
             <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 7pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               ${prepLabel}
             </p>
@@ -1283,41 +1283,41 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
       ? `<img src="${logoBase64}" width="46" height="46" style="display: block; margin: 0 auto;" alt="Logo" />`
       : `<p align="center" style="font-weight: bold; font-size: 8.5pt; color: #1e3a8a; margin: 0;">CapSU</p>`;
 
-    // 4. ISO Header Table (540pt)
+    // 4. ISO Header Table (525pt matching reference docx)
     const headerHtml = `
-      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="2" style="width: 540pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000;">
+      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="2" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000;">
         <colgroup>
-          <col width="70" style="width: 70pt;">
+          <col width="75" style="width: 75pt;">
           <col width="230" style="width: 230pt;">
-          <col width="120" style="width: 120pt;">
-          <col width="120" style="width: 120pt;">
+          <col width="110" style="width: 110pt;">
+          <col width="110" style="width: 110pt;">
         </colgroup>
         <tr>
-          <td rowspan="4" align="center" valign="middle" width="70" style="width: 70pt; text-align: center; vertical-align: middle; padding: 1pt;">
+          <td rowspan="4" align="center" valign="middle" width="75" style="width: 75pt; text-align: center; vertical-align: middle; padding: 1pt;">
             ${logoHtml}
           </td>
           <td rowspan="2" valign="middle" width="230" style="width: 230pt; padding: 2pt 4pt; font-size: 8pt; vertical-align: middle;">
             <div style="font-size: 8pt;">Document Type: <span style="font-weight: bold; margin-left: 12pt;">FORM</span></div>
             <div style="font-size: 8pt; font-weight: bold; text-align: center; margin-top: 1pt;">ISO 9001:2015</div>
           </td>
-          <td width="120" style="width: 120pt; font-size: 8pt; font-weight: bold; text-align: left; padding-left: 4pt;">Document Code</td>
-          <td width="120" style="width: 120pt; font-size: 8pt; font-weight: bold; text-align: center;">INS F22</td>
+          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: left; padding-left: 4pt;">Document Code</td>
+          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: center;">INS F22</td>
         </tr>
         <tr>
-          <td width="120" style="width: 120pt; font-size: 8pt; font-weight: bold; text-align: left; padding-left: 4pt;">Revision No.</td>
-          <td width="120" style="width: 120pt; font-size: 8pt; font-weight: bold; text-align: center;">00</td>
+          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: left; padding-left: 4pt;">Revision No.</td>
+          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: center;">00</td>
         </tr>
         <tr>
           <td rowspan="2" valign="middle" width="230" style="width: 230pt; padding: 2pt 4pt; font-size: 8pt; vertical-align: middle;">
             <div style="font-size: 8pt;">Document Type:</div>
             <div style="font-size: 11pt; font-weight: bold; text-align: center; margin-top: 1pt;">FACULTY WORKLOAD</div>
           </td>
-          <td width="120" style="width: 120pt; font-size: 8pt; font-weight: bold; text-align: left; padding-left: 4pt;">Effective Date</td>
-          <td width="120" style="width: 120pt; font-size: 8pt; font-weight: bold; text-align: center;">August 5, 2024</td>
+          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: left; padding-left: 4pt;">Effective Date</td>
+          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: center;">August 5, 2024</td>
         </tr>
         <tr>
-          <td width="120" style="width: 120pt; font-size: 8pt; font-weight: bold; text-align: left; padding-left: 4pt;">Page</td>
-          <td width="120" style="width: 120pt; font-size: 8pt; font-weight: bold; text-align: center;">1 of 1</td>
+          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: left; padding-left: 4pt;">Page</td>
+          <td width="110" style="width: 110pt; font-size: 8pt; font-weight: bold; text-align: center;">1 of 1</td>
         </tr>
       </table>
     `;
@@ -1332,14 +1332,14 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
       </p>
     `;
 
-    // 6. Faculty Profile Table (540pt)
+    // 6. Faculty Profile Table (525pt)
     const profileTableHtml = `
-      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 540pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7pt;">
+      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7pt;">
         <colgroup>
-          <col width="130" style="width: 130pt;">
-          <col width="70" style="width: 70pt;">
-          <col width="170" style="width: 170pt;">
-          <col width="170" style="width: 170pt;">
+          <col width="122" style="width: 122pt;">
+          <col width="45" style="width: 45pt;">
+          <col width="207" style="width: 207pt;">
+          <col width="151" style="width: 151pt;">
         </colgroup>
         <tr style="background-color: #f2f2f2;">
           <th colspan="4" style="font-weight: bold; font-size: 7.5pt; text-align: center; padding: 1.5pt;">FACULTY PROFILE</th>
@@ -1395,25 +1395,25 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
       </table>
     `;
 
-    // 7. Teaching Assignment Table (540pt)
+    // 7. Teaching Assignment Table (525pt matching reference docx)
     const teachingAssignmentHtml = `
       <p style="font-size: 7.5pt; font-weight: bold; margin: 3pt 0 1pt 0;">TEACHING ASSIGNMENT:</p>
-      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 540pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7pt;">
+      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7pt;">
         <colgroup>
-          <col width="75" style="width: 75pt;">
-          <col width="215" style="width: 215pt;">
+          <col width="72" style="width: 72pt;">
+          <col width="203" style="width: 203pt;">
           <col width="40" style="width: 40pt;">
-          <col width="50" style="width: 50pt;">
-          <col width="100" style="width: 100pt;">
-          <col width="60" style="width: 60pt;">
+          <col width="90" style="width: 90pt;">
+          <col width="68" style="width: 68pt;">
+          <col width="52" style="width: 52pt;">
         </colgroup>
         <tr style="background-color: #f2f2f2; font-weight: bold;">
-          <th rowspan="2" style="width: 75pt; vertical-align: middle;">Course No.</th>
-          <th rowspan="2" style="width: 215pt; vertical-align: middle;">Course Title</th>
+          <th rowspan="2" style="width: 72pt; vertical-align: middle;">Course No.</th>
+          <th rowspan="2" style="width: 203pt; vertical-align: middle;">Course Title</th>
           <th rowspan="2" style="width: 40pt; vertical-align: middle;">Units</th>
-          <th style="width: 50pt;">No. of Hours</th>
-          <th rowspan="2" style="width: 100pt; vertical-align: middle;">Course and<br/>Year Level</th>
-          <th rowspan="2" style="width: 60pt; vertical-align: middle;">No. of<br/>Students</th>
+          <th style="width: 90pt;">No. of Hours</th>
+          <th rowspan="2" style="width: 68pt; vertical-align: middle;">Course and<br/>Year Level</th>
+          <th rowspan="2" style="width: 52pt; vertical-align: middle;">No. of<br/>Students</th>
         </tr>
         <tr style="background-color: #f2f2f2; font-weight: bold;">
           <th style="font-size: 6.5pt;">Lec/Lab</th>
@@ -1443,25 +1443,25 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
       </table>
     `;
 
-    // 8. Class Schedule Table (540pt)
+    // 8. Class Schedule Table (525pt matching reference docx)
     const classScheduleHtml = `
       <p style="font-size: 7.5pt; font-weight: bold; margin: 3pt 0 1pt 0;">Class Schedule:</p>
-      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 540pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7pt;">
+      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7pt;">
         <colgroup>
-          <col width="75" style="width: 75pt;">
-          <col width="93" style="width: 93pt;">
-          <col width="93" style="width: 93pt;">
-          <col width="93" style="width: 93pt;">
-          <col width="93" style="width: 93pt;">
-          <col width="93" style="width: 93pt;">
+          <col width="89" style="width: 89pt;">
+          <col width="87" style="width: 87pt;">
+          <col width="87" style="width: 87pt;">
+          <col width="91" style="width: 91pt;">
+          <col width="88" style="width: 88pt;">
+          <col width="83" style="width: 83pt;">
         </colgroup>
         <tr style="background-color: #f2f2f2; font-weight: bold;">
-          <th style="width: 75pt;">TIME</th>
-          <th style="width: 93pt;">MONDAY</th>
-          <th style="width: 93pt;">TUESDAY</th>
-          <th style="width: 93pt;">WEDNESDAY</th>
-          <th style="width: 93pt;">THURSDAY</th>
-          <th style="width: 93pt;">FRIDAY</th>
+          <th style="width: 89pt;">TIME</th>
+          <th style="width: 87pt;">MONDAY</th>
+          <th style="width: 87pt;">TUESDAY</th>
+          <th style="width: 91pt;">WEDNESDAY</th>
+          <th style="width: 88pt;">THURSDAY</th>
+          <th style="width: 83pt;">FRIDAY</th>
         </tr>
         ${uniqueTimeBlocks.map(block => `
           <tr>
@@ -1495,11 +1495,11 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
       </table>
     `;
 
-    // 9. Signatures Block (540pt)
+    // 9. Signatures Block (525pt matching reference docx)
     const signaturesHtml = `
-      <table border="0" cellspacing="0" cellpadding="0" style="width: 540pt; border-collapse: collapse; margin-top: 6pt; border: none;">
+      <table border="0" cellspacing="0" cellpadding="0" style="width: 525pt; border-collapse: collapse; margin-top: 6pt; border: none;">
         <colgroup>
-          <col width="280" style="width: 280pt;">
+          <col width="265" style="width: 265pt;">
           <col width="260" style="width: 260pt;">
         </colgroup>
         <tr>

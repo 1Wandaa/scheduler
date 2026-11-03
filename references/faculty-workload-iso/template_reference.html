@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faculty Workload Reference Template (INS F22)</title>
+  <style>
+    @page {
+      size: letter portrait;
+      margin: 0.25in 0.35in;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      font-family: "Times New Roman", Times, serif;
+      background: #f8fafc;
+      color: #000;
+      margin: 0;
+      padding: 20px;
+    }
+    .page-container {
+      width: 100%;
+      max-width: 8.5in;
+      background: #fff;
+      margin: 0 auto;
+      padding: 0.35in 0.45in;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border: 1px solid #cbd5e1;
+    }
+    .fw-header-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #000;
+      margin-bottom: 6px;
+      font-size: 8.5pt;
+    }
+    .fw-header-table td {
+      border: 1px solid #000;
+      padding: 3px 6px;
+      vertical-align: middle;
+    }
+    .fw-semester {
+      text-align: center;
+      font-size: 9pt;
+      text-decoration: underline;
+      font-weight: bold;
+      margin: 4px 0;
+    }
+    .fw-faculty-name {
+      font-size: 9pt;
+      margin-bottom: 6px;
+    }
+    .fw-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #000;
+      font-size: 8pt;
+      margin-bottom: 8px;
+    }
+    .fw-table th, .fw-table td {
+      border: 1px solid #000;
+      padding: 3px 4px;
+    }
+    .fw-table th {
+      background: #f1f5f9;
+      font-weight: bold;
+      text-align: center;
+    }
+    .fw-signatures {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+      font-size: 8.5pt;
+    }
+    .sig-block {
+      flex: 1;
+      padding-right: 8px;
+    }
+    .sig-label { margin-bottom: 22px; }
+    .sig-name { font-weight: bold; text-decoration: underline; font-size: 9pt; }
+    .sig-title { font-size: 8pt; margin-top: 1px; }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page-container {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <!-- Header Table -->
+    <table class="fw-header-table">
+      <tr>
+        <td rowspan="4" style="width: 15%; text-align: center;">
+          <div style="font-weight: bold; font-size: 11pt;">[LOGO]</div>
+          <div style="font-size: 7.5pt; font-weight: bold;">CapSU</div>
+        </td>
+        <td rowspan="2" style="width: 45%; text-align: center;">
+          <div>Document Type: <span style="font-weight: bold;">FORM</span></div>
+          <div style="font-weight: bold; font-size: 8.5pt;">ISO 9001:2015</div>
+        </td>
+        <td style="width: 20%; font-weight: bold;">Document Code</td>
+        <td style="width: 20%; font-weight: bold; text-align: center;">INS F22</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">Revision No.</td>
+        <td style="font-weight: bold; text-align: center;">00</td>
+      </tr>
+      <tr>
+        <td rowspan="2" style="text-align: center;">
+          <div style="font-size: 8pt;">Document Type:</div>
+          <div style="font-size: 12pt; font-weight: bold; letter-spacing: 0.5px;">FACULTY WORKLOAD</div>
+        </td>
+        <td style="font-weight: bold;">Effective Date</td>
+        <td style="font-weight: bold; text-align: center;">August 5, 2024</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold;">Page</td>
+        <td style="font-weight: bold; text-align: center;">1 of 1</td>
+      </tr>
+    </table>
+
+    <div class="fw-semester">1st Semester, School Year 2026-2027</div>
+
+    <div class="fw-faculty-name">
+      Name of Faculty: <span style="font-weight: bold; text-decoration: underline;">PROF. SAMPLE FACULTY</span>
+    </div>
+
+    <!-- Faculty Profile -->
+    <table class="fw-table">
+      <thead>
+        <tr>
+          <th colspan="4" style="background: #e2e8f0;">FACULTY PROFILE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td rowspan="3" style="width: 22%; text-align: center; vertical-align: middle; font-weight: bold;">BACCALAUREATE</td>
+          <td style="width: 18%;">Degree</td>
+          <td style="width: 35%;">BS Computer Science</td>
+          <td rowspan="3" style="width: 25%; text-align: center; vertical-align: middle;">
+            Academic Rank:<br><b>Associate Professor I</b>
+          </td>
+        </tr>
+        <tr>
+          <td>Major</td>
+          <td>Software Engineering</td>
+        </tr>
+        <tr>
+          <td>School Graduated</td>
+          <td>Capiz State University</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Teaching Assignments -->
+    <table class="fw-table">
+      <thead>
+        <tr>
+          <th style="width: 18%;">Subject Code</th>
+          <th style="width: 34%;">Descriptive Title</th>
+          <th style="width: 10%;">Units</th>
+          <th style="width: 12%;">Hours/Wk</th>
+          <th style="width: 14%;">Section</th>
+          <th style="width: 12%;">Students</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align: center;"><b>CC 101 (Lec)</b></td>
+          <td>Introduction to Computing</td>
+          <td style="text-align: center;">2</td>
+          <td style="text-align: center;">2</td>
+          <td style="text-align: center;">BSCS 1A</td>
+          <td style="text-align: center;">40</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;"><b>CC 101 (Lab)</b></td>
+          <td>Introduction to Computing</td>
+          <td style="text-align: center;">1</td>
+          <td style="text-align: center;">3</td>
+          <td style="text-align: center;">BSCS 1A</td>
+          <td style="text-align: center;">40</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;"><b>CS 102</b></td>
+          <td>Data Structures and Algorithms</td>
+          <td style="text-align: center;">3</td>
+          <td style="text-align: center;">3</td>
+          <td style="text-align: center;">BSCS 2A</td>
+          <td style="text-align: center;">35</td>
+        </tr>
+        <tr style="background: #f8fafc; font-weight: bold;">
+          <td colspan="2" style="text-align: right;">TOTAL:</td>
+          <td style="text-align: center;">6</td>
+          <td style="text-align: center;">8</td>
+          <td colspan="2"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Weekly Schedule -->
+    <table class="fw-table">
+      <thead>
+        <tr>
+          <th style="width: 20%;">Time</th>
+          <th style="width: 16%;">Monday</th>
+          <th style="width: 16%;">Tuesday</th>
+          <th style="width: 16%;">Wednesday</th>
+          <th style="width: 16%;">Thursday</th>
+          <th style="width: 16%;">Friday</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align: center;"><b>7:00 – 8:30</b></td>
+          <td style="text-align: center;"><b>CC 101</b><br>BSCS 1A</td>
+          <td></td>
+          <td style="text-align: center;"><b>CC 101</b><br>BSCS 1A</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td style="text-align: center;"><b>12:30 – 2:00</b></td>
+          <td></td>
+          <td style="text-align: center;"><b>CS 102</b><br>BSCS 2A</td>
+          <td></td>
+          <td style="text-align: center;"><b>CS 102</b><br>BSCS 2A</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 4 Signatures -->
+    <div class="fw-signatures">
+      <div class="sig-block">
+        <div class="sig-label">Concurred:</div>
+        <div class="sig-name">PROF. SAMPLE FACULTY</div>
+        <div class="sig-title">Faculty Member</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-label">Verified:</div>
+        <div class="sig-name">PROGRAM CHAIR</div>
+        <div class="sig-title">Program Chair</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-label">Recommending Approval:</div>
+        <div class="sig-name">COLLEGE DEAN, PhD</div>
+        <div class="sig-title">Dean, College of Computing</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-label">Approved:</div>
+        <div class="sig-name">CAMPUS ADMIN, EdD</div>
+        <div class="sig-title">Campus Administrator</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

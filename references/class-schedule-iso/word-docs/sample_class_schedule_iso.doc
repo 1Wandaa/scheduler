@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html xmlns:v="urn:schemas-microsoft-com:vml"
+      xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Class Schedule - INS-CLS-08 Reference</title>
+  <!--[if gte mso 9]>
+  <xml>
+    <w:WordDocument>
+      <w:View>Print</w:View>
+      <w:Zoom>100</w:Zoom>
+      <w:DoNotOptimizeForBrowser/>
+    </w:WordDocument>
+  </xml>
+  <![endif]-->
+  <style>
+    @page Section1 {
+      size: 11.0in 8.5in;
+      mso-page-orientation: landscape;
+      margin: 0.25in 0.35in 0.25in 0.35in;
+      mso-header-margin: 0in;
+      mso-footer-margin: 0in;
+      mso-paper-source: 0;
+    }
+    div.Section1 {
+      page: Section1;
+      width: 700pt;
+      margin: 0 auto;
+    }
+    body {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 8pt;
+      line-height: 1.0;
+      color: #000000;
+      background-color: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+    table {
+      border-collapse: collapse;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+      width: 700pt;
+      table-layout: fixed;
+      page-break-inside: avoid;
+    }
+    .iso-header-table {
+      width: 700pt;
+      border: 1.0pt solid #000000;
+      margin-bottom: 4pt;
+    }
+    .iso-header-table td {
+      border: 1.0pt solid #000000;
+      padding: 2pt 4pt;
+      font-family: "Times New Roman", Times, serif;
+      vertical-align: middle;
+    }
+    .meta-table {
+      width: 700pt;
+      margin-bottom: 4pt;
+      border: none;
+    }
+    .meta-table td {
+      border: none;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 9pt;
+      font-weight: bold;
+      padding: 1pt 0;
+    }
+    .meta-val {
+      text-decoration: underline;
+    }
+    .sched-table {
+      width: 700pt;
+      border: 1.0pt solid #000000;
+      margin-bottom: 8pt;
+    }
+    .sched-table th, .sched-table td {
+      border: 1.0pt solid #000000;
+      padding: 2pt;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .sched-table th {
+      font-size: 8.5pt;
+      font-weight: bold;
+      height: 22pt;
+    }
+    .sched-table td {
+      height: 38pt;
+    }
+    .lunch-row td {
+      height: 20pt;
+      font-weight: bold;
+      letter-spacing: 2px;
+      font-size: 9pt;
+    }
+    .sig-table {
+      width: 700pt;
+      border: none;
+      margin-top: 10pt;
+    }
+    .sig-table td {
+      border: none;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 8.5pt;
+      vertical-align: top;
+    }
+  </style>
+</head>
+<body>
+  <div class="Section1">
+    <!-- ISO Header Table -->
+    <table class="iso-header-table">
+      <colgroup>
+        <col width="90" style="width: 90pt;">
+        <col width="110" style="width: 110pt;">
+        <col width="280" style="width: 280pt;">
+        <col width="110" style="width: 110pt;">
+        <col width="110" style="width: 110pt;">
+      </colgroup>
+      <tr>
+        <td rowspan="4" align="center" valign="middle" style="text-align:center;">
+          <b>[LOGO]</b><br><span style="font-size:6.5pt;">CapSU</span>
+        </td>
+        <td style="font-weight:bold; font-size:8.5pt;">Document Type:</td>
+        <td rowspan="2" align="center" style="font-weight:bold; font-size:11pt; text-align:center;">DOCUMENTED INFORMATION</td>
+        <td style="font-weight:bold; font-size:8.5pt;">Document Code</td>
+        <td align="center" style="font-weight:bold; font-size:8.5pt;">INS-CLS-08</td>
+      </tr>
+      <tr>
+        <td style="font-weight:bold; font-size:8.5pt;">ISO 9001:2015</td>
+        <td style="font-weight:bold; font-size:8.5pt;">Revision No.</td>
+        <td align="center" style="font-weight:bold; font-size:8.5pt;">00</td>
+      </tr>
+      <tr>
+        <td rowspan="2" style="font-weight:bold; font-size:8.5pt; vertical-align:top;">Document Title:</td>
+        <td rowspan="2" align="center" style="font-weight:bold; font-size:12pt; text-align:center; letter-spacing:1px;">CLASS SCHEDULE</td>
+        <td style="font-weight:bold; font-size:8.5pt;">Effective Date</td>
+        <td align="center" style="font-weight:bold; font-size:8.5pt;">June 25, 2018</td>
+      </tr>
+      <tr>
+        <td style="font-weight:bold; font-size:8.5pt;">Page</td>
+        <td align="center" style="font-weight:bold; font-size:8.5pt;">1 of 1</td>
+      </tr>
+    </table>
+
+    <!-- Metadata -->
+    <table class="meta-table">
+      <tr>
+        <td width="40%">DEGREE PROGRAM: <span class="meta-val">BACHELOR OF SCIENCE IN COMPUTER SCIENCE</span></td>
+        <td width="30%" align="center">COURSE &amp; YEAR: <span class="meta-val">BSCS 1A</span></td>
+        <td width="30%" align="right">SEMESTER &amp; AY: <span class="meta-val">1ST SEM 2026-2027</span></td>
+      </tr>
+    </table>
+
+    <!-- Timetable -->
+    <table class="sched-table">
+      <colgroup>
+        <col width="110" style="width: 110pt;">
+        <col width="118" style="width: 118pt;">
+        <col width="118" style="width: 118pt;">
+        <col width="118" style="width: 118pt;">
+        <col width="118" style="width: 118pt;">
+        <col width="118" style="width: 118pt;">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>TIME</th>
+          <th>MONDAY</th>
+          <th>TUESDAY</th>
+          <th>WEDNESDAY</th>
+          <th>THURSDAY</th>
+          <th>FRIDAY</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>7:00 – 8:30</b></td>
+          <td><b>CC 101</b><br><span>Prof. J. Doe</span><br><span>CL 1</span></td>
+          <td></td>
+          <td><b>CC 101</b><br><span>Prof. J. Doe</span><br><span>CL 1</span></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><b>8:30 – 10:00</b></td>
+          <td><b>MATH 101</b><br><span>Prof. M. Santos</span><br><span>RM 201</span></td>
+          <td></td>
+          <td><b>MATH 101</b><br><span>Prof. M. Santos</span><br><span>RM 201</span></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><b>10:00 – 11:30</b></td>
+          <td><b>ENG 101</b><br><span>Prof. A. Cruz</span><br><span>RM 202</span></td>
+          <td></td>
+          <td><b>ENG 101</b><br><span>Prof. A. Cruz</span><br><span>RM 202</span></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr class="lunch-row">
+          <td><b>11:30 – 12:30</b></td>
+          <td colspan="5">L U N C H &nbsp;&nbsp; B R E A K</td>
+        </tr>
+        <tr>
+          <td><b>12:30 – 2:00</b></td>
+          <td></td>
+          <td><b>CS 102</b><br><span>Prof. R. Ramos</span><br><span>CL 2</span></td>
+          <td></td>
+          <td><b>CS 102</b><br><span>Prof. R. Ramos</span><br><span>CL 2</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><b>2:00 – 3:30</b></td>
+          <td></td>
+          <td><b>GE 101</b><br><span>Prof. L. Perez</span><br><span>RM 204</span></td>
+          <td></td>
+          <td><b>GE 101</b><br><span>Prof. L. Perez</span><br><span>RM 204</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><b>3:30 – 5:00</b></td>
+          <td><b>PE 101</b><br><span>Prof. G. Diaz</span><br><span>GYM</span></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><b>5:00 – 6:00</b></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Signatures -->
+    <table class="sig-table">
+      <tr>
+        <td width="50%">
+          Prepared by:<br><br><br>
+          <b><u>PROF. PROGRAM CHAIR</u></b><br>
+          Program Chair
+        </td>
+        <td width="50%" align="right">
+          Approved:<br><br><br>
+          <b><u>RAMY LLOYD LOTILLA, EdD</u></b><br>
+          Campus Administrator
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

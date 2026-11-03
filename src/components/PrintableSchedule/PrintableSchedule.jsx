@@ -42,12 +42,9 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
         });
     }, [department, programName, sectionName, scheduleItems]);
 
-    // Map schedule items to the 8 ISO time blocks
-    const { blockGridMap, cellSpanMap, skippedCellsSet } = useMemo(() => {
+    // Map schedule items to the 8 ISO time blocks (strictly uniform 1x1 schedule boxes)
+    const blockGridMap = useMemo(() => {
         const gridMap = new Map();
-        const spanMap = new Map();
-        const skipped = new Set();
-
         const nonLunchBlocks = ISO_TIME_BLOCKS.filter(b => !b.isLunch);
 
         // Map items to block keys: `${day}-${block.id}`
@@ -64,21 +61,47 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
                 else if (slotId === 10 || slotId === 19) range = { start: 690, end: 750 };
                 else if (slotId >= 11 && slotId <= 13) range = { start: 750, end: 840 };
                 else if (slotId >= 14 && slotId <= 16) range = { start: 840, end: 930 };
-                else if (slotId >= 17 && slotId <= 20) range = { start: 930, end: 1020 };
+                else if (slotId >= 17 && slotId <= 18) range = { start: 930, end: 1020 };
+                else if (slotId === 20) range = { start: 990, end: 1080 }; // 4:30 PM - 6:00 PM
                 else if (slotId >= 21 && slotId <= 22) range = { start: 1020, end: 1080 };
                 else range = { start: 420, end: 510 };
             }
 
-            const effectiveHours = Number(s.hours) || (s.subject?.hasLecLab
+            let effectiveHours = Number(s.hours) || (s.subject?.hasLecLab
                 ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2))
                 : (Number(s.subject?.hoursPerMeeting) || 1.5));
+
+            // Normalize CS 123 or non-lab standard lecture courses to 1.5 hrs per meeting
+            if (s.subject?.code === 'CS 123' && effectiveHours > 1.5 && !s.subject?.hasLecLab) {
+                effectiveHours = 1.5;
+            }
 
             if (range.end <= range.start) {
                 range.end = range.start + effectiveHours * 60;
             }
 
-            // Find matching start block
-            let matchedBlock = nonLunchBlocks.find(b => range.start >= b.start - 15 && range.start < b.end - 15);
+            // If CS 123 range is artificially elongated beyond 90 mins, bound it to standard 90 mins
+            if (s.subject?.code === 'CS 123' && (range.end - range.start) > 90 && !s.subject?.hasLecLab) {
+                range = { start: range.start, end: range.start + 90 };
+            }
+
+            // Match to best fitting ISO block:
+            // Select the block with the MAXIMUM time overlap among non-lunch blocks.
+            let matchedBlock = null;
+            let maxOverlap = 0;
+            nonLunchBlocks.forEach(b => {
+                const overlap = Math.max(0, Math.min(range.end, b.end) - Math.max(range.start, b.start));
+                if (overlap > maxOverlap) {
+                    maxOverlap = overlap;
+                    matchedBlock = b;
+                }
+            });
+
+            // Fallback: match block containing start time or closest block start
+            if (!matchedBlock || maxOverlap === 0) {
+                matchedBlock = nonLunchBlocks.find(b => range.start >= b.start - 25 && range.start < b.end - 15);
+            }
+
             if (!matchedBlock) {
                 let minDiff = Infinity;
                 nonLunchBlocks.forEach(b => {
@@ -97,51 +120,8 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
             gridMap.get(key).push({ ...s, _range: range });
         });
 
-        // Calculate spans and skips across ISO_TIME_BLOCKS
-        ISO_TIME_BLOCKS.forEach((block, bIdx) => {
-            if (block.isLunch) return;
-
-            days.forEach(day => {
-                const cellKey = `${day}-${block.id}`;
-                if (skipped.has(cellKey)) return;
-
-                const items = gridMap.get(cellKey) || [];
-                let rowSpan = 1;
-
-                items.forEach(item => {
-                    const range = item._range;
-                    if (range && range.end > block.end + 15) {
-                        let spanCount = 1;
-                        for (let nextIdx = bIdx + 1; nextIdx < ISO_TIME_BLOCKS.length; nextIdx++) {
-                            const nextBlock = ISO_TIME_BLOCKS[nextIdx];
-                            if (nextBlock.isLunch) break;
-                            if (range.end > nextBlock.start + 15) {
-                                spanCount++;
-                            } else {
-                                break;
-                            }
-                        }
-                        if (spanCount > rowSpan) rowSpan = spanCount;
-                    }
-                });
-
-                spanMap.set(cellKey, rowSpan);
-
-                if (rowSpan > 1) {
-                    let skippedCount = 0;
-                    for (let nextIdx = bIdx + 1; nextIdx < ISO_TIME_BLOCKS.length && skippedCount < rowSpan - 1; nextIdx++) {
-                        const nextBlock = ISO_TIME_BLOCKS[nextIdx];
-                        if (!nextBlock.isLunch) {
-                            skipped.add(`${day}-${nextBlock.id}`);
-                            skippedCount++;
-                        }
-                    }
-                }
-            });
-        });
-
-        return { blockGridMap: gridMap, cellSpanMap: spanMap, skippedCellsSet: skipped };
-    }, [scheduleItems, days, scheduleMode]);
+        return gridMap;
+    }, [scheduleItems, scheduleMode]);
 
     return (
         <div className="printable-iso-document">
@@ -213,19 +193,14 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
                                 <td className="time-cell">{block.label}</td>
                                 {days.map(day => {
                                     const cellKey = `${day}-${block.id}`;
-                                    if (skippedCellsSet.has(cellKey)) {
-                                        return null;
-                                    }
-
                                     const cellSchedules = blockGridMap.get(cellKey) || [];
-                                    const rowSpan = cellSpanMap.get(cellKey) || 1;
                                     const isScheduled = cellSchedules.length > 0;
+                                    const isMulti = cellSchedules.length > 1;
 
                                     return (
                                         <td
                                             key={cellKey}
                                             className={`schedule-cell ${isScheduled ? 'scheduled-cell' : ''}`}
-                                            rowSpan={rowSpan}
                                         >
                                             {cellSchedules.map((cls, idx) => {
                                                 const profFormatted = formatProfessorName(cls.professor?.name);
@@ -233,8 +208,8 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
                                                 return (
                                                     <div
                                                         key={cls.id || idx}
-                                                        className="cell-content"
-                                                        style={idx > 0 ? { marginTop: '2px', borderTop: '1px solid #000', paddingTop: '2px' } : {}}
+                                                        className={`cell-content ${isMulti ? 'compact' : ''}`}
+                                                        style={idx > 0 ? { marginTop: '1px', borderTop: '1px solid #000', paddingTop: '1px' } : {}}
                                                     >
                                                         <div className="cell-subject">{cls.subject?.code || '—'}{cls.component ? ` (${cls.component})` : ''}</div>
                                                         <div className="cell-professor">{profFormatted}</div>

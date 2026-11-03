@@ -1,3 +1,19 @@
+/**
+ * ExportOptions.jsx
+ * Export toolbar for academic schedules supporting ISO 9001:2015 and Ordinary Grid formats.
+ *
+ * LAYOUT REFERENCES & STANDARDS:
+ * - Official reference templates and quality specifications are located in: /references/
+ *   ├── /references/class-schedule-iso/     (INS-CLS-08, Landscape Letter)
+ *   ├── /references/faculty-workload-iso/   (INS F22, Portrait Letter)
+ *   └── /references/room-utilization-iso/   (Institutional Room Util, Portrait Letter)
+ *
+ * Supported ISO export modes:
+ * 1. Word Document (.doc) -> Standard MSO Envelope HTML/VML (via scheduleExportUtils)
+ * 2. Save Image (.png)   -> High-DPI canvas capture (via html2canvas)
+ * 3. Print Document      -> Direct 1-page fit print iframe
+ */
+
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { logActivity, LOG_ACTIONS } from '../../../utils/activityLogger';
@@ -103,18 +119,20 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             setIsGenerating(true);
                             const roomContent = document.querySelector('.printable-room-utilization');
                             const isoContent = document.querySelector('.printable-iso-document');
-                            const printContent = roomContent || isoContent;
+                            const workloadContent = document.querySelector('.faculty-workload-iso-document');
+                            const printContent = roomContent || workloadContent || isoContent;
                             if (!printContent) {
                                 setIsGenerating(false);
                                 toast.error('No printable schedule found. Please select a schedule or room first.');
                                 return;
                             }
                             const isRoom = !!roomContent;
+                            const isWorkload = !!workloadContent && !roomContent;
                             const tempContainer = document.createElement('div');
                             tempContainer.style.position = 'absolute';
                             tempContainer.style.top = '-10000px';
                             tempContainer.style.left = '-10000px';
-                            tempContainer.style.width = '1100px'; 
+                            tempContainer.style.width = isWorkload ? '850px' : '1100px'; 
                             tempContainer.style.backgroundColor = 'white';
                             
                             const isoStyles = `
@@ -127,18 +145,22 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     .meta-info { display: flex; justify-content: space-between; align-items: center; font-size: 9.5pt; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
                                     .meta-value { font-weight: bold; text-decoration: underline; }
                                     .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; font-family: "Times New Roman", Times, serif; color: #000; table-layout: fixed; border: 1px solid #000; margin-bottom: 8px; }
-                                    .iso-schedule-table tr { height: 44px; }
-                                    .iso-schedule-table tr.lunch-row { height: 26px; }
-                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 44px; overflow: hidden; box-sizing: border-box; }
-                                    .iso-schedule-table td.lunch-break-cell { height: 26px; font-weight: bold; font-size: 9.5pt; letter-spacing: 2px; text-align: center; vertical-align: middle; background-color: transparent; }
+                                    .iso-schedule-table tr { height: 44px; max-height: 44px; }
+                                    .iso-schedule-table tr.lunch-row { height: 26px; max-height: 26px; }
+                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 44px; max-height: 44px; overflow: hidden; box-sizing: border-box; }
+                                    .iso-schedule-table td.lunch-break-cell { height: 26px; max-height: 26px; font-weight: bold; font-size: 9.5pt; letter-spacing: 2px; text-align: center; vertical-align: middle; background-color: transparent; }
                                     .iso-schedule-table th { background-color: transparent !important; padding: 4px 2px; height: 26px; font-size: 9pt; font-weight: bold; }
                                     .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8.5pt; padding: 2px 4px; }
                                     .iso-schedule-table td.scheduled-cell { border: 1px solid #000 !important; }
-                                    .iso-schedule-table .schedule-cell { padding: 0; overflow: hidden; }
-                                    .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 4px; height: 100%; overflow: hidden; box-sizing: border-box; line-height: 1.2; }
+                                    .iso-schedule-table .schedule-cell { padding: 0; overflow: hidden; height: 44px; max-height: 44px; }
+                                    .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 4px; height: 100%; max-height: 44px; overflow: hidden; box-sizing: border-box; line-height: 1.2; }
+                                    .cell-content.compact { padding: 1px 2px; line-height: 1.05; }
                                     .cell-subject { font-weight: bold; font-size: 9pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+                                    .cell-content.compact .cell-subject { font-size: 7.5pt; line-height: 1.05; }
                                     .cell-professor { font-size: 8pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                    .cell-content.compact .cell-professor { font-size: 6.5pt; line-height: 1.05; margin-top: 0; }
                                     .cell-room { font-size: 8pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
+                                    .cell-content.compact .cell-room { font-size: 6.5pt; line-height: 1.05; margin-top: 0; }
                                     .signatures-section { display: flex; justify-content: space-between; margin-top: 10px; padding: 0 20px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
                                     .signature-block { text-align: left; min-width: 250px; }
                                     .signature-block.right-aligned { text-align: left; min-width: 280px; padding-right: 40px; }
@@ -367,6 +389,52 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 }
                             `;
 
+                            const workloadStyles = `
+                                .workload-export-wrapper {
+                                    font-family: "Times New Roman", Times, serif;
+                                    color: #000;
+                                    background: #fff;
+                                    width: 850px;
+                                    padding: 25px 35px;
+                                    box-sizing: border-box;
+                                    display: block;
+                                }
+                                .faculty-workload-iso-document {
+                                    display: block !important;
+                                    visibility: visible !important;
+                                    width: 100% !important;
+                                    max-width: 100% !important;
+                                    padding: 0 !important;
+                                    margin: 0 !important;
+                                    font-family: "Times New Roman", Times, serif !important;
+                                }
+                                .fw-header-table, .fw-profile-table, .fw-teaching-table, .fw-schedule-table {
+                                    width: 100% !important;
+                                    border-collapse: collapse !important;
+                                    margin-bottom: 6px !important;
+                                    font-family: "Times New Roman", Times, serif !important;
+                                }
+                                .fw-header-table td, .fw-profile-table td, .fw-profile-table th,
+                                .fw-teaching-table td, .fw-teaching-table th, .fw-schedule-table td, .fw-schedule-table th {
+                                    border: 1px solid #000 !important;
+                                    padding: 2.5px 4px !important;
+                                }
+                                .fw-header-logo img {
+                                    max-width: 50px !important;
+                                    max-height: 50px !important;
+                                    object-fit: contain !important;
+                                    display: block !important;
+                                    margin: 0 auto !important;
+                                }
+                                .fw-signatures-container {
+                                    display: flex !important;
+                                    justify-content: space-between !important;
+                                    margin-top: 10px !important;
+                                    font-size: 8.5pt !important;
+                                    font-family: "Times New Roman", Times, serif !important;
+                                }
+                            `;
+
                             let contentHtml = printContent.innerHTML;
                             if (isRoom) {
                                 contentHtml = contentHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
@@ -374,9 +442,9 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
 
                             tempContainer.innerHTML = `
                                 <style>
-                                    ${isRoom ? roomStyles : isoStyles}
+                                    ${isRoom ? roomStyles : (isWorkload ? workloadStyles : isoStyles)}
                                 </style>
-                                <div class="${isRoom ? 'room-export-wrapper' : ''}" style="${isRoom ? '' : 'padding: 40px;'}">
+                                <div class="${isRoom ? 'room-export-wrapper' : (isWorkload ? 'workload-export-wrapper' : '')}" style="${isRoom ? '' : (isWorkload ? 'padding: 20px;' : 'padding: 40px;')}">
                                     ${contentHtml}
                                 </div>
                             `;
@@ -403,17 +471,20 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             
                             try {
                                 const html2canvas = (await import('html2canvas')).default;
+                                const renderWidth = isWorkload ? 850 : 1100;
                                 const canvas = await html2canvas(tempContainer, { 
                                     scale: 3, 
                                     useCORS: true,
-                                    width: 1100,
-                                    windowWidth: 1100
+                                    width: renderWidth,
+                                    windowWidth: renderWidth
                                 });
                                 setPreviewImage(canvas.toDataURL('image/png'));
                                 logActivity({
                                     user,
                                     action: LOG_ACTIONS.EXPORT,
-                                    details: 'Generated ISO format schedule preview image'
+                                    details: isRoom 
+                                        ? 'Generated room utilization preview image' 
+                                        : (isWorkload ? 'Generated faculty workload preview image' : 'Generated ISO format schedule preview image')
                                 });
                             } catch (error) {
                                 console.error('Failed to save image:', error);
@@ -441,12 +512,14 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             setIsExportOpen(false);
                             const roomContent = document.querySelector('.printable-room-utilization');
                             const isoContent = document.querySelector('.printable-iso-document');
-                            const printContent = roomContent || isoContent;
+                            const workloadContent = document.querySelector('.faculty-workload-iso-document');
+                            const printContent = roomContent || workloadContent || isoContent;
                             if (!printContent) {
                                 toast.error('No printable schedule found. Please select a schedule or room first.');
                                 return;
                             }
                             const isRoom = !!roomContent;
+                            const isWorkload = !!workloadContent && !roomContent;
                             const iframe = document.createElement('iframe');
                             iframe.style.position = 'fixed';
                             iframe.style.top = '0';
@@ -561,9 +634,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                         }
                                         .iso-schedule-table tr { 
                                             height: 44px !important; 
+                                            max-height: 44px !important; 
                                         }
                                         .iso-schedule-table tr.lunch-row { 
                                             height: 26px !important; 
+                                            max-height: 26px !important; 
                                         }
                                         .iso-schedule-table th, .iso-schedule-table td { 
                                             border: 1px solid #000 !important; 
@@ -571,11 +646,13 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             text-align: center !important; 
                                             vertical-align: middle !important; 
                                             height: 44px !important; 
+                                            max-height: 44px !important; 
                                             overflow: hidden !important; 
                                             box-sizing: border-box !important; 
                                         }
                                         .iso-schedule-table td.lunch-break-cell { 
                                             height: 26px !important; 
+                                            max-height: 26px !important; 
                                             font-weight: bold !important; 
                                             font-size: 9.5pt !important; 
                                             letter-spacing: 2px !important; 
@@ -602,6 +679,8 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                         .iso-schedule-table .schedule-cell { 
                                             padding: 0 !important; 
                                             overflow: hidden !important; 
+                                            height: 44px !important; 
+                                            max-height: 44px !important; 
                                         }
                                         .cell-content { 
                                             display: flex !important; 
@@ -610,9 +689,14 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             justify-content: center !important; 
                                             padding: 2px 4px !important; 
                                             height: 100% !important; 
+                                            max-height: 44px !important; 
                                             overflow: hidden !important; 
                                             box-sizing: border-box !important; 
                                             line-height: 1.2 !important; 
+                                        }
+                                        .cell-content.compact { 
+                                            padding: 1px 2px !important; 
+                                            line-height: 1.05 !important; 
                                         }
                                         .cell-subject { 
                                             font-weight: bold !important; 
@@ -623,6 +707,10 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             text-overflow: ellipsis !important; 
                                             max-width: 100% !important; 
                                         }
+                                        .cell-content.compact .cell-subject { 
+                                            font-size: 7.5pt !important; 
+                                            line-height: 1.05 !important; 
+                                        }
                                         .cell-professor { 
                                             font-size: 8pt !important; 
                                             line-height: 1.2 !important; 
@@ -632,6 +720,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             max-width: 100% !important; 
                                             margin-top: 1px !important; 
                                         }
+                                        .cell-content.compact .cell-professor { 
+                                            font-size: 6.5pt !important; 
+                                            line-height: 1.05 !important; 
+                                            margin-top: 0 !important; 
+                                        }
                                         .cell-room { 
                                             font-size: 8pt !important; 
                                             line-height: 1.2 !important; 
@@ -640,6 +733,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             text-overflow: ellipsis !important; 
                                             max-width: 100% !important; 
                                             margin-top: 1px !important; 
+                                        }
+                                        .cell-content.compact .cell-room { 
+                                            font-size: 6.5pt !important; 
+                                            line-height: 1.05 !important; 
+                                            margin-top: 0 !important; 
                                         }
                                         .signatures-section { 
                                             display: flex !important; 
@@ -961,6 +1059,83 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     margin-top: 1px !important; 
                                 }
                             `;
+
+                            const workloadPrintStyles = `
+                                @page { 
+                                    size: letter portrait; 
+                                    margin: 0.25in 0.35in; 
+                                }
+                                *, *::before, *::after {
+                                    box-sizing: border-box !important;
+                                    -webkit-print-color-adjust: exact !important;
+                                    print-color-adjust: exact !important;
+                                }
+                                html, body { 
+                                    margin: 0 !important; 
+                                    padding: 0 !important; 
+                                    background: #fff !important; 
+                                    color: #000 !important;
+                                    font-family: "Times New Roman", Times, serif !important;
+                                    height: auto !important;
+                                    min-height: 0 !important;
+                                    overflow: hidden !important;
+                                    -webkit-font-smoothing: antialiased !important;
+                                    -moz-osx-font-smoothing: grayscale !important;
+                                }
+                                .print-wrapper { 
+                                    width: 100% !important; 
+                                    max-width: 100% !important; 
+                                    margin: 0 !important; 
+                                    padding: 0 !important; 
+                                    page-break-after: avoid !important;
+                                    break-after: avoid !important;
+                                    page-break-inside: avoid !important;
+                                    break-inside: avoid !important;
+                                }
+                                .faculty-workload-iso-document { 
+                                    display: block !important; 
+                                    width: 100% !important; 
+                                    max-width: 100% !important; 
+                                    margin: 0 !important; 
+                                    padding: 0 !important; 
+                                    page-break-after: avoid !important;
+                                    break-after: avoid !important;
+                                    page-break-inside: avoid !important;
+                                    break-inside: avoid !important;
+                                    font-family: "Times New Roman", Times, serif !important;
+                                }
+                                .fw-header-table, .fw-profile-table, .fw-teaching-table, .fw-schedule-table { 
+                                    width: 100% !important; 
+                                    border-collapse: collapse !important; 
+                                    margin-bottom: 6px !important; 
+                                    font-family: "Times New Roman", Times, serif !important;
+                                    page-break-inside: avoid !important;
+                                    break-inside: avoid !important;
+                                }
+                                .fw-header-table td, .fw-profile-table td, .fw-profile-table th,
+                                .fw-teaching-table td, .fw-teaching-table th, .fw-schedule-table td, .fw-schedule-table th { 
+                                    border: 1px solid #000 !important; 
+                                    padding: 2.5px 4px !important; 
+                                }
+                                .fw-header-logo img {
+                                    max-width: 50px !important;
+                                    max-height: 50px !important;
+                                    height: auto !important;
+                                    display: block !important;
+                                    margin: 0 auto !important;
+                                    object-fit: contain !important;
+                                }
+                                .fw-signatures-container { 
+                                    display: flex !important; 
+                                    justify-content: space-between !important; 
+                                    margin-top: 10px !important; 
+                                    font-size: 8.5pt !important; 
+                                    font-family: "Times New Roman", Times, serif !important; 
+                                    color: #000 !important; 
+                                    page-break-inside: avoid !important;
+                                    break-inside: avoid !important;
+                                }
+                            `;
                             
                             let printHtml = printContent.innerHTML;
                             if (isRoom) {
@@ -988,7 +1163,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 <html>
                                 <head>
                                     <style>
-                                        ${isRoom ? roomPrintStyles : isoPrintStyles}
+                                        ${isRoom ? roomPrintStyles : (isWorkload ? workloadPrintStyles : isoPrintStyles)}
                                     </style>
                                 </head>
                                 <body><div class="print-wrapper">${printHtml}</div></body>
@@ -999,7 +1174,9 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             logActivity({
                                 user,
                                 action: LOG_ACTIONS.EXPORT,
-                                details: isRoom ? 'Printed room utilization schedule document' : 'Printed ISO format schedule document'
+                                details: isRoom 
+                                    ? 'Printed room utilization schedule document' 
+                                    : (isWorkload ? 'Printed faculty workload document' : 'Printed ISO format schedule document')
                             });
                             setTimeout(() => {
                                 iframe.contentWindow.print();

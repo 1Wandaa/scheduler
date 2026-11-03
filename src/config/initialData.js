@@ -38,7 +38,7 @@ export const initialProfessors = [
   { id: 'P32', name: 'Osuyos, Art Jayson', department: 'BSCS', specialization: ['OJT', 'Free Elective 102', 'Seminar 301', 'CS 109'], maxUnits: 24 },
   { id: 'P33', name: 'Palomar, Joy', department: 'BSCS', specialization: ['CS 120'], maxUnits: 6 },
   { id: 'P34', name: 'Paredes, Jelly', department: 'BSCS', specialization: ['CS 119', 'Seminar 301'], maxUnits: 12 },
-  { id: 'P35', name: 'Pula, Leo', department: 'BSCS', specialization: ['CS 124', 'Free Elective 104'], maxUnits: 24 },
+  { id: 'P35', name: 'Pula, Leo', department: 'BSCS', specialization: ['CS 123', 'CS 124', 'Free Elective 104'], maxUnits: 24 },
   { id: 'P36', name: 'Ricardo, Lalaine', department: 'BSCS', specialization: ['GE 109'], maxUnits: 12 },
   { id: 'P37', name: 'Suresca, Beljay', department: 'BSFT', specialization: ['Elective 2', 'FT 121', 'FT 115L'], maxUnits: 23 },
   { id: 'P38', name: 'Ticar, Rhodora', department: 'BSFT', specialization: ['Chem 102', 'GEE 103'], maxUnits: 11 },
@@ -55,7 +55,7 @@ export const initialSubjects = [
   { id: 'S06', code: 'GEE 103', name: 'Living in the IT Era', department: 'BSCS', credits: 3, requiredLab: false, hoursPerMeeting: 1.5, hoursPerWeek: 3 },
   { id: 'S07', code: 'PE 112', name: 'PATHFit 4', department: 'BSCS', credits: 2, requiredLab: false, hoursPerMeeting: 2, hoursPerWeek: 2 },
   { id: 'S08', code: 'CS 108', name: 'Software Engineering 1', department: 'BSCS', credits: 3, requiredLab: true, hoursPerMeeting: 2.5, hoursPerWeek: 5 },
-  { id: 'S123', code: 'CS 123', name: 'Human Computer Interaction', department: 'BSCS', credits: 3, requiredLab: true, hoursPerMeeting: 2.5, hoursPerWeek: 5 },
+  { id: 'S123', code: 'CS 123', name: 'Human Computer Interaction', department: 'BSCS', credits: 3, requiredLab: false, hoursPerMeeting: 1.5, hoursPerWeek: 3 },
   { id: 'S09', code: 'CS 107', name: 'Applications Development & Emerging Technolog', department: 'BSCS', credits: 3, requiredLab: true, hoursPerMeeting: 2.5, hoursPerWeek: 5 },
   { id: 'S10', code: 'NSTP 102', name: 'ROTC/CWTS/LTS', department: 'BSCS', credits: 3, requiredLab: false, hoursPerMeeting: 3, hoursPerWeek: 3 },
   { id: 'S11', code: 'FT 110', name: 'Food Processing II', department: 'BSFT', credits: 4.25, requiredLab: true, hoursPerMeeting: 2.5, hoursPerWeek: 5 },
@@ -156,8 +156,8 @@ export const initialSections = [
   { id: 'SEC29', name: 'BSCS 3C', program: 'BS Computer Science', yearLevel: 3, studentCount: 40, subjects: ['S39', 'S59', 'S60', 'S62', 'S73'] },
   { id: 'SEC30', name: 'BSOA 4A', program: 'BS Office Administration', yearLevel: 4, studentCount: 40, subjects: ['S54'] },
   { id: 'SEC31', name: 'BSOA 4B', program: 'BS Office Administration', yearLevel: 4, studentCount: 40, subjects: ['S54'] },
-  { id: 'SEC32', name: 'BSCS 4A', program: 'BS Computer Science', yearLevel: 4, studentCount: 40, subjects: ['S58', 'S63', 'S64'] },
-  { id: 'SEC33', name: 'BSCS 4B', program: 'BS Computer Science', yearLevel: 4, studentCount: 40, subjects: ['S58', 'S63', 'S64'] },
+  { id: 'SEC32', name: 'BSCS 4A', program: 'BS Computer Science', yearLevel: 4, studentCount: 40, subjects: ['S58', 'S63', 'S64', 'S123'] },
+  { id: 'SEC33', name: 'BSCS 4B', program: 'BS Computer Science', yearLevel: 4, studentCount: 40, subjects: ['S58', 'S63', 'S64', 'S123'] },
 ];
 
 export const initialDepartments = [

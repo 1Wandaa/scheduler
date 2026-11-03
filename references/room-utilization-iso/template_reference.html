@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Room Utilization Reference Template</title>
+  <style>
+    @page {
+      size: letter portrait;
+      margin: 0.2in 0.25in;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f8fafc;
+      color: #000;
+      margin: 0;
+      padding: 20px;
+    }
+    .page-container {
+      width: 100%;
+      max-width: 8.5in;
+      background: #fff;
+      margin: 0 auto;
+      padding: 20px 28px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border: 1px solid #cbd5e1;
+    }
+    .header-bar {
+      display: flex;
+      align-items: center;
+      border-bottom: 2.5px solid #f2a900;
+      padding-bottom: 4px;
+      margin-bottom: 8px;
+    }
+    .header-logo {
+      width: 50px;
+      height: 50px;
+      margin-right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed #cbd5e1;
+      font-weight: bold;
+      font-size: 8pt;
+    }
+    .header-text {
+      display: flex;
+      flex-direction: column;
+    }
+    .republic { font-size: 8pt; line-height: 1.15; }
+    .univ { font-size: 13.5pt; font-weight: bold; color: #002060; letter-spacing: 0.5px; line-height: 1.15; }
+    .campus { font-size: 9pt; font-weight: bold; color: #002060; line-height: 1.15; }
+
+    .titles {
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .dept-title {
+      color: #2e5296;
+      font-size: 10.5pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin: 0 0 2px 0;
+    }
+    .sub-title { font-size: 10.5pt; font-weight: bold; margin: 0 0 2px 0; }
+    .term-title { font-size: 8.5pt; margin: 0; }
+
+    .room-badge {
+      display: inline-block;
+      font-size: 9.5pt;
+      font-weight: bold;
+      background: #ffff00;
+      padding: 2px 8px;
+      border: 1px solid #000;
+      margin-bottom: 6px;
+    }
+
+    .subj-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #000;
+      font-size: 7.5pt;
+      margin-bottom: 8px;
+    }
+    .subj-table th, .subj-table td {
+      border: 1px solid #000;
+      padding: 2.5px 4px;
+      text-align: center;
+    }
+    .subj-table th {
+      background: #f2f2f2;
+      font-weight: bold;
+    }
+
+    .grid-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #000;
+      font-size: 7.5pt;
+      table-layout: fixed;
+      margin-bottom: 10px;
+    }
+    .grid-table th, .grid-table td {
+      border: 1px solid #000;
+      text-align: center;
+      vertical-align: middle;
+      padding: 0;
+      height: 19px;
+    }
+    .grid-table th {
+      background: #f2f2f2;
+      font-weight: bold;
+    }
+    .time-cell {
+      width: 13%;
+      background: #f8fafc;
+      font-weight: bold;
+      font-size: 7pt;
+      padding: 1px 2px;
+    }
+    .booked-cell {
+      background: #00b0f0 !important;
+      font-weight: bold;
+      color: #000;
+      padding: 2px;
+    }
+
+    .signatures {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 12px;
+      padding: 0 10px;
+      font-size: 8.5pt;
+    }
+    .sig-block {
+      flex: 1;
+      max-width: 32%;
+    }
+    .sig-label { margin-bottom: 16px; }
+    .sig-name { font-weight: bold; text-decoration: underline; font-size: 9.5pt; }
+    .sig-title { font-size: 8pt; margin-top: 1px; }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page-container {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <!-- Header -->
+    <div class="header-bar">
+      <div class="header-logo">[LOGO]</div>
+      <div class="header-text">
+        <span class="republic">Republic of the Philippines</span>
+        <span class="univ">CAPIZ STATE UNIVERSITY</span>
+        <span class="campus">MAMBUSAO SATELLITE COLLEGE</span>
+      </div>
+    </div>
+
+    <!-- Titles -->
+    <div class="titles">
+      <div class="dept-title">BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT</div>
+      <div class="sub-title">Room Utilization</div>
+      <div class="term-title">First Semester, School Year 2026-2027</div>
+    </div>
+
+    <!-- Room Badge -->
+    <div>
+      <span class="room-badge">Room: COMPUTER LAB 1</span>
+    </div>
+
+    <!-- Subjects Table -->
+    <table class="subj-table">
+      <thead>
+        <tr>
+          <th style="width: 15%;">Subject</th>
+          <th style="width: 35%;">Description</th>
+          <th style="width: 10%;">Unit</th>
+          <th style="width: 20%;">Faculty</th>
+          <th style="width: 20%;">Course/Section</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>CC 101</b></td>
+          <td>Introduction to Computing</td>
+          <td>3</td>
+          <td>Prof. J. Doe</td>
+          <td>BSCS 1A</td>
+        </tr>
+        <tr>
+          <td><b>CS 102</b></td>
+          <td>Data Structures and Algorithms</td>
+          <td>3</td>
+          <td>Prof. R. Ramos</td>
+          <td>BSCS 2A</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Timetable Grid -->
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th style="width: 13%;">TIME</th>
+          <th style="width: 17.4%;">MONDAY</th>
+          <th style="width: 17.4%;">TUESDAY</th>
+          <th style="width: 17.4%;">WEDNESDAY</th>
+          <th style="width: 17.4%;">THURSDAY</th>
+          <th style="width: 17.4%;">FRIDAY</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="time-cell">7:00 – 7:30</td>
+          <td rowspan="3" class="booked-cell">
+            CC 101<br><span style="font-size: 6.5pt; font-weight: normal;">Prof. J. Doe</span><br><span style="font-size: 6pt;">BSCS 1A</span>
+          </td>
+          <td></td>
+          <td rowspan="3" class="booked-cell">
+            CC 101<br><span style="font-size: 6.5pt; font-weight: normal;">Prof. J. Doe</span><br><span style="font-size: 6pt;">BSCS 1A</span>
+          </td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="time-cell">7:30 – 8:00</td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="time-cell">8:00 – 8:30</td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="time-cell">8:30 – 9:00</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="time-cell">12:30 – 1:00</td>
+          <td></td>
+          <td rowspan="3" class="booked-cell">
+            CS 102<br><span style="font-size: 6.5pt; font-weight: normal;">Prof. R. Ramos</span><br><span style="font-size: 6pt;">BSCS 2A</span>
+          </td>
+          <td></td>
+          <td rowspan="3" class="booked-cell">
+            CS 102<br><span style="font-size: 6.5pt; font-weight: normal;">Prof. R. Ramos</span><br><span style="font-size: 6pt;">BSCS 2A</span>
+          </td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="time-cell">1:00 – 1:30</td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="time-cell">1:30 – 2:00</td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Signatures -->
+    <div class="signatures">
+      <div class="sig-block">
+        <div class="sig-label">Prepared by:</div>
+        <div class="sig-name">PROGRAM CHAIR</div>
+        <div class="sig-title">Program Chair</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-label">Noted by:</div>
+        <div class="sig-name">COLLEGE DEAN, PhD</div>
+        <div class="sig-title">College Dean</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-label">Approved by:</div>
+        <div class="sig-name">CAMPUS ADMIN, EdD</div>
+        <div class="sig-title">Campus Administrator</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
