@@ -245,7 +245,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       setError("Major subjects must have at least one department assigned.");
       return;
     }
-    
+
     if (isCodeDuplicate) {
       setError(`A subject with the code "${code}" already exists.`);
       return;
@@ -453,11 +453,11 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       if (activeSemester && s.semester && s.semester !== 'Both' && s.semester !== activeSemester) {
         return false;
       }
-      
+
       const searchLowerCode = searchQuery.toLowerCase().replace(/\s+/g, '');
       const codeMatch = (s.code || '').toLowerCase().replace(/\s+/g, '').includes(searchLowerCode);
       const nameMatch = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       if (searchQuery.trim() !== '') {
         return codeMatch || nameMatch;
       }
@@ -467,7 +467,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       const codeB = (b.code || '').replace(/\s+/g, '').toUpperCase();
       return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
     });
-    
+
     return {
       minorSubjects: filteredSubjects.filter(s => s.category === 'Minor'),
       majorSubjects: filteredSubjects.filter(s => s.category !== 'Minor') // Default to major
@@ -511,7 +511,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
   return (
     <>
-      <div className="card" style={{  position: 'relative' }}>
+      <div className="card" style={{ position: 'relative' }}>
         <div className="mgmt-header">
           <div className="mgmt-header-left">
             {onBack && (
@@ -530,8 +530,8 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
           </div>
           <div className="mgmt-header-actions">
             {onNavigateToHub && (
-              <button 
-                className="btn" 
+              <button
+                className="btn"
                 onClick={onNavigateToHub}
                 style={{ background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-color)', boxShadow: 'none' }}
               >
@@ -559,15 +559,16 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                 const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
                 const isActive = departmentFilter === dept;
                 return (
-                <button
-                  key={dept}
-                  className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
-                  onClick={() => setDepartmentFilter(dept)}
-                  style={isActive ? { background: deptColor, borderColor: deptColor } : undefined}
-                >
-                  {dept === 'All' ? 'All Subjects' : dept === 'Minor' ? 'General Ed / Minor' : dept}
-                </button>
-              )})}
+                  <button
+                    key={dept}
+                    className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
+                    onClick={() => setDepartmentFilter(dept)}
+                    style={isActive ? { background: deptColor, borderColor: deptColor } : undefined}
+                  >
+                    {dept === 'All' ? 'All Subjects' : dept === 'Minor' ? 'General Ed / Minor' : dept}
+                  </button>
+                )
+              })}
             </div>
             {departmentFilter !== 'All' && (
               <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: '500' }}>
@@ -579,12 +580,12 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
             <span className="mgmt-search-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </span>
-            <input 
-              type="text" 
-              className="mgmt-search-input" 
-              placeholder="Search subject code or name..." 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
+            <input
+              type="text"
+              className="mgmt-search-input"
+              placeholder="Search subject code or name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
@@ -606,12 +607,12 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
         {/* Render Minor Subjects First */}
         {(departmentFilter === 'All' || departmentFilter === 'Minor') && (
-          <SubjectTable 
-            subjectList={minorSubjects} 
-            title="Minor Subjects" 
-            titleColor={getDeptColor('Minor')} 
-            onEdit={handleOpenEdit} 
-            onDelete={handleDelete} 
+          <SubjectTable
+            subjectList={minorSubjects}
+            title="Minor Subjects"
+            titleColor={getDeptColor('Minor')}
+            onEdit={handleOpenEdit}
+            onDelete={handleDelete}
             onViewDetails={setDetailsSubject}
             departments={departments}
             selectedIds={selectionMode ? selectedIds : []}
@@ -625,15 +626,15 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
           if (departmentFilter !== 'All' && departmentFilter !== dept) return null;
           const deptMajors = majorSubjects.filter(s => getSubjectDepts(s).includes(dept));
           const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
-          
+
           return (
-            <SubjectTable 
+            <SubjectTable
               key={dept}
-              subjectList={deptMajors} 
-              title={`${dept} Major Subjects`} 
-              titleColor={deptColor} 
-              onEdit={handleOpenEdit} 
-              onDelete={handleDelete} 
+              subjectList={deptMajors}
+              title={`${dept} Major Subjects`}
+              titleColor={deptColor}
+              onEdit={handleOpenEdit}
+              onDelete={handleDelete}
               onViewDetails={setDetailsSubject}
               departments={departments}
               selectedIds={selectionMode ? selectedIds : []}
@@ -645,12 +646,12 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
         {/* Fallback for major subjects that don't have a department assigned yet */}
         {(departmentFilter === 'All') && (
-          <SubjectTable 
-            subjectList={majorSubjects.filter(s => getSubjectDepts(s).length === 0)} 
-            title="Unassigned Major Subjects" 
-            titleColor="var(--text-muted)" 
-            onEdit={handleOpenEdit} 
-            onDelete={handleDelete} 
+          <SubjectTable
+            subjectList={majorSubjects.filter(s => getSubjectDepts(s).length === 0)}
+            title="Unassigned Major Subjects"
+            titleColor="var(--text-muted)"
+            onEdit={handleOpenEdit}
+            onDelete={handleDelete}
             onViewDetails={setDetailsSubject}
             departments={departments}
             selectedIds={selectionMode ? selectedIds : []}
@@ -663,9 +664,9 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
       {showModal && createPortal(
         <div className="modal-overlay">
-          <div 
-            className="modal-content" 
-            style={{ width: '480px', maxWidth: '100%' }} 
+          <div
+            className="modal-content"
+            style={{ width: '480px', maxWidth: '100%' }}
             onClick={e => e.stopPropagation()}
             onKeyDown={handleKeyDown}
           >
@@ -673,7 +674,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-main)' }}>
                 {editMode ? 'Edit Subject' : 'Add New Subject'}
               </h3>
-              <button 
+              <button
                 type="button"
                 onClick={() => !isSaving && setShowModal(false)}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center' }}
@@ -692,11 +693,11 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
             <div className="form-group">
               <label className="form-label">Subject Code</label>
-              <input 
+              <input
                 className={`form-input${isCodeDuplicate ? ' mgmt-input-duplicate' : ''}`}
-                value={formData.code} 
-                onChange={e => handleCodeChange(e.target.value)} 
-                placeholder="Enter subject code" 
+                value={formData.code}
+                onChange={e => handleCodeChange(e.target.value)}
+                placeholder="Enter subject code"
               />
               {isCodeDuplicate && (
                 <div className="mgmt-field-duplicate-msg">
@@ -708,11 +709,11 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
             <div className="form-group">
               <label className="form-label">Subject Name</label>
-              <input 
+              <input
                 className={`form-input${isNameDuplicate ? ' mgmt-input-duplicate' : ''}`}
-                value={formData.name} 
-                onChange={e => handleNameChange(e.target.value)} 
-                placeholder="Enter subject name" 
+                value={formData.name}
+                onChange={e => handleNameChange(e.target.value)}
+                placeholder="Enter subject name"
               />
               {isNameDuplicate && (
                 <div className="mgmt-field-duplicate-msg">
@@ -725,10 +726,10 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
             <div style={{ display: 'flex', gap: '15px' }}>
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Category</label>
-                <select 
-                  className="form-select" 
-                  value={formData.category || 'Major'} 
-                  onChange={e => handleCategoryChange(e.target.value)} 
+                <select
+                  className="form-select"
+                  value={formData.category || 'Major'}
+                  onChange={e => handleCategoryChange(e.target.value)}
                 >
                   <option value="Major">Major Subject</option>
                   <option value="Minor">Minor Subject</option>
@@ -737,9 +738,9 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">Semester</label>
-                <select 
-                  className="form-select" 
-                  value={formData.semester || (activeSemester || (availableSemesters[0] || '1st Semester'))} 
+                <select
+                  className="form-select"
+                  value={formData.semester || (activeSemester || (availableSemesters[0] || '1st Semester'))}
                   onChange={e => setFormData({ ...formData, semester: e.target.value })}
                 >
                   {availableSemesters.map(sem => (
@@ -790,11 +791,11 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
             <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
               <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                 <label className="form-label">Total Units (Credits)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="any"
-                  className="form-input" 
-                  value={formData.credits === undefined ? '' : formData.credits} 
+                  className="form-input"
+                  value={formData.credits === undefined ? '' : formData.credits}
                   onChange={e => {
                     const newCredits = e.target.value === '' ? '' : Number(e.target.value);
                     const nextForm = { ...formData, credits: newCredits };
@@ -805,15 +806,15 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                     } else {
                       setFormData(nextForm);
                     }
-                  }} 
+                  }}
                 />
               </div>
               {!formData.hasLecLab && (
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                   <label className="form-label">Hours per Meeting</label>
-                  <select 
-                    className="form-select" 
-                    value={formData.hoursPerMeeting || 1.5} 
+                  <select
+                    className="form-select"
+                    value={formData.hoursPerMeeting || 1.5}
                     onChange={e => setFormData({ ...formData, hoursPerMeeting: Number(e.target.value) })}
                   >
                     <option value={1}>1.0 Hours</option>
@@ -827,14 +828,14 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                 </div>
               )}
             </div>
-            
+
             {formData.hasLecLab && (
               <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                   <label className="form-label">Lecture Hours</label>
-                  <select 
-                    className="form-select" 
-                    value={formData.lectureHours || 2} 
+                  <select
+                    className="form-select"
+                    value={formData.lectureHours || 2}
                     onChange={e => setFormData({ ...formData, lectureHours: Number(e.target.value) })}
                   >
                     <option value={1}>1.0 Hours</option>
@@ -848,9 +849,9 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                 </div>
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                   <label className="form-label">Lab Hours</label>
-                  <select 
-                    className="form-select" 
-                    value={formData.labHours || 3} 
+                  <select
+                    className="form-select"
+                    value={formData.labHours || 3}
                     onChange={e => setFormData({ ...formData, labHours: Number(e.target.value) })}
                   >
                     <option value={1}>1.0 Hours</option>
@@ -867,55 +868,55 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
 
             <div style={{ marginBottom: '25px', padding: '14px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input 
-                  type="checkbox" 
-                  checked={Boolean(formData.hasLecLab)} 
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData.hasLecLab)}
                   onChange={e => {
                     const checked = e.target.checked;
-                    setFormData(prev => ({ 
-                      ...prev, 
+                    setFormData(prev => ({
+                      ...prev,
                       hasLecLab: checked,
                       requiredLab: checked ? true : prev.requiredLab
                     }));
-                  }} 
-                  style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} 
-                /> 
+                  }}
+                  style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }}
+                />
                 Requires Lecture and Laboratory separately
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input 
-                  type="checkbox" 
-                  checked={Boolean(formData.requiredLab)} 
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData.requiredLab)}
                   onChange={e => {
                     const checked = e.target.checked;
                     setUserLabModified(true);
                     setAutoDetectedReason(null);
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      requiredLab: checked, 
-                      isFoodLab: checked ? false : prev.isFoodLab 
+                    setFormData(prev => ({
+                      ...prev,
+                      requiredLab: checked,
+                      isFoodLab: checked ? false : prev.isFoodLab
                     }));
-                  }} 
-                  style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} 
-                /> 
+                  }}
+                  style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }}
+                />
                 Requires Computer Laboratory
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input 
-                  type="checkbox" 
-                  checked={Boolean(formData.isFoodLab)} 
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData.isFoodLab)}
                   onChange={e => {
                     const checked = e.target.checked;
                     setUserLabModified(true);
                     setAutoDetectedReason(null);
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      isFoodLab: checked, 
-                      requiredLab: checked ? false : prev.requiredLab 
+                    setFormData(prev => ({
+                      ...prev,
+                      isFoodLab: checked,
+                      requiredLab: checked ? false : prev.requiredLab
                     }));
-                  }} 
-                  style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }} 
-                /> 
+                  }}
+                  style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }}
+                />
                 Requires Food Laboratory
               </label>
 
@@ -995,7 +996,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
-            
+
             <div style={{ marginBottom: '20px' }}>
               <h4 style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accent-primary)' }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -1042,7 +1043,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                 )}
               </ul>
             </div>
-            
+
             <div className="mgmt-modal-actions" style={{ marginTop: '25px' }}>
               <button className="btn" onClick={() => setDetailsSubject(null)}>Close</button>
             </div>

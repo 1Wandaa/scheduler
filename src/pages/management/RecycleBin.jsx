@@ -202,8 +202,8 @@ const RecycleBin = ({ onBack, user }) => {
     }
 
     const ignoredKeys = new Set([
-      'name', 'code', 'title', 'id', 'createdAt', 'updatedAt', 
-      'deletedAt', 'originalId', 'firstName', 'lastName', 
+      'name', 'code', 'title', 'id', 'createdAt', 'updatedAt',
+      'deletedAt', 'originalId', 'firstName', 'lastName',
       'searchKeywords', 'normalizedName'
     ]);
 
@@ -212,9 +212,9 @@ const RecycleBin = ({ onBack, user }) => {
     if (data.program) details.push({ label: 'Program', value: data.program });
     if (data.yearLevel) {
       const yr = Number(data.yearLevel);
-      details.push({ 
-        label: 'Year Level', 
-        value: yr ? `${yr}${yr === 1 ? 'st' : yr === 2 ? 'nd' : yr === 3 ? 'rd' : 'th'} Year` : String(data.yearLevel) 
+      details.push({
+        label: 'Year Level',
+        value: yr ? `${yr}${yr === 1 ? 'st' : yr === 2 ? 'nd' : yr === 3 ? 'rd' : 'th'} Year` : String(data.yearLevel)
       });
     }
     if (data.department) details.push({ label: 'Department', value: data.department });
@@ -228,7 +228,7 @@ const RecycleBin = ({ onBack, user }) => {
     if (data.email) details.push({ label: 'Email', value: data.email });
 
     const handledKeys = new Set([
-      'program', 'yearLevel', 'department', 'building', 'type', 
+      'program', 'yearLevel', 'department', 'building', 'type',
       'capacity', 'units', 'maxUnits', 'employmentType', 'role', 'email'
     ]);
 
@@ -256,7 +256,7 @@ const RecycleBin = ({ onBack, user }) => {
   };
 
   return (
-    <div className="card" style={{  position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(100vh - 120px)' }}>
+    <div className="card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(100vh - 120px)' }}>
       <div className="mgmt-header" style={{ flexShrink: 0 }}>
         <div className="mgmt-header-left">
           {onBack && (
@@ -368,12 +368,12 @@ const RecycleBin = ({ onBack, user }) => {
                           </td>
                         )}
                         <td data-label="Type" className="recycle-bin-type-col">
-                          <span 
-                            className="recycle-type-pill" 
-                            style={{ 
-                              background: `${typeColor}15`, 
-                              color: typeColor, 
-                              borderColor: `${typeColor}30` 
+                          <span
+                            className="recycle-type-pill"
+                            style={{
+                              background: `${typeColor}15`,
+                              color: typeColor,
+                              borderColor: `${typeColor}30`
                             }}
                           >
                             {item.type}
@@ -420,18 +420,18 @@ const RecycleBin = ({ onBack, user }) => {
                         </td>
                         <td data-label="Actions" className="recycle-bin-actions-col">
                           <div className="action-buttons-container">
-                            <button 
+                            <button
                               type="button"
-                              className="btn btn-sm btn-restore-action" 
+                              className="btn btn-sm btn-restore-action"
                               onClick={() => handleRestore(item)}
                               title="Restore"
                             >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
                               <span>Restore</span>
                             </button>
-                            <button 
+                            <button
                               type="button"
-                              className="btn-icon btn-delete" 
+                              className="btn-icon btn-delete"
                               onClick={() => handlePermanentDelete(item)}
                               title="Permanently Delete"
                             >

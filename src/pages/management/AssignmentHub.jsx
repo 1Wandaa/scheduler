@@ -1616,17 +1616,38 @@ const AssignmentHub = ({
     setVisibleLimit(12);
   }, [viewMode, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab]);
 
+  // Lock body & main content scrolling when configuration modal is open to prevent background scrolling & re-render flicker
+  useEffect(() => {
+    if (editingEntity) {
+      const originalBodyOverflow = document.body.style.overflow;
+      const mainContentEl = document.querySelector('.main-content');
+      const originalMainOverflow = mainContentEl ? mainContentEl.style.overflow : '';
+
+      document.body.style.overflow = 'hidden';
+      if (mainContentEl) {
+        mainContentEl.style.overflow = 'hidden';
+      }
+
+      return () => {
+        document.body.style.overflow = originalBodyOverflow;
+        if (mainContentEl) {
+          mainContentEl.style.overflow = originalMainOverflow;
+        }
+      };
+    }
+  }, [editingEntity]);
+
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
+      if (entries[0].isIntersecting && !editingEntity) {
         setVisibleLimit(prev => prev + 12);
       }
     }, { rootMargin: '400px' });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [viewMode, filteredSections.length, filteredFaculty.length, filteredSubjects.length]);
+  }, [viewMode, filteredSections.length, filteredFaculty.length, filteredSubjects.length, editingEntity]);
 
   const displayedSections = useMemo(() => filteredSections.slice(0, visibleLimit), [filteredSections, visibleLimit]);
   const displayedFaculty = useMemo(() => filteredFaculty.slice(0, visibleLimit), [filteredFaculty, visibleLimit]);

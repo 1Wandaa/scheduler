@@ -16,7 +16,7 @@ const CustomDropdown = ({ options, value, onChange, title, alignRight = false })
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative' }} title={title}>
-      <div 
+      <div
         onClick={() => setIsOpen(!isOpen)}
         style={{
           display: 'flex', alignItems: 'center', gap: '6px',
@@ -30,13 +30,13 @@ const CustomDropdown = ({ options, value, onChange, title, alignRight = false })
       >
         <span>{value}</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
-            <polyline points="6 9 12 15 18 9"></polyline>
+          <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
       </div>
-      
+
       {isOpen && (
         <div style={{
-          position: 'absolute', top: 'calc(100% + 8px)', 
+          position: 'absolute', top: 'calc(100% + 8px)',
           left: alignRight ? 'auto' : 0,
           right: alignRight ? 0 : 'auto',
           background: 'rgba(15, 20, 35, 0.95)',
@@ -51,15 +51,15 @@ const CustomDropdown = ({ options, value, onChange, title, alignRight = false })
           overflowY: 'auto',
           boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)',
           zIndex: 9999,
-          
+
           display: 'flex', flexDirection: 'column', gap: '2px'
         }} className="custom-dropdown-menu">
           {options.map(opt => (
-            <div 
+            <div
               key={opt}
               onClick={() => { onChange(opt); setIsOpen(false); }}
-              
-              
+
+
               style={{
                 padding: '10px 14px',
                 borderRadius: '8px',
