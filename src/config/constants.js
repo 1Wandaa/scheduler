@@ -81,10 +81,31 @@ export const SCHEDULE_MODES = {
   FOUR_DAY: 'fourDay',
 };
 
+// ───────────────────────────────────────────────────────────
+//  LUNCH BREAK CONSTANTS (Official ISO Format: 11:30 AM – 12:30 PM)
+//  Slot 10: 11:30 AM - 12:00 PM | Slot 19: 12:00 PM - 12:30 PM
+// ───────────────────────────────────────────────────────────
+export const LUNCH_START_MINUTES = 690; // 11:30 AM
+export const LUNCH_END_MINUTES = 750;   // 12:30 PM
+export const LUNCH_SLOT_IDS = [10, 19];
+
+/** Check if a time slot or slot ID falls within lunch break */
+export function isLunchSlot(timeSlotOrId) {
+  if (!timeSlotOrId) return false;
+  const id = typeof timeSlotOrId === 'object' ? Number(timeSlotOrId?.id) : Number(timeSlotOrId);
+  return LUNCH_SLOT_IDS.includes(id);
+}
+
+/** Check if a start-end time range in minutes overlaps lunch break (11:30 AM – 12:30 PM) */
+export function overlapsLunchBreak(startMinutes, endMinutes) {
+  if (startMinutes == null || endMinutes == null) return false;
+  return startMinutes < LUNCH_END_MINUTES && endMinutes > LUNCH_START_MINUTES;
+}
+
 /**
  * Returns the correct configuration for a given schedule mode.
  * @param {'standard'|'fourDay'} mode
- * @returns {{ timeSlots: Object[], days: string[], preferredPairs: string[][], lunchBreakBefore: number, lunchBreakAfter: number }}
+ * @returns {{ timeSlots: Object[], days: string[], preferredPairs: string[][], lunchBeforeId: number, lunchAfterId: number, lunchSlotIds: number[], lunchLabel: string }}
  */
 export function getScheduleConfig(mode) {
   if (mode === 'fourDay') {
@@ -92,9 +113,10 @@ export function getScheduleConfig(mode) {
       timeSlots: FOUR_DAY_TIME_SLOTS,
       days: FOUR_DAY_DAYS,
       preferredPairs: PREFERRED_PAIRS_FOUR_DAY,
-      // Lunch gap: last morning slot id 10 (11:30–12:00) → first afternoon slot id 19 (12:00–12:30)
-      lunchBeforeId: 10,
-      lunchAfterId: 19,
+      // Lunch gap: 11:30 AM – 12:30 PM (slots 10 & 19)
+      lunchBeforeId: 9,
+      lunchAfterId: 11,
+      lunchSlotIds: LUNCH_SLOT_IDS,
       lunchLabel: '11:30 AM – 12:30 PM',
       allowSevenAm: true,
     };
@@ -104,9 +126,10 @@ export function getScheduleConfig(mode) {
     timeSlots: TIME_SLOTS,
     days: DAYS,
     preferredPairs: PREFERRED_PAIRS_STANDARD,
-    // Lunch gap: last morning slot id 10 (11:30–12:00) → first afternoon slot id 19 (12:00–12:30)
-    lunchBeforeId: 10,
-    lunchAfterId: 19,
+    // Lunch gap: 11:30 AM – 12:30 PM (slots 10 & 19)
+    lunchBeforeId: 9,
+    lunchAfterId: 11,
+    lunchSlotIds: LUNCH_SLOT_IDS,
     lunchLabel: '11:30 AM – 12:30 PM',
     allowSevenAm: true,
   };

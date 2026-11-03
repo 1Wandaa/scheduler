@@ -9,7 +9,7 @@
  * addSchedule callback.
  */
 
-import { TIME_SLOTS, DAYS, getScheduleConfig } from '../config/constants';
+import { TIME_SLOTS, DAYS, getScheduleConfig, isLunchSlot, overlapsLunchBreak } from '../config/constants';
 import {
   professorMatchesSubject,
   getEligibleProfessors,
@@ -22,6 +22,7 @@ import {
   isProfessorAllowedInRoom,
   isProfessorStageLocked,
   getMeetingTimeLabel,
+  getScheduleTimeRange,
 } from '../utils/scheduleUtils';
 import { resolveUnscheduledClasses } from '../utils/scheduleAI';
 
@@ -281,7 +282,10 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   // Conflict checks (room/prof/section overlap) are handled by schedulesOverlap.
   // Helper: check if a single slot is free for a given combo
   const isSlotFree = (room, professor, subject, section, day, timeSlot, customHours, customComponent) => {
+    if (isLunchSlot(timeSlot)) return false;
     const candidate = { room, professor, subject, section, day, timeSlot, hours: customHours, component: customComponent };
+    const range = getScheduleTimeRange(candidate, scheduleMode);
+    if (range && range.start > 0 && range.end > 0 && overlapsLunchBreak(range.start, range.end)) return false;
     // Check for time conflicts with already-scheduled classes
     if (temp.some((s) => schedulesOverlap(candidate, s, scheduleMode))) return false;
     const startIdx = getTimeSlotIndex(timeSlot, scheduleMode);
@@ -481,6 +485,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 
         for (const timeSlot of ACTIVE_TIME_SLOTS) {
           if (signal?.aborted) return { success: false };
+          if (isLunchSlot(timeSlot)) continue;
           const startIdx = getTimeSlotIndex(timeSlot, scheduleMode);
           if (startIdx < 0 || slotsNeededFromIndex(startIdx, group.targetDuration || subject?.hoursPerMeeting, scheduleMode) === 0) continue;
 
@@ -574,6 +579,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
             if (!isProfessorAllowedInRoom(room, professor, subject, section, rooms)) continue;
             for (const ts of ACTIVE_TIME_SLOTS) {
               if (signal?.aborted) return { success: false };
+              if (isLunchSlot(ts)) continue;
               const si = getTimeSlotIndex(ts, scheduleMode);
               if (si < 0 || slotsNeededFromIndex(si, group.targetDuration || subject?.hoursPerMeeting, scheduleMode) === 0) continue;
               for (const day of ACTIVE_DAYS) {
@@ -1120,7 +1126,18 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 
         if (!room || !professor || !timeSlot || !day) continue;
 
-        // Hard check: reject AI suggestions that cross the lunch break
+        // Hard check: reject AI suggestions that are in or cross the lunch break
+        if (isLunchSlot(timeSlot)) {
+          console.warn(`[AutoScheduler] AI suggestion rejected: slot ${timeSlot.label} is during lunch break.`);
+          continue;
+        }
+
+        const aiRange = getScheduleTimeRange({ timeSlot, hours: group.targetDuration, subject: group.subject, component: group.component }, scheduleMode);
+        if (aiRange && aiRange.start > 0 && aiRange.end > 0 && overlapsLunchBreak(aiRange.start, aiRange.end)) {
+          console.warn(`[AutoScheduler] AI suggestion rejected: slot ${timeSlot.label} spans lunch break (11:30 AM - 12:30 PM).`);
+          continue;
+        }
+
         const aiStartIdx = getTimeSlotIndex(timeSlot, scheduleMode);
         if (aiStartIdx < 0 || slotsNeededFromIndex(aiStartIdx, group.targetDuration || group.subject?.hoursPerMeeting, scheduleMode) === 0) {
           console.warn(`[AutoScheduler] AI suggestion rejected: slot ${timeSlot.label} does not fit ${group.targetDuration || group.subject?.hoursPerMeeting || 1.5}hr meeting (likely crosses lunch break).`);

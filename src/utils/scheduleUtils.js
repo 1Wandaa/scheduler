@@ -2,7 +2,23 @@
  * Shared scheduling utilities used by GA, Dashboard validation, AI, and AutoScheduler.
  */
 
-import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS, getSlotDurationHours, getScheduleConfig, DAYS, FOUR_DAY_DAYS, PREFERRED_PAIRS_STANDARD, PREFERRED_PAIRS_FOUR_DAY } from '../config/constants.js';
+import {
+  TIME_SLOTS,
+  FOUR_DAY_TIME_SLOTS,
+  getSlotDurationHours,
+  getScheduleConfig,
+  DAYS,
+  FOUR_DAY_DAYS,
+  PREFERRED_PAIRS_STANDARD,
+  PREFERRED_PAIRS_FOUR_DAY,
+  isLunchSlot,
+  overlapsLunchBreak,
+  LUNCH_SLOT_IDS,
+  LUNCH_START_MINUTES,
+  LUNCH_END_MINUTES
+} from '../config/constants.js';
+
+export { isLunchSlot, overlapsLunchBreak, LUNCH_SLOT_IDS, LUNCH_START_MINUTES, LUNCH_END_MINUTES };
 
 const DEPARTMENTS = ['BSCS', 'BAEL', 'BSOA', 'BSFT'];
 
@@ -32,10 +48,18 @@ export function slotsNeededFromIndex(startIdx, hoursPerMeeting, scheduleMode) {
   // In 4-day mode, 7:00 AM is allowed.
   if (!config.allowSevenAm && slots[startIdx].id === 1) return 0;
 
+  // Never allow starting a meeting within lunch break (11:30 AM - 12:30 PM, slots 10 & 19)
+  if (isLunchSlot(slots[startIdx])) return 0;
+
   const target = Number(hoursPerMeeting) || 1.5;
   let accumulated = 0;
   let count = 0;
   while (startIdx + count < slots.length && accumulated < target - 0.001) {
+    const currentSlot = slots[startIdx + count];
+    // If any slot traversed is in lunch break, the meeting cannot cross or occupy lunch break
+    if (isLunchSlot(currentSlot)) {
+      return 0;
+    }
     accumulated += getSlotDurationHours(startIdx + count, scheduleMode);
     count++;
   }
@@ -720,6 +744,9 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
   if (candidate.room) {
     for (const ts of (eligibleTimeSlots || [])) {
       if (String(ts.id) === String(candidate.timeSlot?.id)) continue;
+      if (isLunchSlot(ts)) continue;
+      const tsIdx = getTimeSlotIndex(ts, scheduleMode);
+      if (tsIdx >= 0 && slotsNeededFromIndex(tsIdx, candidate.subject?.hoursPerMeeting, scheduleMode) === 0) continue;
 
       let allDaysClean = true;
       for (const d of candidateDays) {

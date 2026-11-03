@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { DAYS, getProgramChairInfo } from '../../config/constants';
+import { DAYS, getProgramChairInfo, isLunchSlot, overlapsLunchBreak } from '../../config/constants';
 import { getScheduleTimeRange, normalizeDay } from '../../utils/scheduleUtils';
 import '../../styles/PrintableSchedule.css';
 
@@ -52,13 +52,16 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
             const dayName = normalizeDay(s.day) || s.day;
             if (!dayName) return;
 
+            const slotId = Number(s.timeSlot?.id || s.timeSlot);
+            // Prevent placing any schedule that is explicitly in lunch break slots (10 or 19)
+            if (isLunchSlot(slotId)) return;
+
             let range = getScheduleTimeRange(s, scheduleMode);
             if (!range || (range.start === 0 && range.end === 0)) {
-                const slotId = Number(s.timeSlot?.id || s.timeSlot);
                 if (slotId >= 1 && slotId <= 3) range = { start: 420, end: 510 };
                 else if (slotId >= 4 && slotId <= 6) range = { start: 510, end: 600 };
                 else if (slotId >= 7 && slotId <= 9) range = { start: 600, end: 690 };
-                else if (slotId === 10 || slotId === 19) range = { start: 690, end: 750 };
+                else if (slotId === 10 || slotId === 19) return; // Prevent lunchbreak schedule
                 else if (slotId >= 11 && slotId <= 13) range = { start: 750, end: 840 };
                 else if (slotId >= 14 && slotId <= 16) range = { start: 840, end: 930 };
                 else if (slotId >= 17 && slotId <= 18) range = { start: 930, end: 1020 };
@@ -66,6 +69,13 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
                 else if (slotId >= 21 && slotId <= 22) range = { start: 1020, end: 1080 };
                 else range = { start: 420, end: 510 };
             }
+
+            // Strictly prevent placing any schedule whose time falls within or primarily during lunch break (11:30 AM - 12:30 PM, 690 - 750)
+            if (range.start >= 690 && range.start < 750) return;
+            if (range.start >= 690 && range.end <= 750) return;
+            const lunchOverlap = Math.max(0, Math.min(range.end, 750) - Math.max(range.start, 690));
+            const duration = Math.max(1, range.end - range.start);
+            if (lunchOverlap >= 30 && lunchOverlap >= duration * 0.5) return;
 
             let effectiveHours = Number(s.hours) || (s.subject?.hasLecLab
                 ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2))
@@ -97,23 +107,17 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
                 }
             });
 
-            // Fallback: match block containing start time or closest block start
+            // Fallback: match block containing start time or closest block start, but NEVER if start was in lunch break
             if (!matchedBlock || maxOverlap === 0) {
-                matchedBlock = nonLunchBlocks.find(b => range.start >= b.start - 25 && range.start < b.end - 15);
+                if (range.start < 690 || range.start >= 750) {
+                    matchedBlock = nonLunchBlocks.find(b => range.start >= b.start - 25 && range.start < b.end - 15);
+                }
             }
 
-            if (!matchedBlock) {
-                let minDiff = Infinity;
-                nonLunchBlocks.forEach(b => {
-                    const diff = Math.abs(range.start - b.start);
-                    if (diff < minDiff) {
-                        minDiff = diff;
-                        matchedBlock = b;
-                    }
-                });
+            // Do not place in any block if there is no genuine overlap or if start is within lunch
+            if (!matchedBlock || (maxOverlap === 0 && (range.start >= 690 && range.start < 750))) {
+                return;
             }
-
-            if (!matchedBlock) return;
 
             const key = `${dayName}-${matchedBlock.id}`;
             if (!gridMap.has(key)) gridMap.set(key, []);

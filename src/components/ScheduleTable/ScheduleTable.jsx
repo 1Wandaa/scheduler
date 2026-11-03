@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
-import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig } from '../../config/constants';
+import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig, isLunchSlot, overlapsLunchBreak } from '../../config/constants';
 import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange } from '../../utils/scheduleUtils';
 import { exportGridToWord, exportGridToExcel } from '../../utils/scheduleExportUtils';
 import '../../styles/ScheduleTable.css';
@@ -904,6 +904,12 @@ const ScheduleTable = React.memo(function ScheduleTable({
     if (!movingSchedule) return;
     if (movingSchedule.day === day && String(movingSchedule.timeSlot?.id) === String(timeSlotId)) return;
 
+    // Prevent dropping into lunch break (11:30 AM - 12:30 PM)
+    if (isLunchSlot(timeSlotId)) {
+      showToast('Cannot schedule class during lunch break (11:30 AM - 12:30 PM).');
+      return;
+    }
+
     const baseTimeSlot = TIME_SLOTS.find(ts => String(ts.id) === String(timeSlotId));
     let finalTimeSlot = { ...baseTimeSlot };
 
@@ -951,6 +957,12 @@ const ScheduleTable = React.memo(function ScheduleTable({
     }
 
     const candidate = { ...movingSchedule, day, timeSlot: finalTimeSlot };
+
+    const candidateRange = getScheduleTimeRange(candidate, scheduleMode);
+    if (candidateRange && candidateRange.start > 0 && candidateRange.end > 0 && overlapsLunchBreak(candidateRange.start, candidateRange.end)) {
+      showToast('Cannot schedule class during lunch break (11:30 AM - 12:30 PM).');
+      return;
+    }
 
     const schedulesToCheck = activeSchedules && activeSchedules.length > 0 ? activeSchedules : schedules;
     const overlap = schedulesToCheck.find(s => String(s.id) !== String(scheduleId) && schedulesOverlap(candidate, s, scheduleMode));

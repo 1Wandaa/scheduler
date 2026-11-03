@@ -7,7 +7,7 @@
 
 import { db } from '../config/firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, writeBatch, query, where, limit } from 'firebase/firestore';
-import { TIME_SLOTS, getScheduleConfig } from '../config/constants';
+import { TIME_SLOTS, getScheduleConfig, isLunchSlot, overlapsLunchBreak } from '../config/constants';
 import {
   professorMatchesSubject,
   findScheduleConflicts,
@@ -17,6 +17,7 @@ import {
   isRoomAllowedFor,
   isProfessorAllowedInRoom,
   getMeetingTimeLabel,
+  getScheduleTimeRange,
   entitiesMatch,
 } from '../utils/scheduleUtils';
 import { generateConflictResolutions } from './conflictResolutionService';
@@ -107,6 +108,19 @@ export function validateScheduleEntry(
   }
 
   if (errors.length > 0) return { valid: false, errors, warnings };
+
+  // Lunch break check (11:30 AM - 12:30 PM)
+  if (timeSlot?.id && isLunchSlot(timeSlot.id)) {
+    errors.push('Classes cannot be scheduled during lunch break (11:30 AM - 12:30 PM).');
+    return { valid: false, errors, warnings };
+  }
+  const schedRange = getScheduleTimeRange({ timeSlot, hours, subject, component }, scheduleMode);
+  if (schedRange && schedRange.start > 0 && schedRange.end > 0) {
+    if (overlapsLunchBreak(schedRange.start, schedRange.end)) {
+      errors.push('Classes cannot be scheduled during lunch break (11:30 AM - 12:30 PM).');
+      return { valid: false, errors, warnings };
+    }
+  }
 
   // Time slot fit check
   if (!timeSlot?.isCustom && !timeSlot?.customLabel) {

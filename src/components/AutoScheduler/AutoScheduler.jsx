@@ -355,7 +355,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           ) : (
             <p style={{ margin: 0 }}>
               <strong style={{ color: 'var(--text-main)', fontWeight: 600 }}>Monday–Friday</strong>.<br/>
-              Morning: 7:30 AM – 12:00 PM <span style={{ opacity: 0.5 }}>|</span> Lunch: 12:00 PM – 1:00 PM <span style={{ opacity: 0.5 }}>|</span> Afternoon: 1:00 PM – 5:00 PM
+              Morning: 7:30 AM – 11:30 AM <span style={{ opacity: 0.5 }}>|</span> Lunch: 11:30 AM – 12:30 PM <span style={{ opacity: 0.5 }}>|</span> Afternoon: 12:30 PM – 5:00 PM
             </p>
           )}
         </div>

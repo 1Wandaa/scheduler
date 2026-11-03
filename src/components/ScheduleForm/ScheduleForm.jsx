@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TIME_SLOTS, DAYS } from '../../config/constants';
+import { TIME_SLOTS, DAYS, isLunchSlot, overlapsLunchBreak } from '../../config/constants';
 import {
   getEligibleProfessors,
   professorMatchesSubject,
@@ -10,7 +10,9 @@ import {
   findAlternativeSlots,
   getSmartScheduleRecommendations,
   normalizeDay,
-  resolveToDayPair
+  resolveToDayPair,
+  getScheduleTimeRange,
+  parseTimeToMinutes
 } from '../../utils/scheduleUtils';
 import CustomSelect from '../CustomSelect/CustomSelect';
 import '../../styles/SchedulerForm.css';
@@ -199,8 +201,8 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
       let timeSlotObj = null;
       const eligibleSlots = subject
-        ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, currentHours) > 0)
-        : TIME_SLOTS;
+        ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, currentHours) > 0 && !isLunchSlot(slot))
+        : TIME_SLOTS.filter(slot => !isLunchSlot(slot));
 
       const cleanTimeStr = (str) => String(str || '').replace(/\s+/g, '').toUpperCase();
       const targetStr = cleanTimeStr(timeStr);
@@ -233,6 +235,19 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       if (!timeSlotObj) {
         allValid = false;
         allErrors.push(`Failed to resolve time slot for ${day}.`);
+        continue;
+      }
+
+      if (isLunchSlot(timeSlotObj)) {
+        allValid = false;
+        allErrors.push(`Classes cannot be scheduled during lunch break (11:30 AM - 12:30 PM) on ${day}.`);
+        continue;
+      }
+
+      const formSchedRange = getScheduleTimeRange({ timeSlot: timeSlotObj, hours: currentHours, subject, component: formData.component }, 'standard');
+      if (formSchedRange && formSchedRange.start > 0 && formSchedRange.end > 0 && overlapsLunchBreak(formSchedRange.start, formSchedRange.end)) {
+        allValid = false;
+        allErrors.push(`Classes cannot be scheduled during lunch break (11:30 AM - 12:30 PM) on ${day}.`);
         continue;
       }
 
@@ -420,8 +435,8 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     : (Number(selectedSubject?.hoursPerMeeting) || 1.5);
 
   const eligibleTimeSlots = selectedSubject
-    ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, currentRenderHours) > 0)
-    : TIME_SLOTS;
+    ? TIME_SLOTS.filter((slot, idx) => slotsNeededFromIndex(idx, currentRenderHours) > 0 && !isLunchSlot(slot))
+    : TIME_SLOTS.filter(slot => !isLunchSlot(slot));
 
   const resolveTimeSlotForDay = (day) => {
     if (!formData.timeSlot) return null;
