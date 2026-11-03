@@ -30,6 +30,7 @@ import {
   SEED_VERSION,
 } from '../config/initialData';
 import { SEMESTERS, SCHOOL_YEARS, PROGRAM_DEPARTMENTS } from '../config/constants';
+import { isStandardOneAndHalfHourClass, parseTimeToMinutes } from '../utils/scheduleUtils';
 
 /**
  * Normalize a section's program name into a short department code
@@ -320,7 +321,8 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
   const enrichedSchedules = useMemo(() => {
     return activeSchedules.map((s) => {
       const fullSubject = (s.subject?.id && subjectById[s.subject.id]) || s.subject;
-      let effectiveHours = Number(s.hours);
+      const isOneAndHalf = isStandardOneAndHalfHourClass({ ...s, subject: fullSubject });
+      let effectiveHours = isOneAndHalf ? 1.5 : Number(s.hours);
       if (!effectiveHours && fullSubject?.hasLecLab) {
         effectiveHours = s.component === 'Lecture'
           ? ((Number(fullSubject.lectureHours) || 2) / 2)
@@ -331,15 +333,41 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
 
       const enrichedSubject = fullSubject ? {
         ...fullSubject,
-        hoursPerMeeting: effectiveHours,
+        hoursPerMeeting: isOneAndHalf ? 1.5 : effectiveHours,
         ...(fullSubject.hasLecLab && s.component ? {
           credits: s.component === 'Lecture' ? (Number(fullSubject.lectureHours) || 2) : (Number(fullSubject.labHours) || 3)
         } : {})
       } : fullSubject;
 
+      // Also normalize customLabel if it is a 1.5h class but elongated beyond 90 mins (e.g. 10:00 - 12:00)
+      let enrichedTimeSlot = s.timeSlot;
+      if (isOneAndHalf && s.timeSlot?.customLabel) {
+        const parts = s.timeSlot.customLabel.split('-');
+        if (parts.length === 2) {
+          const startM = parseTimeToMinutes(parts[0].trim());
+          const endM = parseTimeToMinutes(parts[1].trim());
+          if (startM !== null && endM !== null && (endM - startM) > 90) {
+            const newEndM = startM + 90;
+            const h = Math.floor(newEndM / 60);
+            const m = newEndM % 60;
+            const period = h >= 12 ? 'PM' : 'AM';
+            const displayH = h % 12 === 0 ? 12 : h % 12;
+            const displayM = m.toString().padStart(2, '0');
+            const endLabel = parts[1].includes(':') && (parts[1].includes('AM') || parts[1].includes('PM'))
+              ? `${displayH}:${displayM} ${period}`
+              : `${displayH}:${displayM}`;
+            enrichedTimeSlot = {
+              ...s.timeSlot,
+              customLabel: `${parts[0].trim()} - ${endLabel}`
+            };
+          }
+        }
+      }
+
       return {
         ...s,
         hours: effectiveHours,
+        timeSlot: enrichedTimeSlot,
         professor: (s.professor?.id && professorById[s.professor.id]) || s.professor,
         room: (s.room?.id && roomById[s.room.id]) || s.room,
         section: (s.section?.id && sectionById[s.section.id]) || s.section,

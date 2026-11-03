@@ -212,12 +212,66 @@ export function entitiesMatch(a, b) {
   return false;
 }
 
+export function isStandardOneAndHalfHourClass(schedule) {
+  if (!schedule) return false;
+  const sub = schedule.subject || {};
+  const code = (sub.code || '').trim().toUpperCase();
+  const name = (sub.name || '').trim().toUpperCase();
+  const comp = schedule.component || '';
+
+  // Explicitly NOT 1.5h classes
+  if (/^(PE|PATHFIT)\b/i.test(code) || /PATHFIT|PHYSICAL EDUCATION/i.test(name)) return false;
+  if (/^(OJT|INTERNSHIP|PRACTICUM)\b/i.test(code) || /ON-THE-JOB|INTERNSHIP|PRACTICUM/i.test(name)) return false;
+  if (/^SEMINAR\b/i.test(code) || /SEMINAR/i.test(name)) return false;
+  if (/^NSTP\b/i.test(code) || /ROTC|CWTS|LTS/i.test(name)) return false;
+  if (code === 'FT 115' || code === 'FT 115L') return false;
+
+  // Explicit 1.0-hour lecture meetings
+  if (comp === 'Lecture' && (Number(schedule.hours) === 1 || (sub.hasLecLab && Number(sub.lectureHours) === 2))) {
+    return false;
+  }
+
+  // 1. Explicit 1.5 hour indicators
+  if (Number(schedule.hours) === 1.5 || Number(sub.hoursPerMeeting) === 1.5) return true;
+
+  // 2. Specific known elective / major codes (CS ELECT, FREE ELECTIVE, ELECTIVE, CS 123)
+  if (/^(CS\s*ELECT|FREE\s*ELECT|ELECTIVE|ELECT|CS\s*123)\b/i.test(code)) return true;
+  if (/ELECTIVE/i.test(name) || /ELECT\b/i.test(name)) return true;
+
+  // 3. BSCS Major subjects (standard 1.5 hrs per session in collegiate schedule)
+  if (/^CS\s*(103|107|108|109|110|111|116|117|118|119|120|123|124)\b/i.test(code)) return true;
+
+  // 4. Laboratory sessions of standard 3-unit subjects (excluding food lab)
+  if (comp === 'Laboratory' && !sub.isFoodLab) {
+    const creds = Number(sub.credits) || 3;
+    if (creds <= 3) return true;
+  }
+
+  // 5. Academic 3-credit subjects that are not single-meeting classes
+  const credits = Number(sub.credits);
+  if (credits === 3 && !sub.hasLecLab) return true;
+
+  return false;
+}
+
 export function getScheduleTimeRange(schedule, scheduleMode) {
   if (!schedule) return { start: 0, end: 0 };
 
-  const effectiveHours = Number(schedule.hours) || (schedule.subject?.hasLecLab
-    ? (schedule.component === 'Lecture' ? ((Number(schedule.subject.lectureHours) || 2) / 2) : ((Number(schedule.subject.labHours) || 3) / 2))
-    : (Number(schedule.subject?.hoursPerMeeting) || 1.5));
+  const isOneAndHalf = isStandardOneAndHalfHourClass(schedule);
+
+  const effectiveHours = isOneAndHalf
+    ? 1.5
+    : (Number(schedule.hours) || (schedule.subject?.hasLecLab
+        ? (schedule.component === 'Lecture' ? ((Number(schedule.subject.lectureHours) || 2) / 2) : ((Number(schedule.subject.labHours) || 3) / 2))
+        : (Number(schedule.subject?.hoursPerMeeting) || 1.5)));
+
+  const clampRange = (start, end) => {
+    if (start === null || end === null || start >= end) return { start: 0, end: 0 };
+    if (isOneAndHalf && (end - start) > 90) {
+      return { start, end: start + 90 };
+    }
+    return { start, end };
+  };
 
   // 0. Direct string timeSlot support
   if (typeof schedule.timeSlot === 'string') {
@@ -225,12 +279,12 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     if (parts.length === 2) {
       const start = parseTimeToMinutes(parts[0].trim());
       const end = parseTimeToMinutes(parts[1].trim());
-      if (start !== null && end !== null && start < end) return { start, end };
+      if (start !== null && end !== null && start < end) return clampRange(start, end);
     }
     const start = parseTimeToMinutes(schedule.timeSlot);
     if (start !== null) {
       const duration = effectiveHours * 60;
-      return { start, end: start + duration };
+      return clampRange(start, start + duration);
     }
   }
 
@@ -240,12 +294,12 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
     if (customParts.length === 2) {
       const start = parseTimeToMinutes(customParts[0].trim());
       const end = parseTimeToMinutes(customParts[1].trim());
-      if (start !== null && end !== null && start < end) return { start, end };
+      if (start !== null && end !== null && start < end) return clampRange(start, end);
     }
     const start = parseTimeToMinutes(schedule.timeSlot.customLabel);
     if (start !== null) {
       const duration = effectiveHours * 60;
-      return { start, end: start + duration };
+      return clampRange(start, start + duration);
     }
   }
 
@@ -255,7 +309,7 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
   if (parts.length === 2) {
     const start = parseTimeToMinutes(parts[0].trim());
     const end = parseTimeToMinutes(parts[1].trim());
-    if (start !== null && end !== null && start < end) return { start, end };
+    if (start !== null && end !== null && start < end) return clampRange(start, end);
   }
 
   // 3. Fallback to raw timeSlot.time
@@ -267,7 +321,7 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
       if (effectiveHours) {
         end = Math.max(end, start + effectiveHours * 60);
       }
-      return { start, end };
+      return clampRange(start, end);
     }
   }
 
@@ -280,7 +334,7 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
       if (effectiveHours) {
         end = Math.max(end, start + effectiveHours * 60);
       }
-      return { start, end };
+      return clampRange(start, end);
     }
   }
 

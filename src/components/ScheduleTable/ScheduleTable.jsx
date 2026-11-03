@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig, isLunchSlot, overlapsLunchBreak } from '../../config/constants';
-import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange } from '../../utils/scheduleUtils';
+import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange, isStandardOneAndHalfHourClass } from '../../utils/scheduleUtils';
 import { exportGridToWord, exportGridToExcel } from '../../utils/scheduleExportUtils';
 import '../../styles/ScheduleTable.css';
 
@@ -238,15 +238,19 @@ const ScheduleTable = React.memo(function ScheduleTable({
         const cellSchedules = scheduleGridMap.get(cellKey) || [];
         let rowSpan = 1;
         for (const s of cellSchedules) {
+          const isOneAndHalf = isStandardOneAndHalfHourClass(s);
           const range = getScheduleTimeRange(s, scheduleMode);
           if (range.start > 0 && range.end > 0) {
-            const durationMins = range.end - range.start;
+            let durationMins = range.end - range.start;
+            if (isOneAndHalf && durationMins > 90) durationMins = 90;
             let needed = Math.ceil(durationMins / 30);
+            if (isOneAndHalf && needed > 3) needed = 3;
             if (needed < 1) needed = 1;
             if (needed > rowSpan) rowSpan = needed;
           } else {
-            const sHours = Number(s.hours) || (s.subject?.hasLecLab ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2)) : (Number(s.subject?.hoursPerMeeting) || 1.5));
-            const needed = slotsNeededFromIndex(tIdx, sHours, scheduleMode);
+            const sHours = isOneAndHalf ? 1.5 : (Number(s.hours) || (s.subject?.hasLecLab ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2)) : (Number(s.subject?.hoursPerMeeting) || 1.5)));
+            let needed = slotsNeededFromIndex(tIdx, sHours, scheduleMode);
+            if (isOneAndHalf && needed > 3) needed = 3;
             if (needed > rowSpan) rowSpan = needed;
           }
         }
@@ -914,9 +918,11 @@ const ScheduleTable = React.memo(function ScheduleTable({
     let finalTimeSlot = { ...baseTimeSlot };
 
     if (movingSchedule.timeSlot && movingSchedule.timeSlot.customLabel) {
+      const isOneAndHalf = isStandardOneAndHalfHourClass(movingSchedule);
       const range = getScheduleTimeRange(movingSchedule, scheduleMode);
       if (range.start > 0 && range.end > 0) {
-        const durationMins = range.end - range.start;
+        let durationMins = range.end - range.start;
+        if (isOneAndHalf && durationMins > 90) durationMins = 90;
         const newStartStr = baseTimeSlot.time.split('-')[0].trim();
         const newStartMins = parseTimeToMinutes(newStartStr);
         if (newStartMins !== null) {
@@ -935,9 +941,11 @@ const ScheduleTable = React.memo(function ScheduleTable({
     }
 
     // ALWAYS preserve duration by computing customLabel even if original had none, if it visually spanned > 30mins
+    const isOneAndHalf = isStandardOneAndHalfHourClass(movingSchedule);
     const originalRange = getScheduleTimeRange(movingSchedule, scheduleMode);
     if (!movingSchedule.timeSlot?.customLabel && originalRange.start > 0 && originalRange.end > 0) {
-      const durationMins = originalRange.end - originalRange.start;
+      let durationMins = originalRange.end - originalRange.start;
+      if (isOneAndHalf && durationMins > 90) durationMins = 90;
       if (durationMins > 30) {
         const newStartStr = baseTimeSlot.time.split('-')[0].trim();
         const newStartMins = parseTimeToMinutes(newStartStr);

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { DAYS, getProgramChairInfo, isLunchSlot, overlapsLunchBreak } from '../../config/constants';
-import { getScheduleTimeRange, normalizeDay } from '../../utils/scheduleUtils';
+import { getScheduleTimeRange, normalizeDay, isStandardOneAndHalfHourClass } from '../../utils/scheduleUtils';
 import '../../styles/PrintableSchedule.css';
 
 // Helper: Format professor name compactly (e.g. "C. Bernabe")
@@ -77,21 +77,19 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
             const duration = Math.max(1, range.end - range.start);
             if (lunchOverlap >= 30 && lunchOverlap >= duration * 0.5) return;
 
-            let effectiveHours = Number(s.hours) || (s.subject?.hasLecLab
-                ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2))
-                : (Number(s.subject?.hoursPerMeeting) || 1.5));
-
-            // Normalize CS 123 or non-lab standard lecture courses to 1.5 hrs per meeting
-            if (s.subject?.code === 'CS 123' && effectiveHours > 1.5 && !s.subject?.hasLecLab) {
-                effectiveHours = 1.5;
-            }
+            const isOneAndHalf = isStandardOneAndHalfHourClass(s);
+            let effectiveHours = isOneAndHalf
+                ? 1.5
+                : (Number(s.hours) || (s.subject?.hasLecLab
+                    ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2))
+                    : (Number(s.subject?.hoursPerMeeting) || 1.5)));
 
             if (range.end <= range.start) {
                 range.end = range.start + effectiveHours * 60;
             }
 
-            // If CS 123 range is artificially elongated beyond 90 mins, bound it to standard 90 mins
-            if (s.subject?.code === 'CS 123' && (range.end - range.start) > 90 && !s.subject?.hasLecLab) {
+            // If 1.5h class range is artificially elongated beyond 90 mins, bound it to standard 90 mins
+            if (isOneAndHalf && (range.end - range.start) > 90) {
                 range = { start: range.start, end: range.start + 90 };
             }
 
