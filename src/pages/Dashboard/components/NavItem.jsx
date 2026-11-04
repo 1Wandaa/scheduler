@@ -6,15 +6,23 @@ const NavItem = ({ label, iconPath, active, onClick, danger, indent }) => (
     className={`nav-item${active ? ' active' : ''}${indent ? ' nav-sub-item' : ''}${danger ? ' nav-danger' : ''}`}
     onClick={onClick}
     style={{
-      color: danger ? '#f87171' : active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text-muted)',
-      background: active ? 'rgba(86, 69, 238, 0.2)' : 'transparent',
-      fontWeight: active ? 600 : 500,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      padding: indent ? '8px 12px 8px 36px' : '10px 12px',
+      borderRadius: '8px',
       cursor: 'pointer',
+      fontWeight: active ? 600 : 400,
+      fontSize: indent ? '0.85rem' : '0.9rem',
+      color: danger ? 'var(--danger)' : active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text-muted)',
+      background: active ? 'rgba(86, 69, 238, 0.2)' : 'transparent',
       userSelect: 'none',
       listStyle: 'none',
     }}
+    
+    
   >
-    {iconPath && <Icon d={iconPath} size={indent ? 14 : 16} />}
+    {iconPath && <Icon d={iconPath} size={indent ? 15 : 17} />}
     <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
   </li>
 );

@@ -354,7 +354,7 @@ const Dashboard = ({ user, onLogout }) => {
         </button>
 
         {/* Logo block */}
-        <div className="sidebar-logo-block">
+        <div className="sidebar-logo-block" style={{ padding: '28px 20px 24px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', textAlign: 'center' }}>
           <img
             src={LOGO_SRC}
             alt="CAPSU Logo"
@@ -367,16 +367,22 @@ const Dashboard = ({ user, onLogout }) => {
           />
           {!isSidebarCollapsed && (
             <>
-              <div className="sidebar-title">
+              <div className="sidebar-title" style={{
+                fontWeight: 900,
+                fontSize: '1.25rem',
+                letterSpacing: '0.12em',
+                color: '#ffffff',
+                textShadow: '0 2px 12px rgba(255,255,255,0.3)'
+              }}>
                 SMARTSCHED
               </div>
-              <span
-                className="sidebar-role-badge"
-                style={{
-                  background: isAdmin ? '#2f2c68' : 'rgba(2,185,116,0.2)',
-                  border: isAdmin ? 'none' : '1px solid rgba(2,185,116,0.2)',
-                }}
-              >
+              <span className="sidebar-role-badge" style={{
+                display: 'inline-block', marginTop: 10,
+                fontSize: '0.75rem', padding: '6px 18px', borderRadius: '20px',
+                background: isAdmin ? '#2f2c68' : 'rgba(2,185,116,0.2)',
+                color: '#fff', fontWeight: 600, letterSpacing: '0.04em',
+                border: isAdmin ? 'none' : '1px solid rgba(2,185,116,0.2)',
+              }}>
                 {user?.role}
               </span>
             </>
@@ -528,11 +534,11 @@ const Dashboard = ({ user, onLogout }) => {
               </>
             )}
           </ul>
-        </nav>
 
-        {/* Pinned Bottom Footer (Profile & Log Out - Always visible & fits on all screens) */}
-        <div className="sidebar-footer">
-          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+          {/* Divider + Account */}
+          <div className="nav-section-divider" />
+          <ul style={{ margin: 0, padding: 0 }}>
+            <div className="nav-section-title">Account</div>
             <NavItem
               label="Profile"
               iconPath={NAV_ICONS.users}
@@ -544,7 +550,9 @@ const Dashboard = ({ user, onLogout }) => {
             />
             <NavItem label="Log Out" iconPath={NAV_ICONS.logout} danger onClick={onLogout} />
           </ul>
-        </div>
+        </nav>
+
+
       </aside>
 
       {/* Main content */}
