@@ -1,5 +1,5 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect, useMemo, Suspense, useTransition } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SEMESTERS, SCHOOL_YEARS } from '../../config/constants';
 import { useFirestoreData } from '../../hooks/useFirestoreData';
@@ -87,29 +87,16 @@ const Dashboard = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const pathParts = location.pathname.split('/');
-  const actualActiveTab = pathParts[2] || (isStudent ? 'view-schedules' : 'dashboard');
+  const activeTab = pathParts[2] || (isStudent ? 'view-schedules' : 'dashboard');
   const { confirm, prompt } = useGlobalDialog();
 
-  // Performance: Use transitions for heavy page renders
-  const [isPending, startTransition] = useTransition();
-  const [optimisticTab, setOptimisticTab] = useState(null);
-  
-  // Reset optimistic tab when URL finally updates
-  useEffect(() => {
-    setOptimisticTab(null);
-  }, [location.pathname]);
-
-  const activeTab = optimisticTab || actualActiveTab;
-
   const setActiveTab = (tab) => {
-    if (tab === actualActiveTab) return;
-    startTransition(() => {
-      if (tab === 'dashboard') {
-        navigate('/dashboard');
-      } else {
-        navigate(`/dashboard/${tab}`);
-      }
-    });
+    if (tab === activeTab) return;
+    if (tab === 'dashboard') {
+      navigate('/dashboard');
+    } else {
+      navigate(`/dashboard/${tab}`);
+    }
   };
 
   // UI state
@@ -124,10 +111,10 @@ const Dashboard = ({ user, onLogout }) => {
   // Auto-expand Academic Data menu if an academic entity tab is active
   useEffect(() => {
     const academicTabs = ['departments', 'courses', 'sections', 'subjects', 'faculty', 'rooms', 'terms'];
-    if (academicTabs.includes(actualActiveTab)) {
+    if (academicTabs.includes(activeTab)) {
       setIsManageDataOpen(true);
     }
-  }, [actualActiveTab]);
+  }, [activeTab]);
 
   // Term selection
   const [activeSemester, setActiveSemester] = useState(SEMESTERS[0]);
@@ -137,7 +124,7 @@ const Dashboard = ({ user, onLogout }) => {
   const data = useFirestoreData(activeSemester, activeSchoolYear, isAdmin);
   const {
     rooms, professors, subjects, sections,
-    schedules, activeSchedules, enrichedSchedules, scheduleHistory,
+    schedules, enrichedSchedules, scheduleHistory,
     departments, courses,
     availableSemesters, availableSchoolYears, publishedTerms, setPublishedTerms,
   } = data;
@@ -150,8 +137,6 @@ const Dashboard = ({ user, onLogout }) => {
   }, []);
 
   const handleTabClick = (tab) => { 
-    if (tab === actualActiveTab) return;
-    setOptimisticTab(tab); 
     setIsMobileMenuOpen(false); 
     setActiveTab(tab); 
   };
@@ -649,7 +634,7 @@ const Dashboard = ({ user, onLogout }) => {
 
         {/* Dashboard Tab */}
         {!isStudent && activeTab === 'dashboard' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px',  }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
             {/* KPI row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
@@ -700,22 +685,50 @@ const Dashboard = ({ user, onLogout }) => {
                       </span>
                       Faculty Profiles
                     </h3>
-                    <button className="btn btn-sm" onClick={() => setActiveTab('faculty')} style={{ background: 'transparent', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', boxShadow: 'none', borderRadius: '8px' }}>View All</button>
+                    <button className="widget-view-all-btn" onClick={() => setActiveTab('faculty')}>
+                      View All
+                    </button>
                   </div>
                   <table className="data-table">
-                    <thead><tr><th>Name</th><th>Department</th><th>Max Units</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th style={{ textAlign: 'center' }}>Max Units</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {professors.slice(0, 3).map(p => (
                         <tr key={p.id}>
                           <td data-label="Name" style={{ fontWeight: 600 }}>{p.name}</td>
-                          <td data-label="Department"><span style={{ fontSize: '0.78rem', padding: '2px 8px', borderRadius: 6, background: '#EEF2FF', color: '#5645EE', fontWeight: 600 }}>{p.department}</span></td>
-                          <td data-label="Max Units" style={{ textAlign: 'center', fontWeight: 600 }}>{p.maxUnits || p.maxHours || 12}</td>
+                          <td data-label="Department">
+                            <span style={{
+                              fontSize: '0.78rem',
+                              padding: '2px 8px',
+                              borderRadius: 6,
+                              background: '#EEF2FF',
+                              color: '#5645EE',
+                              fontWeight: 600
+                            }}>
+                              {p.department}
+                            </span>
+                          </td>
+                          <td data-label="Max Units" style={{ textAlign: 'center', fontWeight: 600 }}>
+                            {p.maxUnits || p.maxHours || 12}
+                          </td>
                         </tr>
                       ))}
+                      {professors.length === 0 && (
+                        <tr>
+                          <td colSpan={3} style={{ textAlign: 'center', padding: '18px 0', color: 'var(--text-muted)' }}>
+                            No faculty members found.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                   {professors.length > 3 && (
-                    <p style={{ margin: '12px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'right', fontWeight: 500 }}>
+                    <p style={{ margin: '14px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'right', fontWeight: 500 }}>
                       +{professors.length - 3} more faculty
                     </p>
                   )}
@@ -735,18 +748,33 @@ const Dashboard = ({ user, onLogout }) => {
                       </span>
                       Room List
                     </h3>
-                    <button className="btn btn-sm" onClick={() => setActiveTab('rooms')} style={{ background: 'transparent', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)', boxShadow: 'none', borderRadius: '8px' }}>View All</button>
+                    <button className="widget-view-all-btn" onClick={() => setActiveTab('rooms')}>
+                      View All
+                    </button>
                   </div>
                   <table className="data-table">
-                    <thead><tr><th>Name</th><th>Type</th><th>Lab?</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th style={{ textAlign: 'center' }}>Lab?</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {rooms.slice(0, 3).map(r => (
                         <tr key={r.id}>
                           <td data-label="Name" style={{ fontWeight: 600 }}>{r.name}</td>
-                          <td data-label="Type"><span style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.03em' }}>{r.type}</span></td>
+                          <td data-label="Type">
+                            <span style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.03em' }}>
+                              {r.type}
+                            </span>
+                          </td>
                           <td data-label="Lab?" style={{ textAlign: 'center' }}>
                             <span style={{
-                              fontSize: '0.73rem', padding: '3px 10px', borderRadius: 20, fontWeight: 700,
+                              fontSize: '0.73rem',
+                              padding: '3px 10px',
+                              borderRadius: 20,
+                              fontWeight: 700,
                               background: r.hasComputers ? 'linear-gradient(135deg, #E6F8F0, #D1FAE5)' : '#F1F5F9',
                               color: r.hasComputers ? '#059669' : '#94a3b8',
                             }}>
@@ -755,10 +783,17 @@ const Dashboard = ({ user, onLogout }) => {
                           </td>
                         </tr>
                       ))}
+                      {rooms.length === 0 && (
+                        <tr>
+                          <td colSpan={3} style={{ textAlign: 'center', padding: '18px 0', color: 'var(--text-muted)' }}>
+                            No rooms found.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                   {rooms.length > 3 && (
-                    <p style={{ margin: '12px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'right', fontWeight: 500 }}>
+                    <p style={{ margin: '14px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'right', fontWeight: 500 }}>
                       +{rooms.length - 3} more rooms
                     </p>
                   )}
@@ -766,24 +801,19 @@ const Dashboard = ({ user, onLogout }) => {
               </div>
             )}
 
-            {/* QuickStartGuide removed */}
-
             {/* Dashboard Widgets */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
               {isAdmin && <SystemReminders />}
               <RecentActivity schedules={displaySchedules} onViewAll={() => setActiveTab('view-schedules')} />
             </div>
 
-
           </div>
         )}
 
         {/* Other Tabs — wrapped in Suspense for code-split chunks */}
-        {isPending && <TabLoader />}
-        <div style={{ display: isPending ? 'none' : 'block' }}>
-          <Suspense fallback={<TabLoader />}>
-          {isAdmin && actualActiveTab === 'users' && <UserManagement user={user} onBack={() => setActiveTab('dashboard')} />}
-          {isAdmin && actualActiveTab === 'schedule' && (
+        <Suspense fallback={<TabLoader />}>
+          {isAdmin && activeTab === 'users' && <UserManagement user={user} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && activeTab === 'schedule' && (
             <div className="schedule-grid" style={{  }}>
               {!isMobile && (
                 <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} onLogHistory={handleLogHistory} validator={validator} activeSemester={activeSemester} activeSchedules={enrichedSchedules} />
@@ -791,20 +821,20 @@ const Dashboard = ({ user, onLogout }) => {
               <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onAutoScheduleBatch={handleAddSchedulesBatch} onLogHistory={handleLogHistory} />
             </div>
           )}
-          {isAdmin && actualActiveTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
-          {isAdmin && actualActiveTab === 'rooms' && <RoomManagement rooms={rooms} professors={professors} schedules={displaySchedules} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
-          {isAdmin && actualActiveTab === 'availability' && <RoomAvailability rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
-          {isAdmin && actualActiveTab === 'faculty-availability' && <FacultyAvailability professors={professors} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
-          {isAdmin && actualActiveTab === 'departments' && <DepartmentManagement departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
-          {isAdmin && actualActiveTab === 'courses' && <CourseManagement courses={courses} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
-          {isAdmin && actualActiveTab === 'assignments' && <AssignmentHub sections={sections} professors={professors} subjects={subjects} departments={departments} courses={courses} rooms={rooms} activeSemester={activeSemester} user={user} onBack={() => setActiveTab('dashboard')} />}
-          {isAdmin && actualActiveTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
-          {isAdmin && actualActiveTab === 'subjects' && <SubjectManagement subjects={subjects} professors={professors} sections={sections} schedules={displaySchedules} availableSemesters={availableSemesters} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
-          {isAdmin && actualActiveTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} user={user} />}
-          {isAdmin && actualActiveTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
-          {isAdmin && actualActiveTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} subjects={subjects} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} user={user} />}
-          {isAdmin && actualActiveTab === 'recycle-bin' && <RecycleBin user={user} onBack={() => setActiveTab('dashboard')} />}
-          {isAdmin && actualActiveTab === 'activity-log' && (
+          {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} professors={professors} schedules={displaySchedules} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && activeTab === 'availability' && <RoomAvailability rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && activeTab === 'faculty-availability' && <FacultyAvailability professors={professors} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && activeTab === 'departments' && <DepartmentManagement departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && activeTab === 'courses' && <CourseManagement courses={courses} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && activeTab === 'assignments' && <AssignmentHub sections={sections} professors={professors} subjects={subjects} departments={departments} courses={courses} rooms={rooms} activeSemester={activeSemester} user={user} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && activeTab === 'faculty' && <FacultyManagement professors={professors} subjects={subjects} rooms={rooms} sections={sections} schedules={displaySchedules} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
+          {isAdmin && activeTab === 'subjects' && <SubjectManagement subjects={subjects} professors={professors} sections={sections} schedules={displaySchedules} availableSemesters={availableSemesters} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
+          {isAdmin && activeTab === 'terms' && <TermManagement availableSemesters={availableSemesters} availableSchoolYears={availableSchoolYears} onBack={() => setActiveTab('dashboard')} publishedTerms={publishedTerms} setPublishedTerms={setPublishedTerms} user={user} />}
+          {isAdmin && activeTab === 'sections' && <SectionManagement sections={sections} professors={professors} schedules={displaySchedules} subjects={subjects} activeSemester={activeSemester} departments={departments} courses={courses} user={user} onBack={() => setActiveTab('dashboard')} onNavigateToHub={() => setActiveTab('assignments')} />}
+          {isAdmin && activeTab === 'workload' && <ProfessorWorkload professors={professors} schedules={displaySchedules} departments={departments} subjects={subjects} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} user={user} />}
+          {isAdmin && activeTab === 'recycle-bin' && <RecycleBin user={user} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && activeTab === 'activity-log' && (
             <ActivityLog
               onBack={() => setActiveTab('dashboard')}
               onViewProfile={(username) => {
@@ -815,9 +845,9 @@ const Dashboard = ({ user, onLogout }) => {
           )}
 
           {/* THIS IS THE ONLY TAB STUDENTS CAN ACCESS */}
-          {actualActiveTab === 'view-schedules' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={displaySchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} onRemoveSchedule={handleRemoveSchedule} onRemoveSchedulesBatch={handleRemoveSchedulesBatch} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} departments={departments} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
+          {activeTab === 'view-schedules' && <ScheduleViewer user={user} rooms={rooms} professors={professors} sections={sections} schedules={displaySchedules} isAdmin={isAdmin} onUpdateSchedule={handleUpdateSchedule} onRemoveSchedule={handleRemoveSchedule} onRemoveSchedulesBatch={handleRemoveSchedulesBatch} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} departments={departments} isPublished={publishedTerms[`${activeSemester}_${activeSchoolYear}`] === true} />}
 
-          {actualActiveTab === 'profile' && (
+          {activeTab === 'profile' && (
             <Profile
               user={{
                 username: targetProfileUsername || user.username,
@@ -830,8 +860,7 @@ const Dashboard = ({ user, onLogout }) => {
               }}
             />
           )}
-          </Suspense>
-        </div>
+        </Suspense>
 
       </div>
       <Suspense fallback={null}>
