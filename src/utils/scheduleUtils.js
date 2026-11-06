@@ -760,17 +760,23 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
     ? rawCandidateDays.map(normalizeDay).filter(Boolean)
     : resolveToDayPair(candidate.day, scheduleMode);
   const dayLabel = candidateDays.map(d => d.slice(0, 3)).join(' / ');
+  const effectiveHours = Number(candidate.hours) || Number(candidate.subject?.hoursPerMeeting) || 1.5;
 
   // 1. Try alternative rooms across the candidate days & timeSlot
   if (candidate.timeSlot) {
+    const isCompLabNeeded = candidate.subject?.requiredLab && (!candidate.subject?.hasLecLab || candidate.component !== 'Lecture');
+    const isFoodLabNeeded = candidate.subject?.isFoodLab && (!candidate.subject?.hasLecLab || candidate.component !== 'Lecture');
+
     for (const r of (rooms || [])) {
       if (r.id === candidate.room?.id) continue;
       if (!isRoomAllowedFor(r, candidate.subject, candidate.section)) continue;
       if (candidate.professor && !isProfessorAllowedInRoom(r, candidate.professor, candidate.subject, candidate.section, rooms)) continue;
+      if (isCompLabNeeded && !r.hasComputers) continue;
+      if (isFoodLabNeeded && !r.isFoodLab) continue;
 
       let allDaysClean = true;
       for (const d of candidateDays) {
-        const testCand = { ...candidate, day: d, room: r };
+        const testCand = { ...candidate, day: d, room: r, hours: effectiveHours };
         const conf = findScheduleConflicts(testCand, activeSchedules, { scheduleMode });
         if (conf.room || conf.professor || conf.section) {
           allDaysClean = false;
@@ -779,7 +785,7 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
       }
 
       if (allDaysClean) {
-        const timeLabel = getMeetingTimeLabel(candidate.timeSlot, candidate.subject?.hoursPerMeeting, scheduleMode) || candidate.timeSlot.label;
+        const timeLabel = getMeetingTimeLabel(candidate.timeSlot, effectiveHours, scheduleMode) || candidate.timeSlot.label;
         alternatives.push({
           type: 'room',
           title: `Switch Room to ${r.name}`,
@@ -800,11 +806,17 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
       if (String(ts.id) === String(candidate.timeSlot?.id)) continue;
       if (isLunchSlot(ts)) continue;
       const tsIdx = getTimeSlotIndex(ts, scheduleMode);
-      if (tsIdx >= 0 && slotsNeededFromIndex(tsIdx, candidate.subject?.hoursPerMeeting, scheduleMode) === 0) continue;
+      if (tsIdx >= 0 && slotsNeededFromIndex(tsIdx, effectiveHours, scheduleMode) === 0) continue;
+      if (candidate.subject?.code?.toUpperCase().startsWith('PE') && String(ts.id) === '2') continue;
+
+      const tsRange = getScheduleTimeRange({ timeSlot: ts, hours: effectiveHours, subject: candidate.subject, component: candidate.component }, scheduleMode);
+      if (tsRange && tsRange.start > 0 && tsRange.end > 0 && overlapsLunchBreak(tsRange.start, tsRange.end)) {
+        continue;
+      }
 
       let allDaysClean = true;
       for (const d of candidateDays) {
-        const testCand = { ...candidate, day: d, timeSlot: ts };
+        const testCand = { ...candidate, day: d, timeSlot: ts, hours: effectiveHours };
         const conf = findScheduleConflicts(testCand, activeSchedules, { scheduleMode });
         if (conf.room || conf.professor || conf.section) {
           allDaysClean = false;
@@ -813,7 +825,7 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
       }
 
       if (allDaysClean) {
-        const label = getMeetingTimeLabel(ts, candidate.subject.hoursPerMeeting, scheduleMode) || ts.label;
+        const label = getMeetingTimeLabel(ts, effectiveHours, scheduleMode) || ts.label;
         alternatives.push({
           type: 'timeSlot',
           title: `Switch Time to ${label}`,
@@ -842,7 +854,7 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
 
     let allDaysClean = true;
     for (const d of optionNorm) {
-      const testCand = { ...candidate, day: d };
+      const testCand = { ...candidate, day: d, hours: effectiveHours };
       const conf = findScheduleConflicts(testCand, activeSchedules, { scheduleMode });
       if (conf.room || conf.professor || conf.section) {
         allDaysClean = false;
@@ -851,7 +863,7 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
     }
 
     if (allDaysClean) {
-      const label = getMeetingTimeLabel(candidate.timeSlot, candidate.subject.hoursPerMeeting, scheduleMode) || candidate.timeSlot.label;
+      const label = getMeetingTimeLabel(candidate.timeSlot, effectiveHours, scheduleMode) || candidate.timeSlot.label;
       const optLabel = optionNorm.map(d => d.slice(0, 3)).join(' / ');
       alternatives.push({
         type: 'day',

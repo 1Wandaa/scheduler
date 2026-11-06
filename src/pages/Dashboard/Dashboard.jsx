@@ -874,11 +874,18 @@ const Dashboard = ({ user, onLogout }) => {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
-            <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={async (sched) => {
-              const res = await handleAddSchedule(sched);
-              if (res && res.ok) setIsScheduleFormOpen(false);
-              return res;
-            }} onLogHistory={handleLogHistory} validator={validator} activeSemester={activeSemester} activeSchedules={enrichedSchedules} />
+            <ScheduleForm
+              rooms={rooms}
+              professors={professors}
+              subjects={subjects}
+              sections={sections}
+              onSchedule={handleAddSchedule}
+              onSuccess={() => setIsScheduleFormOpen(false)}
+              onLogHistory={handleLogHistory}
+              validator={validator}
+              activeSemester={activeSemester}
+              activeSchedules={enrichedSchedules}
+            />
           </div>
         </div>
       )}
