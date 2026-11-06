@@ -38,8 +38,8 @@ service cloud.firestore {
 
     // --- USERS ---
     match /users/{userId} {
-      // Any authenticated user can read user profiles (needed for login flow)
-      allow read: if isAuthenticated();
+      // Allow reading user profiles for login and registration verification
+      allow read: if true;
 
       // Users can create their own profile (sign-up flow) — doc ID must match auth UID
       allow create: if isAuthenticated() && userId == request.auth.uid;
@@ -88,9 +88,9 @@ service cloud.firestore {
     // --- SCHEDULE HISTORY ---
     match /scheduleHistory/{historyId} {
       allow read: if isAuthenticated();
-      allow create: if isAdmin();
-      // History entries should not be modified or deleted
-      allow update, delete: if false;
+      allow create, delete: if isAdmin();
+      // History entries should not be modified
+      allow update: if false;
     }
 
     // --- DEPARTMENTS ---
@@ -113,11 +113,11 @@ service cloud.firestore {
 
     // --- ACTIVITY LOGS ---
     match /activityLogs/{logId} {
-      allow read: if isAdmin();
+      allow read, delete: if isAdmin();
       // Any authenticated user can create log entries (login/view events)
       allow create: if isAuthenticated();
-      // Logs should not be modified or deleted
-      allow update, delete: if false;
+      // Logs should not be modified
+      allow update: if false;
     }
 
     // --- DEFAULT DENY ---

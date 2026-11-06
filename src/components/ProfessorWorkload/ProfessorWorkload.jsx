@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import '../../styles/ProfessorWorkload.css';
 import PrintableFacultyWorkload from '../PrintableFacultyWorkload/PrintableFacultyWorkload';
-import { getScheduleTimeRange } from '../../utils/scheduleUtils';
 import { exportFacultyWorkloadToWord } from '../../utils/scheduleExportUtils';
+
+const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
+const matchesProfessor = (s, professor) => professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);
 
 function ProfessorWorkload({ 
   professors, 
@@ -36,10 +38,10 @@ function ProfessorWorkload({
   }, []);
 
   const handlePrint = (prof) => {
-    document.title = ""; // Strips "SMARTSCHED" from browser print header
-    document.body.classList.add('printing-faculty-workload');
     setPrintingProf(prof);
     setTimeout(() => {
+      document.title = ""; // Strips "SMARTSCHED" from browser print header
+      document.body.classList.add('printing-faculty-workload');
       window.print();
     }, 250);
   };
@@ -62,8 +64,7 @@ function ProfessorWorkload({
     });
   };
 
-  const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
-  const matchesProfessor = (s, professor) => professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);const getDeptColor = (dept) => {
+  const getDeptColor = (dept) => {
     if (!dept) return '#64748b'; // default slate
 
     if (departments && departments.length > 0) {
@@ -86,8 +87,23 @@ function ProfessorWorkload({
       const profSchedules = schedules.filter(s => matchesProfessor(s, professor));
       
       let units = 0;
-      if (professor.sectionSubjectMap) {
-        Object.entries(professor.sectionSubjectMap).forEach(([secId, subRefs]) => {
+      if (profSchedules.length > 0) {
+        // Derive units from actual scheduled classes (deduplicated by subject + section + component)
+        const countedAssignments = new Set();
+        profSchedules.forEach(s => {
+          if (!s.subject || !s.section) return;
+          const comp = s.component || '';
+          const key = `${s.subject.id || s.subject.code}-${s.section.id || s.section.name}${comp ? '-' + comp : ''}`;
+          if (!countedAssignments.has(key)) {
+            countedAssignments.add(key);
+            const compUnit = s.subject.hasLecLab
+              ? (comp === 'Lecture' ? (Number(s.subject.lectureHours) || 2) : (Number(s.subject.labHours) || 3))
+              : (Number(s.subject.units ?? s.subject.credits) || 3);
+            units += compUnit;
+          }
+        });
+      } else if (professor.sectionSubjectMap) {
+        Object.entries(professor.sectionSubjectMap).forEach(([, subRefs]) => {
           subRefs.forEach(subRef => {
             const sub = subjects?.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
             if (sub) {
@@ -119,8 +135,7 @@ function ProfessorWorkload({
         statusBg
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [professors, schedules]);
+  }, [professors, schedules, subjects]);
 
   const filteredAndSortedProfessors = useMemo(() => {
     let result = processedProfessors;

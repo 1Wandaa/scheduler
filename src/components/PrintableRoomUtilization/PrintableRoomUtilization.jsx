@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { TIME_SLOTS, FOUR_DAY_TIME_SLOTS, DAYS, getScheduleConfig, getProgramChairInfo } from '../../config/constants';
-import { slotsNeededFromIndex, getMeetingTimeLabel, getScheduleTimeRange, normalizeDay } from '../../utils/scheduleUtils';
+import { slotsNeededFromIndex, getScheduleTimeRange, normalizeDay } from '../../utils/scheduleUtils';
 
 // Helper: Format professor name compactly to match ScheduleTable
 function formatProfessorName(name) {
@@ -23,7 +23,6 @@ const PrintableRoomUtilization = ({
     roomName = '', 
     semesterInfo = '', 
     scheduleMode = 'standard',
-    departments = [],
     targetDepartment = '',
     programName = ''
 }) => {

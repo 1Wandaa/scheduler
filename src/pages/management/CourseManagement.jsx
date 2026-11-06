@@ -1,13 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../../config/firebase';
-import { collection, addDoc, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
 import { deleteCourseBatch } from '../../services/cascadeDeleteService';
 import BatchActionBar from '../../components/common/BatchActionBar';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
-import { getColorNameAndCode } from '../../utils/colorUtils';
 
 const CourseManagement = ({ courses, departments, onBack, user }) => {
   const { confirm } = useGlobalDialog();

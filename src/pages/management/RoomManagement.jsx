@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../../config/firebase';
-import { collection, addDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { deleteRoomCascade, deleteRoomBatchCascade } from '../../services/cascadeDeleteService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
@@ -9,7 +9,6 @@ import { ROOM_TYPES, BUILDINGS, DEPARTMENTS, getDeptColor } from '../../config/c
 import RoomTable from '../../components/RoomTable/RoomTable';
 import BatchActionBar from '../../components/common/BatchActionBar';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
-import { getColorNameAndCode } from '../../utils/colorUtils';
 
 const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack, user }) => {
   const { confirm } = useGlobalDialog();

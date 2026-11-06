@@ -129,7 +129,7 @@ async function resolveUserProfile(firebaseUser, storedUsername, cachedRole, cach
     if (cachedSnap && cachedSnap.exists()) {
       candidateDocs.push(cachedSnap);
     }
-  } catch (_) {
+  } catch {
     // Expected when no local IndexedDB cache entry exists yet
   }
 

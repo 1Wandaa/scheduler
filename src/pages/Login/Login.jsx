@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { auth, db, firebaseConfig } from '../../config/firebase';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { collection, query, where, getDocs, getDoc, setDoc, doc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, setDoc, doc, onSnapshot, getFirestore } from 'firebase/firestore';
 
 // Department → Program mapping (must match the 'program' field stored in Firestore sections)
 const DEPARTMENT_PROGRAM = {
@@ -205,11 +205,12 @@ const Login = ({ onLogin }) => {
           const secondaryAppName = `SecondaryApp_signup_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
           secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
           const secondaryAuth = getAuth(secondaryApp);
+          const secondaryDb = getFirestore(secondaryApp);
 
           const userCredential = await createUserWithEmailAndPassword(secondaryAuth, dummyEmail, password);
 
-         // Save Admin user to Firestore using auth UID
-          await setDoc(doc(db, 'users', userCredential.user.uid), {
+          // Save Admin user to Firestore using secondary authenticated context and auth UID
+          await setDoc(doc(secondaryDb, 'users', userCredential.user.uid), {
             id: userCredential.user.uid,
             username: cleanUsername,
             name: fullName.trim(),
@@ -270,11 +271,12 @@ const Login = ({ onLogin }) => {
         const secondaryAppName = `SecondaryApp_signup_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
         const secondaryAuth = getAuth(secondaryApp);
+        const secondaryDb = getFirestore(secondaryApp);
 
         const userCredential = await createUserWithEmailAndPassword(secondaryAuth, dummyEmail, password);
 
-        // Save user to Firestore using auth UID as doc ID
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
+        // Save user to Firestore using secondary authenticated context and auth UID as doc ID
+        await setDoc(doc(secondaryDb, 'users', userCredential.user.uid), {
           id: userCredential.user.uid,
           username: cleanUsername,
           name: fullName.trim(),
@@ -306,7 +308,7 @@ const Login = ({ onLogin }) => {
             const legacyDummyEmail = `${cleanUsername}@gmail.com`;
             try {
               userCredential = await signInWithEmailAndPassword(auth, legacyDummyEmail, password);
-            } catch (fallbackErr) {
+            } catch {
               authFailed = true;
             }
           } else {

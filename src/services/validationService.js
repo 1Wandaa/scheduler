@@ -12,7 +12,6 @@ import {
   professorMatchesSubject,
   findScheduleConflicts,
   slotsNeededFromIndex,
-  getTimeSlotIndex,
   getSectionDepartment,
   isRoomAllowedFor,
   isProfessorAllowedInRoom,
@@ -31,7 +30,7 @@ import { generateConflictResolutions } from './conflictResolutionService';
  * @returns {{ valid: boolean, errors: string[], warnings: string[] }}
  */
 export function validateScheduleEntry(
-  { room, professor, subject, section, day, timeSlot, excludeScheduleId = null, scheduleMode, hours, component },
+  { room, professor, subject, section, day, timeSlot, excludeScheduleId = null, scheduleMode, hours, component, respectLabs = true },
   activeSchedules,
   rooms
 ) {
@@ -161,8 +160,10 @@ export function validateScheduleEntry(
     const session = `${s.subject?.code || 'a class'}${s.room?.name ? ` in ${s.room.name}` : ''}${s.professor?.name ? ` with ${s.professor.name}` : ''}`;
     errors.push(`Section "${section?.name}" already has a class on ${day} (${timeRange}): ${session}.`);
   }
-  if (subject?.requiredLab && component !== 'Lecture' && !room?.hasComputers) errors.push(`Subject "${subject?.code || 'selected'}" requires a computer laboratory, but room "${room?.name || 'selected'}" does not have computers.`);
-  if (subject?.isFoodLab && component !== 'Lecture' && !room?.isFoodLab) errors.push(`Subject "${subject?.code || 'selected'}" requires a food laboratory, but room "${room?.name || 'selected'}" is not a food laboratory.`);
+  if (respectLabs !== false) {
+    if (subject?.requiredLab && component !== 'Lecture' && !room?.hasComputers) errors.push(`Subject "${subject?.code || 'selected'}" requires a computer laboratory, but room "${room?.name || 'selected'}" does not have computers.`);
+    if (subject?.isFoodLab && component !== 'Lecture' && !room?.isFoodLab) errors.push(`Subject "${subject?.code || 'selected'}" requires a food laboratory, but room "${room?.name || 'selected'}" is not a food laboratory.`);
+  }
 
   let suggestions = [];
   if (Object.keys(conflicts).length > 0 && rooms && rooms.length > 0) {
@@ -213,7 +214,12 @@ export async function addSchedule(newSchedule, activeSchedules, rooms, activeSem
   );
 
   if (!check.valid) return { ok: false, errors: check.errors };
-  const sanitized = JSON.parse(JSON.stringify({ ...newSchedule, semester: activeSemester, schoolYear: activeSchoolYear }));
+  const sanitized = JSON.parse(JSON.stringify({ 
+    ...newSchedule, 
+    semester: activeSemester, 
+    schoolYear: activeSchoolYear,
+    createdAt: newSchedule?.createdAt || Date.now()
+  }));
   await addDoc(collection(db, 'schedules'), sanitized);
   return { ok: true };
 }
@@ -289,16 +295,29 @@ export async function removeSchedulesBatch(ids, isAdmin) {
 /**
  * Batch-add multiple schedule entries to Firestore.
  */
-export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode) {
+export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode, options = {}) {
   if (!isAdmin) return { ok: false, errors: ['Not authorized.'] };
 
+  const respectLabs = options?.respectLabs !== false;
   const validSchedules = [];
   const errors = [];
 
   // Validate each schedule against both existing schedules AND already-accepted batch entries
   for (const s of newSchedules) {
     const check = validateScheduleEntry(
-      { room: s.room, professor: s.professor, subject: s.subject, section: s.section || null, day: s.day, timeSlot: s.timeSlot, excludeScheduleId: null, scheduleMode, hours: s.hours, component: s.component },
+      { 
+        room: s.room, 
+        professor: s.professor, 
+        subject: s.subject, 
+        section: s.section || null, 
+        day: s.day, 
+        timeSlot: s.timeSlot, 
+        excludeScheduleId: null, 
+        scheduleMode, 
+        hours: s.hours, 
+        component: s.component,
+        respectLabs 
+      },
       [...activeSchedules, ...validSchedules],
       rooms
     );
@@ -327,7 +346,8 @@ export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, ac
         const sanitized = JSON.parse(JSON.stringify({ 
             ...s, 
             semester: activeSemester, 
-            schoolYear: activeSchoolYear 
+            schoolYear: activeSchoolYear,
+            createdAt: s.createdAt || Date.now()
         }));
         batch.set(newDocRef, sanitized);
       }

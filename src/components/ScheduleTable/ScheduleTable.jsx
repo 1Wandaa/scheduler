@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig, isLunchSlot, overlapsLunchBreak } from '../../config/constants';
-import { slotsNeededFromIndex, getMeetingTimeLabel, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange, isStandardOneAndHalfHourClass } from '../../utils/scheduleUtils';
+import { slotsNeededFromIndex, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange, isStandardOneAndHalfHourClass } from '../../utils/scheduleUtils';
 import { exportGridToWord, exportGridToExcel } from '../../utils/scheduleExportUtils';
 import '../../styles/ScheduleTable.css';
 
@@ -321,14 +321,6 @@ const ScheduleTable = React.memo(function ScheduleTable({
 
     return { uniqueSubjectsList: list, totalUnits: units };
   }, [schedules, scheduleMode]);
-
-  // Schedules grouped by day for mobile card view
-  const schedulesByDay = useMemo(() => {
-    return DAYS.reduce((acc, day) => {
-      acc[day] = schedules.filter(s => s.day === day).sort((a, b) => (a.timeSlot?.id ?? 0) - (b.timeSlot?.id ?? 0));
-      return acc;
-    }, {});
-  }, [schedules]);
 
   // Helper: prepare a clean, desktop-like clone of the schedule for export / print
   const prepareExportClone = useCallback((clone) => {
@@ -1011,7 +1003,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
     } else if (result && result.ok) {
       showToast('Schedule successfully updated.', false);
     }
-  }, [schedules, onUpdateSchedule, scheduleMode, showToast]);
+  }, [schedules, activeSchedules, onUpdateSchedule, scheduleMode, showToast]);
 
   return (
     <div ref={containerRef} className={`schedule-table-container ${isFullscreen ? 'schedule-fullscreen' : ''}`}>

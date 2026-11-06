@@ -24,12 +24,9 @@ const SubjectSelector = ({
   subjects, 
   activeSemester, 
   selectedSubjects = [], 
-  departments = [], 
   onToggleSubject, 
   label = "Enrolled Subjects",
   recommendedDepartment = null,
-  contextType = 'section',
-  yearLevel = null,
   onQuickAdd = null
 }) => {
   const [subjectSearchQuery, setSubjectSearchQuery] = useState('');

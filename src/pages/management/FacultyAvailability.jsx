@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { DAYS } from '../../config/constants';
-import { getScheduleTimeRange } from '../../utils/scheduleUtils';
+import { getScheduleTimeRange, normalizeDay } from '../../utils/scheduleUtils';
 
 const TIMELINE_START = 420; // 7:00 AM in minutes
 const TIMELINE_END = 1080; // 6:00 PM in minutes
@@ -37,8 +37,11 @@ function FacultyAvailability({ professors, schedules, activeSemester, activeScho
     const map = {};
     professors.forEach(p => map[p.id] = []);
 
+    const targetDay = normalizeDay(selectedDay);
     schedules.forEach(s => {
-      if (s.day !== selectedDay || !s.professor?.id) return;
+      if (!s.professor?.id) return;
+      const sDays = Array.isArray(s.day) ? s.day.map(normalizeDay) : (s.day ? [normalizeDay(s.day)] : []);
+      if (!sDays.includes(targetDay)) return;
       if (map[s.professor.id]) {
         map[s.professor.id].push(s);
       }

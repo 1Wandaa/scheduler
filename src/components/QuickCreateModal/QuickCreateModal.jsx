@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { db } from '../../config/firebase';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 import { DEPARTMENTS } from '../../config/constants';

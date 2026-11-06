@@ -159,7 +159,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
       if (r.results && r.results.length > 0) {
         setAiStatus('💾 Saving schedules to database...');
-        const batchResult = await validator.addSchedulesBatch(r.results, scheduleMode);
+        const batchResult = await validator.addSchedulesBatch(r.results, scheduleMode, { respectLabs });
         if (!batchResult.ok) {
           toast.error('Failed to save some schedules to the database.');
           console.error('Batch save error:', batchResult.errors);

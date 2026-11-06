@@ -1,7 +1,7 @@
 import React from 'react';
 import { getDeptColor } from '../../config/constants';
 
-const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments = [], onEdit, onDelete, selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
+const FacultyTable = ({ facultyList, subjects = [], departments = [], onEdit, onDelete, selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
   const allSelected = facultyList.length > 0 && facultyList.every(p => selectedIds.includes(p.id));
   const someSelected = facultyList.some(p => selectedIds.includes(p.id)) && !allSelected;
   const headerCheckboxRef = React.useRef(null);
@@ -52,7 +52,7 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments 
             // Calculate units based on assignments to ensure it immediately reflects Assignment Hub changes
             let currentUnits = 0;
             if (p.sectionSubjectMap) {
-              Object.entries(p.sectionSubjectMap).forEach(([secId, subRefs]) => {
+              Object.entries(p.sectionSubjectMap).forEach(([, subRefs]) => {
                 subRefs.forEach(subRef => {
                   const sub = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
                   if (sub) {

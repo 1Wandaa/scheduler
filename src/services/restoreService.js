@@ -36,14 +36,14 @@ export const restoreFromTrash = async (trashRecord) => {
       modifications.modifiedProfessors.forEach(profId => {
         const updateData = {};
         if (type === 'subject') {
-          // Restore all identifier forms that may have been in the specialization
-          updateData.specialization = arrayUnion(data.id, data.code, data.name);
+          // Restore canonical subject identifier
+          updateData.specialization = arrayUnion(data.id || data.code);
         }
         if (type === 'room') {
-          updateData.preferredRooms = arrayUnion(data.id, data.name);
+          updateData.preferredRooms = arrayUnion(data.id);
         }
         if (type === 'section') {
-          updateData.assignedSections = arrayUnion(data.id, data.name);
+          updateData.assignedSections = arrayUnion(data.id);
         }
         
         batch.update(doc(db, 'professors', String(profId)), updateData);
@@ -53,9 +53,9 @@ export const restoreFromTrash = async (trashRecord) => {
     if (modifications.modifiedSections && modifications.modifiedSections.length > 0) {
       modifications.modifiedSections.forEach(secId => {
         if (type === 'subject') {
-          // Restore all identifier forms that may have been in the subjects array
+          // Restore canonical subject identifier to section's subjects
           batch.update(doc(db, 'sections', String(secId)), {
-            subjects: arrayUnion(data.id, data.code, data.name)
+            subjects: arrayUnion(data.id || data.code)
           });
         }
       });

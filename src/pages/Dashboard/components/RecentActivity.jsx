@@ -18,7 +18,11 @@ const RecentActivity = ({ schedules = [], onViewAll }) => {
     return String(day).slice(0, 3).toUpperCase();
   };
 
-  const recentList = (schedules || []).slice(-4).reverse();
+  const recentList = React.useMemo(() => {
+    return [...(schedules || [])]
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      .slice(0, 4);
+  }, [schedules]);
 
   return (
     <div className="card" style={{ padding: '22px' }}>

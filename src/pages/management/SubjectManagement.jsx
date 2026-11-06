@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../../config/firebase';
 import SubjectTable, { getSubjectDepts } from '../../components/SubjectTable/SubjectTable';
-import { collection, addDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import { deleteSubjectCascade, deleteSubjectBatchCascade } from '../../services/cascadeDeleteService';
 import BatchActionBar from '../../components/common/BatchActionBar';
 import { toast } from 'sonner';
@@ -30,7 +30,6 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectionMode, setSelectionMode] = useState(false);
 
-  const [facultySearchQuery, setFacultySearchQuery] = useState('');
   const [quickCreateState, setQuickCreateState] = useState({ isOpen: false, type: 'section' });
   const [formData, setFormData] = useState({
     id: '', code: '', name: '', departments: [], credits: 3, requiredLab: false, isFoodLab: false, hasLecLab: false, lectureHours: 2, labHours: 3, hoursPerMeeting: 1.5, category: 'Major', semester: activeSemester || (availableSemesters[0] || '')
@@ -198,7 +197,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
     setShowModal(true);
   };
 
-  const handleQuickCreateSuccess = (newItem, type) => {
+  const handleQuickCreateSuccess = () => {
     // Left empty since quick creating cross-entity is removed from this form
   };
 

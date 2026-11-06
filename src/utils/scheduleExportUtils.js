@@ -37,7 +37,7 @@ async function getImageAsBase64(url) {
       reader.onerror = () => resolve(null);
       reader.readAsDataURL(blob);
     });
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -1860,7 +1860,7 @@ export async function exportGridToWord(tableContainer, user) {
       const isHalfHour = tr.classList.contains('half-hour-row');
 
       const tds = tr.querySelectorAll('td');
-      tds.forEach((td, tdIdx) => {
+      tds.forEach(td => {
         td.style.boxSizing = 'border-box';
         td.style.verticalAlign = 'middle';
         td.style.padding = '1pt 2pt';

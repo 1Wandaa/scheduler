@@ -17,7 +17,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { logActivity, LOG_ACTIONS } from '../../../utils/activityLogger';
-import { exportIsoToWord, exportGridToWord, exportRoomUtilizationToWord, exportFacultyWorkloadToWord } from '../../../utils/scheduleExportUtils';
+import { exportIsoToWord, exportRoomUtilizationToWord, exportFacultyWorkloadToWord } from '../../../utils/scheduleExportUtils';
 
 const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user }) => {
     const [isExportOpen, setIsExportOpen] = useState(false);

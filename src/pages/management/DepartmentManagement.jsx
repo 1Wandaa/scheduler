@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../../config/firebase';
-import { collection, addDoc, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
 import { deleteDepartmentBatch } from '../../services/cascadeDeleteService';
 import BatchActionBar from '../../components/common/BatchActionBar';
 import { toast } from 'sonner';

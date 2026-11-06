@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../../config/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import { deleteFacultyCascade, deleteFacultyBatchCascade } from '../../services/cascadeDeleteService';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
@@ -10,9 +10,8 @@ import FacultyTable from '../../components/FacultyTable/FacultyTable';
 import BatchActionBar from '../../components/common/BatchActionBar';
 import AutocompleteMultiSelect from '../../components/AutocompleteMultiSelect/AutocompleteMultiSelect';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
-import { getColorNameAndCode } from '../../utils/colorUtils';
 
-const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], schedules = [], activeSemester, departments = [], courses = [], onBack, user, onNavigateToHub }) => {
+const FacultyManagement = ({ professors, subjects = [], rooms = [], schedules = [], departments = [], onBack, user, onNavigateToHub }) => {
   const { confirm } = useGlobalDialog();
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -496,7 +495,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [
 
                 if (editMode && currentId) {
                   if (formData.sectionSubjectMap) {
-                    Object.entries(formData.sectionSubjectMap).forEach(([secId, subRefs]) => {
+                    Object.values(formData.sectionSubjectMap).forEach(subRefs => {
                       subRefs.forEach(subRef => {
                         const sub = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
                         if (sub) {

@@ -82,8 +82,9 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
   const seedDone = useRef(false);
   const loadedSnapshots = useRef(new Set());
 
- // One-time data seeding & migration
+ // One-time data seeding & migration (Admin only)
   useEffect(() => {
+    if (!isAdmin) return;
     if (seedDone.current) return;
     seedDone.current = true;
 
@@ -165,7 +166,7 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
     };
 
     initializeData();
-  }, []);
+  }, [isAdmin]);
 
  // Real-time listeners
   useEffect(() => {
@@ -247,12 +248,12 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
   useEffect(() => {
     if (!activeSemester || !activeSchoolYear) return;
 
-    // Filter unpublished schedules at the query level for students
+    // Filter unpublished schedules for non-admins
     if (isAdmin === false) {
       const termKey = `${activeSemester}_${activeSchoolYear}`;
       if (publishedTerms[termKey] !== true) {
-        setSchedules([]);
-        return () => {};
+        const timer = setTimeout(() => setSchedules([]), 0);
+        return () => clearTimeout(timer);
       }
     }
 

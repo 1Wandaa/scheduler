@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { DAYS, getProgramChairInfo, isLunchSlot, overlapsLunchBreak } from '../../config/constants';
+import { DAYS, getProgramChairInfo, isLunchSlot } from '../../config/constants';
 import { getScheduleTimeRange, normalizeDay, isStandardOneAndHalfHourClass } from '../../utils/scheduleUtils';
 import '../../styles/PrintableSchedule.css';
 

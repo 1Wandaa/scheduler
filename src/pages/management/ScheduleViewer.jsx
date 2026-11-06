@@ -9,7 +9,7 @@ import PreviewModal from './components/PreviewModal';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import CustomSelect from '../../components/CustomSelect/CustomSelect';
 
-function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, onUpdateSchedule, onRemoveSchedule, onRemoveSchedulesBatch, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true }) {
+function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, isFaculty = false, onUpdateSchedule, onRemoveSchedule, onRemoveSchedulesBatch, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true }) {
     const { confirm } = useGlobalDialog();
     const location = useLocation();
 
@@ -27,63 +27,73 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     const prevViewTypeRef = React.useRef(viewType);
 
     useEffect(() => {
-        if (hasAppliedInitialTargetRef.current) {
-            hasAppliedInitialTargetRef.current = false;
-            return;
-        }
+        const timer = setTimeout(() => {
+            if (hasAppliedInitialTargetRef.current) {
+                hasAppliedInitialTargetRef.current = false;
+                return;
+            }
 
-        const allDepts = departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
+            const allDepts = departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
 
-        if (viewType === 'department') {
-            // Find user's section object if available
-            const userSectionObj = (user?.section && sections.length > 0)
-                ? sections.find(s => s.id === user.section || (s.name && s.name.trim().toUpperCase() === user.section.trim().toUpperCase()))
-                : null;
+            if (viewType === 'department') {
+                // Find user's section object if available
+                const userSectionObj = (user?.section && sections.length > 0)
+                    ? sections.find(s => s.id === user.section || (s.name && s.name.trim().toUpperCase() === user.section.trim().toUpperCase()))
+                    : null;
 
-            // Determine target department
-            let targetDept = selectedId;
-            if (!targetDept || !initialUserAppliedRef.current) {
-                if (user?.department && (allDepts.includes(user.department) || allDepts.length === 0)) {
-                    targetDept = user.department;
-                } else if (userSectionObj) {
-                    const secDept = userSectionObj.name.split(/\s+/)[0]?.toUpperCase();
-                    if (secDept && (allDepts.includes(secDept) || allDepts.length === 0)) {
-                        targetDept = secDept;
+                // Determine target department
+                setSelectedId(prev => {
+                    let targetDept = prev;
+                    if (!targetDept || !initialUserAppliedRef.current) {
+                        if (user?.department && (allDepts.includes(user.department) || allDepts.length === 0)) {
+                            targetDept = user.department;
+                        } else if (userSectionObj) {
+                            const secDept = userSectionObj.name.split(/\s+/)[0]?.toUpperCase();
+                            if (secDept && (allDepts.includes(secDept) || allDepts.length === 0)) {
+                                targetDept = secDept;
+                            }
+                        }
+                        if (!targetDept && allDepts.length > 0) {
+                            targetDept = allDepts[0];
+                        }
+                    }
+                    return targetDept || prev;
+                });
+
+                // Determine target year level
+                if (!initialUserAppliedRef.current) {
+                    if (user?.yearLevel) {
+                        setSelectedYearLevel(String(user.yearLevel));
+                    } else if (userSectionObj?.yearLevel) {
+                        setSelectedYearLevel(String(userSectionObj.yearLevel));
                     }
                 }
-                if (!targetDept && allDepts.length > 0) {
-                    targetDept = allDepts[0];
+
+                // Determine target section ID
+                if (userSectionObj) {
+                    setDeptSectionId(prevSecId => (!prevSecId || !initialUserAppliedRef.current) ? userSectionObj.id : prevSecId);
                 }
-                if (targetDept) {
-                    setSelectedId(targetDept);
+
+                if (user && (user.department || user.section) && sections.length > 0) {
+                    initialUserAppliedRef.current = true;
                 }
+            } else if (viewType === 'room' && rooms.length > 0) {
+                setSelectedId(prev => (!prev || prevViewTypeRef.current !== 'room') ? rooms[0].id : prev);
+            } else if (viewType === 'faculty' && professors.length > 0) {
+                setSelectedId(prev => {
+                    if (!prev || prevViewTypeRef.current !== 'faculty') {
+                        const myProf = isFaculty && user ? professors.find(p => p.name === user.name || p.id === user.id) : null;
+                        return myProf ? myProf.id : professors[0].id;
+                    }
+                    return prev;
+                });
             }
 
-            // Determine target year level
-            if (!initialUserAppliedRef.current) {
-                if (user?.yearLevel) {
-                    setSelectedYearLevel(String(user.yearLevel));
-                } else if (userSectionObj?.yearLevel) {
-                    setSelectedYearLevel(String(userSectionObj.yearLevel));
-                }
-            }
+            prevViewTypeRef.current = viewType;
+        }, 0);
 
-            // Determine target section ID
-            if (userSectionObj && (!deptSectionId || !initialUserAppliedRef.current)) {
-                setDeptSectionId(userSectionObj.id);
-            }
-
-            if (user && (user.department || user.section) && sections.length > 0) {
-                initialUserAppliedRef.current = true;
-            }
-        } else if (viewType === 'room' && rooms.length > 0) {
-            if (!selectedId || prevViewTypeRef.current !== 'room') setSelectedId(rooms[0].id);
-        } else if (viewType === 'faculty' && professors.length > 0) {
-            if (!selectedId || prevViewTypeRef.current !== 'faculty') setSelectedId(professors[0].id);
-        }
-
-        prevViewTypeRef.current = viewType;
-    }, [viewType, rooms, professors, sections, user, departments]);
+        return () => clearTimeout(timer);
+    }, [viewType, rooms, professors, sections, user, departments, isFaculty]);
 
     // Listen for custom events to change view type from mobile Speed Dial
     useEffect(() => {
@@ -100,7 +110,8 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     useEffect(() => {
         if (viewType === 'department') {
             if (prevSelectedIdRef.current && prevSelectedIdRef.current !== selectedId) {
-                setSelectedYearLevel('');
+                const timer = setTimeout(() => setSelectedYearLevel(''), 0);
+                return () => clearTimeout(timer);
             }
             prevSelectedIdRef.current = selectedId;
         }
@@ -119,20 +130,23 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     ? matching.find(sec => sec.id === user.section || (sec.name && sec.name.trim().toUpperCase() === user.section.trim().toUpperCase()))
                     : null;
 
-                if (userSecMatch) {
-                    setDeptSectionId(userSecMatch.id);
-                } else if (deptSectionId && matching.some(sec => sec.id === deptSectionId)) {
-                    // Keep current section if it remains valid
-                } else {
-                    setDeptSectionId(matching[0].id);
+                const nextId = userSecMatch 
+                    ? userSecMatch.id 
+                    : (deptSectionId && matching.some(sec => sec.id === deptSectionId) ? deptSectionId : matching[0].id);
+
+                if (nextId !== deptSectionId) {
+                    const timer = setTimeout(() => setDeptSectionId(nextId), 0);
+                    return () => clearTimeout(timer);
                 }
-            } else {
-                setDeptSectionId('');
+            } else if (deptSectionId) {
+                const timer = setTimeout(() => setDeptSectionId(''), 0);
+                return () => clearTimeout(timer);
             }
-        } else {
-            setDeptSectionId('');
+        } else if (deptSectionId) {
+            const timer = setTimeout(() => setDeptSectionId(''), 0);
+            return () => clearTimeout(timer);
         }
-    }, [viewType, selectedId, selectedYearLevel, sections, user]);
+    }, [viewType, selectedId, selectedYearLevel, sections, user, deptSectionId]);
 
     // Compute unique year levels from sections for the selected department
     const availableYearLevels = React.useMemo(() => {
@@ -338,7 +352,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                             style={{ width: '100%' }}
                         >
                             <option value="department">Department</option>
-                            {isAdmin && <option value="faculty">Faculty</option>}
+                            {(isAdmin || isFaculty) && <option value="faculty">Faculty</option>}
                             <option value="room">Room</option>
                         </select>
                     </div>

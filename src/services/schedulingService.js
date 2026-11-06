@@ -17,7 +17,6 @@ import {
   slotsNeededFromIndex,
   getTimeSlotIndex,
   schedulesOverlap,
-  entitiesMatch,
   getEligibleRoomsTiered,
   isProfessorAllowedInRoom,
   isProfessorStageLocked,
@@ -91,9 +90,12 @@ function buildAssignments(subjects, sections, activeSemester, filter) {
   const assignments = [];
   for (const section of sections) {
     const uniqueSubjects = [...new Set(section.subjects || [])];
+    const seenSubjectIds = new Set();
     for (const subId of uniqueSubjects) {
       const subject = subjects.find((su) => su.id === subId || su.code === subId);
       if (!subject) continue;
+      if (seenSubjectIds.has(String(subject.id))) continue;
+      seenSubjectIds.add(String(subject.id));
       if (subject.semester && subject.semester !== 'Both' && subject.semester !== activeSemester) continue;
       if (filter && !filter(subject, section)) continue;
 
@@ -180,10 +182,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   // 1. Group assignments by Section + Subject
   const groupsMap = new Map();
   for (const a of assignments) {
-    // Skip subjects that have no eligible professors (considered unassigned or not in active faculty filter)
-    const profPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, a.subject, a.section, constraints);
-    // REMOVED: if (profPool.length === 0) continue; // Do not silently drop them! Let them fail properly in tryPlaceGroup.
-
     const componentStr = a.component ? `_${a.component}` : '';
     const key = `${a.section?.id || 'none'}_${a.subject?.id}${componentStr}`;
     if (!groupsMap.has(key)) {
@@ -1004,7 +1002,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         return b.eligibleRoomCount - a.eligibleRoomCount;
       });
 
-      let bumpSucceeded = false;
       // Try bumping candidates (try up to 30 to thoroughly search viable relocations)
       for (let bi = 0; bi < Math.min(candidateBumps.length, 30); bi++) {
         if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
@@ -1057,7 +1054,6 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
             placedKeys.add(unschedKey);
             const uIdx = unscheduled.findIndex((u) => u.subject?.id === unschedGroup.subject?.id && u.section?.id === unschedGroup.section?.id);
             if (uIdx !== -1) unscheduled.splice(uIdx, 1);
-            bumpSucceeded = true;
             anyBumpSucceededInRound = true;
             console.log(`[AutoScheduler] Bump success: displaced ${bumpTarget.subject?.code} to make room for ${unschedGroup.subject?.code}`);
             break;

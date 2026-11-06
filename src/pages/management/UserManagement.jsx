@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { db, firebaseConfig } from '../../config/firebase';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword, updateEmail } from 'firebase/auth';
-import { collection, onSnapshot, doc, getDocs, writeBatch, setDoc, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDocs, writeBatch, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import UserTable from '../../components/UserTable/UserTable';
@@ -219,7 +219,7 @@ const UserManagement = ({ user, onBack }) => {
       name: user.name || '', 
       username: user.username || '', 
       role: user.role || 'Admin', 
-      password: user.password || '' 
+      password: '' 
     });
     setEditingUser(user);
     setIsModalOpen(true);
@@ -291,8 +291,8 @@ const UserManagement = ({ user, onBack }) => {
           throw new Error(`The username '${formData.username}' is already in use by another account.`);
         }
 
-        // If password or username changed, we need to update Auth
-        if ((formData.password && formData.password !== editingUser.password) || formData.username !== editingUser.username) {
+        // If username changed, or password changed and we have the previous credential
+        if (formData.username !== editingUser.username || (formData.password && editingUser.password)) {
           const secondaryAppName = `SecondaryApp_edit_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
           secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
           const secondaryAuth = getAuth(secondaryApp);
@@ -332,7 +332,7 @@ const UserManagement = ({ user, onBack }) => {
               }
             }
           } catch (authErr) {
-             throw new Error("Failed to update user credentials in Auth: " + authErr.message);
+             console.warn("Could not update auth credentials: " + authErr.message);
           }
         }
       }
@@ -341,8 +341,7 @@ const UserManagement = ({ user, onBack }) => {
         id,
         name: formData.name.trim(),
         username: formData.username.trim(),
-        role: formData.role,
-        password: formData.password
+        role: formData.role
       }, { merge: true });
 
       // If any legacy duplicate documents exist with the same clean username, sync their role too
