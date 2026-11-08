@@ -17,6 +17,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   const [result, setResult] = useState(null);
   const [progress, setProgress] = useState({ percent: 0, placed: 0, total: 0, pass: 0 });
   const abortRef = useRef(null);
+  const progressRef = useRef(null);
 
   const [engineMode, setEngineMode] = useState('full');
   const [targetId, setTargetId] = useState('');
@@ -29,6 +30,8 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   const [aiStatus, setAiStatus] = useState('');
   const [, setAiInsights] = useState(null);
 
+  const runTargetedRef = useRef(null);
+
   // Listen for custom events to change engine mode from mobile Speed Dial
   React.useEffect(() => {
     const handleModeChange = (e) => {
@@ -39,14 +42,12 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     };
     const handleExecuteEvent = (e) => {
       if (e.detail) {
-        if (e.detail === 'ga' || e.detail.mode === 'ga' || e.detail === 'full' || e.detail.mode === 'full') {
-          setEngineMode('full');
-          setTargetId('');
-        } else {
-          setEngineMode(e.detail.mode);
-          setTargetId(e.detail.targetId);
-        }
-        setTimeout(() => document.getElementById('btn-execute-autoschedule')?.click(), 100);
+        const isFull = e.detail === 'ga' || e.detail.mode === 'ga' || e.detail === 'full' || e.detail.mode === 'full';
+        const newMode = isFull ? 'full' : e.detail.mode;
+        const newTargetId = isFull ? '' : (e.detail.targetId || '');
+        setEngineMode(newMode);
+        setTargetId(newTargetId);
+        runTargetedRef.current?.({ mode: newMode, targetId: newTargetId });
       }
     };
     window.addEventListener('change-autoscheduler-mode', handleModeChange);
@@ -98,7 +99,10 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   };
 
   // Run the Targeted Heuristic Engine (Greedy)
-  const runTargeted = async () => {
+  const runTargeted = async (overrideParams = null) => {
+    const activeEngineMode = overrideParams?.mode || engineMode;
+    const activeTargetId = overrideParams?.targetId !== undefined ? overrideParams.targetId : targetId;
+
     const controller = new AbortController();
     abortRef.current = controller;
     setLoading(true);
@@ -106,6 +110,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     setProgress({ percent: 0, placed: 0, total: 0, pass: 0 });
     setAiInsights(null);
     setAiStatus('');
+    setTimeout(() => progressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
     try {
       // AI pre-processing: build professor-subject match map
       let aiProfessorMap = null;
@@ -138,23 +143,20 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
       };
       let r = null;
 
-      if (engineMode === 'full') r = await validator.autoScheduleFull(constraints, schedulerOptions);
-      else if (engineMode === 'faculty') r = await validator.autoScheduleForFaculty(targetId, constraints, schedulerOptions);
-      else if (engineMode === 'room') r = await validator.autoScheduleForRoom(targetId, constraints, schedulerOptions);
-      else if (engineMode === 'section') r = await validator.autoScheduleForSection(targetId, constraints, schedulerOptions);
+      if (activeEngineMode === 'full') r = await validator.autoScheduleFull(constraints, schedulerOptions);
+      else if (activeEngineMode === 'faculty') r = await validator.autoScheduleForFaculty(activeTargetId, constraints, schedulerOptions);
+      else if (activeEngineMode === 'room') r = await validator.autoScheduleForRoom(activeTargetId, constraints, schedulerOptions);
+      else if (activeEngineMode === 'section') r = await validator.autoScheduleForSection(activeTargetId, constraints, schedulerOptions);
       else throw new Error('Invalid mode selected.');
 
-      let unscheduledResults = r.unscheduled || [];
-      if (engineMode === 'room') {
-        unscheduledResults = [];
-      }
+      const unscheduledResults = r.unscheduled || [];
 
       setResult({
         schedule: r.results || [],
         unscheduled: unscheduledResults,
         prescriptions: [],
         error: r.error || null,
-        mode: engineMode
+        mode: activeEngineMode
       });
 
       if (r.results && r.results.length > 0) {
@@ -167,7 +169,10 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
           toast.success(`Successfully saved ${batchResult.writtenCount} schedules.`, {
             action: {
               label: 'View Schedules',
-              onClick: () => navigate('/dashboard/view-schedules')
+              onClick: () => {
+                navigate('/dashboard/view-schedules');
+                window.dispatchEvent(new CustomEvent('change-tab', { detail: 'view-schedules' }));
+              }
             }
           });
         }
@@ -181,7 +186,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
       if (onLogHistory) {
         onLogHistory({
-          engineMode,
+          engineMode: activeEngineMode,
           totalAttempted: (r.results || []).length + unscheduledResults.length,
           successCount: (r.results || []).length,
           errorCount: unscheduledResults.length,
@@ -196,7 +201,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
 
     } catch (e) {
       if (!controller.signal.aborted) {
-        setResult({ schedule: [], unscheduled: [], prescriptions: [], error: e.message, mode: engineMode });
+        setResult({ schedule: [], unscheduled: [], prescriptions: [], error: e.message, mode: activeEngineMode });
       }
     } finally {
       if (!controller.signal.aborted) {
@@ -208,7 +213,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     }
   };
 
-
+  runTargetedRef.current = runTargeted;
 
   const handleExecute = () => {
     runTargeted();
@@ -395,9 +400,15 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         )}
       </div>
 
+      {engineMode !== 'full' && !targetId && (
+        <p style={{ fontSize: '0.8rem', color: 'var(--warning)', margin: '0 0 12px 0' }}>
+          ⚠️ Please select a specific {engineMode} above before generating.
+        </p>
+      )}
+
       {/* Progress Bar */}
       {loading && (
-        <div style={{ marginTop: '12px',  }}>
+        <div ref={progressRef} style={{ marginTop: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
               {progress.pass > 0

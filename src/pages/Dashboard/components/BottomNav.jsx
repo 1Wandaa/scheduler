@@ -1,9 +1,9 @@
 import React from 'react';
 import { Icon, NAV_ICONS } from './Icon';
 
-const BottomNav = ({ activeTab, handleTabClick, isAdmin, setIsMobileMenuOpen }) => (
+const BottomNav = ({ activeTab, handleTabClick, isAdmin, isFaculty, setIsMobileMenuOpen }) => (
   <div className="bottom-nav">
-    {isAdmin && (
+    {(isAdmin || isFaculty) && (
       <button className={`bottom-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => handleTabClick('dashboard')}>
         <Icon d={NAV_ICONS.dashboard} size={20} />
         <span>Home</span>
@@ -13,6 +13,12 @@ const BottomNav = ({ activeTab, handleTabClick, isAdmin, setIsMobileMenuOpen }) 
       <Icon d={NAV_ICONS.viewSchedules} size={20} />
       <span>Schedules</span>
     </button>
+    {isFaculty && !isAdmin && (
+      <button className={`bottom-nav-btn ${activeTab === 'workload' ? 'active' : ''}`} onClick={() => handleTabClick('workload')}>
+        <Icon d={NAV_ICONS.workload} size={20} />
+        <span>Workload</span>
+      </button>
+    )}
     {isAdmin && (
       <button className={`bottom-nav-btn ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => handleTabClick('schedule')}>
         <Icon d={NAV_ICONS.schedule} size={20} />

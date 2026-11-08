@@ -18,6 +18,7 @@ import {
   getTimeSlotIndex,
   schedulesOverlap,
   getEligibleRoomsTiered,
+  isRoomAllowedFor,
   isProfessorAllowedInRoom,
   isProfessorStageLocked,
   getMeetingTimeLabel,
@@ -295,17 +296,25 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   // Helper: attempt to place a single group
   const tryPlaceGroup = async (group, roomPool, usePairsOnly) => {
     const { subject, section, count } = group;
-    const rawProfPool = fixedProfessor ? [fixedProfessor] : getEligibleProfs(professors, subject, section, constraints);
+    let rawProfPool;
+    if (fixedProfessor) {
+      const eligible = getEligibleProfs(professors, subject, section, constraints);
+      rawProfPool = eligible.filter(p => String(p.id) === String(fixedProfessor.id));
+    } else {
+      rawProfPool = getEligibleProfs(professors, subject, section, constraints);
+    }
     const hasStage = rooms.some((r) => (r.name || '').toLowerCase().includes('stage'));
 
     if (rawProfPool.length === 0) {
       return {
         success: false,
-        reason: `No faculty assigned to teach ${subject?.code || 'this subject'}.`,
+        reason: fixedProfessor
+          ? `Faculty "${fixedProfessor.name}" is not assigned or eligible to teach ${subject?.code || 'this subject'} for section ${section?.name || ''}.`
+          : `No faculty assigned to teach ${subject?.code || 'this subject'}.`,
         details: {
           professors: [],
           rooms: roomPool.map((r) => ({ id: r.id, name: r.name, type: r.type || 'Lecture' })),
-          suggestion: `Go to Faculty Management and assign someone to teach ${subject?.code || 'this subject'}.`
+          suggestion: `Go to Faculty Management or Assignment Hub and assign an eligible instructor to ${subject?.code || 'this subject'} (${section?.name || ''}).`
         }
       };
     }
@@ -1179,13 +1188,13 @@ export async function autoScheduleForRoom(roomId, context, constraints, addSched
   const room = rooms.find((r) => r.id === roomId);
   if (!room) return { results: [], unscheduled: [], error: `Room "${roomId}" not found.` };
 
-  const filter = (subject) => {
+  const filter = (subject, section) => {
     // Optimization: Skip subjects that definitely cannot fit in this room due to lab constraints
-    if (constraints?.respectLabs) {
+    if (constraints?.respectLabs !== false) {
       if (subject.requiredLab && !room.hasComputers) return false;
       if (subject.isFoodLab && !room.isFoodLab) return false;
     }
-    return true;
+    return isRoomAllowedFor(room, subject, section);
   };
 
   const assignments = buildAssignments(subjects, sections, activeSemester, filter);
@@ -1197,7 +1206,11 @@ export async function autoScheduleForFaculty(professorId, context, constraints, 
   const professor = professors.find((p) => p.id === professorId);
   if (!professor) return { results: [], unscheduled: [], error: `Faculty "${professorId}" not found.` };
 
-  const filter = (subject) => professorMatchesSubject(professor, subject);
+  const filter = (subject, section) => {
+    if (!professorMatchesSubject(professor, subject)) return false;
+    const eligible = getEligibleProfessors(professors, subject, section);
+    return eligible.some(p => String(p.id) === String(professor.id));
+  };
   const assignments = buildAssignments(subjects, sections, activeSemester, filter);
   return runTargetedScheduler(assignments, context, { ...constraints, fixedProfessor: professor }, addScheduleFn, options);
 }

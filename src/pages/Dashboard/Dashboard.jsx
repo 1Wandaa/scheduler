@@ -1,5 +1,5 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SEMESTERS, SCHOOL_YEARS } from '../../config/constants';
 import { useFirestoreData } from '../../hooks/useFirestoreData';
@@ -130,11 +130,21 @@ const Dashboard = ({ user, onLogout }) => {
     availableSemesters, availableSchoolYears, publishedTerms, setPublishedTerms,
   } = data;
 
+  const setActiveTabRef = useRef(setActiveTab);
+  setActiveTabRef.current = setActiveTab;
+
   // Responsive handler
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    const handleTabChangeEvent = (e) => {
+      if (e.detail) setActiveTabRef.current(e.detail);
+    };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('change-tab', handleTabChangeEvent);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('change-tab', handleTabChangeEvent);
+    };
   }, []);
 
   const handleTabClick = (tab) => { 
@@ -888,7 +898,7 @@ const Dashboard = ({ user, onLogout }) => {
       <Suspense fallback={null}>
         <Chatbot schedules={displaySchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
       </Suspense>
-      <BottomNav activeTab={activeTab} handleTabClick={handleTabClick} isAdmin={isAdmin} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+      <BottomNav activeTab={activeTab} handleTabClick={handleTabClick} isAdmin={isAdmin} isFaculty={isFaculty} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 
       {/* --- Mobile Floating Action Button (FAB) --- */}
       {isAdmin && isMobile && (activeTab === 'view-schedules' || activeTab === 'schedule') && (

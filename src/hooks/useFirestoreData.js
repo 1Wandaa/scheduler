@@ -365,13 +365,17 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
         }
       }
 
+      const profKey = s.professor?.id ?? s.professorId ?? (typeof s.professor === 'string' ? s.professor : null);
+      const roomKey = s.room?.id ?? s.roomId ?? (typeof s.room === 'string' ? s.room : null);
+      const secKey = s.section?.id ?? s.sectionId ?? (typeof s.section === 'string' ? s.section : null);
+
       return {
         ...s,
         hours: effectiveHours,
         timeSlot: enrichedTimeSlot,
-        professor: (s.professor?.id && professorById[s.professor.id]) || s.professor,
-        room: (s.room?.id && roomById[s.room.id]) || s.room,
-        section: (s.section?.id && sectionById[s.section.id]) || s.section,
+        professor: (profKey && professorById[profKey]) || s.professor,
+        room: (roomKey && roomById[roomKey]) || s.room,
+        section: (secKey && sectionById[secKey]) || s.section,
         subject: enrichedSubject,
       };
     });

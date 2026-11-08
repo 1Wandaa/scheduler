@@ -85,6 +85,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, departme
       program: formData.program,
       yearLevel: formData.yearLevel || 1,
       subjects: formData.subjects || [],
+      ...(formData.subjectInstructors ? { subjectInstructors: formData.subjectInstructors } : {}),
     };
 
     setIsSaving(true);

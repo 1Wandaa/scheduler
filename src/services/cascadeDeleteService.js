@@ -87,25 +87,72 @@ export const deleteSubjectBatchCascade = async (subjectList, professors = [], se
     await safeBatch.delete(doc(db, 'subjects', String(subject.id)));
   }
 
-  // 2. Remove from professors' specializations
+  // 2. Remove from professors' specializations and sectionSubjectMap
   for (const prof of professors) {
+    let profNeedsUpdate = false;
+    const profUpdates = {};
+
     if (prof.specialization && Array.isArray(prof.specialization)) {
       const hasMatch = prof.specialization.some(s => subjectIds.has(String(s)) || subjectCodes.has(s) || subjectNames.has(s));
       if (hasMatch) {
-        const newSpecs = prof.specialization.filter(s => !subjectIds.has(String(s)) && !subjectCodes.has(s) && !subjectNames.has(s));
-        await safeBatch.update(doc(db, 'professors', String(prof.id)), { specialization: newSpecs });
+        profUpdates.specialization = prof.specialization.filter(s => !subjectIds.has(String(s)) && !subjectCodes.has(s) && !subjectNames.has(s));
+        profNeedsUpdate = true;
       }
+    }
+
+    if (prof.sectionSubjectMap) {
+      let mapChanged = false;
+      const newMap = {};
+      for (const [secId, subs] of Object.entries(prof.sectionSubjectMap)) {
+        if (Array.isArray(subs)) {
+          const filtered = subs.filter(s => !subjectIds.has(String(s)) && !subjectCodes.has(s) && !subjectNames.has(s));
+          if (filtered.length !== subs.length) mapChanged = true;
+          if (filtered.length > 0) newMap[secId] = filtered;
+        } else {
+          newMap[secId] = subs;
+        }
+      }
+      if (mapChanged) {
+        profUpdates.sectionSubjectMap = newMap;
+        profNeedsUpdate = true;
+      }
+    }
+
+    if (profNeedsUpdate) {
+      await safeBatch.update(doc(db, 'professors', String(prof.id)), profUpdates);
     }
   }
 
-  // 3. Remove from sections' subjects
+  // 3. Remove from sections' subjects and subjectInstructors
   for (const sec of sections) {
+    let secNeedsUpdate = false;
+    const secUpdates = {};
+
     if (sec.subjects && Array.isArray(sec.subjects)) {
       const hasMatch = sec.subjects.some(s => subjectIds.has(String(s)) || subjectCodes.has(s) || subjectNames.has(s));
       if (hasMatch) {
-        const newSubjs = sec.subjects.filter(s => !subjectIds.has(String(s)) && !subjectCodes.has(s) && !subjectNames.has(s));
-        await safeBatch.update(doc(db, 'sections', String(sec.id)), { subjects: newSubjs });
+        secUpdates.subjects = sec.subjects.filter(s => !subjectIds.has(String(s)) && !subjectCodes.has(s) && !subjectNames.has(s));
+        secNeedsUpdate = true;
       }
+    }
+
+    if (sec.subjectInstructors) {
+      let instructorsChanged = false;
+      const newInstructors = { ...sec.subjectInstructors };
+      for (const [subKey] of Object.entries(sec.subjectInstructors)) {
+        if (subjectIds.has(String(subKey)) || subjectCodes.has(subKey) || subjectNames.has(subKey)) {
+          delete newInstructors[subKey];
+          instructorsChanged = true;
+        }
+      }
+      if (instructorsChanged) {
+        secUpdates.subjectInstructors = newInstructors;
+        secNeedsUpdate = true;
+      }
+    }
+
+    if (secNeedsUpdate) {
+      await safeBatch.update(doc(db, 'sections', String(sec.id)), secUpdates);
     }
   }
 
@@ -230,14 +277,42 @@ export const deleteSectionBatchCascade = async (sectionList, professors = [], sc
     await safeBatch.delete(doc(db, 'sections', String(sec.id)));
   }
 
-  // 2. Remove from professors' assigned sections
+  // 2. Remove from professors' assigned sections and sectionSubjectMap
   for (const prof of professors) {
+    let profNeedsUpdate = false;
+    const profUpdates = {};
+
     if (prof.assignedSections && Array.isArray(prof.assignedSections)) {
       const hasMatch = prof.assignedSections.some(s => sectionIds.has(String(s)) || sectionNames.has(s));
       if (hasMatch) {
-        const newSecs = prof.assignedSections.filter(s => !sectionIds.has(String(s)) && !sectionNames.has(s));
-        await safeBatch.update(doc(db, 'professors', String(prof.id)), { assignedSections: newSecs });
+        profUpdates.assignedSections = prof.assignedSections.filter(s => !sectionIds.has(String(s)) && !sectionNames.has(s));
+        profNeedsUpdate = true;
       }
+    }
+
+    if (prof.sectionSubjectMap) {
+      const newMap = { ...prof.sectionSubjectMap };
+      let mapChanged = false;
+      for (const sId of sectionIds) {
+        if (newMap[sId]) {
+          delete newMap[sId];
+          mapChanged = true;
+        }
+      }
+      for (const sName of sectionNames) {
+        if (newMap[sName]) {
+          delete newMap[sName];
+          mapChanged = true;
+        }
+      }
+      if (mapChanged) {
+        profUpdates.sectionSubjectMap = newMap;
+        profNeedsUpdate = true;
+      }
+    }
+
+    if (profNeedsUpdate) {
+      await safeBatch.update(doc(db, 'professors', String(prof.id)), profUpdates);
     }
   }
 
