@@ -1,7 +1,8 @@
 /* Form Card */
 .login-card {
   position: relative;
-  background-color: #fcfbf8; /* Lighter dirty white / off-white */
+  background-color: #fcfbf8;
+  /* Lighter dirty white / off-white */
   background-image: url('/white_watermark_bg.png');
   background-blend-mode: multiply;
   background-size: cover;
@@ -13,7 +14,7 @@
   max-width: 380px;
   text-align: center;
   border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 
+  box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.08),
     0 0 80px rgba(0, 0, 0, 0.03);
 }
@@ -41,44 +42,60 @@
   margin-top: 40px;
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.7);
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   text-align: center;
 }
 
 @media (max-width: 768px) {
   .login-center-wrapper {
-    padding: 24px 16px;
+    padding: 36px 24px;
   }
+
   .login-card {
     padding: 28px 24px;
-    border-radius: 18px;
-    max-width: 400px;
+    border-radius: 26px;
+    width: 100%;
+    max-width: 370px;
   }
+
   .login-card.login-card-wide {
-    max-width: 440px;
+    max-width: 420px;
   }
 }
 
 @media (max-width: 480px) {
   .login-center-wrapper {
-    padding: 16px 12px;
+    padding: 32px 24px;
+    padding-top: max(32px, env(safe-area-inset-top, 32px));
+    padding-bottom: max(32px, env(safe-area-inset-bottom, 32px));
+    padding-left: max(24px, env(safe-area-inset-left, 24px));
+    padding-right: max(24px, env(safe-area-inset-right, 24px));
   }
+
   .login-card {
-    padding: 24px 18px;
-    border-radius: 14px;
+    padding: 24px 20px;
+    border-radius: 26px;
     width: 100%;
-    max-width: none;
+    max-width: 335px;
+    margin: 0 auto;
+    box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.22),
+    0 0 0 1px rgba(255, 255, 255, 0.18);
   }
+
   .login-card.login-card-wide {
-    max-width: none;
+    max-width: 355px;
   }
+
   .signup-row {
     flex-direction: column;
     gap: 0;
   }
+
   .signup-row .input-group {
     margin-bottom: 14px !important;
   }
+
   .login-logo {
     width: 64px;
     height: 64px;
@@ -86,36 +103,55 @@
     object-fit: cover;
     border: 3px solid white;
     box-shadow: 0 6px 24px rgba(86, 69, 238, 0.2),
-                0 0 0 6px rgba(86, 69, 238, 0.12);
+      0 0 0 6px rgba(86, 69, 238, 0.12);
     margin-bottom: 10px;
   }
+
   .login-system-title {
     font-size: 1.05rem;
   }
+
   .login-school-name {
     font-size: 0.75rem;
   }
+
   .login-card-title {
     font-size: 1.15rem;
   }
+
   .login-card-subtitle {
     font-size: 0.8rem;
     margin-bottom: 16px;
   }
+
   .input-group label {
     font-size: 0.75rem;
     margin-bottom: 4px;
   }
-  .input-group input, 
+
+  .input-group input,
   .input-group select {
     padding: 8px 10px;
     font-size: 0.82rem;
     border-radius: 8px;
   }
+
   .btn-login {
     padding: 10px 14px;
     font-size: 0.85rem;
     border-radius: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .login-center-wrapper {
+    padding: 20px 16px;
+  }
+
+  .login-card {
+    padding: 20px 14px;
+    border-radius: 22px;
+    max-width: 295px;
   }
 }
 
@@ -634,10 +670,25 @@
     padding: 10px 12px;
   }
 
-  .login-orb-1 { width: 200px; height: 200px; }
-  .login-orb-2 { width: 180px; height: 180px; }
-  .login-orb-3 { width: 120px; height: 120px; }
-  .login-orb-4 { width: 100px; height: 100px; }
+  .login-orb-1 {
+    width: 200px;
+    height: 200px;
+  }
+
+  .login-orb-2 {
+    width: 180px;
+    height: 180px;
+  }
+
+  .login-orb-3 {
+    width: 120px;
+    height: 120px;
+  }
+
+  .login-orb-4 {
+    width: 100px;
+    height: 100px;
+  }
 }
 
 /* =============================================
@@ -785,7 +836,7 @@
 
 .modal-content {
   background-color: rgba(255, 255, 255, 0.98);
-  background-image: 
+  background-image:
     linear-gradient(rgba(86, 69, 238, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(86, 69, 238, 0.03) 1px, transparent 1px),
     linear-gradient(rgba(86, 69, 238, 0.015) 1px, transparent 1px),
@@ -1115,7 +1166,8 @@
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    padding: 16px 14px 90px 14px !important; /* 90px bottom padding for the BottomNav */
+    padding: 16px 14px 90px 14px !important;
+    /* 90px bottom padding for the BottomNav */
     overflow-x: hidden !important;
   }
 
@@ -1130,7 +1182,7 @@
   header h1 {
     font-size: 1.3rem !important;
   }
-  
+
   header p {
     font-size: 0.7rem !important;
   }
@@ -1147,15 +1199,17 @@
     border-radius: 10px !important;
   }
 
-  .kpi-tile > div > div:first-child {
-    font-size: 1.4rem !important; /* The value number */
+  .kpi-tile>div>div:first-child {
+    font-size: 1.4rem !important;
+    /* The value number */
   }
 
-  .kpi-tile > div > div:last-child {
-    font-size: 0.7rem !important; /* The label */
+  .kpi-tile>div>div:last-child {
+    font-size: 0.7rem !important;
+    /* The label */
   }
 
-  .data-table th, 
+  .data-table th,
   .data-table td {
     padding: 10px 12px !important;
     font-size: 0.8rem !important;
@@ -1164,7 +1218,8 @@
 
 
   .modal-overlay {
-    padding-bottom: 85px !important; /* Space for the bottom nav bar */
+    padding-bottom: 85px !important;
+    /* Space for the bottom nav bar */
   }
 
   .modal-content {
@@ -1206,6 +1261,7 @@
   background: rgba(255, 255, 255, 0.98) !important;
   width: 340px !important;
 }
+
 .swal2-title.minimal-title {
   font-size: 1.15rem !important;
   font-weight: 700 !important;
@@ -1213,16 +1269,19 @@
   margin-bottom: 8px !important;
   padding: 0 !important;
 }
+
 .swal2-html-container.minimal-text {
   font-size: 0.9rem !important;
   color: var(--text-muted) !important;
   margin-bottom: 24px !important;
   padding: 0 !important;
 }
+
 .swal2-actions.minimal-actions {
   gap: 12px !important;
   margin-top: 0 !important;
 }
+
 .swal2-popup.minimal-toast {
   border-radius: 8px;
   padding: 12px 20px;
@@ -1342,10 +1401,12 @@
   }
 
   .main-content {
-    padding-bottom: 65px; /* Space for compact bottom nav */
+    padding-bottom: 65px;
+    /* Space for compact bottom nav */
   }
 
-  .mobile-menu-btn, .sidebar-toggle-btn {
+  .mobile-menu-btn,
+  .sidebar-toggle-btn {
     display: none !important;
   }
 }
