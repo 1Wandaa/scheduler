@@ -302,6 +302,7 @@ const Dashboard = ({ user, onLogout }) => {
       schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear, hours, component }
     }),
     clearAllSchedules: handleClearAllSchedules,
+    removeSchedulesBatch: handleRemoveSchedulesBatch,
     addSchedulesBatch: (schedules, scheduleMode, options) => handleAddSchedulesBatch(schedules, scheduleMode, options),
     autoScheduleForSection: (sectionId, constraints, options) =>
       autoScheduleForSection(sectionId, schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
@@ -850,7 +851,7 @@ const Dashboard = ({ user, onLogout }) => {
               {!isMobile && (
                 <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} onLogHistory={handleLogHistory} validator={validator} activeSemester={activeSemester} activeSchedules={enrichedSchedules} />
               )}
-              <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} onAutoSchedule={handleAddSchedule} onAutoScheduleBatch={handleAddSchedulesBatch} onLogHistory={handleLogHistory} />
+              <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onNavigateTab={setActiveTab} onAutoSchedule={handleAddSchedule} onAutoScheduleBatch={handleAddSchedulesBatch} onLogHistory={handleLogHistory} />
             </div>
           )}
           {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}

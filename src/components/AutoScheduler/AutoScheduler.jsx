@@ -1,21 +1,56 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Calendar,
+  Copy,
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Search,
+  ArrowRight,
+  RotateCcw,
+  SlidersHorizontal,
+  ShieldCheck,
+  Info,
+  Clock,
+  X,
+  Play,
+  RefreshCw,
+  Square,
+  Trash2
+} from 'lucide-react';
 import { suggestProfessorMatches } from '../../utils/scheduleAI';
 import { TIME_SLOTS, DAYS, SCHEDULE_MODES } from '../../config/constants';
-import { getMeetingTimeLabel } from '../../utils/scheduleUtils';
+import {
+  getMeetingTimeLabel,
+  professorMatchesSubject,
+  getEligibleProfessors,
+  isRoomAllowedFor
+} from '../../utils/scheduleUtils';
 import '../../styles/AutoScheduler.css';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import CustomSelect from '../CustomSelect/CustomSelect';
 
-// 1. ADDED 'schedules', 'onLogHistory', and 'onAutoScheduleBatch' to the props list
-function AutoScheduler({ validator, subjects, sections, professors, rooms, schedules, activeSemester, onLogHistory }) {
+function AutoScheduler({
+  validator,
+  subjects,
+  sections,
+  professors,
+  rooms,
+  schedules = [],
+  activeSemester,
+  activeSchoolYear,
+  onNavigateTab,
+  onLogHistory
+}) {
   const navigate = useNavigate();
   const { confirm } = useGlobalDialog();
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [result, setResult] = useState(null);
   const [progress, setProgress] = useState({ percent: 0, placed: 0, total: 0, pass: 0 });
+  const [resultFilter, setResultFilter] = useState('');
   const abortRef = useRef(null);
   const progressRef = useRef(null);
 
@@ -23,21 +58,22 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
   const [targetId, setTargetId] = useState('');
   const [scheduleMode, setScheduleMode] = useState(SCHEDULE_MODES.STANDARD);
 
-  // Constraints
+  // Scheduling Constraints
   const [respectLabs, setRespectLabs] = useState(true);
   const [preventDoubleBooking, setPreventDoubleBooking] = useState(true);
   const [aiAssisted, setAiAssisted] = useState(true);
   const [aiStatus, setAiStatus] = useState('');
-  const [, setAiInsights] = useState(null);
 
   const runTargetedRef = useRef(null);
 
   // Listen for custom events to change engine mode from mobile Speed Dial
-  React.useEffect(() => {
+  useEffect(() => {
     const handleModeChange = (e) => {
       if (e.detail) {
         setEngineMode(e.detail);
         setTargetId('');
+        setResult(null);
+        setResultFilter('');
       }
     };
     const handleExecuteEvent = (e) => {
@@ -47,6 +83,8 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         const newTargetId = isFull ? '' : (e.detail.targetId || '');
         setEngineMode(newMode);
         setTargetId(newTargetId);
+        setResult(null);
+        setResultFilter('');
         runTargetedRef.current?.({ mode: newMode, targetId: newTargetId });
       }
     };
@@ -58,14 +96,52 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     };
   }, []);
 
-  // Only consider subjects that match the currently selected active semester
-  const activeSemesterSubjects = subjects.filter(sub => !sub.semester || sub.semester === 'Both' || sub.semester === activeSemester);
+  // Filter subjects for the active semester
+  const activeSemesterSubjects = useMemo(() => {
+    return (subjects || []).filter(sub => !sub.semester || sub.semester === 'Both' || sub.semester === activeSemester);
+  }, [subjects, activeSemester]);
 
-  // CLEAR ALL SCHEDULES (Independent action)
+  const activeSubjectIdSet = useMemo(() => {
+    return new Set(activeSemesterSubjects.flatMap(s => [String(s.id), s.code]).filter(Boolean));
+  }, [activeSemesterSubjects]);
+
+  const targetName = useMemo(() => {
+    if (!targetId || engineMode === 'full') return '';
+    if (engineMode === 'faculty') return professors?.find(p => String(p.id) === String(targetId))?.name || 'Selected Faculty';
+    if (engineMode === 'section') return sections?.find(s => String(s.id) === String(targetId))?.name || 'Selected Section';
+    if (engineMode === 'room') return rooms?.find(r => String(r.id) === String(targetId))?.name || 'Selected Room';
+    return '';
+  }, [engineMode, targetId, professors, sections, rooms]);
+
+  const targetSchedules = useMemo(() => {
+    if (engineMode === 'full' || !targetId || !schedules?.length) return [];
+    if (engineMode === 'section') {
+      return schedules.filter(s => String(s.section?.id) === String(targetId) || String(s.section) === String(targetId));
+    }
+    if (engineMode === 'faculty') {
+      return schedules.filter(s => String(s.professor?.id) === String(targetId) || String(s.professor) === String(targetId));
+    }
+    if (engineMode === 'room') {
+      return schedules.filter(s => String(s.room?.id) === String(targetId) || String(s.room) === String(targetId));
+    }
+    return [];
+  }, [engineMode, targetId, schedules]);
+
+  const handleNavigateView = (tab) => {
+    if (onNavigateTab) {
+      onNavigateTab(tab);
+    } else {
+      navigate(`/dashboard/${tab}`);
+      window.dispatchEvent(new CustomEvent('change-tab', { detail: tab }));
+    }
+  };
+
+  // CLEAR ALL SCHEDULES for the active semester
   const handleClearAll = async () => {
+    const termLabel = `${activeSemester || 'Active Term'}${activeSchoolYear ? ` (${activeSchoolYear})` : ''}`;
     const isConfirmed = await confirm({
       title: 'Clear All Schedules?',
-      text: "⚠️ This will permanently delete ALL scheduled classes. Are you sure you want to proceed?",
+      text: `Are you sure you want to delete all schedules for ${termLabel}? This cannot be undone.`,
       icon: 'warning',
       confirmButtonText: 'Yes, Clear All',
       isDestructive: true
@@ -77,9 +153,8 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     try {
       await validator.clearAllSchedules();
       setResult(null);
-      setAiInsights(null);
       setAiStatus('');
-      toast.success('All schedules have been removed.');
+      toast.success(`Removed all schedules for ${termLabel}.`);
     } catch (e) {
       console.error('Failed to clear schedules:', e);
       toast.error('Failed to clear schedules.');
@@ -87,53 +162,85 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     setClearing(false);
   };
 
-  // Cancel handler
+  // CLEAR TARGET SCHEDULES ONLY
+  const handleClearTarget = async () => {
+    if (!targetSchedules.length || !validator.removeSchedulesBatch) return;
+    const isConfirmed = await confirm({
+      title: `Clear ${targetName} Schedules?`,
+      text: `Delete all ${targetSchedules.length} schedules for ${targetName}? Other schedules will remain untouched.`,
+      icon: 'warning',
+      confirmButtonText: `Delete ${targetSchedules.length} Classes`,
+      isDestructive: true
+    });
+
+    if (!isConfirmed) return;
+
+    setClearing(true);
+    try {
+      const ids = targetSchedules.map(s => s.id);
+      const res = await validator.removeSchedulesBatch(ids);
+      if (res?.ok === false) {
+        toast.error(`Failed to clear schedules for ${targetName}.`);
+      } else {
+        toast.success(`Removed ${ids.length} schedules for ${targetName}.`);
+        setResult(null);
+      }
+    } catch (e) {
+      console.error('Failed to clear target schedules:', e);
+      toast.error('Error clearing target schedules.');
+    }
+    setClearing(false);
+  };
+
+  // Cancel execution
   const handleCancel = () => {
     if (abortRef.current) {
       abortRef.current.abort();
     }
-    setResult({ schedule: [], unscheduled: [], prescriptions: [], error: 'Cancelled by user.', mode: engineMode });
+    setResult({ schedule: [], unscheduled: [], prescriptions: [], error: 'Scheduling stopped by user.', mode: engineMode });
     setLoading(false);
     setAiStatus('');
     setProgress({ percent: 0, placed: 0, total: 0, pass: 0 });
   };
 
-  // Run the Targeted Heuristic Engine (Greedy)
+  // Run the Allocation Engine
   const runTargeted = async (overrideParams = null) => {
     const activeEngineMode = overrideParams?.mode || engineMode;
     const activeTargetId = overrideParams?.targetId !== undefined ? overrideParams.targetId : targetId;
+
+    if (activeEngineMode !== 'full' && !activeTargetId) {
+      toast.error(`Please select a ${activeEngineMode} first.`);
+      return;
+    }
 
     const controller = new AbortController();
     abortRef.current = controller;
     setLoading(true);
     setResult(null);
     setProgress({ percent: 0, placed: 0, total: 0, pass: 0 });
-    setAiInsights(null);
     setAiStatus('');
     setTimeout(() => progressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+
     try {
-      // AI pre-processing: build professor-subject match map
       let aiProfessorMap = null;
       if (aiAssisted) {
         try {
-          setAiStatus('🧠 AI analyzing professor-subject compatibility...');
+          setAiStatus('Matching professors with subjects...');
           aiProfessorMap = await suggestProfessorMatches(professors, activeSemesterSubjects, sections, schedules);
-          // Check if cancelled during AI call
           if (controller.signal.aborted) return;
-          
+
           if (aiProfessorMap) {
-            setAiStatus('✅ AI matching complete — starting targeted engine with optimized assignments');
+            setAiStatus('Matching complete. Scheduling classes...');
           } else {
-            setAiStatus('⚠️ AI matching returned no results — using default matching');
+            setAiStatus('Scheduling classes...');
           }
         } catch (aiError) {
           if (controller.signal.aborted) return;
-          console.warn('[AI] Pre-processing failed:', aiError);
-          setAiStatus('⚠️ AI unavailable — using default matching');
+          console.warn('[AutoScheduler] Pre-processing fallback to standard matching:', aiError);
+          setAiStatus('Scheduling classes...');
         }
       }
 
-      // Check again before starting scheduler
       if (controller.signal.aborted) return;
 
       const constraints = { respectLabs, preventDoubleBooking, aiProfessorMap, scheduleMode, aiAssisted };
@@ -141,67 +248,136 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         onProgress: (p) => setProgress(p),
         signal: controller.signal,
       };
+
       let r = null;
+      if (activeEngineMode === 'full') {
+        r = await validator.autoScheduleFull(constraints, schedulerOptions);
+      } else if (activeEngineMode === 'faculty') {
+        r = await validator.autoScheduleForFaculty(activeTargetId, constraints, schedulerOptions);
+      } else if (activeEngineMode === 'room') {
+        r = await validator.autoScheduleForRoom(activeTargetId, constraints, schedulerOptions);
+      } else if (activeEngineMode === 'section') {
+        r = await validator.autoScheduleForSection(activeTargetId, constraints, schedulerOptions);
+      } else {
+        throw new Error('Invalid mode selected.');
+      }
 
-      if (activeEngineMode === 'full') r = await validator.autoScheduleFull(constraints, schedulerOptions);
-      else if (activeEngineMode === 'faculty') r = await validator.autoScheduleForFaculty(activeTargetId, constraints, schedulerOptions);
-      else if (activeEngineMode === 'room') r = await validator.autoScheduleForRoom(activeTargetId, constraints, schedulerOptions);
-      else if (activeEngineMode === 'section') r = await validator.autoScheduleForSection(activeTargetId, constraints, schedulerOptions);
-      else throw new Error('Invalid mode selected.');
+      if (controller.signal.aborted) return;
 
-      const unscheduledResults = r.unscheduled || [];
+      const rawPlaced = r?.results || [];
+      const unscheduledResults = r?.unscheduled || [];
 
-      setResult({
-        schedule: r.results || [],
-        unscheduled: unscheduledResults,
-        prescriptions: [],
-        error: r.error || null,
-        mode: activeEngineMode
-      });
+      if (rawPlaced.length > 0) {
+        setAiStatus('Saving schedules...');
+        const batchResult = await validator.addSchedulesBatch(rawPlaced, scheduleMode, { respectLabs });
 
-      if (r.results && r.results.length > 0) {
-        setAiStatus('💾 Saving schedules to database...');
-        const batchResult = await validator.addSchedulesBatch(r.results, scheduleMode, { respectLabs });
-        if (!batchResult.ok) {
-          toast.error('Failed to save some schedules to the database.');
-          console.error('Batch save error:', batchResult.errors);
+        if (!batchResult?.ok) {
+          const saveErrMsg = Array.isArray(batchResult?.errors)
+            ? batchResult.errors.join('; ')
+            : (batchResult?.errors || 'Database write rejected');
+          console.error('Batch save error:', batchResult?.errors);
+          toast.error('Could not save schedules to the database.');
+
+          setResult({
+            schedule: [],
+            unscheduled: [
+              ...unscheduledResults,
+              ...rawPlaced.map(s => ({
+                subject: s.subject,
+                section: s.section,
+                reason: `Save error: ${saveErrMsg}`
+              }))
+            ],
+            prescriptions: [],
+            error: `Failed to save: ${saveErrMsg}`,
+            mode: activeEngineMode
+          });
+          setAiStatus('Could not save schedules. Please check errors below.');
         } else {
-          toast.success(`Successfully saved ${batchResult.writtenCount} schedules.`, {
+          const writtenCount = batchResult.writtenCount ?? rawPlaced.length;
+          const savedSchedules = rawPlaced.slice(0, writtenCount);
+          const rejectedBatch = rawPlaced.slice(writtenCount).map((s, idx) => ({
+            subject: s.subject,
+            section: s.section,
+            reason: batchResult.errors?.[idx] || 'Not saved due to conflict'
+          }));
+
+          const finalUnscheduled = [...unscheduledResults, ...rejectedBatch];
+
+          setResult({
+            schedule: savedSchedules,
+            unscheduled: finalUnscheduled,
+            prescriptions: [],
+            error: r.error || null,
+            mode: activeEngineMode
+          });
+
+          toast.success(`Saved ${writtenCount} schedule${writtenCount > 1 ? 's' : ''}!`, {
             action: {
-              label: 'View Schedules',
+              label: 'View Timetable',
               onClick: () => {
                 navigate('/dashboard/view-schedules');
                 window.dispatchEvent(new CustomEvent('change-tab', { detail: 'view-schedules' }));
               }
             }
           });
+
+          if (finalUnscheduled.length === 0) {
+            setAiStatus('All classes scheduled successfully!');
+          } else {
+            setAiStatus(`Done. ${finalUnscheduled.length} class${finalUnscheduled.length > 1 ? 'es' : ''} could not be scheduled.`);
+          }
+
+          if (onLogHistory) {
+            onLogHistory({
+              engineMode: activeEngineMode,
+              totalAttempted: rawPlaced.length + unscheduledResults.length,
+              successCount: writtenCount,
+              errorCount: finalUnscheduled.length,
+              errors: finalUnscheduled.map(u => ({
+                subject: u.subject?.code || u.subject?.name || 'Unknown',
+                section: u.section?.name || 'Unknown',
+                reason: u.reason || 'No open slot or conflict',
+                details: u.details || null
+              }))
+            });
+          }
+        }
+      } else {
+        setResult({
+          schedule: [],
+          unscheduled: unscheduledResults,
+          prescriptions: [],
+          error: r.error || (unscheduledResults.length > 0 ? null : 'No classes found to schedule.'),
+          mode: activeEngineMode
+        });
+
+        if (unscheduledResults.length > 0) {
+          setAiStatus(`${unscheduledResults.length} class${unscheduledResults.length > 1 ? 'es' : ''} could not be scheduled. See details below.`);
+        } else {
+          setAiStatus('No classes found for this selection.');
+        }
+
+        if (onLogHistory && unscheduledResults.length > 0) {
+          onLogHistory({
+            engineMode: activeEngineMode,
+            totalAttempted: unscheduledResults.length,
+            successCount: 0,
+            errorCount: unscheduledResults.length,
+            errors: unscheduledResults.map(u => ({
+              subject: u.subject?.code || u.subject?.name || 'Unknown',
+              section: u.section?.name || 'Unknown',
+              reason: u.reason || 'No open slot or conflict',
+              details: u.details || null
+            }))
+          });
         }
       }
-
-      if (aiAssisted && unscheduledResults.length === 0) {
-        setAiStatus('✅ All classes scheduled successfully');
-      } else if (aiAssisted) {
-        setAiStatus('⚠️ Auto-scheduler completed with some conflicts. Review the results below.');
-      }
-
-      if (onLogHistory) {
-        onLogHistory({
-          engineMode: activeEngineMode,
-          totalAttempted: (r.results || []).length + unscheduledResults.length,
-          successCount: (r.results || []).length,
-          errorCount: unscheduledResults.length,
-          errors: unscheduledResults.map(u => ({
-            subject: u.subject?.code || u.subject?.name || 'Unknown',
-            section: u.section?.name || 'Unknown',
-            reason: u.reason || 'Insufficient slots or conflict',
-            details: u.details || null
-          }))
-        });
-      }
-
     } catch (e) {
       if (!controller.signal.aborted) {
+        console.error('[AutoScheduler] Engine run failed:', e);
         setResult({ schedule: [], unscheduled: [], prescriptions: [], error: e.message, mode: activeEngineMode });
+        setAiStatus('Scheduling failed. Please try again.');
       }
     } finally {
       if (!controller.signal.aborted) {
@@ -219,7 +395,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     runTargeted();
   };
 
-  const targetOptions = React.useMemo(() => {
+  const targetOptions = useMemo(() => {
     if (engineMode === 'faculty') {
       return (professors || [])
         .slice()
@@ -232,7 +408,7 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
     if (engineMode === 'room') {
       return Object.entries(
         (rooms || []).reduce((acc, r) => {
-          const b = r.building || 'Other';
+          const b = r.building || 'General Classrooms';
           if (!acc[b]) acc[b] = [];
           acc[b].push(r);
           return acc;
@@ -256,54 +432,247 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }))
         .map(s => ({
           value: s.id,
-          label: s.department ? `${s.name} (${s.department})` : s.name
+          label: (s.department || s.program) ? `${s.name} (${s.department || s.program})` : s.name
         }));
     }
     return [];
   }, [engineMode, professors, rooms, sections]);
 
   const targetPlaceholder =
-    engineMode === 'faculty' ? 'Search or select faculty...' :
-    engineMode === 'room' ? 'Search or select room...' :
-    engineMode === 'section' ? 'Search or select section...' :
-    'Choose...';
+    engineMode === 'faculty' ? 'Choose faculty...' :
+    engineMode === 'room' ? 'Choose room...' :
+    engineMode === 'section' ? 'Choose section...' :
+    'Select target...';
 
-  // Group schedules by Day for cleaner UI
-  const groupedSchedule = result?.schedule?.reduce((acc, curr) => {
-    if (!acc[curr.day]) acc[curr.day] = [];
-    acc[curr.day].push(curr);
-    return acc;
-  }, {}) || {};
+  // Mode-dependent preflight summary
+  const preflightStats = useMemo(() => {
+    if (engineMode === 'section') {
+      if (!targetId) {
+        return {
+          isReady: false,
+          totalSubs: 0,
+          label: 'Select a section to see required subjects.'
+        };
+      }
+      const sec = sections?.find(s => String(s.id) === String(targetId));
+      const matchingSubs = (sec?.subjects || []).filter(subRef => activeSubjectIdSet.has(String(subRef)));
+      return {
+        isReady: true,
+        totalSubs: matchingSubs.length,
+        label: `${matchingSubs.length} subjects for ${sec?.name || 'Section'} (${activeSemester})`
+      };
+    }
+
+    if (engineMode === 'faculty') {
+      if (!targetId) {
+        return {
+          isReady: false,
+          totalSubs: 0,
+          label: 'Select a faculty member to see eligible classes.'
+        };
+      }
+      const prof = professors?.find(p => String(p.id) === String(targetId));
+      let count = 0;
+      (sections || []).forEach(sec => {
+        (sec.subjects || []).forEach(subRef => {
+          if (!activeSubjectIdSet.has(String(subRef))) return;
+          const sub = (subjects || []).find(s => String(s.id) === String(subRef) || s.code === subRef);
+          if (sub && professorMatchesSubject(prof, sub)) {
+            const eligible = getEligibleProfessors(professors, sub, sec);
+            if (eligible.some(p => String(p.id) === String(prof.id))) {
+              count++;
+            }
+          }
+        });
+      });
+      return {
+        isReady: true,
+        totalSubs: count,
+        label: `${count} classes available for ${prof?.name || 'Faculty'} (${activeSemester})`
+      };
+    }
+
+    if (engineMode === 'room') {
+      if (!targetId) {
+        return {
+          isReady: false,
+          totalSubs: 0,
+          label: 'Select a room to see compatible classes.'
+        };
+      }
+      const room = rooms?.find(r => String(r.id) === String(targetId));
+      let count = 0;
+      (sections || []).forEach(sec => {
+        (sec.subjects || []).forEach(subRef => {
+          if (!activeSubjectIdSet.has(String(subRef))) return;
+          const sub = (subjects || []).find(s => String(s.id) === String(subRef) || s.code === subRef);
+          if (!sub) return;
+          if (respectLabs) {
+            if (sub.requiredLab && !room?.hasComputers) return;
+            if (sub.isFoodLab && !room?.isFoodLab) return;
+          }
+          if (isRoomAllowedFor(room, sub, sec)) {
+            count++;
+          }
+        });
+      });
+      return {
+        isReady: true,
+        totalSubs: count,
+        label: `${count} classes fit in ${room?.name || 'Room'} (${activeSemester})`
+      };
+    }
+
+    // Full engine mode
+    let totalSubs = 0;
+    (sections || []).forEach(sec => {
+      const matching = (sec.subjects || []).filter(subRef => activeSubjectIdSet.has(String(subRef)));
+      totalSubs += matching.length;
+    });
+    return {
+      isReady: true,
+      totalSubs,
+      label: `${totalSubs} subjects across ${(sections || []).length} sections (${activeSemester})`
+    };
+  }, [engineMode, targetId, sections, subjects, professors, rooms, activeSubjectIdSet, activeSemester, respectLabs]);
+
+  const resultStats = useMemo(() => {
+    if (!result) return null;
+    const placed = result.schedule?.length || 0;
+    const unplaced = result.unscheduled?.length || 0;
+    const total = placed + unplaced;
+    const successRate = total > 0 ? Math.round((placed / total) * 100) : 0;
+    const uniqueRooms = new Set(result.schedule.map(s => s.room?.id).filter(Boolean)).size;
+    const uniqueProfs = new Set(result.schedule.map(s => s.professor?.id).filter(Boolean)).size;
+    return { placed, unplaced, total, successRate, uniqueRooms, uniqueProfs };
+  }, [result]);
+
+  const filteredGroupedSchedule = useMemo(() => {
+    if (!result?.schedule?.length) return {};
+    const q = resultFilter.trim().toLowerCase();
+    const map = {};
+    for (const curr of result.schedule) {
+      if (q) {
+        const matchesSub = (curr.subject?.code || '').toLowerCase().includes(q) || (curr.subject?.name || '').toLowerCase().includes(q);
+        const matchesSec = (curr.section?.name || '').toLowerCase().includes(q);
+        const matchesProf = (curr.professor?.name || '').toLowerCase().includes(q);
+        const matchesRoom = (curr.room?.name || '').toLowerCase().includes(q);
+        if (!matchesSub && !matchesSec && !matchesProf && !matchesRoom) continue;
+      }
+      if (!map[curr.day]) map[curr.day] = [];
+      map[curr.day].push(curr);
+    }
+    return map;
+  }, [result?.schedule, resultFilter]);
+
+  const hasFilteredClasses = useMemo(() => {
+    return Object.values(filteredGroupedSchedule).some(arr => arr && arr.length > 0);
+  }, [filteredGroupedSchedule]);
+
+  const dataIssues = useMemo(() => {
+    return (result?.unscheduled || []).filter(u => {
+      const r = (u.reason || '').toLowerCase();
+      return r.includes('no faculty') || r.includes('not eligible') || r.includes('no computer lab') || r.includes('no food lab') || r.includes('no available');
+    });
+  }, [result?.unscheduled]);
+
+  const slotConflicts = useMemo(() => {
+    return (result?.unscheduled || []).filter(u => {
+      const r = (u.reason || '').toLowerCase();
+      return !(r.includes('no faculty') || r.includes('not eligible') || r.includes('no computer lab') || r.includes('no food lab') || r.includes('no available'));
+    });
+  }, [result?.unscheduled]);
+
+  const handleCopyConflictReport = async () => {
+    if (!result?.unscheduled?.length) return;
+    const lines = [
+      `=== SCHEDULE CONFLICT REPORT ===`,
+      `Term: ${activeSemester || ''} ${activeSchoolYear || ''}`,
+      `Mode: ${result.mode || engineMode}`,
+      `Date: ${new Date().toLocaleString()}`,
+      `Summary: Placed ${result.schedule?.length || 0} | Unscheduled ${result.unscheduled.length}`,
+      ``,
+      `UNSCHEDULED CLASSES (${result.unscheduled.length}):`
+    ];
+    result.unscheduled.forEach((u, i) => {
+      lines.push(`${i + 1}. ${u.subject?.code || u.subject?.name || 'Subject'} (${u.section?.name || 'Section'})`);
+      lines.push(`   Reason: ${u.reason || 'No open slot'}`);
+      if (u.details?.suggestion) lines.push(`   Fix: ${u.details.suggestion}`);
+    });
+
+    const reportText = lines.join('\n');
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(reportText);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = reportText;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+      }
+      toast.success('Conflict report copied to clipboard.');
+    } catch (err) {
+      console.error('Clipboard copy error:', err);
+      toast.error('Could not copy report to clipboard.');
+    }
+  };
 
   return (
-    <div className="card" style={{ overflow: 'visible' }}>
-      <div style={{ marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '15px' }}>
-        <h2 style={{ margin: '0 0 5px 0', color: 'var(--accent-dark)' }}>Smart Auto-Scheduler</h2>
-        <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Generate conflict-free timetables automatically.</p>
+    <div className="card autosched-container" style={{ overflow: 'visible' }}>
+      {/* Header */}
+      <div className="autosched-header">
+        <div className="autosched-header-title">
+          <SlidersHorizontal size={20} className="autosched-header-icon" />
+          <div>
+            <h2>Auto Scheduler</h2>
+            <p>Generate class schedules automatically without conflicts.</p>
+          </div>
+        </div>
+        <div className="autosched-term-badge">
+          <Calendar size={13} />
+          <span>{activeSemester || 'Active Term'}{activeSchoolYear ? ` • ${activeSchoolYear}` : ''}</span>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px' }}>
-        <div className="form-group">
-          <label className="form-label">Engine Mode</label>
+      {/* Scope / Engine Mode Selection */}
+      <div className="autosched-form-row">
+        <div className="form-group" style={{ flex: '1 1 240px' }}>
+          <label className="form-label">Schedule By</label>
           <select
             className="form-select"
             value={engineMode}
-            onChange={(e) => { setEngineMode(e.target.value); setTargetId(''); }}
+            onChange={(e) => {
+              setEngineMode(e.target.value);
+              setTargetId('');
+              setResult(null);
+              setResultFilter('');
+            }}
           >
-            <option value="full">Full Timetable</option>
+            <option value="full">All Sections</option>
+            <option value="section">By Section</option>
             <option value="faculty">By Faculty</option>
             <option value="room">By Room</option>
-            <option value="section">By Section</option>
           </select>
         </div>
 
         {engineMode !== 'full' && (
-          <div className="form-group">
-            <label className="form-label">Select Target</label>
+          <div className="form-group" style={{ flex: '2 1 320px' }}>
+            <label className="form-label">
+              Select {engineMode === 'faculty' ? 'Faculty' : engineMode === 'room' ? 'Room' : 'Section'}
+            </label>
             <CustomSelect
               name="targetId"
               value={targetId}
-              onChange={(e) => setTargetId(e.target.value)}
+              onChange={(e) => {
+                setTargetId(e.target.value);
+                setResult(null);
+              }}
               placeholder={targetPlaceholder}
               options={targetOptions}
             />
@@ -311,213 +680,334 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
         )}
       </div>
 
-      <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: 'var(--table-header)', borderRadius: '8px' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', cursor: 'pointer' }}>
-          <input type="checkbox" checked={preventDoubleBooking} onChange={(e) => setPreventDoubleBooking(e.target.checked)} />
-          Strict Non-Overlap (Faculty, Room, Section)
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', cursor: 'pointer' }}>
-          <input type="checkbox" checked={respectLabs} onChange={(e) => setRespectLabs(e.target.checked)} />
-          Enforce Lab Requirements (Computer & Food)
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', color: 'var(--accent-primary)' }}>
-          <input type="checkbox" checked={aiAssisted} onChange={(e) => setAiAssisted(e.target.checked)} />
-          <strong>🧠 AI-Assisted Mode</strong>
-          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '400' }}>— Gemini optimizes professor matching & generates prescriptions</span>
-        </label>
+      {/* Scheduling Rules */}
+      <div className="autosched-constraints-panel">
+        <div className="autosched-constraints-title">
+          <ShieldCheck size={16} />
+          <span>Scheduling Rules</span>
+        </div>
+        <div className="autosched-constraints-grid">
+          <label className="autosched-constraint-item">
+            <input
+              type="checkbox"
+              checked={preventDoubleBooking}
+              onChange={(e) => setPreventDoubleBooking(e.target.checked)}
+            />
+            <div>
+              <strong>Prevent Double Booking</strong>
+              <span>Avoid overlapping times for rooms, faculty, and sections</span>
+            </div>
+          </label>
+
+          <label className="autosched-constraint-item">
+            <input
+              type="checkbox"
+              checked={respectLabs}
+              onChange={(e) => setRespectLabs(e.target.checked)}
+            />
+            <div>
+              <strong>Match Lab Rooms</strong>
+              <span>Assign lab subjects to computer or food labs</span>
+            </div>
+          </label>
+
+          <label className="autosched-constraint-item">
+            <input
+              type="checkbox"
+              checked={aiAssisted}
+              onChange={(e) => setAiAssisted(e.target.checked)}
+            />
+            <div>
+              <strong>Smart Professor Matching</strong>
+              <span>Match professors based on their subjects and load limits</span>
+            </div>
+          </label>
+        </div>
       </div>
 
-      {/* Schedule Mode Selector */}
-      <div style={{ marginBottom: '32px' }}>
-        <label className="form-label" style={{ marginBottom: '12px', display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Class Schedule Type</label>
-        
-        {/* Ultra-Minimalist Segmented Control (Themed) */}
+      {/* Schedule Type (5-Day vs 4-Day) */}
+      <div className="autosched-schedule-type-section">
+        <label className="autosched-section-label">Schedule Type</label>
         <div className="segmented-control">
           <button
             type="button"
             onClick={() => setScheduleMode(SCHEDULE_MODES.STANDARD)}
             className={`segmented-btn ${scheduleMode === SCHEDULE_MODES.STANDARD ? 'active' : ''}`}
           >
-            5-Day Standard
+            5-Day (Mon–Fri)
           </button>
-
           <button
             type="button"
             onClick={() => setScheduleMode(SCHEDULE_MODES.FOUR_DAY)}
             className={`segmented-btn ${scheduleMode === SCHEDULE_MODES.FOUR_DAY ? 'active' : ''}`}
           >
-            4-Day Accelerated
+            4-Day (Mon–Thu)
           </button>
         </div>
 
-        {/* Minimalist Info Callouts (Themed) */}
-        <div style={{ marginTop: '16px', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.6', maxWidth: '600px' }}>
+        <div className="autosched-schedule-callout">
+          <Clock size={14} className="text-muted" style={{ flexShrink: 0, marginTop: '2px' }} />
           {scheduleMode === SCHEDULE_MODES.FOUR_DAY ? (
-            <p style={{ margin: 0 }}>
-              <strong style={{ color: 'var(--text-main)', fontWeight: 600 }}>Monday–Thursday</strong> only.<br/>
-              Morning: 7:00 AM – 11:30 AM <span style={{ opacity: 0.5 }}>|</span> Lunch: 11:30 AM – 12:30 PM <span style={{ opacity: 0.5 }}>|</span> Afternoon: 12:30 PM – 6:00 PM
+            <p>
+              <strong>Mon–Thu:</strong> Morning (7:00 AM – 11:30 AM), Lunch (11:30 AM – 12:30 PM), Afternoon (12:30 PM – 6:00 PM).
             </p>
           ) : (
-            <p style={{ margin: 0 }}>
-              <strong style={{ color: 'var(--text-main)', fontWeight: 600 }}>Monday–Friday</strong>.<br/>
-              Morning: 7:30 AM – 11:30 AM <span style={{ opacity: 0.5 }}>|</span> Lunch: 11:30 AM – 12:30 PM <span style={{ opacity: 0.5 }}>|</span> Afternoon: 12:30 PM – 5:00 PM
+            <p>
+              <strong>Mon–Fri:</strong> Morning (7:30 AM – 11:30 AM), Lunch (11:30 AM – 12:30 PM), Afternoon (12:30 PM – 5:00 PM).
             </p>
           )}
         </div>
       </div>
 
-      {/* Pre-Scheduling Summary */}
-      <div style={{ marginBottom: '15px', padding: '10px 15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
-        <strong>Pre-flight Summary:</strong> {sections?.reduce((sum, sec) => sum + (sec.subjects?.length || 0), 0) || 0} subjects total across all sections ready to be scheduled.
+      {/* Summary before running */}
+      <div className="autosched-preflight-card">
+        <div className="autosched-preflight-info">
+          <Info size={16} className="autosched-preflight-icon" />
+          <div>
+            <strong>Ready to Schedule:</strong>{' '}
+            <span className="autosched-preflight-text">{preflightStats.label}</span>
+          </div>
+        </div>
+        {targetSchedules.length > 0 && (
+          <div className="autosched-preflight-badge">
+            <Calendar size={13} />
+            <span>{targetSchedules.length} already scheduled</span>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+      <div className="autosched-actions-row">
         {!loading ? (
           <>
-            <button id="btn-execute-autoschedule" onClick={handleExecute} disabled={clearing || (engineMode !== 'full' && !targetId)} className="btn" style={{ flex: 1, padding: '14px', fontSize: '1rem', whiteSpace: 'nowrap', minWidth: '200px' }}>
-              Generate Timetable
-            </button>
             <button
-              onClick={handleClearAll}
-              disabled={clearing}
-              className="btn-danger-outline"
+              id="btn-execute-autoschedule"
+              type="button"
+              onClick={handleExecute}
+              disabled={clearing || (engineMode !== 'full' && !targetId)}
+              className="btn autosched-btn-primary"
             >
-              {clearing ? 'Clearing...' : '🗑 Clear All Schedules'}
+              <Play size={16} />
+              <span>Generate Schedule</span>
             </button>
+
+            <div className="autosched-secondary-actions">
+              {engineMode !== 'full' && targetId && targetSchedules.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearTarget}
+                  disabled={clearing}
+                  className="btn-danger-outline"
+                  title={`Delete only the ${targetSchedules.length} schedules of ${targetName}`}
+                >
+                  <Trash2 size={15} />
+                  <span>{clearing ? 'Clearing...' : `Clear ${targetName} (${targetSchedules.length})`}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleClearAll}
+                disabled={clearing}
+                className="btn-danger-outline"
+              >
+                <RotateCcw size={15} />
+                <span>{clearing ? 'Clearing...' : 'Clear All Schedules'}</span>
+              </button>
+            </div>
           </>
         ) : (
           <button
+            type="button"
             onClick={handleCancel}
-            className="btn-danger-outline"
-            style={{ flex: 1, padding: '14px', fontSize: '1rem', minWidth: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            className="btn-danger-outline autosched-btn-cancel"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="6" y="6" width="12" height="12" rx="2" />
-            </svg>
-            Cancel Scheduling
+            <Square size={14} />
+            <span>Cancel</span>
           </button>
         )}
       </div>
 
+      {/* Helper text if target is not selected */}
       {engineMode !== 'full' && !targetId && (
-        <p style={{ fontSize: '0.8rem', color: 'var(--warning)', margin: '0 0 12px 0' }}>
-          ⚠️ Please select a specific {engineMode} above before generating.
+        <p className="autosched-helper-warn">
+          <AlertCircle size={14} />
+          <span>Please select a {engineMode} above to continue.</span>
         </p>
       )}
 
       {/* Progress Bar */}
       {loading && (
-        <div ref={progressRef} style={{ marginTop: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
-              {progress.pass > 0
-                ? `Pass ${progress.pass}/${aiAssisted ? '4' : '3'} — ${progress.percent}%`
-                : 'Preparing...'}
+        <div ref={progressRef} className="autosched-progress-wrapper">
+          <div className="autosched-progress-meta">
+            <span className="autosched-pass-label">
+              Step {progress.pass > 0 ? progress.pass : 1} of {aiAssisted ? '4' : '3'} &mdash; {progress.percent}%
             </span>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              {progress.placed > 0 ? `${progress.placed} placed of ${progress.total} groups` : ''}
+            <span className="autosched-count-label">
+              {progress.placed > 0 ? `${progress.placed} of ${progress.total} classes placed` : 'Preparing schedule...'}
             </span>
           </div>
-          <div style={{ height: '10px', background: 'var(--border-color)', borderRadius: '5px', overflow: 'hidden', position: 'relative' }}>
-            <div style={{
-              width: `${progress.percent}%`,
-              height: '100%',
-              background: 'linear-gradient(90deg, var(--accent-primary), #7c3aed)',
-              borderRadius: '5px',
-              transition: 'width 0.3s ease',
-              boxShadow: progress.percent > 0 ? '0 0 8px rgba(99,102,241,0.4)' : 'none',
-            }} />
+          <div className="autosched-progress-bar-track">
+            <div
+              className="autosched-progress-bar-fill"
+              style={{ width: `${progress.percent}%` }}
+            />
           </div>
-          <p style={{ textAlign: 'center', fontSize: '0.78rem', marginTop: '6px', color: 'var(--text-muted)' }}>
-            {progress.pass === 1 && (scheduleMode === SCHEDULE_MODES.FOUR_DAY
-              ? 'Scheduling with 4-day rooms & preferred day pairs (Mon–Thu)...'
-              : 'Scheduling with department rooms & preferred day pairs...')}
-            {progress.pass === 2 && 'Trying shared rooms with flexible days...'}
-            {progress.pass === 3 && 'Attempting overflow placement with all rooms...'}
-            {progress.pass === 4 && 'AI resolving remaining conflicts...'}
-            {progress.pass === 0 && 'Initializing scheduler...'}
+          <p className="autosched-progress-detail">
+            {progress.pass === 1 && 'Step 1: Assigning main rooms and days...'}
+            {progress.pass === 2 && 'Step 2: Checking shared rooms and alternate days...'}
+            {progress.pass === 3 && 'Step 3: Fitting remaining classes in open rooms...'}
+            {progress.pass === 4 && 'Step 4: Resolving remaining conflicts...'}
+            {progress.pass === 0 && 'Starting scheduler...'}
           </p>
         </div>
       )}
 
-      {/* AI Status */}
+      {/* Status banner */}
       {aiStatus && (
-        <div className="ai-status-panel">
-          {aiStatus}
+        <div className="autosched-status-banner">
+          {loading ? (
+            <RefreshCw size={15} className="autosched-spin-icon" />
+          ) : result?.unscheduled?.length > 0 ? (
+            <AlertTriangle size={15} className="text-warning" />
+          ) : (
+            <CheckCircle2 size={15} className="text-success" />
+          )}
+          <span>{aiStatus}</span>
         </div>
       )}
 
-
-
       {/* Results Section */}
       {result && !loading && (
-        <div style={{ marginTop: '30px',  }}>
+        <div className="autosched-results-wrapper">
 
           {/* Error Message */}
           {result.error && (
-            <div className="alert-danger" style={{ padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-              <strong>Engine Error:</strong> {result.error}
-            </div>
-          )}
-
-          {/* Data Issues (Pre-flight infeasible items) */}
-          {result.prescriptions?.some(p => p.isDataIssue) && (
-            <div className="result-section data-issues-section">
-              <h3>
-                ⚠️ Data Issues ({result.prescriptions.filter(p => p.isDataIssue).length})
-              </h3>
-              <p className="section-description">
-                These subjects are missing required data (like a professor or a room). Fix them in Management before running again.
-              </p>
-              <div className="card-list">
-                {result.prescriptions.filter(p => p.isDataIssue).map((p, idx) => (
-                  <div key={idx} className="data-issue-card">
-                    <div className="card-title">
-                      {p.subject?.code || p.subject?.name} {p.section?.name ? `— ${p.section.name}` : ''}
-                    </div>
-                    <div className="card-reason">
-                      {p.reason}
-                    </div>
-                  </div>
-                ))}
+            <div className="autosched-error-banner">
+              <AlertCircle size={18} />
+              <div>
+                <strong>Notice:</strong> {result.error}
               </div>
             </div>
           )}
 
-          {/* Success Grouped by Day */}
-          {result.schedule.length > 0 && (
-            <div className="result-section success-section">
-              <h3>
-                Successfully Scheduled ({result.schedule.length})
-              </h3>
+          {/* Quick Stats */}
+          {resultStats && (
+            <div className="autosched-kpi-bar">
+              <div className="autosched-kpi-card">
+                <span className="kpi-label">Success Rate</span>
+                <span className={`kpi-value ${resultStats.successRate === 100 ? 'text-success' : resultStats.successRate >= 80 ? 'text-warning' : 'text-danger'}`}>
+                  {resultStats.successRate}%
+                </span>
+              </div>
+              <div className="autosched-kpi-card">
+                <span className="kpi-label">Scheduled</span>
+                <span className="kpi-value text-success">{resultStats.placed}</span>
+              </div>
+              <div className="autosched-kpi-card">
+                <span className="kpi-label">Unscheduled</span>
+                <span className={`kpi-value ${resultStats.unplaced > 0 ? 'text-danger' : 'text-success'}`}>
+                  {resultStats.unplaced}
+                </span>
+              </div>
+              <div className="autosched-kpi-card">
+                <span className="kpi-label">Rooms Used</span>
+                <span className="kpi-value">{resultStats.uniqueRooms}</span>
+              </div>
+              <div className="autosched-kpi-card">
+                <span className="kpi-label">Faculty Assigned</span>
+                <span className="kpi-value">{resultStats.uniqueProfs}</span>
+              </div>
+            </div>
+          )}
 
-              <div className="schedule-list">
-                {DAYS.map(day => {
-                  const dayClasses = groupedSchedule[day];
-                  if (!dayClasses || dayClasses.length === 0) return null;
+          {/* Search & Actions Toolbar */}
+          <div className="autosched-results-actions">
+            <div className="autosched-search-wrapper">
+              <Search size={15} className="autosched-search-icon" />
+              <input
+                type="text"
+                className="autosched-search-input"
+                placeholder="Search by subject, section, faculty, or room..."
+                value={resultFilter}
+                onChange={(e) => setResultFilter(e.target.value)}
+              />
+              {resultFilter && (
+                <button
+                  type="button"
+                  className="autosched-search-clear"
+                  onClick={() => setResultFilter('')}
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <div className="autosched-action-buttons">
+              <button
+                type="button"
+                className="autosched-action-btn"
+                onClick={() => handleNavigateView('view-schedules')}
+              >
+                <Calendar size={15} />
+                <span>View Timetable</span>
+              </button>
+              {result.unscheduled?.length > 0 && (
+                <button
+                  type="button"
+                  className="autosched-action-btn"
+                  onClick={handleCopyConflictReport}
+                  title="Copy list of unscheduled classes"
+                >
+                  <Copy size={15} />
+                  <span>Copy Conflict Report</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Missing Assignments (Faculty or Lab) */}
+          {dataIssues.length > 0 && (
+            <div className="result-section data-issues-section">
+              <div className="result-section-header">
+                <AlertTriangle size={18} className="text-warning" />
+                <h3>Missing Assignments ({dataIssues.length})</h3>
+              </div>
+              <p className="section-description">
+                These classes cannot be scheduled because they need an assigned professor or a lab room.
+              </p>
+              <div className="card-list">
+                {dataIssues.map((p, idx) => {
+                  const isMissingProf = (p.reason || '').toLowerCase().includes('faculty') || (p.reason || '').toLowerCase().includes('eligible');
+                  const isMissingRoom = (p.reason || '').toLowerCase().includes('lab') || (p.reason || '').toLowerCase().includes('room');
 
                   return (
-                    <div key={day} className="day-group">
-                      <h4>{day}</h4>
-                      <div className="card-list">
-                        {dayClasses.map((item, idx) => (
-                          <div key={idx} className={`schedule-card ${item.prescriptionNote ? 'warning-border' : 'success-border'}`}>
-                            <div className="schedule-card-header">
-                              <span>{item.subject.code} {item.section ? `(${item.section.name})` : ''}</span>
-                              <span>{getMeetingTimeLabel(item.timeSlot, item.hours || item.subject?.hoursPerMeeting) || item.timeSlot.label}</span>
-                            </div>
-                            <div className="schedule-card-body">
-                              {item.room.name} • Prof. {item.professor.name}
-                            </div>
-                            {item.prescriptionNote && (
-                              <div className="schedule-card-warning">
-                                ⚠️ {item.prescriptionNote}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                    <div key={idx} className="data-issue-card">
+                      <div className="card-title">
+                        {p.subject?.code || p.subject?.name} {p.section?.name ? `— ${p.section.name}` : ''}
                       </div>
+                      <div className="card-reason">{p.reason}</div>
+                      {isMissingProf && (
+                        <button
+                          type="button"
+                          className="autosched-fix-btn"
+                          onClick={() => handleNavigateView('assignments')}
+                        >
+                          <span>Assign Professor</span>
+                          <ArrowRight size={13} />
+                        </button>
+                      )}
+                      {isMissingRoom && (
+                        <button
+                          type="button"
+                          className="autosched-fix-btn"
+                          onClick={() => handleNavigateView('rooms')}
+                        >
+                          <span>Manage Rooms</span>
+                          <ArrowRight size={13} />
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -525,17 +1015,18 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
             </div>
           )}
 
-          {/* Unscheduled Results */}
-          {result.unscheduled.length > 0 && (
+          {/* Time Slot & Room Conflicts */}
+          {slotConflicts.length > 0 && (
             <div className="result-section prescriptions-section">
-              <h3>
-                ⚠️ Could Not Schedule ({result.unscheduled.length})
-              </h3>
+              <div className="result-section-header">
+                <AlertCircle size={18} className="text-danger" />
+                <h3>Time & Room Conflicts ({slotConflicts.length})</h3>
+              </div>
               <p className="section-description">
-                These classes couldn't be scheduled. Check the details below to see what's blocking each one.
+                These classes could not find an open time slot, room, or professor without overlap.
               </p>
               <div className="card-list">
-                {result.unscheduled.map((s, idx) => {
+                {slotConflicts.map((s, idx) => {
                   const subjectCredits = s?.subject?.credits || 3;
                   const hoursPerMeeting = s?.subject?.hoursPerMeeting || 1.5;
                   const labLabel = s?.subject?.isFoodLab ? 'Food Lab' : s?.subject?.requiredLab ? 'Computer Lab' : null;
@@ -544,28 +1035,95 @@ function AutoScheduler({ validator, subjects, sections, professors, rooms, sched
                     <div key={idx} className="prescription-card">
                       <div className="prescription-card-header">
                         <div className="prescription-card-title">
-                          <span>{s?.subject?.code || s?.subject?.name || 'Unknown Subject'}</span>
+                          <span>{s?.subject?.code || s?.subject?.name || 'Subject'}</span>
                           {s?.section?.name && (
-                            <span className="prescription-card-section">— {s.section.name}</span>
+                            <span className="prescription-card-section">&mdash; {s.section.name}</span>
                           )}
                         </div>
                         <div className="prescription-meta-badges">
                           <span className="meta-pill">{subjectCredits} Units</span>
-                          <span className="meta-pill">{hoursPerMeeting}h / meeting</span>
-                          {labLabel && <span className="meta-pill lab-pill">🔬 {labLabel}</span>}
+                          <span className="meta-pill">{hoursPerMeeting}h / session</span>
+                          {labLabel && <span className="meta-pill lab-pill">{labLabel}</span>}
                         </div>
                       </div>
 
                       <div className="prescription-reason-banner">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}>
-                          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                          <line x1="12" y1="9" x2="12" y2="13" />
-                          <line x1="12" y1="17" x2="12.01" y2="17" />
-                        </svg>
+                        <AlertCircle size={16} className="text-danger" style={{ flexShrink: 0, marginTop: '2px' }} />
                         <div>
-                          <strong>Reason: </strong>
-                          <span>{s?.reason || 'No open slot found'}</span>
+                          <strong>Conflict: </strong>
+                          <span>{s?.reason || 'No open time slot found'}</span>
                         </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Empty Search Filter State */}
+          {resultFilter && !hasFilteredClasses && (
+            <div className="autosched-empty-filter">
+              <Search size={26} className="text-muted" />
+              <p>No classes match &ldquo;<strong>{resultFilter}</strong>&rdquo;</p>
+              <button
+                type="button"
+                className="autosched-clear-filter-btn"
+                onClick={() => setResultFilter('')}
+              >
+                Clear search
+              </button>
+            </div>
+          )}
+
+          {/* Placed Schedule List Grouped by Day */}
+          {result.schedule?.length > 0 && hasFilteredClasses && (
+            <div className="result-section success-section">
+              <div className="result-section-header">
+                <CheckCircle2 size={18} className="text-success" />
+                <h3>
+                  Scheduled Classes ({result.schedule.length})
+                  {resultFilter && (
+                    <span className="autosched-filter-tag">Filtered</span>
+                  )}
+                </h3>
+              </div>
+
+              <div className="schedule-list">
+                {DAYS.map(day => {
+                  const dayClasses = filteredGroupedSchedule[day];
+                  if (!dayClasses || dayClasses.length === 0) return null;
+
+                  return (
+                    <div key={day} className="day-group">
+                      <div className="day-group-header">
+                        <h4>{day}</h4>
+                        <span className="day-count-badge">{dayClasses.length} class{dayClasses.length > 1 ? 'es' : ''}</span>
+                      </div>
+                      <div className="card-list">
+                        {dayClasses.map((item, idx) => (
+                          <div key={idx} className={`schedule-card ${item.prescriptionNote ? 'warning-border' : 'success-border'}`}>
+                            <div className="schedule-card-header">
+                              <span className="schedule-card-subject">
+                                {item.subject.code} {item.section ? `(${item.section.name})` : ''}
+                              </span>
+                              <span className="schedule-card-time">
+                                {getMeetingTimeLabel(item.timeSlot, item.hours || item.subject?.hoursPerMeeting) || item.timeSlot?.label}
+                              </span>
+                            </div>
+                            <div className="schedule-card-body">
+                              <span>{item.room?.name || 'Room TBA'}</span>
+                              <span className="schedule-card-divider">&bull;</span>
+                              <span>Prof. {item.professor?.name || 'TBA'}</span>
+                            </div>
+                            {item.prescriptionNote && (
+                              <div className="schedule-card-warning">
+                                <AlertCircle size={13} />
+                                <span>{item.prescriptionNote}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   );
