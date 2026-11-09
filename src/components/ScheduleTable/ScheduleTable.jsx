@@ -1202,16 +1202,18 @@ const ScheduleTable = React.memo(function ScheduleTable({
               const isHourGroupHead = tIdx % 2 === 0;
               const nextSlot = activeTimeSlots[tIdx + 1];
               const timeRowSpan = isHourGroupHead ? (nextSlot ? 2 : 1) : 0;
-              const rawHourLabel = isHourGroupHead
+              const hourLabel = isHourGroupHead
                 ? (nextSlot ? `${timeSlot.label.split(' - ')[0]} - ${nextSlot.label.split(' - ')[1]}` : timeSlot.label)
                 : '';
-              const hourLabel = isHourGroupHead ? formatTimeRange(rawHourLabel, timeFormat) : '';
+              const displayHourLabel = isHourGroupHead && timeFormat === '24h'
+                ? formatTimeRange(hourLabel, '24h')
+                : hourLabel;
 
               return (
                 <tr key={timeSlot.id} className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
                   {isHourGroupHead && (
                     <td className="time-label sticky-col" rowSpan={timeRowSpan} style={{ borderRight: '1px solid var(--border-color)' }}>
-                      <strong>{hourLabel}</strong>
+                      <strong>{displayHourLabel}</strong>
                     </td>
                   )}
                   {displayDays.map(day => {

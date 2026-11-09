@@ -197,23 +197,20 @@ export function formatMinutesToTime(mins, format = '12h') {
     return `${hh}:${mm}`;
   }
 
-  // 12-hour format
-  const period = hours >= 12 ? 'PM' : 'AM';
+  // 12-hour clean format
   const h12 = hours % 12 === 0 ? 12 : hours % 12;
-  return `${h12}:${mm} ${period}`;
+  return `${h12}:${mm}`;
 }
 
 export function formatTimeRange(timeStr, format = '12h') {
   if (!timeStr) return '';
+  if (format !== '24h') return timeStr; // Keep original 12h text (e.g. '7:00 - 8:00')
   const parts = String(timeStr).split('-');
   if (parts.length === 2) {
     const startMins = parseTimeToMinutes(parts[0].trim());
     const endMins = parseTimeToMinutes(parts[1].trim());
     if (startMins !== null && endMins !== null) {
-      if (format === '24h') {
-        return `${formatMinutesToTime(startMins, '24h')} - ${formatMinutesToTime(endMins, '24h')}`;
-      }
-      return `${formatMinutesToTime(startMins, '12h')} - ${formatMinutesToTime(endMins, '12h')}`;
+      return `${formatMinutesToTime(startMins, '24h')} - ${formatMinutesToTime(endMins, '24h')}`;
     }
   }
   return timeStr;
