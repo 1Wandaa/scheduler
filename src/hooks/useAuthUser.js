@@ -414,6 +414,16 @@ export function useAuthUser() {
     setUser(null);
   };
 
-  return { user, loading, isOffline, handleLogin, handleLogout };
+  const updateUserProfile = (updatedFields) => {
+    if (!updatedFields || typeof updatedFields !== 'object') return;
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...updatedFields };
+      persistUserSession(next);
+      return next;
+    });
+  };
+
+  return { user, loading, isOffline, handleLogin, handleLogout, updateUserProfile };
 }
 

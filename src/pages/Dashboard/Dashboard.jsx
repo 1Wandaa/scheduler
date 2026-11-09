@@ -45,6 +45,7 @@ const ScheduleViewer = React.lazy(() => import('../management/ScheduleViewer'));
 const SectionManagement = React.lazy(() => import('../management/SectionManagement'));
 const ScheduleHistory = React.lazy(() => import('../management/ScheduleHistory'));
 const Profile = React.lazy(() => import('../../components/Profile/Profile'));
+const Settings = React.lazy(() => import('../Settings/Settings'));
 const Chatbot = React.lazy(() => import('../../components/Chatbot/Chatbot'));
 const ActivityLog = React.lazy(() => import('../management/ActivityLog'));
 const DepartmentManagement = React.lazy(() => import('../management/DepartmentManagement'));
@@ -75,7 +76,7 @@ const TabLoader = () => (
 );
 
 // Dashboard
-const Dashboard = ({ user, onLogout }) => {
+const Dashboard = ({ user, onLogout, onUpdateUser }) => {
   const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
@@ -555,6 +556,12 @@ const Dashboard = ({ user, onLogout }) => {
                 handleTabClick('profile');
               }}
             />
+            <NavItem
+              label="Settings"
+              iconPath={NAV_ICONS.settings}
+              active={activeTab === 'settings'}
+              onClick={() => handleTabClick('settings')}
+            />
             <NavItem label="Log Out" iconPath={NAV_ICONS.logout} danger onClick={onLogout} />
           </ul>
         </nav>
@@ -635,19 +642,32 @@ const Dashboard = ({ user, onLogout }) => {
                 alignRight={true}
               />
             </div>
-            <div style={{
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '10px',
-              padding: '8px 14px',
-              textAlign: 'right',
-              display: 'none',
-            }}>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Today</div>
-              <div style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600, marginTop: 2 }}>
-                {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-              </div>
-            </div>
+
+            {/* Quick Settings Shortcut */}
+            <button
+              type="button"
+              className="settings-toggle-header-btn"
+              onClick={() => handleTabClick('settings')}
+              title="User Account & System Settings"
+              aria-label="Settings"
+              style={{
+                background: activeTab === 'settings' ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                color: '#ffffff',
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+              }}
+            >
+              <Icon d={NAV_ICONS.settings} size={18} />
+            </button>
+
             <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(o => !o)}>
               <Icon d={NAV_ICONS.menu} size={22} />
             </button>
@@ -887,8 +907,19 @@ const Dashboard = ({ user, onLogout }) => {
                 role: (targetProfileUsername && targetProfileUsername !== user.username) ? '' : user.role
               }}
               readOnly={!!targetProfileUsername && targetProfileUsername !== user.username}
+              onNavigateSettings={() => handleTabClick('settings')}
               onBack={() => {
                 setTargetProfileUsername(null);
+                setActiveTab(isAdmin ? 'dashboard' : 'view-schedules');
+              }}
+            />
+          )}
+
+          {activeTab === 'settings' && (
+            <Settings
+              user={user}
+              onUpdateUser={onUpdateUser}
+              onBack={() => {
                 setActiveTab(isAdmin ? 'dashboard' : 'view-schedules');
               }}
             />

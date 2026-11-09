@@ -8,7 +8,7 @@ import './styles/App.css';
 
 
 function App() {
-  const { user, loading, isOffline, handleLogin, handleLogout } = useAuthUser();
+  const { user, loading, isOffline, handleLogin, handleLogout, updateUserProfile } = useAuthUser();
 
   // Show a loading spinner while checking auth state
   if (loading) {
@@ -55,7 +55,7 @@ function App() {
           path="/dashboard/*" 
           element={
             <ProtectedRoute user={user}>
-              <Dashboard user={user} onLogout={handleLogout} />
+              <Dashboard user={user} onLogout={handleLogout} onUpdateUser={updateUserProfile} />
             </ProtectedRoute>
           } 
         />

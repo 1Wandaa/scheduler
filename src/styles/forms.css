@@ -1,14 +1,5 @@
-/* Universal Box-Sizing for Login Components */
-.login-fullscreen,
-.login-fullscreen *,
-.login-fullscreen *::before,
-.login-fullscreen *::after {
-  box-sizing: border-box !important;
-}
-
 /* Form Card */
 .login-card {
-  box-sizing: border-box !important;
   position: relative;
   background-color: #fcfbf8;
   /* Lighter dirty white / off-white */
@@ -17,12 +8,10 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  padding: 36px 32px;
+  padding: 36px 36px;
   border-radius: 24px;
   width: 100%;
   max-width: 380px;
-  margin-left: auto;
-  margin-right: auto;
   text-align: center;
   border: 1px solid rgba(0, 0, 0, 0.05);
   box-shadow:
@@ -58,6 +47,14 @@
 }
 
 @media (max-width: 768px) {
+  /* Universal Box-Sizing for Login Components on Mobile */
+  .login-fullscreen,
+  .login-fullscreen *,
+  .login-fullscreen *::before,
+  .login-fullscreen *::after {
+    box-sizing: border-box !important;
+  }
+
   .login-center-wrapper {
     box-sizing: border-box !important;
     width: 100%;
@@ -478,7 +475,6 @@
    LOGIN/REGISTER BUTTONS
    ========================================= */
 .btn-login {
-  box-sizing: border-box !important;
   width: 100%;
   background: linear-gradient(135deg, var(--accent-primary), #7c3aed);
   color: white;
@@ -523,7 +519,6 @@
 
 /* Google Button */
 .btn-google {
-  box-sizing: border-box !important;
   width: 100%;
   background: #ffffff;
   color: #374151;
