@@ -49,7 +49,31 @@ function App() {
       <Routes>
         <Route 
           path="/" 
-          element={!user ? <Login onLogin={handleLogin} /> : <Navigate to="/dashboard" replace />} 
+          element={
+            !user ? (
+              <Login onLogin={handleLogin} />
+            ) : (
+              <Navigate 
+                to={(() => {
+                  try {
+                    const def = localStorage.getItem('smartsched_pref_default_tab') || user?.settings?.defaultTab;
+                    if (def && def !== 'dashboard') {
+                      const role = (user?.role || '').toLowerCase();
+                      const isFaculty = role === 'faculty';
+                      const isAdmin = role === 'admin' || role === 'department head';
+                      if (def === 'workload' && !isFaculty && !isAdmin) return '/dashboard';
+                      if (def === 'schedule' && !isAdmin) return '/dashboard';
+                      return `/dashboard/${def}`;
+                    }
+                  } catch {
+                    // ignore
+                  }
+                  return '/dashboard';
+                })()} 
+                replace 
+              />
+            )
+          } 
         />
         <Route 
           path="/dashboard/*" 

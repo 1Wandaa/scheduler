@@ -4,6 +4,7 @@ import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 
 import { collection, query, where, getDocs, updateDoc, doc, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { Icon, NAV_ICONS } from '../Dashboard/components/Icon';
+import { playSuccessChime } from '../../utils/soundEffects';
 import './Settings.css';
 
 const DEPARTMENT_PROGRAM = {
@@ -390,7 +391,7 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
           onClick={() => setActiveTab('preferences')}
         >
           <Icon d={NAV_ICONS.calendar} size={18} />
-          <span>Scheduler Preferences</span>
+          <span>Display & Schedule</span>
         </button>
         <button
           className={`settings-tab-btn ${activeTab === 'security' ? 'active' : ''}`}
@@ -612,7 +613,7 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          TAB 2: SCHEDULER & SYSTEM PREFERENCES
+          TAB 2: DISPLAY & SCHEDULE SETTINGS
          ───────────────────────────────────────────────────────────── */}
       {activeTab === 'preferences' && (
         <div className="settings-card tab-entrance-anim">
@@ -622,8 +623,8 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
                 <Icon d={NAV_ICONS.calendar} size={20} />
               </div>
               <div>
-                <h2>Scheduler & Display Preferences</h2>
-                <p>Customize timetable formatting, default landing view, and system notification alerts.</p>
+                <h2>Display & Schedule Settings</h2>
+                <p>Manage your timetable format, start page, and schedule alerts.</p>
               </div>
             </div>
           </div>
@@ -631,8 +632,8 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
           {/* Time Format */}
           <div className="settings-pref-row">
             <div className="settings-pref-info">
-              <h3>Timetable Time Format</h3>
-              <p>Choose between 12-hour (e.g. 7:30 AM – 9:00 AM) or 24-hour military clock (07:30 – 09:00).</p>
+              <h3>Time Format</h3>
+              <p>Show hours in 12-hour (7:30 AM) or 24-hour (07:30) format.</p>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
@@ -649,11 +650,13 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
                   setTimeFormat('12h');
                   try {
                     localStorage.setItem('smartsched_time_format', '12h');
+                    window.dispatchEvent(new CustomEvent('smartsched_preference_change', { detail: { key: 'timeFormat', value: '12h' } }));
+                    window.dispatchEvent(new Event('storage'));
                   } catch (e) {
                     console.warn(e);
                   }
                   handleSavePreferences(undefined, '12h');
-                  toast.success('Time format set to 12-Hour (AM/PM)');
+                  toast.success('Switched to 12-hour time');
                 }}
               >
                 12-Hour (AM/PM)
@@ -672,14 +675,16 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
                   setTimeFormat('24h');
                   try {
                     localStorage.setItem('smartsched_time_format', '24h');
+                    window.dispatchEvent(new CustomEvent('smartsched_preference_change', { detail: { key: 'timeFormat', value: '24h' } }));
+                    window.dispatchEvent(new Event('storage'));
                   } catch (e) {
                     console.warn(e);
                   }
                   handleSavePreferences(undefined, '24h');
-                  toast.success('Time format set to 24-Hour (Military)');
+                  toast.success('Switched to 24-hour time');
                 }}
               >
-                24-Hour (Military)
+                24-Hour
               </button>
             </div>
           </div>
@@ -687,8 +692,8 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
           {/* Default Start Tab */}
           <div className="settings-pref-row">
             <div className="settings-pref-info">
-              <h3>Default Landing Tab</h3>
-              <p>Select which tab opens automatically when you sign into your SMARTSCHED session.</p>
+              <h3>Start Page</h3>
+              <p>Choose which page opens first when you log in.</p>
             </div>
             <select
               style={{
@@ -705,14 +710,16 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
                 setDefaultTab(val);
                 try {
                   localStorage.setItem('smartsched_pref_default_tab', val);
+                  window.dispatchEvent(new CustomEvent('smartsched_preference_change', { detail: { key: 'defaultTab', value: val } }));
+                  window.dispatchEvent(new Event('storage'));
                 } catch (err) {
                   console.warn(err);
                 }
                 handleSavePreferences(undefined, undefined, undefined, undefined, val);
-                toast.success(`Default start tab updated to "${val}"`);
+                toast.success('Start page saved');
               }}
             >
-              <option value="dashboard">Dashboard Overview</option>
+              <option value="dashboard">Dashboard</option>
               <option value="view-schedules">Class Schedules</option>
               {isFaculty && <option value="workload">Faculty Workload</option>}
               {isAdmin && <option value="schedule">Schedule Creator</option>}
@@ -722,8 +729,8 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
           {/* Conflict Alerts Switch */}
           <div className="settings-pref-row">
             <div className="settings-pref-info">
-              <h3>Conflict & Overlap Highlighting</h3>
-              <p>Show real-time visual warning badges when rooms or faculty members have overlapping slots.</p>
+              <h3>Highlight Conflicts</h3>
+              <p>Show warning badges on overlapping classes, rooms, or instructors.</p>
             </div>
             <label className="switch-toggle">
               <input
@@ -734,11 +741,13 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
                   setConflictAlerts(val);
                   try {
                     localStorage.setItem('smartsched_pref_conflict_alerts', String(val));
+                    window.dispatchEvent(new CustomEvent('smartsched_preference_change', { detail: { key: 'conflictAlerts', value: val } }));
+                    window.dispatchEvent(new Event('storage'));
                   } catch (err) {
                     console.warn(err);
                   }
                   handleSavePreferences(undefined, undefined, val);
-                  toast.success(val ? 'Conflict alerts enabled' : 'Conflict alerts muted');
+                  toast.success(val ? 'Conflict highlighting turned on' : 'Conflict highlighting turned off');
                 }}
               />
               <span className="slider-round"></span>
@@ -748,8 +757,8 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
           {/* Audio Chime Feedback */}
           <div className="settings-pref-row">
             <div className="settings-pref-info">
-              <h3>Audio Feedback</h3>
-              <p>Play subtle sound cues upon successful schedule creation and batch updates.</p>
+              <h3>Sound Effects</h3>
+              <p>Play a sound when saving or updating schedules.</p>
             </div>
             <label className="switch-toggle">
               <input
@@ -760,11 +769,16 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
                   setSoundFeedback(val);
                   try {
                     localStorage.setItem('smartsched_pref_sound', String(val));
+                    window.dispatchEvent(new CustomEvent('smartsched_preference_change', { detail: { key: 'soundFeedback', value: val } }));
+                    window.dispatchEvent(new Event('storage'));
                   } catch (err) {
                     console.warn(err);
                   }
                   handleSavePreferences(undefined, undefined, undefined, val);
-                  toast.success(val ? 'Audio feedback enabled' : 'Audio feedback muted');
+                  if (val) {
+                    playSuccessChime();
+                  }
+                  toast.success(val ? 'Sound effects turned on' : 'Sound effects turned off');
                 }}
               />
               <span className="slider-round"></span>

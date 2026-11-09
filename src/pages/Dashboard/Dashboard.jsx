@@ -20,6 +20,7 @@ import {
   autoScheduleFull,
 } from '../../services/schedulingService';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
+import { triggerSoundFeedback } from '../../utils/soundEffects';
 
 import { Icon, NAV_ICONS } from './components/Icon';
 import DraggableSpeedDial from './components/DraggableSpeedDial';
@@ -91,6 +92,26 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
   const pathParts = location.pathname.split('/');
   const activeTab = pathParts[2] || (isStudent ? 'view-schedules' : 'dashboard');
   const { confirm, prompt } = useGlobalDialog();
+
+  // Handle user's preferred default landing tab on direct session visit to /dashboard
+  const hasResolvedLandingTab = useRef(false);
+  useEffect(() => {
+    if (!hasResolvedLandingTab.current) {
+      hasResolvedLandingTab.current = true;
+      if (!pathParts[2]) {
+        try {
+          const prefTab = localStorage.getItem('smartsched_pref_default_tab') || user?.settings?.defaultTab;
+          if (prefTab && prefTab !== 'dashboard') {
+            if (prefTab === 'workload' && !isFaculty && !isAdmin) return;
+            if (prefTab === 'schedule' && !isAdmin) return;
+            navigate(`/dashboard/${prefTab}`, { replace: true });
+          }
+        } catch (e) {
+          console.warn('[Dashboard] Error resolving default landing tab:', e);
+        }
+      }
+    }
+  }, [pathParts, user, isFaculty, isAdmin, navigate]);
 
   const setActiveTab = (tab) => {
     if (tab === activeTab) return;
@@ -220,6 +241,7 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
   const handleAddSchedule = async (newSchedule, scheduleMode = 'standard') => {
     const res = await addSchedule(newSchedule, enrichedSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode);
     if (res?.ok !== false) {
+      triggerSoundFeedback();
       logActivity({
         user,
         action: LOG_ACTIONS.ADD_SCHEDULE,
@@ -233,6 +255,7 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
     const sched = schedules.find(s => String(s.id) === String(scheduleId)) || enrichedSchedules.find(s => String(s.id) === String(scheduleId));
     const res = await updateSchedule(scheduleId, newDay, newTimeSlot, schedules, enrichedSchedules, rooms, isAdmin);
     if (res?.ok !== false) {
+      triggerSoundFeedback();
       logActivity({
         user,
         action: LOG_ACTIONS.UPDATE_SCHEDULE,
@@ -270,6 +293,7 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
   const handleAddSchedulesBatch = async (newSchedules, scheduleMode, options = {}) => {
     const res = await addSchedulesBatch(newSchedules, enrichedSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode, options);
     if (res?.ok !== false) {
+      triggerSoundFeedback();
       logActivity({
         user,
         action: LOG_ACTIONS.AUTO_SCHEDULE,

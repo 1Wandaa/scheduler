@@ -185,6 +185,40 @@ export function parseTimeToMinutes(timeStr) {
   return hours * 60 + mins;
 }
 
+export function formatMinutesToTime(mins, format = '12h') {
+  if (mins === null || mins === undefined || isNaN(mins)) return '';
+  const totalMins = mins % (24 * 60);
+  const hours = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  const mm = m < 10 ? `0${m}` : `${m}`;
+
+  if (format === '24h') {
+    const hh = hours < 10 ? `0${hours}` : `${hours}`;
+    return `${hh}:${mm}`;
+  }
+
+  // 12-hour format
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const h12 = hours % 12 === 0 ? 12 : hours % 12;
+  return `${h12}:${mm} ${period}`;
+}
+
+export function formatTimeRange(timeStr, format = '12h') {
+  if (!timeStr) return '';
+  const parts = String(timeStr).split('-');
+  if (parts.length === 2) {
+    const startMins = parseTimeToMinutes(parts[0].trim());
+    const endMins = parseTimeToMinutes(parts[1].trim());
+    if (startMins !== null && endMins !== null) {
+      if (format === '24h') {
+        return `${formatMinutesToTime(startMins, '24h')} - ${formatMinutesToTime(endMins, '24h')}`;
+      }
+      return `${formatMinutesToTime(startMins, '12h')} - ${formatMinutesToTime(endMins, '12h')}`;
+    }
+  }
+  return timeStr;
+}
+
 export function entitiesMatch(a, b) {
   if (!a || !b) return false;
 

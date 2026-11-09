@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig, isLunchSlot, overlapsLunchBreak } from '../../config/constants';
-import { slotsNeededFromIndex, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange, isStandardOneAndHalfHourClass } from '../../utils/scheduleUtils';
+import { slotsNeededFromIndex, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange, isStandardOneAndHalfHourClass, formatTimeRange } from '../../utils/scheduleUtils';
+import { triggerSoundFeedback } from '../../utils/soundEffects';
 import { exportGridToWord, exportGridToExcel } from '../../utils/scheduleExportUtils';
 import '../../styles/ScheduleTable.css';
 
@@ -188,6 +189,57 @@ const ScheduleTable = React.memo(function ScheduleTable({
   const [successToast, setSuccessToast] = useState(null);
   const [fitScale, setFitScale] = useState(1);
   const [previewImage, setPreviewImage] = useState(null);
+
+  // Scheduler preferences: time format ('12h' | '24h') & conflict highlighting
+  const [timeFormat, setTimeFormat] = useState(() => {
+    try {
+      return localStorage.getItem('smartsched_time_format') || '12h';
+    } catch {
+      return '12h';
+    }
+  });
+
+  const [conflictAlertsEnabled, setConflictAlertsEnabled] = useState(() => {
+    try {
+      return localStorage.getItem('smartsched_pref_conflict_alerts') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    const handlePrefChange = () => {
+      try {
+        const fmt = localStorage.getItem('smartsched_time_format') || '12h';
+        const alerts = localStorage.getItem('smartsched_pref_conflict_alerts') !== 'false';
+        setTimeFormat(fmt);
+        setConflictAlertsEnabled(alerts);
+      } catch (e) {
+        console.warn(e);
+      }
+    };
+    window.addEventListener('smartsched_preference_change', handlePrefChange);
+    window.addEventListener('storage', handlePrefChange);
+    return () => {
+      window.removeEventListener('smartsched_preference_change', handlePrefChange);
+      window.removeEventListener('storage', handlePrefChange);
+    };
+  }, []);
+
+  // Detect overlapping/conflicting schedules within the displayed timetable
+  const conflictingScheduleIds = useMemo(() => {
+    if (!conflictAlertsEnabled || !schedules || schedules.length < 2) return new Set();
+    const set = new Set();
+    for (let i = 0; i < schedules.length; i++) {
+      for (let j = i + 1; j < schedules.length; j++) {
+        if (schedulesOverlap(schedules[i], schedules[j], scheduleMode)) {
+          if (schedules[i].id) set.add(schedules[i].id);
+          if (schedules[j].id) set.add(schedules[j].id);
+        }
+      }
+    }
+    return set;
+  }, [schedules, conflictAlertsEnabled, scheduleMode]);
 
   const showToast = useCallback((msg, isError = true) => {
     if (isError) {
@@ -1002,6 +1054,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
       showToast(`Cannot move schedule:\n${result.errors?.join('\n') || result.error || 'Unknown error'}`);
     } else if (result && result.ok) {
       showToast('Schedule successfully updated.', false);
+      triggerSoundFeedback();
     }
   }, [schedules, activeSchedules, onUpdateSchedule, scheduleMode, showToast]);
 
@@ -1149,9 +1202,10 @@ const ScheduleTable = React.memo(function ScheduleTable({
               const isHourGroupHead = tIdx % 2 === 0;
               const nextSlot = activeTimeSlots[tIdx + 1];
               const timeRowSpan = isHourGroupHead ? (nextSlot ? 2 : 1) : 0;
-              const hourLabel = isHourGroupHead
+              const rawHourLabel = isHourGroupHead
                 ? (nextSlot ? `${timeSlot.label.split(' - ')[0]} - ${nextSlot.label.split(' - ')[1]}` : timeSlot.label)
                 : '';
+              const hourLabel = isHourGroupHead ? formatTimeRange(rawHourLabel, timeFormat) : '';
 
               return (
                 <tr key={timeSlot.id} className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
@@ -1184,11 +1238,12 @@ const ScheduleTable = React.memo(function ScheduleTable({
                         {cellSchedules.map((schedule) => {
                           const deptColor = getDeptColor(schedule);
                           const profFormatted = formatProfessorName(schedule.professor?.name);
+                          const isConflicting = conflictAlertsEnabled && (cellSchedules.length > 1 || conflictingScheduleIds.has(schedule.id));
 
                           return (
                             <div
                               key={schedule.id}
-                              className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''}`}
+                              className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''} ${isConflicting ? 'has-conflict' : ''}`}
                               draggable={!!onUpdateSchedule && isDeleteMode}
                               onDragStart={(e) => handleDragStart(e, schedule)}
                               onDragEnd={handleDragEnd}
@@ -1210,6 +1265,11 @@ const ScheduleTable = React.memo(function ScheduleTable({
                                     <p className="section" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
                                       {schedule.section.name}
                                     </p>
+                                  )}
+                                  {isConflicting && (
+                                    <span className="schedule-conflict-tag" title="Overlapping schedule detected">
+                                      ⚠️ Conflict
+                                    </span>
                                   )}
                                 </div>
                               </div>
