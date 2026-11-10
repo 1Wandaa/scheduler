@@ -2,8 +2,12 @@
 
 /* SHARED ISO STYLES (used by screen preview & print) */
 
+.printable-iso-document,
+.printable-iso-document * {
+    font-family: "Times New Roman", Times, serif !important;
+}
+
 .printable-iso-document {
-    font-family: "Times New Roman", Times, serif;
     color: #000;
     background: #fff;
     width: 100%;
@@ -139,10 +143,25 @@
     max-height: 44px;
 }
 
-.iso-schedule-table .cell-content {
+.iso-schedule-table .cell-wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.iso-schedule-table .cell-wrapper.cell-multi {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: stretch;
+}
+
+.iso-schedule-table .cell-content {
+    display: flex;
+    flex-direction: column;
     justify-content: center;
     padding: 2px 4px;
     height: 100%;
@@ -150,6 +169,9 @@
     overflow: hidden;
     box-sizing: border-box;
     line-height: 1.2;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
 }
 
 .iso-schedule-table .cell-content.compact {
@@ -164,7 +186,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
+    width: 100%;
+    text-align: center;
 }
 
 .iso-schedule-table .cell-content.compact .cell-subject {
@@ -172,19 +195,29 @@
     line-height: 1.05;
 }
 
+.iso-schedule-table .cell-section,
 .iso-schedule-table .cell-professor {
     font-size: 8pt;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
+    width: 100%;
+    text-align: left;
+    padding-left: 6px;
+    box-sizing: border-box;
     margin-top: 1px;
 }
 
+.iso-schedule-table .cell-section {
+    font-weight: bold;
+}
+
+.iso-schedule-table .cell-content.compact .cell-section,
 .iso-schedule-table .cell-content.compact .cell-professor {
     font-size: 6.5pt;
     line-height: 1.05;
+    padding-left: 3px;
     margin-top: 0;
 }
 
@@ -194,13 +227,17 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 100%;
+    width: 100%;
+    text-align: left;
+    padding-left: 6px;
+    box-sizing: border-box;
     margin-top: 1px;
 }
 
 .iso-schedule-table .cell-content.compact .cell-room {
     font-size: 6.5pt;
     line-height: 1.05;
+    padding-left: 3px;
     margin-top: 0;
 }
 
@@ -278,12 +315,15 @@
         image-rendering: -webkit-optimize-contrast !important;
     }
 
-    body * {
+    body.printing-iso-document * {
         visibility: hidden;
     }
 
+    body.printing-iso-document .printable-iso-document,
+    body.printing-iso-document .printable-iso-document *,
     .printable-iso-document,
     .printable-iso-document * {
+        font-family: "Times New Roman", Times, serif !important;
         visibility: visible;
         -webkit-font-smoothing: antialiased !important;
         -moz-osx-font-smoothing: grayscale !important;
@@ -363,11 +403,59 @@
         overflow: hidden !important;
     }
 
+    .iso-schedule-table .cell-wrapper {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        height: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .iso-schedule-table .cell-wrapper.cell-multi {
+        flex-direction: row !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+    }
+
     .iso-schedule-table .cell-content {
         height: 100% !important;
         max-height: 44px !important;
         overflow: hidden !important;
         box-sizing: border-box !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    .iso-schedule-table .cell-subject {
+        text-align: center !important;
+        width: 100% !important;
+    }
+
+    .iso-schedule-table .cell-section,
+    .iso-schedule-table .cell-professor {
+        text-align: left !important;
+        width: 100% !important;
+        padding-left: 6px !important;
+        box-sizing: border-box !important;
+    }
+
+    .iso-schedule-table .cell-content.compact .cell-section,
+    .iso-schedule-table .cell-content.compact .cell-professor {
+        padding-left: 3px !important;
+    }
+
+    .iso-schedule-table .cell-room {
+        text-align: left !important;
+        width: 100% !important;
+        padding-left: 6px !important;
+        box-sizing: border-box !important;
+    }
+
+    .iso-schedule-table .cell-content.compact .cell-room {
+        padding-left: 3px !important;
     }
 
     .iso-schedule-table th {

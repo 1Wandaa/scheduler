@@ -4,15 +4,29 @@
    ========================= */
 @media print {
 
-  /* Override PrintableSchedule.css global hide */
-  body.print-colored-mode * {
+  /* Ensure schedule table is visible in print */
+  body.print-colored-mode *,
+  .print-vector-wrapper,
+  .print-vector-wrapper *,
+  .schedule-table-container,
+  .schedule-table-container * {
     visibility: visible !important;
+  }
+
+  body::before,
+  body::after,
+  html::before,
+  html::after {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+    background-image: none !important;
   }
 
   /* Page layout */
   @page {
     size: landscape;
-    margin: 10mm;
+    margin: 0.2in 0.25in;
   }
 
   /* Hide layout elements that are not the schedule table */
@@ -39,8 +53,9 @@
     width: 100% !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    /* Scale down to ensure it fits completely within one page vertically */
-    zoom: 0.85;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    zoom: 0.80;
     transform-origin: top center;
   }
 
@@ -48,8 +63,6 @@
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 
   /* Force background colors to print */

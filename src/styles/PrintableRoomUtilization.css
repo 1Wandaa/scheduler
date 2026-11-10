@@ -233,10 +233,12 @@
         image-rendering: -webkit-optimize-contrast !important;
     }
 
-    body * {
+    body.printing-room-utilization * {
         visibility: hidden;
     }
 
+    body.printing-room-utilization .printable-room-utilization,
+    body.printing-room-utilization .printable-room-utilization *,
     .printable-room-utilization,
     .printable-room-utilization * {
         visibility: visible !important;

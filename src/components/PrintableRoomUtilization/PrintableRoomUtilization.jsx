@@ -284,9 +284,12 @@ const PrintableRoomUtilization = ({
                         min-height: 0 !important;
                         overflow: hidden !important;
                     }
-                    body * {
+                    body.printing-room-utilization * {
                         visibility: hidden;
                     }
+                    body.printing-room-utilization .printable-room-utilization-wrapper,
+                    body.printing-room-utilization .printable-room-utilization,
+                    body.printing-room-utilization .printable-room-utilization *,
                     .printable-room-utilization-wrapper,
                     .printable-room-utilization,
                     .printable-room-utilization * {

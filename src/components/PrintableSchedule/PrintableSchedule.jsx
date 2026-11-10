@@ -30,17 +30,27 @@ const ISO_TIME_BLOCKS = [
     { id: 'b7', label: '5:00   –   6:00', start: 1020, end: 1080 }
 ];
 
-const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, department, semesterInfo, scheduleMode = 'standard' }) => {
+const PrintableSchedule = ({ 
+    scheduleItems = [], 
+    sectionName = '', 
+    programName = '', 
+    department = '', 
+    semesterInfo = '', 
+    scheduleMode = 'standard',
+    viewType = 'department',
+    facultyName = ''
+}) => {
     const days = DAYS; // Always 5 days (Mon - Fri) to match the official INS-CLS-08 table
+    const isFaculty = viewType === 'faculty' || (!sectionName && !!facultyName);
 
     const chairInfo = useMemo(() => {
         return getProgramChairInfo({
             department,
             programName,
-            sectionName,
+            sectionName: isFaculty ? (facultyName || sectionName) : sectionName,
             scheduleItems
         });
-    }, [department, programName, sectionName, scheduleItems]);
+    }, [department, programName, sectionName, scheduleItems, isFaculty, facultyName]);
 
     // Map schedule items to the 8 ISO time blocks (strictly uniform 1x1 schedule boxes)
     const blockGridMap = useMemo(() => {
@@ -122,6 +132,11 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
             gridMap.get(key).push({ ...s, _range: range });
         });
 
+        // Ensure multi-item cells are ordered chronologically by start time
+        gridMap.forEach(items => {
+            items.sort((a, b) => (a._range?.start || 0) - (b._range?.start || 0));
+        });
+
         return gridMap;
     }, [scheduleItems, scheduleMode]);
 
@@ -163,7 +178,11 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
             {/* Meta Info */}
             <div className="meta-info">
                 <span>DEGREE PROGRAM: <span className="meta-value underline bold">{chairInfo.programName}</span></span>
-                <span>COURSE &amp; YEAR: <span className="meta-value underline bold">{sectionName || 'BSCS 1A'}</span></span>
+                {isFaculty ? (
+                    <span>FACULTY: <span className="meta-value underline bold">{facultyName || sectionName}</span></span>
+                ) : (
+                    <span>COURSE &amp; YEAR: <span className="meta-value underline bold">{sectionName || 'BSCS 1A'}</span></span>
+                )}
                 <span>SEMESTER &amp; AY: <span className="meta-value underline bold">{semesterInfo || '1st Sem 2026-2027'}</span></span>
             </div>
 
@@ -204,21 +223,38 @@ const PrintableSchedule = ({ scheduleItems = [], sectionName, programName, depar
                                             key={cellKey}
                                             className={`schedule-cell ${isScheduled ? 'scheduled-cell' : ''}`}
                                         >
-                                            {cellSchedules.map((cls, idx) => {
-                                                const profFormatted = formatProfessorName(cls.professor?.name);
+                                            {isScheduled && (
+                                                <div className={`cell-wrapper ${isMulti ? 'cell-multi' : ''}`}>
+                                                    {cellSchedules.map((cls, idx) => {
+                                                        const profFormatted = formatProfessorName(cls.professor?.name);
+                                                        const rawCode = cls.subject?.code || cls.subjectCode || '—';
+                                                        const subjCode = rawCode.replace(/\s*\((?:Lecture|Laboratory|Lec|Lab)\)/i, '').trim();
+                                                        const roomName = cls.room?.name || 'TBA';
+                                                        const sectionLabel = cls.section?.name || '';
 
-                                                return (
-                                                    <div
-                                                        key={cls.id || idx}
-                                                        className={`cell-content ${isMulti ? 'compact' : ''}`}
-                                                        style={idx > 0 ? { marginTop: '1px', borderTop: '1px solid #000', paddingTop: '1px' } : {}}
-                                                    >
-                                                        <div className="cell-subject">{cls.subject?.code || '—'}{cls.component ? ` (${cls.component})` : ''}</div>
-                                                        <div className="cell-professor">{profFormatted}</div>
-                                                        <div className="cell-room">{cls.room?.name || 'TBA'}</div>
-                                                    </div>
-                                                );
-                                            })}
+                                                        return (
+                                                            <div
+                                                                key={cls.id || idx}
+                                                                className={`cell-content ${isMulti ? 'compact' : ''}`}
+                                                                style={idx > 0 && isMulti ? { borderLeft: '1px solid #000' } : undefined}
+                                                            >
+                                                                <div className="cell-subject">{subjCode}</div>
+                                                                {isFaculty ? (
+                                                                    <>
+                                                                        {sectionLabel && <div className="cell-section">{sectionLabel}</div>}
+                                                                        <div className="cell-room">{roomName}</div>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <div className="cell-professor">{profFormatted}</div>
+                                                                        <div className="cell-room">{roomName}</div>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
                                         </td>
                                     );
                                 })}

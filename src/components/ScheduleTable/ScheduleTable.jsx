@@ -376,8 +376,12 @@ const ScheduleTable = React.memo(function ScheduleTable({
 
   // Helper: prepare a clean, desktop-like clone of the schedule for export / print
   const prepareExportClone = useCallback((clone) => {
-    // 1. Remove non-printable and interactive elements
-    clone.querySelectorAll('.schedule-toolbar, .floating-exit-btn, .rotate-device-hint, .schedule-card-view, .remove-btn, .dept-legend').forEach(el => el.remove());
+    // 1. Remove non-printable and interactive elements as well as conflict badges
+    clone.querySelectorAll('.schedule-toolbar, .floating-exit-btn, .rotate-device-hint, .schedule-card-view, .remove-btn, .dept-legend, .schedule-conflict-tag').forEach(el => el.remove());
+    clone.querySelectorAll('.schedule-item.has-conflict').forEach(item => {
+      item.style.outline = 'none';
+      item.style.backgroundColor = 'transparent';
+    });
 
     // 2. Base container styling
     clone.style.width = '100%';
@@ -399,6 +403,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
       docHeader.style.marginBottom = '8px';
       docHeader.style.backgroundColor = '#ffffff';
       docHeader.style.overflow = 'hidden';
+      docHeader.style.height = 'auto';
     }
 
     const docLogo = clone.querySelector('.schedule-doc-logo');
@@ -522,6 +527,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
           cell.style.border = '1px solid #000000';
           cell.style.padding = '3px 6px';
           cell.style.boxSizing = 'border-box';
+          cell.style.lineHeight = '1.2';
         });
         summaryTable.querySelectorAll('th').forEach(th => {
           th.style.backgroundColor = '#f1f5f9';
@@ -673,54 +679,65 @@ const ScheduleTable = React.memo(function ScheduleTable({
     }
   }, []);
 
+  // Shared helper: renders the ordinary schedule table to a high-DPI canvas
+  // Ensures identical, pristine rendering without deformation across both Save Image and Print
+  const generateOrdinaryGridCanvas = useCallback(async () => {
+    if (!containerRef.current) return null;
+    const html2canvas = (await import('html2canvas')).default;
+
+    const toolbar = containerRef.current.querySelector('.schedule-toolbar');
+    if (toolbar) toolbar.style.display = 'none';
+
+    const clone = containerRef.current.cloneNode(true);
+    if (toolbar) toolbar.style.display = 'flex';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'schedule-export-wrapper';
+    wrapper.style.position = 'absolute';
+    wrapper.style.top = '-10000px';
+    wrapper.style.left = '-10000px';
+    wrapper.style.width = '880px';
+    wrapper.style.minWidth = '880px';
+    wrapper.style.maxWidth = '880px';
+    wrapper.style.height = 'auto';
+    wrapper.style.backgroundColor = '#ffffff';
+    wrapper.style.padding = '12px 14px';
+    wrapper.style.boxSizing = 'border-box';
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
+    prepareExportClone(clone);
+
+    await new Promise(r => setTimeout(r, 150));
+
+    const finalRect = wrapper.getBoundingClientRect();
+    const finalWidth = Math.round(finalRect.width) || 880;
+    const finalHeight = Math.round(finalRect.height) || 900;
+
+    const canvas = await html2canvas(wrapper, {
+      scale: 3,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      width: finalWidth,
+      height: finalHeight,
+      windowWidth: finalWidth,
+      windowHeight: finalHeight
+    });
+
+    document.body.removeChild(wrapper);
+
+    return canvas;
+  }, [prepareExportClone]);
+
   const handleExportImage = useCallback(async () => {
     if (!containerRef.current) return;
     try {
       showToast('Generating image, please wait...', false);
-      const html2canvas = (await import('html2canvas')).default;
-
-      const toolbar = containerRef.current.querySelector('.schedule-toolbar');
-      if (toolbar) toolbar.style.display = 'none';
-
-      const clone = containerRef.current.cloneNode(true);
-      const wrapper = document.createElement('div');
-      wrapper.className = 'schedule-export-wrapper';
-      wrapper.style.position = 'absolute';
-      wrapper.style.top = '-10000px';
-      wrapper.style.left = '-10000px';
-      wrapper.style.width = '880px';
-      wrapper.style.minWidth = '880px';
-      wrapper.style.maxWidth = '880px';
-      wrapper.style.height = 'auto';
-      wrapper.style.backgroundColor = '#ffffff';
-      wrapper.style.padding = '12px 14px';
-      wrapper.style.boxSizing = 'border-box';
-      wrapper.style.display = 'flex';
-      wrapper.style.flexDirection = 'column';
-
-      wrapper.appendChild(clone);
-      document.body.appendChild(wrapper);
-
-      prepareExportClone(clone);
-
-      await new Promise(r => setTimeout(r, 150));
-
-      const finalRect = wrapper.getBoundingClientRect();
-      const finalWidth = Math.round(finalRect.width) || 880;
-      const finalHeight = Math.round(finalRect.height) || 900;
-
-      const canvas = await html2canvas(wrapper, {
-        scale: 2.5,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        width: finalWidth,
-        height: finalHeight,
-        windowWidth: finalWidth,
-        windowHeight: finalHeight
-      });
-
-      document.body.removeChild(wrapper);
-      if (toolbar) toolbar.style.display = 'flex';
+      const canvas = await generateOrdinaryGridCanvas();
+      if (!canvas) return;
 
       const imgData = canvas.toDataURL('image/png');
       setPreviewImage(imgData);
@@ -728,25 +745,16 @@ const ScheduleTable = React.memo(function ScheduleTable({
       console.error(err);
       showToast('Failed to export image.');
     }
-  }, [prepareExportClone, showToast]);
+  }, [generateOrdinaryGridCanvas, showToast]);
 
   const handleExportPrint = useCallback(async () => {
     if (!containerRef.current) return;
     try {
       showToast('Preparing print, please wait...', false);
+      const canvas = await generateOrdinaryGridCanvas();
+      if (!canvas) return;
 
-      const toolbar = containerRef.current.querySelector('.schedule-toolbar');
-      if (toolbar) toolbar.style.display = 'none';
-
-      const clone = containerRef.current.cloneNode(true);
-      if (toolbar) toolbar.style.display = 'flex';
-
-      prepareExportClone(clone);
-
-      // Collect all stylesheets from parent document to ensure vector fonts, grid styling & colors are crisp
-      const styleSheets = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-        .map(el => el.outerHTML)
-        .join('\n');
+      const imgData = canvas.toDataURL('image/png');
 
       const iframe = document.createElement('iframe');
       iframe.style.position = 'fixed';
@@ -768,61 +776,63 @@ const ScheduleTable = React.memo(function ScheduleTable({
           <html>
           <head>
               <title>Print Schedule</title>
-              ${styleSheets}
               <style>
                   @page {
                       size: landscape;
-                      margin: 0.2in 0.3in;
+                      margin: 0.2in 0.25in;
                   }
                   *, *::before, *::after {
+                      box-sizing: border-box !important;
                       -webkit-print-color-adjust: exact !important;
                       print-color-adjust: exact !important;
-                      box-sizing: border-box !important;
                   }
                   html, body {
                       margin: 0 !important;
                       padding: 0 !important;
                       width: 100% !important;
+                      height: 100% !important;
                       background: #ffffff !important;
-                      color: #000000 !important;
+                      overflow: hidden !important;
                       -webkit-font-smoothing: antialiased !important;
                       -moz-osx-font-smoothing: grayscale !important;
                       text-rendering: optimizeLegibility !important;
                   }
-                  .print-vector-wrapper {
+                  .print-image-container {
                       width: 100% !important;
+                      height: 100% !important;
                       max-width: 100% !important;
-                      margin: 0 auto !important;
-                      padding: 0 !important;
+                      max-height: 100% !important;
+                      display: flex !important;
+                      justify-content: center !important;
+                      align-items: center !important;
                       page-break-inside: avoid !important;
                       break-inside: avoid !important;
+                      page-break-after: avoid !important;
+                      break-after: avoid !important;
                   }
-                  .schedule-table-container {
-                      padding: 0 !important;
-                      margin: 0 !important;
-                      box-shadow: none !important;
-                      border-radius: 0 !important;
-                      width: 100% !important;
-                  }
-                  .schedule-table {
-                      width: 100% !important;
-                      table-layout: fixed !important;
-                  }
-                  .no-print, .schedule-toolbar, .floating-exit-btn, .rotate-device-hint, .remove-btn {
-                      display: none !important;
+                  .print-schedule-image {
+                      max-width: 100% !important;
+                      max-height: 98vh !important;
+                      width: auto !important;
+                      height: auto !important;
+                      object-fit: contain !important;
+                      display: block !important;
+                      margin: 0 auto !important;
+                      image-rendering: -webkit-optimize-contrast !important;
+                      image-rendering: high-quality !important;
                   }
               </style>
           </head>
           <body>
-              <div class="print-vector-wrapper">
-                  ${clone.outerHTML}
+              <div class="print-image-container">
+                  <img class="print-schedule-image" src="${imgData}" alt="Schedule" />
               </div>
           </body>
           </html>
       `);
       doc.close();
 
-      setTimeout(() => {
+      const triggerPrint = () => {
         try {
           iframe.contentWindow.focus();
           iframe.contentWindow.print();
@@ -834,13 +844,25 @@ const ScheduleTable = React.memo(function ScheduleTable({
             document.body.removeChild(iframe);
           }
         }, 2000);
-      }, 350);
+      };
+
+      const printImg = doc.querySelector('img');
+      if (printImg) {
+        if (printImg.complete) {
+          setTimeout(triggerPrint, 150);
+        } else {
+          printImg.onload = () => setTimeout(triggerPrint, 150);
+          printImg.onerror = () => setTimeout(triggerPrint, 150);
+        }
+      } else {
+        setTimeout(triggerPrint, 150);
+      }
 
     } catch (err) {
       console.error(err);
       showToast('Failed to print schedule.');
     }
-  }, [prepareExportClone, showToast]);
+  }, [generateOrdinaryGridCanvas, showToast]);
 
   useEffect(() => {
     const onExportImage = () => handleExportImage();

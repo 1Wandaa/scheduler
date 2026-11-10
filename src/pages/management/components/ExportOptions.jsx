@@ -136,7 +136,8 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             tempContainer.style.backgroundColor = 'white';
                             
                             const isoStyles = `
-                                    .printable-iso-document { width: 100%; font-family: "Times New Roman", Times, serif; color: #000; background: #fff; }
+                                    .printable-iso-document, .printable-iso-document * { font-family: "Times New Roman", Times, serif !important; }
+                                    .printable-iso-document { width: 100%; font-family: "Times New Roman", Times, serif !important; color: #000; background: #fff; }
                                     .iso-header-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 8.5pt; font-family: "Times New Roman", Times, serif; color: #000; }
                                     .iso-header-table td, .iso-header-table th { border: 1px solid #000; padding: 3px 6px; text-align: left; }
                                     .iso-header-table img { max-width: 55px; max-height: 52px; object-fit: contain; display: block; margin: 0 auto; }
@@ -153,14 +154,17 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8.5pt; padding: 2px 4px; }
                                     .iso-schedule-table td.scheduled-cell { border: 1px solid #000 !important; }
                                     .iso-schedule-table .schedule-cell { padding: 0; overflow: hidden; height: 44px; max-height: 44px; }
-                                    .cell-content { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 4px; height: 100%; max-height: 44px; overflow: hidden; box-sizing: border-box; line-height: 1.2; }
+                                    .cell-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box; }
+                                    .cell-wrapper.cell-multi { flex-direction: row; align-items: stretch; justify-content: stretch; }
+                                    .cell-content { display: flex; flex-direction: column; justify-content: center; padding: 2px 4px; height: 100%; max-height: 44px; overflow: hidden; box-sizing: border-box; line-height: 1.2; flex: 1; min-width: 0; width: 100%; }
                                     .cell-content.compact { padding: 1px 2px; line-height: 1.05; }
-                                    .cell-subject { font-weight: bold; font-size: 9pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+                                    .cell-subject { font-weight: bold; font-size: 9pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
                                     .cell-content.compact .cell-subject { font-size: 7.5pt; line-height: 1.05; }
-                                    .cell-professor { font-size: 8pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                    .cell-content.compact .cell-professor { font-size: 6.5pt; line-height: 1.05; margin-top: 0; }
-                                    .cell-room { font-size: 8pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 1px; }
-                                    .cell-content.compact .cell-room { font-size: 6.5pt; line-height: 1.05; margin-top: 0; }
+                                    .cell-section, .cell-professor { font-size: 8pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: left; padding-left: 6px; box-sizing: border-box; margin-top: 1px; }
+                                    .cell-section { font-weight: bold; }
+                                    .cell-content.compact .cell-section, .cell-content.compact .cell-professor { font-size: 6.5pt; line-height: 1.05; padding-left: 3px; margin-top: 0; }
+                                    .cell-room { font-size: 8pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: left; padding-left: 6px; box-sizing: border-box; margin-top: 1px; }
+                                    .cell-content.compact .cell-room { font-size: 6.5pt; line-height: 1.05; padding-left: 3px; margin-top: 0; }
                                     .signatures-section { display: flex; justify-content: space-between; margin-top: 10px; padding: 0 20px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
                                     .signature-block { text-align: left; min-width: 250px; }
                                     .signature-block.right-aligned { text-align: left; min-width: 280px; padding-right: 40px; }
@@ -569,12 +573,17 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             page-break-inside: avoid !important;
                                             break-inside: avoid !important;
                                         }
+                                        .printable-iso-document,
+                                        .printable-iso-document * {
+                                            font-family: "Times New Roman", Times, serif !important;
+                                        }
                                         .printable-iso-document { 
                                             display: block !important; 
                                             width: 100% !important; 
                                             max-width: 100% !important; 
                                             margin: 0 !important; 
                                             padding: 0 !important; 
+                                            font-family: "Times New Roman", Times, serif !important;
                                             page-break-after: avoid !important;
                                             break-after: avoid !important;
                                             page-break-inside: avoid !important;
@@ -682,10 +691,23 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             height: 44px !important; 
                                             max-height: 44px !important; 
                                         }
-                                        .cell-content { 
+                                        .cell-wrapper { 
                                             display: flex !important; 
                                             flex-direction: column !important; 
                                             align-items: center !important; 
+                                            justify-content: center !important; 
+                                            width: 100% !important; 
+                                            height: 100% !important; 
+                                            box-sizing: border-box !important; 
+                                        }
+                                        .cell-wrapper.cell-multi { 
+                                            flex-direction: row !important; 
+                                            align-items: stretch !important; 
+                                            justify-content: stretch !important; 
+                                        }
+                                        .cell-content { 
+                                            display: flex !important; 
+                                            flex-direction: column !important; 
                                             justify-content: center !important; 
                                             padding: 2px 4px !important; 
                                             height: 100% !important; 
@@ -693,6 +715,9 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             overflow: hidden !important; 
                                             box-sizing: border-box !important; 
                                             line-height: 1.2 !important; 
+                                            flex: 1 !important; 
+                                            min-width: 0 !important; 
+                                            width: 100% !important; 
                                         }
                                         .cell-content.compact { 
                                             padding: 1px 2px !important; 
@@ -705,24 +730,32 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             white-space: nowrap !important; 
                                             overflow: hidden !important; 
                                             text-overflow: ellipsis !important; 
-                                            max-width: 100% !important; 
+                                            width: 100% !important; 
+                                            text-align: center !important; 
                                         }
                                         .cell-content.compact .cell-subject { 
                                             font-size: 7.5pt !important; 
                                             line-height: 1.05 !important; 
                                         }
-                                        .cell-professor { 
+                                        .cell-section, .cell-professor { 
                                             font-size: 8pt !important; 
                                             line-height: 1.2 !important; 
                                             white-space: nowrap !important; 
                                             overflow: hidden !important; 
                                             text-overflow: ellipsis !important; 
-                                            max-width: 100% !important; 
+                                            width: 100% !important; 
+                                            text-align: left !important; 
+                                            padding-left: 6px !important; 
+                                            box-sizing: border-box !important; 
                                             margin-top: 1px !important; 
                                         }
-                                        .cell-content.compact .cell-professor { 
+                                        .cell-section { 
+                                            font-weight: bold !important; 
+                                        }
+                                        .cell-content.compact .cell-section, .cell-content.compact .cell-professor { 
                                             font-size: 6.5pt !important; 
                                             line-height: 1.05 !important; 
+                                            padding-left: 3px !important; 
                                             margin-top: 0 !important; 
                                         }
                                         .cell-room { 
@@ -731,12 +764,16 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             white-space: nowrap !important; 
                                             overflow: hidden !important; 
                                             text-overflow: ellipsis !important; 
-                                            max-width: 100% !important; 
+                                            width: 100% !important; 
+                                            text-align: left !important; 
+                                            padding-left: 6px !important; 
+                                            box-sizing: border-box !important; 
                                             margin-top: 1px !important; 
                                         }
                                         .cell-content.compact .cell-room { 
                                             font-size: 6.5pt !important; 
                                             line-height: 1.05 !important; 
+                                            padding-left: 3px !important; 
                                             margin-top: 0 !important; 
                                         }
                                         .signatures-section { 
@@ -1244,6 +1281,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                         style={itemStyle}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        title="Save high-resolution image of ordinary grid schedule (.png)"
                     >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
@@ -1267,6 +1305,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                         style={{ ...itemStyle, borderBottom: 'none' }}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        title="Print ordinary grid schedule with exact formatting matching saved image"
                     >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="6 9 6 2 18 2 18 9"></polyline>

@@ -443,7 +443,9 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 <PrintableSchedule
                     scheduleItems={filteredSchedules}
                     scheduleMode={detectedScheduleMode}
-                    department={viewType === 'department' ? selectedId : ''}
+                    department={viewType === 'department' ? selectedId : (activeEntity?.department || '')}
+                    viewType={viewType}
+                    facultyName={viewType === 'faculty' ? titleName : ''}
                     sectionName={
                         viewType === 'department' && deptSectionId
                             ? (sections.find(s => s.id === deptSectionId)?.name || titleName)
@@ -456,7 +458,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                                 ? selectedId
                                 : viewType === 'section' && selectedId
                                     ? (sections.find(s => s.id === selectedId)?.program || '')
-                                    : ''
+                                    : (activeEntity?.department || '')
                     }
                     semesterInfo={`${activeSemester} ${activeSchoolYear}`.trim() || "2nd Sem 2025-2026"}
                 />
