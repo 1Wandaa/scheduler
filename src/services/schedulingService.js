@@ -314,7 +314,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         details: {
           professors: [],
           rooms: roomPool.map((r) => ({ id: r.id, name: r.name, type: r.type || 'Lecture' })),
-          suggestion: `Go to Faculty Management or Assignment Hub and assign an eligible instructor to ${subject?.code || 'this subject'} (${section?.name || ''}).`
+          suggestion: `Go to Faculty Management or Teaching Load Management and assign an eligible instructor to ${subject?.code || 'this subject'} (${section?.name || ''}).`
         }
       };
     }

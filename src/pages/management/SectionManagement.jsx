@@ -315,7 +315,7 @@ const SectionManagement = ({ sections, professors, schedules, subjects, departme
                 onClick={onNavigateToHub}
                 style={{ background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-color)', boxShadow: 'none' }}
               >
-                ⇄ Assignments Hub
+                ⇄ Teaching Load Management
               </button>
             )}
             <button

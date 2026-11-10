@@ -47,7 +47,7 @@ const SystemReminders = ({
         title: 'Unassigned Subjects',
         text: `${unassignedCount} active subject${unassignedCount > 1 ? 's have' : ' has'} no qualified faculty assigned.`,
         actionTab: 'assignments',
-        actionLabel: 'Assignment Hub'
+        actionLabel: 'Teaching Load Management'
       });
     }
 

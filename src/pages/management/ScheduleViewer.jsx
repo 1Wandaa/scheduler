@@ -9,7 +9,7 @@ import PreviewModal from './components/PreviewModal';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import CustomSelect from '../../components/CustomSelect/CustomSelect';
 
-function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, isFaculty = false, onUpdateSchedule, onRemoveSchedule, onRemoveSchedulesBatch, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true }) {
+function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, isFaculty = false, onUpdateSchedule, onRemoveSchedule, onRemoveSchedulesBatch, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true, onBack }) {
     const { confirm } = useGlobalDialog();
     const location = useLocation();
 
@@ -310,6 +310,12 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 </div>
                 <h3 style={{ color: 'var(--text-main)', marginBottom: '10px', fontSize: '1.5rem' }}>Schedules Not Available</h3>
                 <p style={{ color: 'var(--text-muted)', maxWidth: '500px', lineHeight: 1.6 }}>The schedules for {activeSemester} {activeSchoolYear} are still being finalized and have not been published yet. Please check back later.</p>
+                {onBack && (
+                    <button className="back-btn" onClick={onBack} style={{ marginTop: '20px' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                        Back
+                    </button>
+                )}
             </div>
         );
     }
@@ -322,6 +328,12 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 {/* Header Row: Title & Print Button separated from filters */}
                 <div className="mgmt-header no-print">
                     <div className="mgmt-header-left">
+                        {onBack && (
+                            <button className="back-btn" onClick={onBack}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                                Back
+                            </button>
+                        )}
                         <div className="mgmt-header-info">
                             <h3 className="card-title">
                                 <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>

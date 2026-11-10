@@ -49,7 +49,7 @@ const FacultyTable = ({ facultyList, subjects = [], departments = [], onEdit, on
         </thead>
         <tbody>
           {facultyList.map(p => {
-            // Calculate units based on assignments to ensure it immediately reflects Assignment Hub changes
+            // Calculate units based on assignments to ensure it immediately reflects Teaching Load Management changes
             let currentUnits = 0;
             if (p.sectionSubjectMap) {
               Object.entries(p.sectionSubjectMap).forEach(([, subRefs]) => {

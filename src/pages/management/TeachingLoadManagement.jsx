@@ -1,4 +1,4 @@
-// src/pages/management/AssignmentHub.jsx
+// src/pages/management/TeachingLoadManagement.jsx
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { db } from '../../config/firebase';
@@ -37,7 +37,7 @@ import {
   Settings2,
   Edit3
 } from 'lucide-react';
-import './AssignmentHub.css';
+import './TeachingLoadManagement.css';
 
 /**
  * Normalizes program name or department code to standard department code.
@@ -126,7 +126,7 @@ const InlineInstructorSelect = React.memo(({
   );
 });
 
-const AssignmentHub = ({
+const TeachingLoadManagement = ({
   sections = [],
   professors = [],
   subjects = [],
@@ -2306,7 +2306,7 @@ const AssignmentHub = ({
                 <span className="hub-header-icon-badge">
                   <ArrowRightLeft size={18} />
                 </span>
-                Assignments Hub
+                Teaching Load Management
               </h2>
               <p className="hub-header-desc">
                 Integrated coordinator for Section, Subject, and Faculty relationships
@@ -3948,4 +3948,4 @@ const AssignmentHub = ({
   );
 };
 
-export default AssignmentHub;
+export default TeachingLoadManagement;

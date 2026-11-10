@@ -1529,7 +1529,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
       {selectedSubject && eligibleSections.length === 0 && (
         <div className="info-box">
-          ℹ️ No sections are currently enrolled in this subject. You can assign this subject to a section in Section Management or Assignment Hub.
+          ℹ️ No sections are currently enrolled in this subject. You can assign this subject to a section in Section Management or Teaching Load Management.
         </div>
       )}
 

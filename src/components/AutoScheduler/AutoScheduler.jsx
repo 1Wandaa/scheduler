@@ -42,7 +42,8 @@ function AutoScheduler({
   activeSemester,
   activeSchoolYear,
   onNavigateTab,
-  onLogHistory
+  onLogHistory,
+  onBack
 }) {
   const navigate = useNavigate();
   const { confirm } = useGlobalDialog();
@@ -627,11 +628,19 @@ function AutoScheduler({
     <div className="card autosched-container" style={{ overflow: 'visible' }}>
       {/* Header */}
       <div className="autosched-header">
-        <div className="autosched-header-title">
-          <SlidersHorizontal size={20} className="autosched-header-icon" />
-          <div>
-            <h2>Auto Scheduler</h2>
-            <p>Generate class schedules automatically without conflicts.</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {onBack && (
+            <button type="button" className="back-btn" onClick={onBack} title="Return to Dashboard">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+              Back
+            </button>
+          )}
+          <div className="autosched-header-title">
+            <SlidersHorizontal size={20} className="autosched-header-icon" />
+            <div>
+              <h2>Auto Scheduler</h2>
+              <p>Generate class schedules automatically without conflicts.</p>
+            </div>
           </div>
         </div>
         <div className="autosched-term-badge">

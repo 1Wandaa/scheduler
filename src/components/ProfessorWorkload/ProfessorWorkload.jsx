@@ -14,7 +14,8 @@ function ProfessorWorkload({
   activeSemester,
   activeSchoolYear,
   semesterInfo,
-  user
+  user,
+  onBack
 }) {
   const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
@@ -170,6 +171,15 @@ function ProfessorWorkload({
 
   return (
     <div className="professor-workload-container pw-animate">
+
+      {onBack && (
+        <div className="no-print" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center' }}>
+          <button className="back-btn" onClick={onBack}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            Back
+          </button>
+        </div>
+      )}
 
       {/* Header */}
       <div className="pw-header">
