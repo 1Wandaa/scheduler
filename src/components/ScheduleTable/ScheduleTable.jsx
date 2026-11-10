@@ -778,7 +778,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
               <title>Print Schedule</title>
               <style>
                   @page {
-                      size: landscape;
+                      size: letter portrait;
                       margin: 0.2in 0.25in;
                   }
                   *, *::before, *::after {
@@ -809,15 +809,16 @@ const ScheduleTable = React.memo(function ScheduleTable({
                       break-inside: avoid !important;
                       page-break-after: avoid !important;
                       break-after: avoid !important;
+                      box-sizing: border-box !important;
                   }
                   .print-schedule-image {
                       max-width: 100% !important;
-                      max-height: 98vh !important;
+                      max-height: 99% !important;
                       width: auto !important;
                       height: auto !important;
                       object-fit: contain !important;
                       display: block !important;
-                      margin: 0 auto !important;
+                      margin: auto !important;
                       image-rendering: -webkit-optimize-contrast !important;
                       image-rendering: high-quality !important;
                   }

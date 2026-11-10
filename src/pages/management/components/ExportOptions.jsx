@@ -4,7 +4,7 @@
  *
  * LAYOUT REFERENCES & STANDARDS:
  * - Official reference templates and quality specifications are located in: /references/
- *   ├── /references/class-schedule-iso/     (INS-CLS-08, Landscape Letter)
+ *   ├── /references/class-schedule-iso/     (INS-CLS-08, Portrait/Landscape Letter)
  *   ├── /references/faculty-workload-iso/   (INS F22, Portrait Letter)
  *   └── /references/room-utilization-iso/   (Institutional Room Util, Portrait Letter)
  *
@@ -55,9 +55,9 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
 
     return (
         <div className="no-print export-dropdown-container">
-            <button 
-                className="btn btn-sm" 
-                onClick={() => setIsExportOpen(!isExportOpen)} 
+            <button
+                className="btn btn-sm"
+                onClick={() => setIsExportOpen(!isExportOpen)}
                 style={{ background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -77,15 +77,15 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                     <div style={{ padding: '8px 12px', fontSize: '0.72rem', fontWeight: 'bold', color: 'var(--accent-primary)', backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)', letterSpacing: '0.5px' }}>
                         ISO 9001:2015 FORMAT
                     </div>
-                    
+
                     {/* Word Document (.doc) */}
-                    <button 
+                    <button
                         onClick={() => {
                             setIsExportOpen(false);
                             const roomContent = document.querySelector('.printable-room-utilization');
                             const isoContent = document.querySelector('.printable-iso-document');
                             const workloadContent = document.querySelector('.faculty-workload-iso-document');
-                            
+
                             if (roomContent) {
                                 exportRoomUtilizationToWord(user);
                             } else if (workloadContent) {
@@ -95,7 +95,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             } else {
                                 toast.error('No printable schedule found. Please select a schedule or room first.');
                             }
-                        }} 
+                        }}
                         style={itemStyle}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -113,7 +113,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
 
 
                     {/* ISO Image (.png) */}
-                    <button 
+                    <button
                         onClick={async () => {
                             setIsExportOpen(false);
                             setIsGenerating(true);
@@ -132,9 +132,9 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             tempContainer.style.position = 'absolute';
                             tempContainer.style.top = '-10000px';
                             tempContainer.style.left = '-10000px';
-                            tempContainer.style.width = isWorkload ? '850px' : '1100px'; 
+                            tempContainer.style.width = isRoom ? '1100px' : '850px';
                             tempContainer.style.backgroundColor = 'white';
-                            
+
                             const isoStyles = `
                                     .printable-iso-document, .printable-iso-document * { font-family: "Times New Roman", Times, serif !important; }
                                     .printable-iso-document { width: 100%; font-family: "Times New Roman", Times, serif !important; color: #000; background: #fff; }
@@ -172,7 +172,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     .sig-name { text-decoration: underline; font-weight: bold; font-size: 9.5pt; }
                                     .sig-title { font-size: 8.5pt; margin-top: 2px; }
                             `;
-                            
+
                             const roomStyles = `
                                 .room-export-wrapper {
                                     font-family: Arial, "Times New Roman", Times, serif;
@@ -472,12 +472,12 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     cloneImg.src = origImg.src;
                                 }
                             }
-                            
+
                             try {
                                 const html2canvas = (await import('html2canvas')).default;
-                                const renderWidth = isWorkload ? 850 : 1100;
-                                const canvas = await html2canvas(tempContainer, { 
-                                    scale: 3, 
+                                const renderWidth = isRoom ? 1100 : 850;
+                                const canvas = await html2canvas(tempContainer, {
+                                    scale: 3,
                                     useCORS: true,
                                     width: renderWidth,
                                     windowWidth: renderWidth
@@ -486,8 +486,8 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 logActivity({
                                     user,
                                     action: LOG_ACTIONS.EXPORT,
-                                    details: isRoom 
-                                        ? 'Generated room utilization preview image' 
+                                    details: isRoom
+                                        ? 'Generated room utilization preview image'
                                         : (isWorkload ? 'Generated faculty workload preview image' : 'Generated ISO format schedule preview image')
                                 });
                             } catch (error) {
@@ -497,7 +497,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 document.body.removeChild(tempContainer);
                                 setIsGenerating(false);
                             }
-                        }} 
+                        }}
                         style={itemStyle}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -511,7 +511,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                     </button>
 
                     {/* ISO Print */}
-                    <button 
+                    <button
                         onClick={() => {
                             setIsExportOpen(false);
                             const roomContent = document.querySelector('.printable-room-utilization');
@@ -538,11 +538,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             document.body.appendChild(iframe);
                             const doc = iframe.contentDocument || iframe.contentWindow.document;
                             doc.open();
-                            
+
                             const isoPrintStyles = `
                                         @page { 
-                                            size: landscape; 
-                                            margin: 0.25in 0.35in; 
+                                            size: letter portrait; 
+                                            margin: 0.2in 0.25in; 
                                         }
                                         *, *::before, *::after {
                                             box-sizing: border-box !important;
@@ -780,8 +780,8 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             display: flex !important; 
                                             justify-content: space-between !important; 
                                             margin-top: 10px !important; 
-                                            padding: 0 20px !important; 
-                                            font-size: 9pt !important; 
+                                            padding: 0 10px !important; 
+                                            font-size: 8.5pt !important; 
                                             font-family: "Times New Roman", Times, serif !important; 
                                             color: #000 !important; 
                                             page-break-inside: avoid !important;
@@ -789,13 +789,13 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             page-break-after: avoid !important;
                                             break-after: avoid !important; 
                                         }
-                                        .signature-block { text-align: left !important; min-width: 250px !important; }
-                                        .signature-block.right-aligned { text-align: left !important; min-width: 280px !important; padding-right: 40px !important; }
-                                        .sig-label { margin-bottom: 22px !important; font-size: 9pt !important; }
-                                        .sig-name { text-decoration: underline !important; font-weight: bold !important; font-size: 9.5pt !important; }
-                                        .sig-title { font-size: 8.5pt !important; margin-top: 2px !important; }
+                                        .signature-block { text-align: left !important; min-width: 200px !important; }
+                                        .signature-block.right-aligned { text-align: left !important; min-width: 200px !important; padding-right: 10px !important; }
+                                        .sig-label { margin-bottom: 20px !important; font-size: 8.5pt !important; }
+                                        .sig-name { text-decoration: underline !important; font-weight: bold !important; font-size: 9pt !important; }
+                                        .sig-title { font-size: 8pt !important; margin-top: 2px !important; }
                             `;
-                            
+
                             const roomPrintStyles = `
                                 @page { 
                                     size: letter portrait; 
@@ -1173,7 +1173,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     break-inside: avoid !important;
                                 }
                             `;
-                            
+
                             let printHtml = printContent.innerHTML;
                             if (isRoom) {
                                 printHtml = printHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
@@ -1195,7 +1195,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     // Keep original src
                                 }
                             }
-                            
+
                             doc.write(`
                                 <html>
                                 <head>
@@ -1211,8 +1211,8 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             logActivity({
                                 user,
                                 action: LOG_ACTIONS.EXPORT,
-                                details: isRoom 
-                                    ? 'Printed room utilization schedule document' 
+                                details: isRoom
+                                    ? 'Printed room utilization schedule document'
                                     : (isWorkload ? 'Printed faculty workload document' : 'Printed ISO format schedule document')
                             });
                             setTimeout(() => {
@@ -1223,7 +1223,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     }
                                 }, 2000);
                             }, 300);
-                        }} 
+                        }}
                         style={itemStyle}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -1242,7 +1242,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                     </div>
 
                     {/* Grid Word (.doc) */}
-                    <button 
+                    <button
                         onClick={() => {
                             setIsExportOpen(false);
                             window.dispatchEvent(new Event('export-ordinary-word'));
@@ -1251,7 +1251,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 action: LOG_ACTIONS.EXPORT,
                                 details: 'Exported ordinary grid schedule to Word (.doc)'
                             });
-                        }} 
+                        }}
                         style={itemStyle}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -1268,7 +1268,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
 
 
                     {/* Grid Save Image */}
-                    <button 
+                    <button
                         onClick={() => {
                             setIsExportOpen(false);
                             window.dispatchEvent(new Event('export-ordinary-image'));
@@ -1277,7 +1277,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 action: LOG_ACTIONS.EXPORT,
                                 details: 'Exported ordinary grid schedule image'
                             });
-                        }} 
+                        }}
                         style={itemStyle}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -1292,7 +1292,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                     </button>
 
                     {/* Grid Print */}
-                    <button 
+                    <button
                         onClick={() => {
                             setIsExportOpen(false);
                             window.dispatchEvent(new Event('export-ordinary-print'));
@@ -1301,7 +1301,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 action: LOG_ACTIONS.EXPORT,
                                 details: 'Printed ordinary grid schedule'
                             });
-                        }} 
+                        }}
                         style={{ ...itemStyle, borderBottom: 'none' }}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
