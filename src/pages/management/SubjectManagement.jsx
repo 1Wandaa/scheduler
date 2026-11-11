@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import { DEPARTMENTS, getDeptColor } from '../../config/constants';
 import AutocompleteMultiSelect from '../../components/AutocompleteMultiSelect/AutocompleteMultiSelect';
+import HoursPerMeetingSelect from '../../components/HoursPerMeetingSelect/HoursPerMeetingSelect';
 import QuickCreateModal from '../../components/QuickCreateModal/QuickCreateModal';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 import { detectLabRequirement, suggestDepartmentFromCode } from '../../utils/subjectLabDetector';
@@ -811,19 +812,14 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               {!formData.hasLecLab && (
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                   <label className="form-label">Hours per Meeting</label>
-                  <select
-                    className="form-select"
+                  <HoursPerMeetingSelect
                     value={formData.hoursPerMeeting || 1.5}
-                    onChange={e => setFormData({ ...formData, hoursPerMeeting: Number(e.target.value) })}
-                  >
-                    <option value={1}>1.0 Hours</option>
-                    <option value={1.5}>1.5 Hours</option>
-                    <option value={2}>2.0 Hours</option>
-                    <option value={2.5}>2.5 Hours</option>
-                    <option value={3}>3.0 Hours</option>
-                    <option value={4}>4.0 Hours</option>
-                    <option value={5}>5.0 Hours</option>
-                  </select>
+                    onChange={val => setFormData({ ...formData, hoursPerMeeting: val })}
+                    label="Hours / Meeting"
+                    labelClassName="form-label"
+                    selectClassName="form-select"
+                    inputClassName="form-input"
+                  />
                 </div>
               )}
             </div>

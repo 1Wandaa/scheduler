@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 import { DEPARTMENTS } from '../../config/constants';
 import { detectLabRequirement, suggestDepartmentFromCode } from '../../utils/subjectLabDetector';
+import HoursPerMeetingSelect from '../HoursPerMeetingSelect/HoursPerMeetingSelect';
 import './QuickCreateModal.css';
 
 const QuickCreateModal = ({
@@ -464,17 +465,14 @@ const QuickCreateModal = ({
                 {!subjectData.hasLecLab && (
                   <div className="quick-form-group" style={{ flex: 1 }}>
                     <label className="quick-form-label">Hours / Meeting</label>
-                    <select
-                      className="quick-form-select"
+                    <HoursPerMeetingSelect
                       value={subjectData.hoursPerMeeting}
-                      onChange={e => setSubjectData({ ...subjectData, hoursPerMeeting: Number(e.target.value) })}
-                    >
-                      <option value={1}>1.0 Hour</option>
-                      <option value={1.5}>1.5 Hours</option>
-                      <option value={2}>2.0 Hours</option>
-                      <option value={2.5}>2.5 Hours</option>
-                      <option value={3}>3.0 Hours</option>
-                    </select>
+                      onChange={val => setSubjectData({ ...subjectData, hoursPerMeeting: val })}
+                      label="Hours / Meeting"
+                      labelClassName="quick-form-label"
+                      selectClassName="quick-form-select"
+                      inputClassName="quick-form-input"
+                    />
                   </div>
                 )}
               </div>

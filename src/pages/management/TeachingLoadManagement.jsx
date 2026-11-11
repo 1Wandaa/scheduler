@@ -6,6 +6,7 @@ import { doc, writeBatch, updateDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { DEPARTMENTS, getDeptColor, PROGRAM_DEPARTMENTS } from '../../config/constants';
 import QuickCreateModal from '../../components/QuickCreateModal/QuickCreateModal';
+import HoursPerMeetingSelect from '../../components/HoursPerMeetingSelect/HoursPerMeetingSelect';
 import AutocompleteMultiSelect from '../../components/AutocompleteMultiSelect/AutocompleteMultiSelect';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 import { detectLabRequirement, suggestDepartmentFromCode } from '../../utils/subjectLabDetector';
@@ -2005,16 +2006,14 @@ const TeachingLoadManagement = ({
         ) : (
           <div className="hub-form-field">
             <label className="hub-form-label">Hours Per Meeting</label>
-            <select
-              className="hub-form-select"
+            <HoursPerMeetingSelect
               value={form.hoursPerMeeting || 1.5}
-              onChange={e => setNestedEditing(prev => ({ ...prev, form: { ...prev.form, hoursPerMeeting: Number(e.target.value) } }))}
-            >
-              <option value={1}>1.0 Hour</option>
-              <option value={1.5}>1.5 Hours (e.g. 2x weekly)</option>
-              <option value={2}>2.0 Hours</option>
-              <option value={3}>3.0 Hours (1x weekly block)</option>
-            </select>
+              onChange={val => setNestedEditing(prev => ({ ...prev, form: { ...prev.form, hoursPerMeeting: val } }))}
+              label="Hours / Meeting"
+              labelClassName="hub-form-label"
+              selectClassName="hub-form-select"
+              inputClassName="hub-form-input"
+            />
           </div>
         )}
 
@@ -3721,16 +3720,14 @@ const TeachingLoadManagement = ({
                     <div className="hub-form-grid-2">
                       <div className="hub-form-field">
                         <label className="hub-form-label">Hours Per Meeting</label>
-                        <select
-                          className="hub-form-select"
+                        <HoursPerMeetingSelect
                           value={stagedEntityForm.hoursPerMeeting || 1.5}
-                          onChange={e => setStagedEntityForm(prev => ({ ...prev, hoursPerMeeting: Number(e.target.value) }))}
-                        >
-                          <option value={1}>1.0 Hour (e.g. 3x weekly)</option>
-                          <option value={1.5}>1.5 Hours (e.g. 2x weekly TTh / WF)</option>
-                          <option value={2}>2.0 Hours</option>
-                          <option value={3}>3.0 Hours (1x weekly block)</option>
-                        </select>
+                          onChange={val => setStagedEntityForm(prev => ({ ...prev, hoursPerMeeting: val }))}
+                          label="Hours / Meeting"
+                          labelClassName="hub-form-label"
+                          selectClassName="hub-form-select"
+                          inputClassName="hub-form-input"
+                        />
                       </div>
                       <div className="hub-form-field">
                         <label className="hub-form-label">Classroom Mode</label>
