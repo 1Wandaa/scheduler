@@ -626,7 +626,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     }
   }, [appliedMessage]);
 
-  // Subtle Proactive Suggestion Chip (only computed when subject or section is selected)
+  // Proactive Suggestion Chip (only computed when subject, section, or professor is selected)
   const bestSuggestion = (() => {
     if (!formData.subject && !formData.section && !formData.professor) return null;
     const recs = getSmartScheduleRecommendations({
@@ -740,7 +740,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       };
     });
     setTimeSlotSearch({});
-    setAppliedMessage(`✓ Conflict resolved: ${alt.title}`);
+    setAppliedMessage(`Conflict resolved: ${alt.title}`);
     setOpenTimeSlotDay(null);
     setValidation(null);
   };
@@ -769,7 +769,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       component: rec.component || formData.component || 'Lecture'
     });
     setTimeSlotSearch({});
-    setAppliedMessage(`✓ Auto-filled: ${dayDisplay} ${timeLabel} · ${rec.room?.name}`);
+    setAppliedMessage(`Auto-filled: ${dayDisplay} ${timeLabel} · ${rec.room?.name}`);
     setOpenTimeSlotDay(null);
     setValidation(null);
   };
@@ -799,7 +799,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
         </div>
       )}
 
-      {/* Reactive AI Conflict Resolver Banner */}
+      {/* Conflict Resolver Banner */}
       {!appliedMessage && activeConflictData && activeConflictData.alternatives.length > 0 && (
         <div className="ai-conflict-banner">
           <div className="ai-conflict-header">
@@ -820,7 +820,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                 className="ai-conflict-btn"
                 onClick={() => handleApplyAlternative(alt)}
               >
-                <span>✨ {alt.title}</span>
+                <span>{alt.title}</span>
                 <span style={{ fontSize: '0.72rem', opacity: 0.85 }}>({alt.description})</span>
               </button>
             ))}
@@ -828,18 +828,18 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
         </div>
       )}
 
-      {/* Subtle, Clean Proactive Suggestion Chip (Only when fields are unfilled) */}
+      {/* Proactive Suggestion Chip (Predetermined schedule recommendation) */}
       {!appliedMessage && bestSuggestion && isFormIncomplete && !activeConflictData && (
         <div className="ai-inline-chip-bar">
           <span className="ai-inline-chip-text">
-            💡 <strong>AI Suggestion:</strong> {bestSuggestion.dayLabel || (Array.isArray(bestSuggestion.day) ? bestSuggestion.day.map(d => d.slice(0, 3)).join(' / ') : bestSuggestion.day)} {bestSuggestion.timeSlot?.label} · {bestSuggestion.room?.name} · Prof. {bestSuggestion.professor?.name}
+            <strong>AI Suggestion:</strong> {bestSuggestion.dayLabel || (Array.isArray(bestSuggestion.day) ? bestSuggestion.day.map(d => d.slice(0, 3)).join(' / ') : bestSuggestion.day)} {bestSuggestion.timeSlot?.label} · {bestSuggestion.room?.name} · Prof. {bestSuggestion.professor?.name}
           </span>
           <button
             type="button"
             className="ai-inline-chip-btn"
             onClick={() => handleApplySuggestion(bestSuggestion)}
           >
-            ⚡ Auto-Fill
+            Auto-Fill
           </button>
         </div>
       )}
@@ -873,7 +873,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                       enrolled.push({
                         value: sub.id,
                         label: `${sub.code} - ${sub.name}`,
-                        badge: '✨ Enrolled',
+                        badge: 'Enrolled',
                         badgeColor: '#059669'
                       });
                     } else {
@@ -887,7 +887,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   const groups = [];
                   if (enrolled.length > 0) {
                     groups.push({
-                      label: `✨ Recommended for ${selectedSection.name}`,
+                      label: `Recommended for ${selectedSection.name}`,
                       options: enrolled
                     });
                   }
@@ -914,7 +914,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                       specialized.push({
                         value: sub.id,
                         label: `${sub.code} - ${sub.name}`,
-                        badge: '✨ Specialized',
+                        badge: 'Specialized',
                         badgeColor: '#059669'
                       });
                     } else {
@@ -928,7 +928,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   const groups = [];
                   if (specialized.length > 0) {
                     groups.push({
-                      label: `✨ Specialization of Prof. ${selectedProfessor.name}`,
+                      label: `Specialization of Prof. ${selectedProfessor.name}`,
                       options: specialized
                     });
                   }
@@ -997,7 +997,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                       matching.push({
                         value: sec.id,
                         label: `${sec.name}${sec.program ? ` (${sec.program})` : ''}`,
-                        badge: '✨ Enrolled',
+                        badge: 'Enrolled',
                         badgeColor: '#059669'
                       });
                     } else {
@@ -1011,7 +1011,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   const groups = [];
                   if (matching.length > 0) {
                     groups.push({
-                      label: `✨ Recommended for ${selectedSubject.code}`,
+                      label: `Recommended for ${selectedSubject.code}`,
                       options: matching
                     });
                   }
@@ -1036,7 +1036,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                       assigned.push({
                         value: sec.id,
                         label: `${sec.name}${sec.program ? ` (${sec.program})` : ''}`,
-                        badge: '✨ Assigned',
+                        badge: 'Assigned',
                         badgeColor: '#059669'
                       });
                     } else {
@@ -1050,7 +1050,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   const groups = [];
                   if (assigned.length > 0) {
                     groups.push({
-                      label: `✨ Assigned Sections of Prof. ${selectedProfessor.name}`,
+                      label: `Assigned Sections of Prof. ${selectedProfessor.name}`,
                       options: assigned
                     });
                   }
@@ -1096,7 +1096,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                       specialized.push({
                         value: professor.id,
                         label: `${professor.name}${professor.department ? ` (${professor.department})` : ''}`,
-                        badge: isConflict ? '(Occupied)' : '✨ Specialized',
+                        badge: isConflict ? '(Occupied)' : 'Specialized',
                         badgeColor: isConflict ? '#ef4444' : '#059669'
                       });
                     } else {
@@ -1112,7 +1112,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   const groups = [];
                   if (specialized.length > 0) {
                     groups.push({
-                      label: `✨ Recommended for ${selectedSubject.code}`,
+                      label: `Recommended for ${selectedSubject.code}`,
                       options: specialized
                     });
                   }
@@ -1139,7 +1139,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                       sectionFaculty.push({
                         value: professor.id,
                         label: `${professor.name}${professor.department ? ` (${professor.department})` : ''}`,
-                        badge: isConflict ? '(Occupied)' : isAdviser ? '✨ Adviser' : '✨ Assigned',
+                        badge: isConflict ? '(Occupied)' : isAdviser ? 'Adviser' : 'Assigned',
                         badgeColor: isConflict ? '#ef4444' : '#059669'
                       });
                     } else {
@@ -1155,7 +1155,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   const groups = [];
                   if (sectionFaculty.length > 0) {
                     groups.push({
-                      label: `✨ Recommended Faculty for ${selectedSection.name}`,
+                      label: `Recommended Faculty for ${selectedSection.name}`,
                       options: sectionFaculty
                     });
                   }
@@ -1242,7 +1242,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
                   if (suggestedRooms.length > 0) {
                     finalOptions.push({
-                      label: '✨ Suggested Labs',
+                      label: 'Suggested Labs',
                       options: suggestedRooms.map(room => {
                          let roomLabel = room.name;
                          if (room.hasComputers) roomLabel += ' (Comp Lab)';
@@ -1250,7 +1250,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                          return {
                            value: room.id,
                            label: roomLabel,
-                           badge: '✨ Recommended'
+                           badge: 'Recommended'
                          };
                       })
                     });
@@ -1529,7 +1529,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                           <span>Use custom time "{filterQuery}"</span>
                           {isInvalid && (
                             <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: '500' }}>
-                              ⚠️ Beyond timetable
+                              Beyond timetable
                             </span>
                           )}
                         </div>
@@ -1574,19 +1574,19 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
       {selectedSubject && (selectedSubject.requiredLab && (!selectedSubject.hasLecLab || formData.component !== 'Lecture')) && (
         <div className="info-box">
-          ⚠️ This subject requires a computer laboratory.
+          This subject requires a computer laboratory.
         </div>
       )}
 
       {selectedSubject && (selectedSubject.isFoodLab && (!selectedSubject.hasLecLab || formData.component !== 'Lecture')) && (
         <div className="info-box">
-          ⚠️ This subject requires a food laboratory.
+          This subject requires a food laboratory.
         </div>
       )}
 
       {selectedSubject && eligibleSections.length === 0 && (
         <div className="info-box">
-          ℹ️ No sections are currently enrolled in this subject. You can assign this subject to a section in Section Management or Teaching Load Management.
+          No sections are currently enrolled in this subject. You can assign this subject to a section in Section Management or Teaching Load Management.
         </div>
       )}
 
@@ -1612,19 +1612,19 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
           {validation.valid ? (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <p style={{ margin: 0 }}>✓ Schedule added successfully! <span style={{ textDecoration: 'underline', fontSize: '0.85em', marginLeft: '8px' }}>Click to view</span></p>
+                <p style={{ margin: 0 }}>Schedule added successfully! <span style={{ textDecoration: 'underline', fontSize: '0.85em', marginLeft: '8px' }}>Click to view</span></p>
               </div>
               {validation.warnings && validation.warnings.length > 0 && (
                 <ul style={{ marginTop: '8px' }}>
                   {validation.warnings.map((w, i) => (
-                    <li key={i}>⚠️ {w}</li>
+                    <li key={i}>{w}</li>
                   ))}
                 </ul>
               )}
             </>
           ) : (
             <>
-              <p>✗ Schedule could not be added:</p>
+              <p>Schedule could not be added:</p>
               <ul>
                 {validation.errors.map((error, i) => (
                   <li key={i}>{error}</li>
