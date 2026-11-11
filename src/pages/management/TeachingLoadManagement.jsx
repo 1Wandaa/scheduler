@@ -84,7 +84,6 @@ const InlineInstructorSelect = React.memo(({
     <select
       className={`hub-instructor-select ${assignedProf ? 'has-assigned' : 'is-unassigned'}`}
       value={assignedProf?.id || ''}
-      onMouseEnter={handleExpand}
       onFocus={handleExpand}
       onPointerDown={handleExpand}
       onTouchStart={handleExpand}

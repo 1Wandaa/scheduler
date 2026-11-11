@@ -616,10 +616,6 @@
   outline: none;
 }
 
-.hub-instructor-select:hover {
-  border-color: var(--accent-primary, #5645ee);
-}
-
 .hub-instructor-select:focus {
   border-color: var(--accent-primary, #5645ee);
   box-shadow: 0 0 0 2px rgba(86, 69, 238, 0.15);
