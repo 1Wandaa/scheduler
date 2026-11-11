@@ -2521,171 +2521,202 @@ const TeachingLoadManagement = ({
       {viewMode === 'sections' && (
         <>
           <div className="hub-cards-grid">
-            {displayedSections.map(sec => {
-              const enrolled = sec.subjects || [];
-              const missingCount = enrolled.filter(subRef => !getAssignedProf(sec, subRef)).length;
-
-              return (
-                <div key={sec.id} className="hub-entity-card">
-                  <div className="hub-entity-header">
-                    <div className="hub-entity-title">
-                      <strong className="hub-entity-name">{sec.name}</strong>
-                      <span className="hub-entity-badge" style={{ background: 'rgba(86, 69, 238, 0.1)', color: 'var(--accent-primary)' }}>
-                        {sec.program} • Y{sec.yearLevel}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      {missingCount > 0 ? (
-                        <>
-                          <span className="hub-alert-chip">
-                            <AlertTriangle size={12} style={{ flexShrink: 0 }} />
-                            {missingCount} unassigned
-                          </span>
-                          <button
-                            className="hub-quick-btn"
-                            style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669', borderColor: 'rgba(16, 185, 129, 0.3)' }}
-                            onClick={() => handleAutoMatchSectionTeachers(sec)}
-                            title="Automatically assign specialized faculty to unassigned subjects"
-                          >
-                            <Sparkles size={12} /> Auto-Match
-                          </button>
-                        </>
-                      ) : enrolled.length > 0 ? (
-                        <span className="hub-success-chip">
-                          <CheckCircle2 size={12} style={{ flexShrink: 0 }} />
-                          Fully Assigned
-                        </span>
-                      ) : (
-                        <span className="hub-alert-chip">No subjects enrolled</span>
-                      )}
-                      <button
-                        className="hub-quick-btn"
-                        onClick={() => handleOpenEditModal('section', sec)}
-                      >
-                        Configure
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Enrolled Subjects List with Inline Teacher Selector */}
-                  <div className="hub-mappings-list">
-                    {enrolled.length === 0 ? (
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '8px 0' }}>
-                        No subjects enrolled for this section yet. Click "Configure" to enroll subjects.
-                      </div>
-                    ) : (
-                      enrolled.map(subRef => {
-                        const foundSub = getSubject(subRef);
-                        const sub = foundSub || { id: subRef, code: subRef, name: subRef };
-                        const isOrphan = !foundSub;
-                        const assignedProf = getAssignedProf(sec, subRef);
-
-                        return (
-                          <div
-                            key={subRef}
-                            className={`hub-section-subject-row ${isOrphan ? 'is-orphan' : ''}`}
-                          >
-                            {/* Top Line: Subject Code, Badges & Quick Action Controls */}
-                            <div className="hub-subject-row-header">
-                              <div className="hub-subject-badge-group">
-                                <span
-                                  className="hub-subject-code"
-                                  style={{
-                                    color: isOrphan ? '#dc2626' : 'var(--accent-dark)',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '4px'
-                                  }}
-                                >
-                                  {isOrphan && <AlertTriangle size={12} style={{ flexShrink: 0 }} />}
-                                  {sub.code}
-                                </span>
-                                {sub.hasLecLab && (
-                                  <span className="hub-tag-leclab" title="Requires separate Lecture and Laboratory sessions">
-                                    <FlaskConical size={10} />
-                                    Lec & Lab
-                                  </span>
-                                )}
-                                {sub.credits && (
-                                  <span className="hub-badge-credits">{sub.credits}u</span>
-                                )}
-                              </div>
-
-                              <div className="hub-subject-row-actions">
-                                {!isOrphan && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenEditModal('subject', sub)}
-                                    className="hub-micro-action-btn"
-                                    title={`Configure subject ${sub.code} (Lec/Lab, Computer Lab, Food Lab, etc.)`}
-                                  >
-                                    <Sliders size={11} />
-                                    <span>Edit Subj</span>
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveSubjectFromSectionInline(sec, subRef)}
-                                  className="hub-micro-delete-btn"
-                                  title={isOrphan ? `Remove orphan ${subRef} from section` : `Unenroll ${sub.code} from section`}
-                                >
-                                  <X size={13} />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Subject Title */}
-                            <div
-                              className="hub-subject-title-line"
-                              style={isOrphan ? { color: '#b91c1c' } : undefined}
-                              title={sub.name}
-                            >
-                              {isOrphan ? 'Legacy / Unmatched ID' : sub.name}
-                            </div>
-
-                            {/* Lec/Lab Breakdown if applicable */}
-                            {sub.hasLecLab && (
-                              <div className="hub-leclab-hours-strip">
-                                <span>Lec: {sub.lectureHours || 2}h</span>
-                                <span className="hub-leclab-divider">•</span>
-                                <span>Lab: {sub.labHours || 3}h ({sub.isFoodLab ? 'Food Lab' : sub.requiredLab ? 'Comp Lab' : 'Lab Required'})</span>
-                              </div>
-                            )}
-
-                            {/* Dedicated Full-Width Faculty Assignment Bar - Maximum Legibility */}
-                            {!isOrphan && (
-                              <div className="hub-instructor-bar">
-                                <div className="hub-instructor-select-wrapper">
-                                  <InlineInstructorSelect
-                                    section={sec}
-                                    subRef={subRef}
-                                    assignedProf={assignedProf}
-                                    onAssign={handleAssignInstructorInline}
-                                    getSubjectProfessors={getSubjectProfessors}
-                                  />
-                                </div>
-                                {assignedProf && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenEditModal('faculty', assignedProf)}
-                                    className="hub-micro-action-btn hub-prof-action-btn"
-                                    title={`Configure faculty ${assignedProf.name} (Max units, preferred rooms)`}
-                                  >
-                                    <UserCheck size={11} />
-                                    <span>Prof</span>
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
+            {displayedSections.length === 0 ? (
+              <div className="hub-empty-state-card">
+                <div className="hub-empty-state-icon">
+                  <Building2 size={24} />
                 </div>
-              );
-            })}
+                <h4 className="hub-empty-state-title">No sections found</h4>
+                <p className="hub-empty-state-desc">
+                  No sections match your current filters. Try resetting your search query or department filter.
+                </p>
+                {(searchQuery || departmentFilter !== 'All' || onlyNeedsAttention || onlyLecLab) && (
+                  <button
+                    type="button"
+                    className="hub-quick-btn"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setDepartmentFilter('All');
+                      setOnlyNeedsAttention(false);
+                      setOnlyLecLab(false);
+                    }}
+                  >
+                    Reset All Filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              displayedSections.map(sec => {
+                const enrolled = sec.subjects || [];
+                const missingCount = enrolled.filter(subRef => !getAssignedProf(sec, subRef)).length;
+
+                return (
+                  <div key={sec.id} className="hub-entity-card">
+                    <div className="hub-entity-header">
+                      <div className="hub-entity-title">
+                        <strong className="hub-entity-name">{sec.name}</strong>
+                        <span className="hub-entity-badge" style={{ background: 'rgba(86, 69, 238, 0.1)', color: 'var(--accent-primary)' }}>
+                          {sec.program} • Y{sec.yearLevel}
+                        </span>
+                        <span className="hub-badge-credits" style={{ background: 'rgba(86, 69, 238, 0.08)', color: 'var(--accent-primary)' }}>
+                          {enrolled.length} Subject{enrolled.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        {missingCount > 0 ? (
+                          <>
+                            <span className="hub-alert-chip">
+                              <AlertTriangle size={12} style={{ flexShrink: 0 }} />
+                              {missingCount} unassigned
+                            </span>
+                            <button
+                              className="hub-quick-btn"
+                              style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669', borderColor: 'rgba(16, 185, 129, 0.3)' }}
+                              onClick={() => handleAutoMatchSectionTeachers(sec)}
+                              title="Automatically assign specialized faculty to unassigned subjects"
+                            >
+                              <Sparkles size={12} /> Auto-Match
+                            </button>
+                          </>
+                        ) : enrolled.length > 0 ? (
+                          <span className="hub-success-chip">
+                            <CheckCircle2 size={12} style={{ flexShrink: 0 }} />
+                            Fully Assigned
+                          </span>
+                        ) : (
+                          <span className="hub-alert-chip">No subjects enrolled</span>
+                        )}
+                        <button
+                          className="hub-quick-btn"
+                          onClick={() => handleOpenEditModal('section', sec)}
+                        >
+                          <Settings2 size={13} />
+                          Configure
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Enrolled Subjects List with Inline Teacher Selector */}
+                    <div className="hub-mappings-list">
+                      {enrolled.length === 0 ? (
+                        <div className="hub-empty-section-notice">
+                          <BookOpen size={16} />
+                          <span>No subjects enrolled for this section yet. Click "Configure" to enroll subjects.</span>
+                        </div>
+                      ) : (
+                        enrolled.map(subRef => {
+                          const foundSub = getSubject(subRef);
+                          const sub = foundSub || { id: subRef, code: subRef, name: subRef };
+                          const isOrphan = !foundSub;
+                          const assignedProf = getAssignedProf(sec, subRef);
+
+                          return (
+                            <div
+                              key={subRef}
+                              className={`hub-section-subject-row ${isOrphan ? 'is-orphan' : ''}`}
+                            >
+                              {/* Top Line: Subject Code, Badges & Quick Action Controls */}
+                              <div className="hub-subject-row-header">
+                                <div className="hub-subject-badge-group">
+                                  <span
+                                    className="hub-subject-code"
+                                    style={{
+                                      color: isOrphan ? '#dc2626' : 'var(--accent-dark)',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}
+                                  >
+                                    {isOrphan && <AlertTriangle size={12} style={{ flexShrink: 0 }} />}
+                                    {sub.code}
+                                  </span>
+                                  {sub.hasLecLab && (
+                                    <span className="hub-tag-leclab" title="Requires separate Lecture and Laboratory sessions">
+                                      <FlaskConical size={10} />
+                                      Lec & Lab
+                                    </span>
+                                  )}
+                                  {sub.credits && (
+                                    <span className="hub-badge-credits">{sub.credits}u</span>
+                                  )}
+                                </div>
+
+                                <div className="hub-subject-row-actions">
+                                  {!isOrphan && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEditModal('subject', sub)}
+                                      className="hub-micro-action-btn"
+                                      title={`Configure subject ${sub.code} (Lec/Lab, Computer Lab, Food Lab, etc.)`}
+                                    >
+                                      <Sliders size={11} />
+                                      <span>Edit Subj</span>
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveSubjectFromSectionInline(sec, subRef)}
+                                    className="hub-micro-delete-btn"
+                                    title={isOrphan ? `Remove orphan ${subRef} from section` : `Unenroll ${sub.code} from section`}
+                                  >
+                                    <X size={13} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Subject Title */}
+                              <div
+                                className="hub-subject-title-line"
+                                style={isOrphan ? { color: '#b91c1c' } : undefined}
+                                title={sub.name}
+                              >
+                                {isOrphan ? 'Legacy / Unmatched ID' : sub.name}
+                              </div>
+
+                              {/* Lec/Lab Breakdown if applicable */}
+                              {sub.hasLecLab && (
+                                <div className="hub-leclab-hours-strip">
+                                  <span>Lec: {sub.lectureHours || 2}h</span>
+                                  <span className="hub-leclab-divider">•</span>
+                                  <span>Lab: {sub.labHours || 3}h ({sub.isFoodLab ? 'Food Lab' : sub.requiredLab ? 'Comp Lab' : 'Lab Required'})</span>
+                                </div>
+                              )}
+
+                              {/* Dedicated Full-Width Faculty Assignment Bar - Maximum Legibility */}
+                              {!isOrphan && (
+                                <div className="hub-instructor-bar">
+                                  <div className="hub-instructor-select-wrapper">
+                                    <InlineInstructorSelect
+                                      section={sec}
+                                      subRef={subRef}
+                                      assignedProf={assignedProf}
+                                      onAssign={handleAssignInstructorInline}
+                                      getSubjectProfessors={getSubjectProfessors}
+                                    />
+                                  </div>
+                                  {assignedProf && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEditModal('faculty', assignedProf)}
+                                      className="hub-micro-action-btn hub-prof-action-btn"
+                                      title={`Configure faculty ${assignedProf.name} (Max units, preferred rooms)`}
+                                    >
+                                      <UserCheck size={11} />
+                                      <span>Prof</span>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
           <div ref={sentinelRef} style={{ height: '1px' }} />
           {filteredSections.length > visibleLimit && (
@@ -2707,139 +2738,172 @@ const TeachingLoadManagement = ({
       {viewMode === 'faculty' && (
         <>
           <div className="hub-cards-grid">
-            {displayedFaculty.map(prof => {
-              const assignedSecs = prof.assignedSections || [];
-              const specSubjects = prof.specialization || [];
-
-              return (
-                <div key={prof.id} className="hub-entity-card">
-                  <div className="hub-entity-header">
-                    <div className="hub-entity-title">
-                      <strong className="hub-entity-name">{prof.name || `${prof.lastName}, ${prof.firstName}`}</strong>
-                      <span className="hub-entity-badge" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' }}>
-                        {prof.department}
-                      </span>
-                    </div>
-
-                    <button
-                      className="hub-quick-btn"
-                      onClick={() => handleOpenEditModal('faculty', prof)}
-                    >
-                      Configure
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {/* Specialization Subjects */}
-                    <div>
-                      <span className="hub-card-section-label">Specialization Subjects:</span>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                        {specSubjects.length === 0 ? (
-                          <span style={{ fontSize: '0.75rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>None assigned</span>
-                        ) : (
-                          specSubjects.map(subRef => {
-                            const sub = getSubject(subRef) || { code: subRef };
-                            return (
-                              <span
-                                key={subRef}
-                                onClick={() => handleOpenEditModal('subject', sub)}
-                                style={{
-                                  fontSize: '0.72rem',
-                                  fontWeight: '600',
-                                  padding: '2px 8px',
-                                  borderRadius: '12px',
-                                  background: 'rgba(86, 69, 238, 0.1)',
-                                  color: 'var(--accent-primary)',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  cursor: 'pointer'
-                                }}
-                                title={`Click to configure subject ${sub.code}`}
-                              >
-                                <span>{sub.code}</span>
-                                {sub.hasLecLab && (
-                                  <span style={{ fontSize: '0.62rem', background: 'rgba(147, 51, 234, 0.15)', color: '#7e22ce', padding: '0 4px', borderRadius: '4px', fontWeight: '700' }}>
-                                    Lec+Lab
-                                  </span>
-                                )}
-                              </span>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Assigned Sections and specific subjects taught */}
-                    <div>
-                      <span className="hub-card-section-label">Assigned Sections & Subjects Taught:</span>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
-                        {assignedSecs.length === 0 ? (
-                          <span style={{ fontSize: '0.75rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>No sections assigned</span>
-                        ) : (
-                          assignedSecs.map(secId => {
-                            const sec = sectionMap.get(String(secId).toLowerCase()) || { id: secId, name: secId };
-                            // Check which subjects this faculty is specifically assigned to teach for this section
-                            const actuallyTaughtSubjects = (sec.subjects || []).filter(subRef => {
-                              const assigned = getAssignedProf(sec, subRef);
-                              return assigned && assigned.id === prof.id;
-                            });
-
-                            return (
-                              <div key={sec.id} style={{
-                                padding: '6px 10px',
-                                background: 'var(--bg-main)',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border-color)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                fontSize: '0.78rem'
-                              }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontWeight: '700', color: 'var(--accent-dark)' }}>{sec.name}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenEditModal('section', sec)}
-                                    className="hub-micro-action-btn"
-                                    style={{ padding: '1px 5px', fontSize: '0.66rem' }}
-                                    title={`Configure section ${sec.name}`}
-                                  >
-                                    <Layers size={10} /> Edit
-                                  </button>
-                                </div>
-                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                                  {actuallyTaughtSubjects.length > 0 ? (
-                                    actuallyTaughtSubjects.map(mRef => {
-                                      const mSub = getSubject(mRef) || { code: mRef };
-                                      return (
-                                        <span
-                                          key={mRef}
-                                          onClick={() => handleOpenEditModal('subject', mSub)}
-                                          style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.15)', color: '#059669', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}
-                                          title={`Click to configure subject ${mSub.code || mRef}`}
-                                        >
-                                          <span>{mSub?.code || mRef}</span>
-                                          {mSub?.hasLecLab && (
-                                            <span style={{ fontSize: '0.6rem', color: '#047857', opacity: 0.85 }}>(Lec+Lab)</span>
-                                          )}
-                                        </span>
-                                      );
-                                    })
-                                  ) : (
-                                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>General section faculty</span>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  </div>
+            {displayedFaculty.length === 0 ? (
+              <div className="hub-empty-state-card">
+                <div className="hub-empty-state-icon">
+                  <Users size={24} />
                 </div>
-              );
-            })}
+                <h4 className="hub-empty-state-title">No faculty found</h4>
+                <p className="hub-empty-state-desc">
+                  No faculty members match your current filters. Try resetting your search query or department filter.
+                </p>
+                {(searchQuery || departmentFilter !== 'All' || onlyNeedsAttention || onlyLecLab) && (
+                  <button
+                    type="button"
+                    className="hub-quick-btn"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setDepartmentFilter('All');
+                      setOnlyNeedsAttention(false);
+                      setOnlyLecLab(false);
+                    }}
+                  >
+                    Reset All Filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              displayedFaculty.map(prof => {
+                const assignedSecs = prof.assignedSections || [];
+                const specSubjects = prof.specialization || [];
+
+                return (
+                  <div key={prof.id} className="hub-entity-card">
+                    <div className="hub-entity-header">
+                      <div className="hub-entity-title">
+                        <strong className="hub-entity-name">{prof.name || `${prof.lastName}, ${prof.firstName}`}</strong>
+                        <span className="hub-entity-badge" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
+                          {prof.department}
+                        </span>
+                        {prof.maxUnits && (
+                          <span className="hub-badge-credits" style={{ background: 'rgba(16, 185, 129, 0.08)', color: '#059669' }}>
+                            Max {prof.maxUnits}u
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        className="hub-quick-btn"
+                        onClick={() => handleOpenEditModal('faculty', prof)}
+                      >
+                        <Settings2 size={13} />
+                        Configure
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {/* Specialization Subjects */}
+                      <div>
+                        <span className="hub-card-section-label">Specialization Subjects ({specSubjects.length}):</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '6px' }}>
+                          {specSubjects.length === 0 ? (
+                            <span style={{ fontSize: '0.75rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>None assigned</span>
+                          ) : (
+                            specSubjects.map(subRef => {
+                              const sub = getSubject(subRef) || { code: subRef };
+                              return (
+                                <span
+                                  key={subRef}
+                                  onClick={() => handleOpenEditModal('subject', sub)}
+                                  style={{
+                                    fontSize: '0.73rem',
+                                    fontWeight: '600',
+                                    padding: '3px 10px',
+                                    borderRadius: '14px',
+                                    background: 'rgba(86, 69, 238, 0.08)',
+                                    border: '1px solid rgba(86, 69, 238, 0.15)',
+                                    color: 'var(--accent-primary)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    cursor: 'pointer'
+                                  }}
+                                  title={sub.name ? `${sub.code} — ${sub.name}` : `Configure subject ${sub.code}`}
+                                >
+                                  <span>{sub.code}</span>
+                                  {sub.hasLecLab && (
+                                    <span style={{ fontSize: '0.6rem', background: 'rgba(147, 51, 234, 0.12)', color: '#7e22ce', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>
+                                      Lec+Lab
+                                    </span>
+                                  )}
+                                </span>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Assigned Sections and specific subjects taught */}
+                      <div>
+                        <span className="hub-card-section-label">Assigned Sections ({assignedSecs.length}):</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                          {assignedSecs.length === 0 ? (
+                            <span style={{ fontSize: '0.75rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>No sections assigned</span>
+                          ) : (
+                            assignedSecs.map(secId => {
+                              const sec = sectionMap.get(String(secId).toLowerCase()) || { id: secId, name: secId };
+                              const actuallyTaughtSubjects = (sec.subjects || []).filter(subRef => {
+                                const assigned = getAssignedProf(sec, subRef);
+                                return assigned && assigned.id === prof.id;
+                              });
+
+                              return (
+                                <div key={sec.id} style={{
+                                  padding: '8px 12px',
+                                  background: 'var(--bg-main)',
+                                  borderRadius: '8px',
+                                  border: '1px solid var(--border-color)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '8px',
+                                  fontSize: '0.78rem'
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                                    <span style={{ fontWeight: '700', color: 'var(--accent-dark)', whiteSpace: 'nowrap' }}>{sec.name}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEditModal('section', sec)}
+                                      className="hub-micro-action-btn"
+                                      style={{ padding: '1px 6px', fontSize: '0.66rem' }}
+                                      title={`Configure section ${sec.name}`}
+                                    >
+                                      <Layers size={10} /> Edit
+                                    </button>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                    {actuallyTaughtSubjects.length > 0 ? (
+                                      actuallyTaughtSubjects.map(mRef => {
+                                        const mSub = getSubject(mRef) || { code: mRef };
+                                        return (
+                                          <span
+                                            key={mRef}
+                                            onClick={() => handleOpenEditModal('subject', mSub)}
+                                            style={{ fontSize: '0.68rem', padding: '2px 7px', borderRadius: '5px', background: 'rgba(16, 185, 129, 0.12)', color: '#059669', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '3px', cursor: 'pointer', border: '1px solid rgba(16, 185, 129, 0.15)' }}
+                                            title={mSub.name ? `${mSub.code} — ${mSub.name}` : `Configure subject ${mSub.code || mRef}`}
+                                          >
+                                            <span>{mSub?.code || mRef}</span>
+                                            {mSub?.hasLecLab && (
+                                              <span style={{ fontSize: '0.6rem', color: '#047857', opacity: 0.85 }}>(L+L)</span>
+                                            )}
+                                          </span>
+                                        );
+                                      })
+                                    ) : (
+                                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>General faculty</span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
           <div ref={sentinelRef} style={{ height: '1px' }} />
           {filteredFaculty.length > visibleLimit && (
@@ -2861,116 +2925,150 @@ const TeachingLoadManagement = ({
       {viewMode === 'subjects' && (
         <>
           <div className="hub-cards-grid">
-            {displayedSubjects.map(sub => {
-              const enrolledSecs = getSectionsForSubject(sub);
-              const { specProfs: qualifiedProfs } = getSubjectProfessors(sub);
-
-              return (
-                <div key={sub.id} className="hub-entity-card">
-                  <div className="hub-entity-header">
-                    <div className="hub-entity-title" style={{ flexWrap: 'wrap', gap: '6px' }}>
-                      <strong className="hub-entity-name">{sub.code}</strong>
-                      <span className="hub-entity-badge" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669' }}>
-                        {sub.credits} Units • {sub.category}
-                      </span>
-                      {sub.hasLecLab && (
-                        <span className="hub-tag-leclab">
-                          <FlaskConical size={10} />
-                          Lec & Lab
-                        </span>
-                      )}
-                    </div>
-
-                    <button
-                      className="hub-quick-btn"
-                      onClick={() => handleOpenEditModal('subject', sub)}
-                    >
-                      Configure
-                    </button>
-                  </div>
-
-                  <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    {sub.name}
-                  </div>
-
-                  {sub.hasLecLab ? (
-                    <div className="hub-subject-leclab-banner">
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', fontSize: '0.75rem' }}>
-                        <span><strong>Lecture:</strong> {sub.lectureHours || 2} hrs/wk</span>
-                        <span className="hub-leclab-divider">•</span>
-                        <span><strong>Laboratory:</strong> {sub.labHours || 3} hrs/wk ({sub.isFoodLab ? 'Food Lab' : sub.requiredLab ? 'Computer Lab' : 'Lab Required'})</span>
-                        <span className="hub-leclab-divider">•</span>
-                        <span style={{ color: '#7e22ce', fontWeight: '700' }}>Total: {Number(sub.lectureHours || 2) + Number(sub.labHours || 3)} hrs/wk</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                      {sub.hoursPerMeeting || 1.5} hrs/meeting • {sub.requiredLab ? 'Requires Computer Lab' : sub.isFoodLab ? 'Requires Food Lab' : 'Standard Classroom'}
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {/* Enrolled Sections & Assigned Instructors */}
-                    <div>
-                      <span className="hub-card-section-label">
-                        Enrolled Sections ({enrolledSecs.length}):
-                      </span>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
-                        {enrolledSecs.length === 0 ? (
-                          <span style={{ fontSize: '0.75rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>No sections enrolled</span>
-                        ) : (
-                          enrolledSecs.map(sec => {
-                            const assignedProf = getAssignedProf(sec, sub.code || sub.id);
-                            return (
-                              <span
-                                key={sec.id}
-                                onClick={() => handleOpenEditModal('section', sec)}
-                                style={{
-                                  fontSize: '0.72rem',
-                                  fontWeight: '600',
-                                  padding: '2px 8px',
-                                  borderRadius: '12px',
-                                  background: assignedProf ? 'rgba(86, 69, 238, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                  color: assignedProf ? 'var(--accent-primary)' : '#dc2626',
-                                  border: assignedProf ? '1px solid rgba(86, 69, 238, 0.2)' : '1px solid rgba(239, 68, 68, 0.25)',
-                                  cursor: 'pointer'
-                                }}
-                                title={assignedProf ? `Taught by ${assignedProf.name}. Click to configure section ${sec.name}` : `Needs instructor. Click to configure section ${sec.name}`}
-                              >
-                                {sec.name} {assignedProf ? `(${assignedProf.name?.split(' ')[0] || assignedProf.lastName})` : '— Unassigned'}
-                              </span>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Qualified Faculty */}
-                    <div>
-                      <span className="hub-card-section-label">
-                        Specialized Faculty ({qualifiedProfs.length}):
-                      </span>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                        {qualifiedProfs.length === 0 ? (
-                          <span style={{ fontSize: '0.75rem', fontStyle: 'italic', color: '#ef4444' }}>No faculty specialized</span>
-                        ) : (
-                          qualifiedProfs.map(prof => (
-                            <span
-                              key={prof.id}
-                              onClick={() => handleOpenEditModal('faculty', prof)}
-                              style={{ fontSize: '0.72rem', fontWeight: '600', padding: '2px 8px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb', cursor: 'pointer' }}
-                              title={`Click to configure faculty ${prof.name}`}
-                            >
-                              {prof.name || `${prof.lastName}, ${prof.firstName}`}
-                            </span>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
+            {displayedSubjects.length === 0 ? (
+              <div className="hub-empty-state-card">
+                <div className="hub-empty-state-icon">
+                  <BookOpen size={24} />
                 </div>
-              );
-            })}
+                <h4 className="hub-empty-state-title">No subjects found</h4>
+                <p className="hub-empty-state-desc">
+                  No subjects match your current filters. Try resetting your search query or department filter.
+                </p>
+                {(searchQuery || departmentFilter !== 'All' || onlyNeedsAttention || onlyLecLab) && (
+                  <button
+                    type="button"
+                    className="hub-quick-btn"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setDepartmentFilter('All');
+                      setOnlyNeedsAttention(false);
+                      setOnlyLecLab(false);
+                    }}
+                  >
+                    Reset All Filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              displayedSubjects.map(sub => {
+                const enrolledSecs = getSectionsForSubject(sub);
+                const { specProfs: qualifiedProfs } = getSubjectProfessors(sub);
+                const subDepts = (sub.departments || (sub.department ? [sub.department] : []));
+
+                return (
+                  <div key={sub.id} className="hub-entity-card">
+                    <div className="hub-entity-header" style={{ flexWrap: 'wrap', gap: '8px' }}>
+                      <div className="hub-entity-title" style={{ flexWrap: 'wrap', gap: '8px' }}>
+                        <strong className="hub-entity-name">{sub.code}</strong>
+                        <span className="hub-entity-badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669' }}>
+                          {sub.credits} Units • {sub.category}
+                        </span>
+                        {sub.hasLecLab && (
+                          <span className="hub-tag-leclab">
+                            <FlaskConical size={10} />
+                            Lec & Lab
+                          </span>
+                        )}
+                        {subDepts.length > 0 && (
+                          <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', padding: '2px 7px', borderRadius: '4px', background: 'var(--bg-main)', border: '1px solid var(--border-color)' }}>
+                            {subDepts.join(', ')}
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        className="hub-quick-btn"
+                        onClick={() => handleOpenEditModal('subject', sub)}
+                      >
+                        <Settings2 size={13} />
+                        Configure
+                      </button>
+                    </div>
+
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                      {sub.name}
+                    </div>
+
+                    {sub.hasLecLab ? (
+                      <div className="hub-subject-leclab-banner">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', fontSize: '0.76rem' }}>
+                          <span><strong>Lecture:</strong> {sub.lectureHours || 2} hrs/wk</span>
+                          <span className="hub-leclab-divider">•</span>
+                          <span><strong>Lab:</strong> {sub.labHours || 3} hrs/wk ({sub.isFoodLab ? 'Food Lab' : sub.requiredLab ? 'Computer Lab' : 'Lab Required'})</span>
+                          <span className="hub-leclab-divider">•</span>
+                          <span style={{ color: '#7e22ce', fontWeight: '700' }}>Total: {Number(sub.lectureHours || 2) + Number(sub.labHours || 3)} hrs/wk</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Clock size={12} />
+                        {sub.hoursPerMeeting || 1.5} hrs/meeting • {sub.requiredLab ? 'Requires Computer Lab' : sub.isFoodLab ? 'Requires Food Lab' : 'Standard Classroom'}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {/* Enrolled Sections & Assigned Instructors */}
+                      <div>
+                        <span className="hub-card-section-label">
+                          Enrolled Sections ({enrolledSecs.length}):
+                        </span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                          {enrolledSecs.length === 0 ? (
+                            <span style={{ fontSize: '0.75rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>No sections enrolled</span>
+                          ) : (
+                            enrolledSecs.map(sec => {
+                              const assignedProf = getAssignedProf(sec, sub.code || sub.id);
+                              return (
+                                <span
+                                  key={sec.id}
+                                  onClick={() => handleOpenEditModal('section', sec)}
+                                  style={{
+                                    fontSize: '0.72rem',
+                                    fontWeight: '600',
+                                    padding: '3px 10px',
+                                    borderRadius: '14px',
+                                    background: assignedProf ? 'rgba(86, 69, 238, 0.08)' : 'rgba(239, 68, 68, 0.06)',
+                                    color: assignedProf ? 'var(--accent-primary)' : '#dc2626',
+                                    border: assignedProf ? '1px solid rgba(86, 69, 238, 0.18)' : '1px solid rgba(239, 68, 68, 0.2)',
+                                    cursor: 'pointer'
+                                  }}
+                                  title={assignedProf ? `Taught by ${assignedProf.name}` : `Needs instructor — click to configure section ${sec.name}`}
+                                >
+                                  {sec.name} {assignedProf ? `(${assignedProf.name?.split(',')[0] || assignedProf.lastName || ''})` : '— Unassigned'}
+                                </span>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Qualified Faculty */}
+                      <div>
+                        <span className="hub-card-section-label">
+                          Specialized Faculty ({qualifiedProfs.length}):
+                        </span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '6px' }}>
+                          {qualifiedProfs.length === 0 ? (
+                            <span style={{ fontSize: '0.75rem', fontStyle: 'italic', color: '#ef4444' }}>No faculty specialized</span>
+                          ) : (
+                            qualifiedProfs.map(prof => (
+                              <span
+                                key={prof.id}
+                                onClick={() => handleOpenEditModal('faculty', prof)}
+                                style={{ fontSize: '0.72rem', fontWeight: '600', padding: '3px 10px', borderRadius: '14px', background: 'rgba(59, 130, 246, 0.08)', color: '#2563eb', cursor: 'pointer', border: '1px solid rgba(59, 130, 246, 0.15)' }}
+                                title={`Configure faculty ${prof.name}`}
+                              >
+                                {prof.name || `${prof.lastName}, ${prof.firstName}`}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
           <div ref={sentinelRef} style={{ height: '1px' }} />
           {filteredSubjects.length > visibleLimit && (
@@ -3910,12 +4008,17 @@ const TeachingLoadManagement = ({
               </div>
             )}
 
-            <div className="mgmt-modal-actions" style={{ marginTop: '20px' }}>
+            <div className="mgmt-modal-actions" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button className="mgmt-cancel-btn" onClick={() => setEditingEntity(null)} disabled={isSaving}>
                 Cancel
               </button>
-              <button className="btn" onClick={handleSaveModal} disabled={isSaving}>
-                {isSaving ? 'Saving Changes...' : 'Save Changes'}
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveModal}
+                disabled={isSaving}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                {isSaving ? 'Saving Changes...' : <><Check size={16} /> Save Changes</>}
               </button>
             </div>
           </div>
