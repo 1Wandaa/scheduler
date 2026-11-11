@@ -17,6 +17,7 @@ import {
   isProfessorAllowedInRoom,
   getMeetingTimeLabel,
   getScheduleTimeRange,
+  validateTimeSlotAgainstTimetable,
   entitiesMatch,
 } from '../utils/scheduleUtils';
 import { generateConflictResolutions } from './conflictResolutionService';
@@ -108,13 +109,30 @@ export function validateScheduleEntry(
 
   if (errors.length > 0) return { valid: false, errors, warnings };
 
+  // Timetable operating hours & Lunch break check
+  const timetableStart = config.allowSevenAm ? 420 : 450;
+  const timetableEnd = 1080; // 6:00 PM
+  const timetableStartLabel = config.allowSevenAm ? '7:00 AM' : '7:30 AM';
+
+  if (timeSlot?.customLabel) {
+    const customVal = validateTimeSlotAgainstTimetable(timeSlot.customLabel, hours || subject?.hoursPerMeeting, scheduleMode);
+    if (!customVal.valid) {
+      errors.push(customVal.error);
+      return { valid: false, errors, warnings };
+    }
+  }
+
   // Lunch break check (11:30 AM - 12:30 PM)
   if (timeSlot?.id && isLunchSlot(timeSlot.id)) {
     errors.push('Classes cannot be scheduled during lunch break (11:30 AM - 12:30 PM).');
     return { valid: false, errors, warnings };
   }
   const schedRange = getScheduleTimeRange({ timeSlot, hours, subject, component }, scheduleMode);
-  if (schedRange && schedRange.start > 0 && schedRange.end > 0) {
+  if (schedRange && (schedRange.start > 0 || schedRange.end > 0)) {
+    if (schedRange.start < timetableStart || schedRange.start >= timetableEnd || schedRange.end > timetableEnd) {
+      errors.push(`Classes cannot be scheduled outside the timetable operating hours (${timetableStartLabel} – 6:00 PM).`);
+      return { valid: false, errors, warnings };
+    }
     if (overlapsLunchBreak(schedRange.start, schedRange.end)) {
       errors.push('Classes cannot be scheduled during lunch break (11:30 AM - 12:30 PM).');
       return { valid: false, errors, warnings };

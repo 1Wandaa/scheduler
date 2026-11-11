@@ -269,13 +269,20 @@ const ScheduleTable = React.memo(function ScheduleTable({
         console.warn('[ScheduleTable] Found schedule missing day or timeSlot.id', s);
         continue;
       }
+      if (s.timeSlot?.customLabel) {
+        const r = getScheduleTimeRange(s, scheduleMode);
+        if (r && (r.start >= 1080 || r.end > 1080 || (r.start > 0 && r.start < 420))) {
+          console.warn('[ScheduleTable] Schedule is outside timetable bounds (7:00 AM - 6:00 PM), skipping grid placement:', s);
+          continue;
+        }
+      }
       const key = `${s.day}-${s.timeSlot.id}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(s);
     }
     console.log('[ScheduleTable] scheduleGridMap built. Size:', map.size, 'Total passed schedules:', schedules.length);
     return map;
-  }, [schedules]);
+  }, [schedules, scheduleMode]);
 
   // Pre-calculate cell span mapping & skipped multi-slot cells
   const { cellSpanMap, skippedCellsSet } = useMemo(() => {
@@ -1034,9 +1041,15 @@ const ScheduleTable = React.memo(function ScheduleTable({
     const candidate = { ...movingSchedule, day, timeSlot: finalTimeSlot };
 
     const candidateRange = getScheduleTimeRange(candidate, scheduleMode);
-    if (candidateRange && candidateRange.start > 0 && candidateRange.end > 0 && overlapsLunchBreak(candidateRange.start, candidateRange.end)) {
-      showToast('Cannot schedule class during lunch break (11:30 AM - 12:30 PM).');
-      return;
+    if (candidateRange && candidateRange.start > 0 && candidateRange.end > 0) {
+      if (candidateRange.start < 420 || candidateRange.start >= 1080 || candidateRange.end > 1080) {
+        showToast('Cannot schedule class beyond timetable operating hours (7:00 AM – 6:00 PM).');
+        return;
+      }
+      if (overlapsLunchBreak(candidateRange.start, candidateRange.end)) {
+        showToast('Cannot schedule class during lunch break (11:30 AM - 12:30 PM).');
+        return;
+      }
     }
 
     const schedulesToCheck = activeSchedules && activeSchedules.length > 0 ? activeSchedules : schedules;

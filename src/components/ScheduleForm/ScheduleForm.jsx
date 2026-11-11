@@ -13,6 +13,7 @@ import {
   resolveToDayPair,
   getScheduleTimeRange,
   parseTimeToMinutes,
+  validateTimeSlotAgainstTimetable,
   entitiesMatch,
   isRoomAllowedFor,
   isProfessorAllowedInRoom
@@ -37,6 +38,13 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
   const [openTimeSlotDay, setOpenTimeSlotDay] = useState(null);
   const [timeSlotSearch, setTimeSlotSearch] = useState({});
   const dropdownRef = useRef(null);
+  const validationRef = useRef(null);
+
+  useEffect(() => {
+    if (validation && !validation.valid && validationRef.current) {
+      validationRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [validation]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -278,9 +286,16 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     if (!resolvedSlot) resolvedSlot = TIME_SLOTS.find(t => String(t.id) === String(timeStr));
 
     if (!resolvedSlot) {
-      const typedMins = parseTimeToMinutes(timeStr);
+      // Validate custom time against timetable operating hours (7:00 AM – 6:00 PM)
+      const timetableVal = validateTimeSlotAgainstTimetable(timeStr, currentRenderHours, scheduleMode);
+      if (!timetableVal.valid) {
+        // Outside timetable or invalid time: must NOT map to a timetable slot!
+        return null;
+      }
+
+      const typedMins = timetableVal.range?.start ?? parseTimeToMinutes(timeStr);
       if (typedMins !== null && eligibleTimeSlots.length > 0) {
-        let floorSlot = eligibleTimeSlots[0];
+        let floorSlot = null;
         let maxStart = -1;
         for (const s of eligibleTimeSlots) {
           const sMins = parseTimeToMinutes(s.time);
@@ -289,9 +304,9 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             floorSlot = s;
           }
         }
-        resolvedSlot = { ...floorSlot, customLabel: timeStr };
-      } else if (eligibleTimeSlots.length > 0) {
-        resolvedSlot = { ...eligibleTimeSlots[0], customLabel: timeStr };
+        if (floorSlot) {
+          resolvedSlot = { ...floorSlot, customLabel: timeStr };
+        }
       }
     }
     return resolvedSlot;
@@ -337,6 +352,14 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       if (!timeStr || !String(timeStr).trim()) {
         allValid = false;
         allErrors.push(`Please select a time slot for ${day}.`);
+        continue;
+      }
+
+      // Validate time against timetable operating hours (7:00 AM – 6:00 PM)
+      const timetableVal = validateTimeSlotAgainstTimetable(timeStr, currentHours, scheduleMode);
+      if (!timetableVal.valid) {
+        allValid = false;
+        allErrors.push(`${timetableVal.error} on ${day}.`);
         continue;
       }
 
@@ -1316,6 +1339,20 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                       setOpenTimeSlotDay(dayStr);
                       setTimeSlotSearch(prev => ({ ...prev, [dayStr]: '' }));
                     }}
+                    onBlur={() => {
+                      const currentVal = (typeof formData.timeSlot === 'object' && formData.timeSlot !== null
+                        ? (formData.timeSlot[dayStr] || formData.timeSlot[normalizeDay(dayStr)])
+                        : formData.timeSlot) || '';
+                      if (currentVal && !eligibleTimeSlots.some(s => s.label === currentVal || s.time === currentVal)) {
+                        const valCheck = validateTimeSlotAgainstTimetable(currentVal, currentRenderHours, scheduleMode);
+                        if (!valCheck.valid) {
+                          setValidation({
+                            valid: false,
+                            errors: [`${valCheck.error} on ${dayStr}.`]
+                          });
+                        }
+                      }
+                    }}
                     placeholder="Select or type a time..."
                     style={{ paddingRight: timeValue ? '56px' : '30px', width: '100%' }}
                     autoComplete="off"
@@ -1449,9 +1486,21 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                     {filterQuery && !eligibleTimeSlots.some(slot => {
                       const rangeLabel = selectedSubject ? getMeetingTimeLabel(slot, currentRenderHours, scheduleMode) : slot.label;
                       return rangeLabel.toLowerCase() === filterQuery;
-                    }) && (
+                    }) && (() => {
+                      const customCheck = validateTimeSlotAgainstTimetable(filterQuery, currentRenderHours, scheduleMode);
+                      const isInvalid = !customCheck.valid;
+
+                      return (
                         <div
                           onClick={() => {
+                            if (isInvalid) {
+                              setValidation({
+                                valid: false,
+                                errors: [`${customCheck.error} on ${dayStr}.`]
+                              });
+                            } else {
+                              setValidation(null);
+                            }
                             setFormData(prev => ({
                               ...prev,
                               timeSlot: { ...prev.timeSlot, [dayStr]: filterQuery }
@@ -1462,22 +1511,30 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                               return next;
                             });
                             setOpenTimeSlotDay(null);
-                            setValidation(null);
                           }}
                           style={{
                             padding: '12px',
                             cursor: 'pointer',
-                            color: 'var(--accent-primary)',
+                            color: isInvalid ? '#ef4444' : 'var(--accent-primary)',
                             fontSize: '0.9rem',
                             fontWeight: '600',
-                            backgroundColor: 'var(--bg-main)'
+                            backgroundColor: 'var(--bg-main)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
                           }}
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--table-header)'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-main)'}
                         >
-                          Use custom time "{filterQuery}"
+                          <span>Use custom time "{filterQuery}"</span>
+                          {isInvalid && (
+                            <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: '500' }}>
+                              ⚠️ Beyond timetable
+                            </span>
+                          )}
                         </div>
-                      )}
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -1541,6 +1598,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
       {validation && (
         <div
+          ref={validationRef}
           className={`validation-box ${validation.valid ? 'success' : 'error'}`}
           style={validation.valid ? { cursor: 'pointer', transition: 'background-color 0.2s ease' } : {}}
           onClick={validation.valid ? () => {

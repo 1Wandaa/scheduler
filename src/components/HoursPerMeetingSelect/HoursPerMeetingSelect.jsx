@@ -1,7 +1,7 @@
 // src/components/HoursPerMeetingSelect/HoursPerMeetingSelect.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 
-export const PRESET_HOURS = [
+const PRESET_HOURS = [
   { value: 1, label: '1.0 Hour' },
   { value: 1.5, label: '1.5 Hours' },
   { value: 2, label: '2.0 Hours' },
@@ -33,10 +33,12 @@ const HoursPerMeetingSelect = ({
 
   const [isCustom, setIsCustom] = useState(!isStandardPreset);
   const [customInputVal, setCustomInputVal] = useState(numValue.toString());
+  const [prevValue, setPrevValue] = useState(value);
   const inputRef = useRef(null);
 
-  // Sync external changes (e.g., when switching active subject)
-  useEffect(() => {
+  // Sync external changes (e.g., when switching active subject) without useEffect cascading renders
+  if (value !== prevValue) {
+    setPrevValue(value);
     const isPreset = PRESET_HOURS.some((p) => p.value === Number(value));
     if (!isPreset && value !== undefined && value !== null && value !== '') {
       setIsCustom(true);
@@ -45,7 +47,7 @@ const HoursPerMeetingSelect = ({
       setIsCustom(false);
       setCustomInputVal((Number(value) || 1.5).toString());
     }
-  }, [value]);
+  }
 
   const handleSelectChange = (e) => {
     const val = e.target.value;

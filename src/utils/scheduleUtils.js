@@ -171,11 +171,11 @@ export function getOccupiedSlots(schedule, scheduleMode) {
 
 export function parseTimeToMinutes(timeStr) {
   if (!timeStr) return null;
-  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+  const match = String(timeStr).trim().match(/(\d+)(?::(\d+))?\s*(AM|PM)?/i);
   if (!match) return null;
   let [_, hours, mins, period] = match;
   hours = parseInt(hours, 10);
-  mins = parseInt(mins, 10);
+  mins = mins !== undefined && mins !== '' ? parseInt(mins, 10) : 0;
   if (period) {
     if (period.toUpperCase() === 'PM' && hours < 12) hours += 12;
     if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
@@ -214,6 +214,135 @@ export function formatTimeRange(timeStr, format = '12h') {
     }
   }
   return timeStr;
+}
+
+/**
+ * Parse any custom time string (e.g. "6:00-6:30", "6:00 PM - 6:30 PM", "8:15 - 9:45", "6:00")
+ * into normalized start & end minutes and duration.
+ */
+export function parseCustomTimeRange(timeStr, defaultDurationHours = 1.5) {
+  if (!timeStr) return null;
+  const clean = String(timeStr).trim();
+  if (!clean) return null;
+
+  const parts = clean.split('-');
+  if (parts.length === 2) {
+    let startPart = parts[0].trim();
+    let endPart = parts[1].trim();
+
+    // If endPart specifies AM/PM and startPart does not, infer period
+    const endHasPeriod = /(AM|PM)/i.test(endPart);
+    const startHasPeriod = /(AM|PM)/i.test(startPart);
+    if (endHasPeriod && !startHasPeriod) {
+      const endPeriod = endPart.match(/(AM|PM)/i)[0].toUpperCase();
+      const startMatch = startPart.match(/^(\d+)/);
+      const endMatch = endPart.match(/^(\d+)/);
+      if (startMatch && endMatch) {
+        const sH = parseInt(startMatch[1], 10);
+        const eH = parseInt(endMatch[1], 10);
+        if (endPeriod === 'PM') {
+          if (sH >= 12 || sH <= eH || (sH >= 1 && sH <= 6)) {
+            startPart = `${startPart} PM`;
+          } else if (sH >= 7 && sH <= 11) {
+            startPart = `${startPart} AM`;
+          }
+        } else if (endPeriod === 'AM') {
+          startPart = `${startPart} AM`;
+        }
+      }
+    }
+
+    const startMins = parseTimeToMinutes(startPart);
+    const endMins = parseTimeToMinutes(endPart);
+
+    if (startMins === null || endMins === null) {
+      return { valid: false, error: `Invalid time format "${clean}".` };
+    }
+    if (startMins >= endMins) {
+      return { valid: false, error: `Invalid time range "${clean}". End time must be after start time.` };
+    }
+    return { valid: true, start: startMins, end: endMins, durationHours: (endMins - startMins) / 60 };
+  } else {
+    const startMins = parseTimeToMinutes(clean);
+    if (startMins === null) {
+      return { valid: false, error: `Invalid time format "${clean}".` };
+    }
+    const duration = (Number(defaultDurationHours) || 1.5) * 60;
+    const endMins = startMins + duration;
+    return { valid: true, start: startMins, end: endMins, durationHours: Number(defaultDurationHours) || 1.5 };
+  }
+}
+
+/**
+ * Validate a custom or selected time string against the timetable operating hours (7:00 AM – 6:00 PM)
+ * and lunch break constraints.
+ */
+export function validateTimeSlotAgainstTimetable(timeStr, hours = 1.5, scheduleMode = 'standard') {
+  if (!timeStr) {
+    return { valid: false, error: 'Time slot is required.' };
+  }
+
+  const config = getScheduleConfig(scheduleMode);
+  const timetableStart = config.allowSevenAm ? 420 : 450; // 7:00 AM (420) or 7:30 AM (450)
+  const timetableEnd = 1080; // 6:00 PM (1080)
+  const timetableStartLabel = config.allowSevenAm ? '7:00 AM' : '7:30 AM';
+  const timetableEndLabel = '6:00 PM';
+
+  // Check if timeStr matches an exact standard slot ID
+  const knownSlot = TIME_SLOTS.find(t => String(t.id) === String(timeStr));
+  if (knownSlot) {
+    const slotIdx = TIME_SLOTS.findIndex(t => String(t.id) === String(timeStr));
+    const needed = slotsNeededFromIndex(slotIdx, hours, scheduleMode);
+    if (needed === 0) {
+      return {
+        valid: false,
+        error: `Time slot "${knownSlot.label || knownSlot.time}" does not fit the ${hours || 1.5}hr meeting duration within timetable hours.`
+      };
+    }
+    return { valid: true, slot: knownSlot };
+  }
+
+  const range = parseCustomTimeRange(timeStr, hours);
+  if (!range) {
+    return { valid: false, error: `Invalid time slot "${timeStr}".` };
+  }
+  if (!range.valid) {
+    return { valid: false, error: range.error || `Invalid time slot "${timeStr}".` };
+  }
+
+  // Check if start time is before timetable start (e.g. before 7:00 AM)
+  if (range.start < timetableStart) {
+    return {
+      valid: false,
+      error: `Time slot "${timeStr}" starts before the timetable operating hours (${timetableStartLabel} – ${timetableEndLabel}).`
+    };
+  }
+
+  // Check if start time is at or beyond the timetable end (e.g. 6:00 PM or later)
+  if (range.start >= timetableEnd) {
+    return {
+      valid: false,
+      error: `Time slot "${timeStr}" is beyond the timetable operating hours (${timetableStartLabel} – ${timetableEndLabel}).`
+    };
+  }
+
+  // Check if end time exceeds the timetable end (e.g. ends after 6:00 PM)
+  if (range.end > timetableEnd) {
+    return {
+      valid: false,
+      error: `Time slot "${timeStr}" extends beyond the timetable operating hours (${timetableStartLabel} – ${timetableEndLabel}).`
+    };
+  }
+
+  // Check lunch break (11:30 AM – 12:30 PM)
+  if (overlapsLunchBreak(range.start, range.end)) {
+    return {
+      valid: false,
+      error: `Classes cannot be scheduled during lunch break (11:30 AM – 12:30 PM).`
+    };
+  }
+
+  return { valid: true, range };
 }
 
 export function entitiesMatch(a, b) {
