@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db, firebaseConfig } from '../../config/firebase';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { collection, query, where, getDocs, getDoc, setDoc, doc, onSnapshot, getFirestore } from 'firebase/firestore';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, signInWithPopup, updateEmail, deleteUser, signOut } from 'firebase/auth';
+import { collection, query, where, getDocs, getDoc, setDoc, doc, onSnapshot, getFirestore, updateDoc, deleteField, deleteDoc } from 'firebase/firestore';
 
 // Department → Program mapping (must match the 'program' field stored in Firestore sections)
 const DEPARTMENT_PROGRAM = {
@@ -298,6 +298,7 @@ const Login = ({ onLogin }) => {
         let firestoreUserDoc = null;
         let userCredential = null;
         let authFailed = false;
+        let usedLegacyEmail = false;
 
         // Authenticate via Firebase Auth
         try {
@@ -308,11 +309,34 @@ const Login = ({ onLogin }) => {
             const legacyDummyEmail = `${cleanUsername}@gmail.com`;
             try {
               userCredential = await signInWithEmailAndPassword(auth, legacyDummyEmail, password);
+              usedLegacyEmail = true;
             } catch {
               authFailed = true;
             }
           } else {
             authFailed = true;
+          }
+        }
+
+        // If authenticated via legacy @gmail.com, migrate to @smartsched.capsu.edu.ph
+        if (usedLegacyEmail && userCredential?.user) {
+          try {
+            await updateEmail(userCredential.user, dummyEmail);
+          } catch (migErr) {
+            if (migErr.code === 'auth/email-already-in-use') {
+              // The @smartsched.capsu.edu.ph account already exists in Firebase Auth!
+              // Since signInWithEmailAndPassword failed for it, this @gmail.com account
+              // was holding an outdated password acting as a secondary password.
+              // Delete the stale duplicate account and reject the login.
+              try {
+                await deleteUser(userCredential.user);
+              } catch (delErr) {
+                console.warn('Could not delete stale legacy Auth account:', delErr);
+              }
+              await signOut(auth);
+              setError('Invalid username or password. Please try again.');
+              return;
+            }
           }
         }
 
@@ -366,23 +390,88 @@ const Login = ({ onLogin }) => {
         const userData = firestoreUserDoc.data();
 
         if (authFailed) {
-          // Plaintext password fallback for when Auth accounts get out of sync with Firestore
+          // Plaintext password check ONLY for first-time migration of legacy accounts without Firebase Auth
           if (!userData.password || password !== userData.password) {
             setError('Invalid username or password. Please try again.');
             return;
           }
-        } else if (userCredential?.user?.uid && firestoreUserDoc.id !== userCredential.user.uid) {
-          // Sync profile to Auth UID document so Firestore security rules recognize the role
+
+          // If userData.password matches, check if a Firebase Auth account already exists
+          // with a different (newer) password. If so, userData.password is obsolete and must be rejected!
+          const secondaryAppName = `SecondaryApp_authCheck_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          let checkApp = null;
           try {
-            await setDoc(doc(db, 'users', userCredential.user.uid), {
-              ...userData,
-              id: userCredential.user.uid,
-              username: userData.username || cleanUsername,
-              name: userData.name || username,
-              role: userData.role || 'User',
-            }, { merge: true });
-          } catch (syncErr) {
-            console.warn('Could not sync user profile to Auth UID:', syncErr);
+            checkApp = initializeApp(firebaseConfig, secondaryAppName);
+            const checkAuth = getAuth(checkApp);
+            try {
+              const newAuthUser = await createUserWithEmailAndPassword(checkAuth, dummyEmail, password);
+              userCredential = newAuthUser;
+              // Also sign in on primary auth
+              try {
+                await signInWithEmailAndPassword(auth, dummyEmail, password);
+              } catch (mainErr) {
+                console.warn('Primary auth sign in:', mainErr);
+              }
+              // Successfully migrated to Firebase Auth! Remove plaintext password from Firestore
+              try {
+                await updateDoc(doc(db, 'users', firestoreUserDoc.id), {
+                  password: deleteField()
+                });
+              } catch (delErr) {
+                console.warn('Could not clean plaintext password:', delErr);
+              }
+            } catch (createErr) {
+              if (createErr.code === 'auth/email-already-in-use') {
+                // A Firebase Auth account already exists, meaning the password was changed there!
+                // The password in Firestore is an OLD / STALE password (secondary password bug).
+                // Immediately delete the stale password from Firestore and reject this login attempt!
+                try {
+                  await updateDoc(doc(db, 'users', firestoreUserDoc.id), {
+                    password: deleteField()
+                  });
+                } catch (delErr) {
+                  console.warn('Could not delete stale password field:', delErr);
+                }
+                setError('Invalid username or password. Please try again.');
+                return;
+              }
+            }
+          } finally {
+            if (checkApp) {
+              try { await deleteApp(checkApp); } catch (e) {}
+            }
+          }
+        } else {
+          // Authentication succeeded via Firebase Auth!
+          // Immediately wipe any legacy plaintext password from Firestore so it can NEVER act as a secondary password!
+          if (userData.password) {
+            try {
+              await updateDoc(doc(db, 'users', firestoreUserDoc.id), {
+                password: deleteField()
+              });
+            } catch (cleanErr) {
+              console.warn('Could not clean legacy plaintext password from Firestore:', cleanErr);
+            }
+          }
+          if (userCredential?.user?.uid && firestoreUserDoc.id !== userCredential.user.uid) {
+            // Sync profile to Auth UID document so Firestore security rules recognize the role
+            const { password: _pwd, ...sanitizedUserData } = userData;
+            try {
+              await setDoc(doc(db, 'users', userCredential.user.uid), {
+                ...sanitizedUserData,
+                id: userCredential.user.uid,
+                username: userData.username || cleanUsername,
+                name: userData.name || username,
+                role: userData.role || 'User',
+              }, { merge: true });
+              await updateDoc(doc(db, 'users', userCredential.user.uid), {
+                password: deleteField()
+              }).catch(() => {});
+              // Purge legacy doc to prevent duplicate admin dummy
+              await deleteDoc(doc(db, 'users', firestoreUserDoc.id)).catch(() => {});
+            } catch (syncErr) {
+              console.warn('Could not sync user profile to Auth UID:', syncErr);
+            }
           }
         }
 
@@ -486,6 +575,7 @@ const Login = ({ onLogin }) => {
               role,
               username: finalUsername
             }, { merge: true });
+            await deleteDoc(doc(db, 'users', firestoreUserDoc.id)).catch(() => {});
           } catch (syncErr) {
             console.warn('Could not sync Google user profile to Auth UID:', syncErr);
           }

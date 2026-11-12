@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { db, firebaseConfig } from '../../config/firebase';
+import { db, auth, firebaseConfig } from '../../config/firebase';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword, updateEmail } from 'firebase/auth';
-import { collection, onSnapshot, doc, getDocs, writeBatch, setDoc } from 'firebase/firestore';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword, updateEmail, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth';
+import { collection, onSnapshot, doc, getDocs, writeBatch, setDoc, deleteDoc, updateDoc, deleteField, query, where } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import UserTable from '../../components/UserTable/UserTable';
@@ -27,7 +27,9 @@ const UserManagement = ({ user, onBack }) => {
   const [activeTab, setActiveTab] = useState('staff'); // 'staff' or 'student'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [formData, setFormData] = useState({ name: '', username: '', role: 'Admin', password: '' });
+  const [formData, setFormData] = useState({ name: '', username: '', role: 'Admin', password: '', oldPassword: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -44,8 +46,68 @@ const UserManagement = ({ user, onBack }) => {
     };
     initializeUsers();
 
-    const unsub = onSnapshot(collection(db, 'users'), (snap) => {
-      setUsers(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+    const unsub = onSnapshot(collection(db, 'users'), async (snap) => {
+      const rawUsers = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+
+      // Group users by clean username to prevent and eradicate duplicate dummy rows
+      const grouped = new Map();
+      rawUsers.forEach(u => {
+        const cleanU = (u.username || '').replace(/^@+/, '').toLowerCase().trim();
+        if (!cleanU) return;
+        if (!grouped.has(cleanU)) {
+          grouped.set(cleanU, []);
+        }
+        grouped.get(cleanU).push(u);
+      });
+
+      const uniqueUsers = [];
+      const duplicatesToDelete = [];
+
+      grouped.forEach((group) => {
+        if (group.length === 1) {
+          uniqueUsers.push(group[0]);
+        } else {
+          // Identify the canonical user document:
+          // 1. Current logged-in user if matches
+          // 2. Firebase Auth UID (long string) over legacy numeric IDs ("1", "2")
+          // 3. Document with richest data/settings
+          const currentUid = auth.currentUser?.uid;
+          let canonical = group.find(u => currentUid && u.id === currentUid);
+          if (!canonical) {
+            canonical = group.find(u => typeof u.id === 'string' && u.id.length > 20 && !/^\d+$/.test(u.id));
+          }
+          if (!canonical) {
+            canonical = group.reduce((best, curr) => {
+              const bestScore = Object.keys(best).length + (best.settings ? 5 : 0) + (best.email ? 3 : 0);
+              const currScore = Object.keys(curr).length + (curr.settings ? 5 : 0) + (curr.email ? 3 : 0);
+              return currScore > bestScore ? curr : best;
+            }, group[0]);
+          }
+
+          uniqueUsers.push(canonical);
+
+          // Mark obsolete dummy duplicates for automatic deletion
+          group.forEach(u => {
+            if (u.id !== canonical.id) {
+              duplicatesToDelete.push(u);
+            }
+          });
+        }
+      });
+
+      // Render only unique users in the table immediately
+      setUsers(uniqueUsers);
+
+      // Clean up duplicate dummy documents from Firestore in the background
+      if (duplicatesToDelete.length > 0) {
+        for (const dup of duplicatesToDelete) {
+          try {
+            await deleteDoc(doc(db, 'users', String(dup.id)));
+          } catch (delErr) {
+            console.warn('[UserManagement] Purging duplicate user doc:', dup.id, delErr);
+          }
+        }
+      }
     });
 
     return () => unsub();
@@ -82,8 +144,19 @@ const UserManagement = ({ user, onBack }) => {
         
         const batch = writeBatch(db);
         
-        // 1. Delete user
+        // 1. Delete user (and any duplicate documents with the same username)
         batch.delete(doc(db, 'users', id.toString()));
+        const cleanDelUsername = (userToDelete?.username || '').replace(/^@+/, '').toLowerCase().trim();
+        if (cleanDelUsername) {
+          try {
+            const dupSnap = await getDocs(query(collection(db, 'users'), where('username', '==', cleanDelUsername)));
+            dupSnap.docs.forEach(d => {
+              if (d.id !== id.toString()) {
+                batch.delete(doc(db, 'users', d.id));
+              }
+            });
+          } catch (e) {}
+        }
         
         // 2. Add to trash
         const trashRef = doc(collection(db, 'trash'));
@@ -204,7 +277,9 @@ const UserManagement = ({ user, onBack }) => {
 
   const resetForm = () => {
     if (isSaving) return;
-    setFormData({ name: '', username: '', role: 'Admin', password: '' });
+    setFormData({ name: '', username: '', role: 'Admin', password: '', oldPassword: '' });
+    setShowPassword(false);
+    setShowOldPassword(false);
     setEditingUser(null);
     setIsModalOpen(false);
   };
@@ -219,8 +294,11 @@ const UserManagement = ({ user, onBack }) => {
       name: user.name || '', 
       username: user.username || '', 
       role: user.role || 'Admin', 
-      password: '' 
+      password: '',
+      oldPassword: ''
     });
+    setShowPassword(false);
+    setShowOldPassword(false);
     setEditingUser(user);
     setIsModalOpen(true);
   };
@@ -244,6 +322,21 @@ const UserManagement = ({ user, onBack }) => {
     if (!editingUser && formData.password.trim().length < 6) {
       toast.warning('Password must be at least 6 characters.');
       return;
+    }
+
+    if (editingUser) {
+      if (formData.password?.trim() && !formData.oldPassword?.trim()) {
+        toast.warning('Please enter the Current Password first before setting a new password.');
+        return;
+      }
+      if (formData.oldPassword?.trim() && !formData.password?.trim()) {
+        toast.warning('Please enter the New Password to complete changing the password.');
+        return;
+      }
+      if (formData.password?.trim() && formData.password.trim().length < 6) {
+        toast.warning('New password must be at least 6 characters.');
+        return;
+      }
     }
 
     isSubmittingRef.current = true;
@@ -291,71 +384,170 @@ const UserManagement = ({ user, onBack }) => {
           throw new Error(`The username '${formData.username}' is already in use by another account.`);
         }
 
-        // If username changed, or password changed and we have the previous credential
-        if (formData.username !== editingUser.username || (formData.password && editingUser.password)) {
+        // Determine what changed
+        const usernameChanged = (formData.username || '').replace(/^@+/, '').toLowerCase().trim() !== (editingUser.username || '').replace(/^@+/, '').toLowerCase().trim();
+        const passwordChanged = formData.password && formData.password.trim().length > 0;
+
+        if (passwordChanged && formData.password.trim().length < 6) {
+          throw new Error('Password must be at least 6 characters.');
+        }
+
+        if (usernameChanged || passwordChanged) {
           const secondaryAppName = `SecondaryApp_edit_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
           secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
           const secondaryAuth = getAuth(secondaryApp);
           
-          try {
-            // Re-authenticate user
-            const oldCleanUsername = (editingUser.username || '').replace('@', '').toLowerCase().trim();
-            let oldDummyEmail = `${oldCleanUsername}@smartsched.capsu.edu.ph`;
-            let userCredential;
-            
+          const oldCleanUsername = (editingUser.username || '').replace('@', '').toLowerCase().trim();
+          const possibleOldEmails = [
+            `${oldCleanUsername}@smartsched.capsu.edu.ph`,
+            `${oldCleanUsername}@gmail.com`,
+          ];
+          
+          let userCredential = null;
+          let authUpdateSucceeded = false;
+
+          // --- Strategy 1: If admin is editing their OWN account, use the primary auth session ---
+          const currentUser = auth.currentUser;
+          const editingOwnAccount = Boolean(
+            currentUser && (
+              currentUser.uid === editingUser.id ||
+              possibleOldEmails.some(e => e === currentUser.email?.toLowerCase()) ||
+              (cleanUsername && currentUser.email?.toLowerCase().startsWith(`${cleanUsername}@`))
+            )
+          );
+
+          if (editingOwnAccount && currentUser) {
+            id = currentUser.uid;
             try {
-              userCredential = await signInWithEmailAndPassword(secondaryAuth, oldDummyEmail, editingUser.password);
-            } catch (err) {
-              if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+              if (formData.oldPassword && formData.oldPassword.trim()) {
+                const cred = EmailAuthProvider.credential(currentUser.email, formData.oldPassword.trim());
+                await reauthenticateWithCredential(currentUser, cred);
+              }
+              if (passwordChanged) {
+                await updatePassword(currentUser, formData.password.trim());
+                authUpdateSucceeded = true;
+              }
+              if (usernameChanged) {
+                await updateEmail(currentUser, dummyEmail);
+                authUpdateSucceeded = true;
+              }
+            } catch (selfUpdateErr) {
+              if (selfUpdateErr.code === 'auth/wrong-password' || selfUpdateErr.code === 'auth/invalid-credential') {
+                throw new Error('Current password is incorrect. Please check the current password and try again.');
+              }
+              console.warn('Could not update own auth credentials:', selfUpdateErr.message);
+            }
+          }
+
+          // --- Strategy 2: Try to sign in via secondary app with known passwords ---
+          if (!authUpdateSucceeded) {
+            // Collect possible passwords to try for re-authentication
+            const passwordCandidates = [];
+            if (formData.oldPassword && formData.oldPassword.trim()) passwordCandidates.push(formData.oldPassword.trim()); // Admin-provided old password
+            if (editingUser.password) passwordCandidates.push(editingUser.password); // Legacy stored password
+            
+            for (const email of possibleOldEmails) {
+              if (userCredential) break;
+              for (const pwd of passwordCandidates) {
+                if (userCredential) break;
                 try {
-                  oldDummyEmail = `${oldCleanUsername}@gmail.com`;
-                  userCredential = await signInWithEmailAndPassword(secondaryAuth, oldDummyEmail, editingUser.password);
-                } catch (err2) {
-                  console.warn("Auth sync failed: ", err2);
-                  userCredential = null;
+                  userCredential = await signInWithEmailAndPassword(secondaryAuth, email, pwd);
+                } catch (err) {
+                  // Try next combination
                 }
-              } else {
-                console.warn("Auth sync failed: ", err);
-                userCredential = null;
               }
             }
             
             if (userCredential) {
-              // Update password if changed
-              if (formData.password && formData.password !== editingUser.password) {
-                await updatePassword(userCredential.user, formData.password.trim());
-              }
-              
-              // Update email if username changed
-              if (formData.username !== editingUser.username) {
-                await updateEmail(userCredential.user, dummyEmail);
+              try {
+                id = userCredential.user.uid;
+                if (passwordChanged) {
+                  await updatePassword(userCredential.user, formData.password.trim());
+                }
+                if (usernameChanged) {
+                  await updateEmail(userCredential.user, dummyEmail);
+                }
+                authUpdateSucceeded = true;
+
+                // Also clean up any alternate legacy duplicate Auth account
+                for (const altEmail of possibleOldEmails) {
+                  if (altEmail !== userCredential.user.email) {
+                    for (const pwd of passwordCandidates) {
+                      try {
+                        const altCred = await signInWithEmailAndPassword(secondaryAuth, altEmail, pwd);
+                        if (altCred?.user) {
+                          await deleteUser(altCred.user);
+                        }
+                      } catch (e) {}
+                    }
+                  }
+                }
+              } catch (authErr) {
+                console.warn("Could not update auth credentials via secondary sign-in:", authErr.message);
               }
             }
-          } catch (authErr) {
-             console.warn("Could not update auth credentials: " + authErr.message);
+          }
+
+          // --- Strategy 3: Create a brand new Auth account and migrate ---
+          if (!authUpdateSucceeded && passwordChanged) {
+            try {
+              // If username changed, the new email is different, so we can create a new account
+              // If username is the same, the email already exists — we can't create a duplicate
+              const newCredential = await createUserWithEmailAndPassword(secondaryAuth, dummyEmail, formData.password.trim());
+              id = newCredential.user.uid;
+              authUpdateSucceeded = true;
+            } catch (createErr) {
+              if (createErr.code === 'auth/email-already-in-use') {
+                // Can't create new account with same email — old auth account exists
+                // This happens when changing password without changing username
+                // and we couldn't sign in to the old account
+                toast.warning(
+                  'Password could not be updated in Firebase Auth because the current password was not verified. The user can change their password from Settings → Security → Change Password.',
+                  { duration: 8000 }
+                );
+              } else {
+                console.warn("Could not create replacement auth account:", createErr.message);
+              }
+            }
+          }
+        }
+
+        // Clean up legacy document if ID has migrated to canonical Auth UID
+        if (editingUser.id && String(editingUser.id) !== String(id)) {
+          try {
+            await deleteDoc(doc(db, 'users', String(editingUser.id)));
+          } catch (delErr) {
+            console.warn('[UserManagement] Could not remove old user doc:', delErr);
           }
         }
       }
 
-      await setDoc(doc(db, 'users', id), {
-        id,
+      await setDoc(doc(db, 'users', String(id)), {
+        id: String(id),
         name: formData.name.trim(),
         username: formData.username.trim(),
         role: formData.role
       }, { merge: true });
 
-      // If any legacy duplicate documents exist with the same clean username, sync their role too
+      // Clean up any legacy plaintext password field so it never remains in Firestore
+      try {
+        await updateDoc(doc(db, 'users', String(id)), {
+          password: deleteField()
+        });
+      } catch (cleanErr) {}
+
+      // DELETE all duplicate dummy documents sharing this clean username (PREVENT DUPLICATION!)
       const otherDuplicates = allUsersSnap.docs.filter(d => {
-        if (d.id === id) return false;
+        if (d.id === String(id) || (editingUser && d.id === String(editingUser.id))) return false;
         const docU = (d.data().username || '').replace(/^@+/, '').toLowerCase().trim();
         return docU === cleanUsername;
       });
       for (const dupDoc of otherDuplicates) {
-        await setDoc(doc(db, 'users', dupDoc.id), {
-          role: formData.role,
-          name: formData.name.trim(),
-          username: formData.username.trim()
-        }, { merge: true });
+        try {
+          await deleteDoc(doc(db, 'users', dupDoc.id));
+        } catch (cleanDupErr) {
+          console.warn('[UserManagement] Could not delete duplicate user doc:', cleanDupErr);
+        }
       }
 
       if (editingUser) {
@@ -373,7 +565,7 @@ const UserManagement = ({ user, onBack }) => {
       }
 
       toast.success('Saved!', { id: toastId });
-      setFormData({ name: '', username: '', role: 'Admin', password: '' });
+      setFormData({ name: '', username: '', role: 'Admin', password: '', oldPassword: '' });
       setEditingUser(null);
       setIsModalOpen(false);
     } catch (err) {
@@ -568,20 +760,117 @@ const UserManagement = ({ user, onBack }) => {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  Password
-                </label>
-                <input 
-                  type="text" 
-                  className="form-input"
-                  placeholder="Enter password (min. 6 chars)"
-                  value={formData.password}
-                  onChange={e => setFormData({ ...formData, password: e.target.value })}
-                />
+              {editingUser ? (
+                <>
+                  {/* Current Password - FIRST */}
+                  <div className="form-group">
+                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      Current Password
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        type={showOldPassword ? 'text' : 'password'} 
+                        className="form-input"
+                        placeholder="Enter current password"
+                        value={formData.oldPassword}
+                        onChange={e => setFormData({ ...formData, oldPassword: e.target.value })}
+                        style={{ paddingRight: '40px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowOldPassword(v => !v)}
+                        aria-label={showOldPassword ? 'Hide password' : 'Show password'}
+                        style={{
+                          position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                          background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
+                          color: 'var(--text-muted)', display: 'flex', alignItems: 'center'
+                        }}
+                      >
+                        {showOldPassword ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
+                        ) : (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
 
-              </div>
+                  {/* New Password - SECOND */}
+                  <div className="form-group">
+                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      New Password
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        type={showPassword ? 'text' : 'password'} 
+                        className="form-input"
+                        placeholder="Enter new password"
+                        value={formData.password}
+                        onChange={e => setFormData({ ...formData, password: e.target.value })}
+                        disabled={!formData.oldPassword.trim()}
+                        style={{ 
+                          paddingRight: '40px',
+                          opacity: !formData.oldPassword.trim() ? 0.6 : 1,
+                          cursor: !formData.oldPassword.trim() ? 'not-allowed' : 'text'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(v => !v)}
+                        disabled={!formData.oldPassword.trim()}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        style={{
+                          position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                          background: 'none', border: 'none', cursor: !formData.oldPassword.trim() ? 'not-allowed' : 'pointer', padding: '4px',
+                          color: 'var(--text-muted)', display: 'flex', alignItems: 'center', opacity: !formData.oldPassword.trim() ? 0.4 : 1
+                        }}
+                      >
+                        {showPassword ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
+                        ) : (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Add New User Password */
+                <div className="form-group">
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Password
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type={showPassword ? 'text' : 'password'} 
+                      className="form-input"
+                      placeholder="Enter password"
+                      value={formData.password}
+                      onChange={e => setFormData({ ...formData, password: e.target.value })}
+                      style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      style={{
+                        position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                        background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
+                        color: 'var(--text-muted)', display: 'flex', alignItems: 'center'
+                      }}
+                    >
+                      {showPassword ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /></svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mgmt-modal-actions">

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { db, auth } from '../../config/firebase';
-import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { collection, query, where, getDocs, updateDoc, doc, onSnapshot } from 'firebase/firestore';
+import { db, auth, firebaseConfig } from '../../config/firebase';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential, getAuth, signInWithEmailAndPassword, deleteUser } from 'firebase/auth';
+import { collection, query, where, getDocs, updateDoc, doc, onSnapshot, deleteField, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { Icon, NAV_ICONS } from '../Dashboard/components/Icon';
 import { playSuccessChime } from '../../utils/soundEffects';
@@ -115,31 +116,80 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
     return role === 'admin' || role === 'department head';
   }, [user]);
 
-  // Fetch user profile from Firestore
+  // Fetch user profile from Firestore with fast O(1) lookup & auto-consolidation
   useEffect(() => {
     let isMounted = true;
     const fetchUserData = async () => {
       try {
         if (!user?.username && !user?.uid && !user?.id) return;
-        const cleanUsername = (user.username || '').replace('@', '').toLowerCase().trim();
+        const cleanUsername = (user.username || '').replace(/^@+/, '').toLowerCase().trim();
+        const currentAuthUid = auth.currentUser?.uid;
 
         let foundDoc = null;
-        if (user.uid || user.id) {
-          const targetId = user.uid || user.id;
-          const snap = await getDocs(query(collection(db, 'users'), where('__name__', '==', targetId)));
-          if (!snap.empty) foundDoc = snap.docs[0];
+
+        // 1. Fast O(1) direct lookup by authenticated Firebase Auth UID (authoritative)
+        if (currentAuthUid) {
+          try {
+            const authSnap = await getDoc(doc(db, 'users', currentAuthUid));
+            if (authSnap.exists()) {
+              foundDoc = authSnap;
+            }
+          } catch (e) {
+            console.warn('[Settings] Auth UID fetch error:', e);
+          }
         }
 
+        // 2. Direct lookup by user.uid or user.id prop if not found yet
+        if (!foundDoc && (user.uid || user.id)) {
+          const targetId = String(user.uid || user.id);
+          try {
+            const idSnap = await getDoc(doc(db, 'users', targetId));
+            if (idSnap.exists()) {
+              foundDoc = idSnap;
+            }
+          } catch (e) {}
+        }
+
+        // 3. Fallback to query by clean username
         if (!foundDoc && cleanUsername) {
           const q = query(collection(db, 'users'), where('username', '==', cleanUsername));
           const snap = await getDocs(q);
-          if (!snap.empty) foundDoc = snap.docs[0];
+          if (!snap.empty) {
+            foundDoc = snap.docs[0];
+          }
         }
 
-        if (!foundDoc && user.username) {
-          const q = query(collection(db, 'users'), where('username', '==', user.username));
-          const snap = await getDocs(q);
-          if (!snap.empty) foundDoc = snap.docs[0];
+        // 4. Auto-consolidate: If current user has a real Auth UID and foundDoc is a legacy doc (foundDoc.id !== currentAuthUid)
+        if (currentAuthUid && foundDoc && foundDoc.id !== currentAuthUid) {
+          try {
+            const legacyData = foundDoc.data() || {};
+            await setDoc(doc(db, 'users', currentAuthUid), {
+              ...legacyData,
+              id: currentAuthUid,
+              username: legacyData.username || cleanUsername
+            }, { merge: true });
+            await deleteDoc(doc(db, 'users', foundDoc.id));
+            const newCanonicalSnap = await getDoc(doc(db, 'users', currentAuthUid));
+            if (newCanonicalSnap.exists()) {
+              foundDoc = newCanonicalSnap;
+            }
+          } catch (migErr) {
+            console.warn('[Settings] Error consolidating legacy user doc to Auth UID:', migErr);
+          }
+        }
+
+        // 5. Clean up any lingering duplicate documents sharing this username
+        if (currentAuthUid && cleanUsername) {
+          try {
+            const dupSnap = await getDocs(query(collection(db, 'users'), where('username', '==', cleanUsername)));
+            for (const d of dupSnap.docs) {
+              if (d.id !== currentAuthUid) {
+                await deleteDoc(doc(db, 'users', d.id)).catch(() => {});
+              }
+            }
+          } catch (cleanupErr) {
+            console.warn('[Settings] Duplicate doc cleanup error:', cleanupErr);
+          }
         }
 
         if (foundDoc && isMounted) {
@@ -219,7 +269,8 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
   // Handle Save Profile
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    if (!docId && !user?.uid) {
+    const canonicalTargetId = auth.currentUser?.uid || docId || user?.uid || user?.id;
+    if (!canonicalTargetId) {
       toast.error('Unable to locate your user document.');
       return;
     }
@@ -251,8 +302,23 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
         },
       };
 
-      const targetDocRef = doc(db, 'users', docId || user.uid);
-      await updateDoc(targetDocRef, updateData);
+      const targetDocRef = doc(db, 'users', canonicalTargetId);
+      await setDoc(targetDocRef, updateData, { merge: true });
+
+      // Clean up any other duplicate documents with this username
+      const cleanU = (username || user?.username || '').replace(/^@+/, '').toLowerCase().trim();
+      if (cleanU) {
+        try {
+          const snap = await getDocs(query(collection(db, 'users'), where('username', '==', cleanU)));
+          for (const d of snap.docs) {
+            if (d.id !== canonicalTargetId) {
+              await deleteDoc(doc(db, 'users', d.id)).catch(() => {});
+            }
+          }
+        } catch (cleanErr) {
+          console.warn('[Settings] Error purging duplicate documents:', cleanErr);
+        }
+      }
 
       if (onUpdateUser) {
         onUpdateUser(updateData);
@@ -270,7 +336,7 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
   // Sync preferences to Firestore
   const handleSavePreferences = async (newCompact, newFormat, newAlerts, newSound, newDefault) => {
     try {
-      const activeDocId = docId || user?.uid;
+      const activeDocId = auth.currentUser?.uid || docId || user?.uid;
       if (!activeDocId) return;
 
       const settingsData = {
@@ -283,7 +349,7 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
         },
       };
 
-      await updateDoc(doc(db, 'users', activeDocId), settingsData);
+      await setDoc(doc(db, 'users', activeDocId), settingsData, { merge: true });
     } catch (err) {
       console.warn('[Settings] Syncing preferences to Firestore:', err);
     }
@@ -315,6 +381,62 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
       const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
       await reauthenticateWithCredential(currentUser, credential);
       await updatePassword(currentUser, newPassword);
+
+      // Clean up legacy plaintext password from Firestore
+      const canonicalDocId = currentUser.uid || docId;
+      if (canonicalDocId) {
+        try {
+          await updateDoc(doc(db, 'users', canonicalDocId), {
+            password: deleteField()
+          });
+        } catch (dbErr) {
+          console.warn('[Settings] Could not delete legacy password field:', dbErr);
+        }
+      }
+
+      // Also clean up any other user documents sharing this clean username: DELETE DUPLICATES!
+      const cleanU = (username || user?.username || '').replace(/^@+/, '').toLowerCase().trim();
+      if (cleanU) {
+        try {
+          const userSnap = await getDocs(query(collection(db, 'users'), where('username', '==', cleanU)));
+          for (const uDoc of userSnap.docs) {
+            if (uDoc.id !== canonicalDocId) {
+              await deleteDoc(doc(db, 'users', uDoc.id)).catch(() => {});
+            } else {
+              await updateDoc(doc(db, 'users', uDoc.id), {
+                password: deleteField()
+              }).catch(() => {});
+            }
+          }
+        } catch (e) {
+          console.warn('[Settings] Purging duplicate docs:', e);
+        }
+
+        // Also check if alternate dummy email exists in Firebase Auth (e.g. legacy @gmail.com vs modern @smartsched.capsu.edu.ph)
+        // Ensure ONLY ONE Firebase Auth account exists by deleting any alternate/dummy account!
+        const currentEmail = currentUser.email.toLowerCase();
+        const modernEmail = `${cleanU}@smartsched.capsu.edu.ph`;
+        const legacyEmail = `${cleanU}@gmail.com`;
+        const altEmail = currentEmail === modernEmail ? legacyEmail : modernEmail;
+
+        let secondaryApp = null;
+        try {
+          const secondaryAppName = `SecondaryApp_pwdSync_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+          const secondaryAuth = getAuth(secondaryApp);
+          const altCred = await signInWithEmailAndPassword(secondaryAuth, altEmail, currentPassword);
+          if (altCred?.user) {
+            // Delete the alternate dummy Auth account completely!
+            await deleteUser(altCred.user);
+          }
+        } catch (syncErr) {
+          // Alt account doesn't exist or already has different credentials
+        } finally {
+          if (secondaryApp) {
+            try { await deleteApp(secondaryApp); } catch (e) {}
+          }
+        }
+      }
 
       setCurrentPassword('');
       setNewPassword('');
