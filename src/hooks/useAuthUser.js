@@ -105,21 +105,15 @@ async function resolveUserProfile(firebaseUser, storedUsername, cachedRole, cach
   const cleanEmailPrefix = emailPrefix.replace(/^@+/, '').toLowerCase().trim();
   const cleanStored = cleanStoredUsername(storedUsername);
 
-  // Search variations for username
-  const searchTargets = Array.from(
-    new Set([
-      emailPrefix,
-      `@${emailPrefix}`,
-      cleanEmailPrefix,
-      `@${cleanEmailPrefix}`,
-      firebaseUser.email,
-      storedUsername,
-      cleanStored ? `@${cleanStored}` : '',
-      cleanStored,
-    ])
-  )
-    .filter(Boolean)
-    .slice(0, 10);
+  // Determine whether this account was previously known as an Admin / Staff
+  const wasAdmin =
+    isAdminRole(cachedRole) ||
+    isAdminRole(cachedUser?.role) ||
+    cleanStored === 'admin';
+
+  const wasStaff =
+    isStaffRole(cachedRole) ||
+    isStaffRole(cachedUser?.role);
 
   const candidateDocs = [];
 
@@ -133,54 +127,69 @@ async function resolveUserProfile(firebaseUser, storedUsername, cachedRole, cach
     // Expected when no local IndexedDB cache entry exists yet
   }
 
-  // 2. Fetch from Firestore network with timeout protection
+  // 2. Fetch direct UID document from Firestore network with timeout protection
   try {
-    const uidFetchPromise = getDoc(doc(db, 'users', firebaseUser.uid))
-      .then((snap) => (snap && snap.exists() ? snap : null))
-      .catch(() => null);
-
-    const usernameFetchPromise =
-      searchTargets.length > 0
-        ? getDocs(query(collection(db, 'users'), where('username', 'in', searchTargets))).catch(() => null)
-        : Promise.resolve(null);
-
-    const timeoutPromise = new Promise((resolve) => {
-      setTimeout(() => resolve('timeout'), PROFILE_FETCH_TIMEOUT);
-    });
-
-    const [uidResult, usernameResult] = await Promise.all([
-      Promise.race([uidFetchPromise, timeoutPromise]),
-      Promise.race([usernameFetchPromise, timeoutPromise]),
+    const uidSnap = await Promise.race([
+      getDoc(doc(db, 'users', firebaseUser.uid)).catch(() => null),
+      new Promise((resolve) => setTimeout(() => resolve('timeout'), 4000)),
     ]);
 
-    if (uidResult && uidResult !== 'timeout' && !candidateDocs.some((d) => d.id === uidResult.id)) {
-      candidateDocs.push(uidResult);
+    if (uidSnap && uidSnap !== 'timeout' && uidSnap.exists() && !candidateDocs.some((d) => d.id === uidSnap.id)) {
+      candidateDocs.push(uidSnap);
     }
+  } catch (err) {
+    console.warn('[useAuthUser] Direct UID doc fetch error:', err);
+  }
 
-    if (usernameResult && usernameResult !== 'timeout' && !usernameResult.empty) {
-      usernameResult.docs.forEach((docSnap) => {
-        if (!candidateDocs.some((d) => d.id === docSnap.id)) {
-          candidateDocs.push(docSnap);
+  // 3. Check if UID doc was found and already satisfies role requirements
+  const hasValidUidDoc = candidateDocs.some((d) => {
+    if (d.id !== firebaseUser.uid && d.data()?.id !== firebaseUser.uid) return false;
+    const role = d.data()?.role;
+    if (wasAdmin) return isAdminRole(role);
+    if (wasStaff) return isStaffRole(role);
+    return Boolean(role);
+  });
+
+  // 4. Fallback search by username variations ONLY if UID doc is missing or wasAdmin is unsatisfied
+  if (!hasValidUidDoc) {
+    const searchTargets = Array.from(
+      new Set([
+        emailPrefix,
+        `@${emailPrefix}`,
+        cleanEmailPrefix,
+        `@${cleanEmailPrefix}`,
+        firebaseUser.email,
+        storedUsername,
+        cleanStored ? `@${cleanStored}` : '',
+        cleanStored,
+      ])
+    )
+      .filter(Boolean)
+      .slice(0, 10);
+
+    if (searchTargets.length > 0) {
+      try {
+        const usernameSnap = await Promise.race([
+          getDocs(query(collection(db, 'users'), where('username', 'in', searchTargets))).catch(() => null),
+          new Promise((resolve) => setTimeout(() => resolve('timeout'), 4000)),
+        ]);
+
+        if (usernameSnap && usernameSnap !== 'timeout' && !usernameSnap.empty) {
+          usernameSnap.docs.forEach((docSnap) => {
+            if (!candidateDocs.some((d) => d.id === docSnap.id)) {
+              candidateDocs.push(docSnap);
+            }
+          });
         }
-      });
+      } catch (fetchErr) {
+        console.warn('[useAuthUser] Error fetching profile candidates from Firestore:', fetchErr);
+      }
     }
-  } catch (fetchErr) {
-    console.warn('[useAuthUser] Error fetching profile candidates from Firestore:', fetchErr);
   }
 
   if (candidateDocs.length === 0) {
     return null;
   }
-
-  // Determine whether this account was previously known as an Admin / Staff
-  const wasAdmin =
-    isAdminRole(cachedRole) ||
-    isAdminRole(cachedUser?.role) ||
-    cleanStored === 'admin';
-
-  const wasStaff =
-    isStaffRole(cachedRole) ||
-    isStaffRole(cachedUser?.role);
 
   let chosenDoc = null;
 
@@ -240,6 +249,9 @@ export function useAuthUser() {
   const activeUserRef = useRef(user);
   activeUserRef.current = user;
 
+  const authOpSeqRef = useRef(0);
+  const isLoggingOutRef = useRef(false);
+
   // Online/offline detection
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -293,11 +305,18 @@ export function useAuthUser() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!isSubscribed) return;
 
+      const currentSeq = ++authOpSeqRef.current;
+
       if (!firebaseUser) {
         // Completely logged out
         clearUserSession();
         setUser(null);
         setLoading(false);
+        return;
+      }
+
+      // If user is currently in the process of logging out, abort immediately
+      if (isLoggingOutRef.current || !auth.currentUser) {
         return;
       }
 
@@ -314,8 +333,15 @@ export function useAuthUser() {
           cached.email === firebaseUser.email ||
           (storedUsername && cached.username === storedUsername))
       ) {
-        setUser(cached);
-        setLoading(false);
+        if (
+          isSubscribed &&
+          currentSeq === authOpSeqRef.current &&
+          !isLoggingOutRef.current &&
+          auth.currentUser
+        ) {
+          setUser(cached);
+          setLoading(false);
+        }
       }
 
       try {
@@ -326,7 +352,18 @@ export function useAuthUser() {
           cached || activeUserRef.current
         );
 
-        if (!isSubscribed) return;
+        // Guard against race conditions:
+        // Must verify hook is subscribed, sequence is still current, user hasn't initiated logout,
+        // and auth.currentUser is still active and matches firebaseUser.uid.
+        if (
+          !isSubscribed ||
+          currentSeq !== authOpSeqRef.current ||
+          isLoggingOutRef.current ||
+          !auth.currentUser ||
+          auth.currentUser.uid !== firebaseUser.uid
+        ) {
+          return;
+        }
 
         if (resolved) {
           persistUserSession(resolved);
@@ -334,6 +371,7 @@ export function useAuthUser() {
         } else if (cached) {
           // If Firestore query timed out or offline, PRESERVE the cached admin session!
           console.warn('[useAuthUser] Retaining cached user profile as Firestore returned no candidates.');
+          persistUserSession(cached);
           setUser(cached);
         } else {
           // No cached profile existed (brand new device or cleared cache).
@@ -355,7 +393,15 @@ export function useAuthUser() {
         }
       } catch (error) {
         console.error('[useAuthUser] Error resolving user profile:', error);
-        if (!isSubscribed) return;
+        if (
+          !isSubscribed ||
+          currentSeq !== authOpSeqRef.current ||
+          isLoggingOutRef.current ||
+          !auth.currentUser ||
+          auth.currentUser.uid !== firebaseUser.uid
+        ) {
+          return;
+        }
 
         // If an unexpected error or network drop occurs, NEVER downgrade an admin account!
         const currentCached = getCachedUser() || activeUserRef.current;
@@ -378,7 +424,11 @@ export function useAuthUser() {
           setUser(fallbackProfile);
         }
       } finally {
-        if (isSubscribed) {
+        if (
+          isSubscribed &&
+          currentSeq === authOpSeqRef.current &&
+          !isLoggingOutRef.current
+        ) {
           setLoading(false);
         }
       }
@@ -393,25 +443,44 @@ export function useAuthUser() {
   // Public actions
   const handleLogin = (userProfile) => {
     if (!userProfile) return;
+    isLoggingOutRef.current = false;
+    ++authOpSeqRef.current;
     persistUserSession(userProfile);
     setUser(userProfile);
   };
 
   const handleLogout = async () => {
-    if (user) {
-      logActivity({
-        user,
-        action: LOG_ACTIONS.LOGOUT,
-        details: `${user.name || user.username} logged out`,
-      });
-    }
+    isLoggingOutRef.current = true;
+    ++authOpSeqRef.current;
+
+    const userToLog = activeUserRef.current || user;
+
+    // Immediately clear session storage & state to prevent any UI lag or race conditions
     clearUserSession();
+    setUser(null);
+
+    if (userToLog) {
+      try {
+        logActivity({
+          user: userToLog,
+          action: LOG_ACTIONS.LOGOUT,
+          details: `${userToLog.name || userToLog.username} logged out`,
+        });
+      } catch (e) {
+        console.warn('[useAuthUser] Activity logging error:', e);
+      }
+    }
+
     try {
       await auth.signOut();
     } catch (e) {
       console.warn('[useAuthUser] Sign out error:', e.message);
+    } finally {
+      // Re-verify session is cleared in case any async operations completed during signOut
+      clearUserSession();
+      setUser(null);
+      isLoggingOutRef.current = false;
     }
-    setUser(null);
   };
 
   const updateUserProfile = (updatedFields) => {

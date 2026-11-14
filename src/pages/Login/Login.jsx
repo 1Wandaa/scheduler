@@ -114,17 +114,24 @@ const Login = ({ onLogin }) => {
     setError('');
   };
 
-  // Real-time listener for sections from Firestore
+  // Real-time listener for sections from Firestore (active only when signing up)
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'sections'), (snapshot) => {
-      const secs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setFirestoreSections(secs);
-    });
+    if (!isSignUp) return;
+    const unsubscribe = onSnapshot(
+      collection(db, 'sections'),
+      (snapshot) => {
+        const secs = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setFirestoreSections(secs);
+      },
+      (err) => {
+        console.warn('[Login] Sections snapshot listener:', err.message);
+      }
+    );
     return () => unsubscribe();
-  }, []);
+  }, [isSignUp]);
 
   // Auto-derive program from selected department
   const derivedProgram = department ? (DEPARTMENT_PROGRAM[department] || '') : '';
@@ -347,11 +354,7 @@ const Login = ({ onLogin }) => {
               const userDocSnap = await getDoc(doc(db, 'users', userCredential.user.uid));
               if (userDocSnap.exists()) {
                 firestoreUserDoc = userDocSnap;
-                const r = (userDocSnap.data()?.role || '').toLowerCase();
-                // If UID doc is already Admin/Staff, break early
-                if (r === 'admin' || r === 'department head' || r === 'faculty') {
-                  break;
-                }
+                break;
               }
             } catch (fetchErr) {
               console.warn('Could not fetch user by uid:', fetchErr);
@@ -367,18 +370,16 @@ const Login = ({ onLogin }) => {
         const isUidElevated = uidRole === 'admin' || uidRole === 'department head' || uidRole === 'faculty';
 
         if (!firestoreUserDoc || !isUidElevated) {
-          for (let attempt = 0; attempt < 3; attempt++) {
+          try {
             const usernameDoc = await findUserDocument(username, userCredential?.user?.uid);
             if (usernameDoc) {
               const uRole = (usernameDoc.data()?.role || '').toLowerCase();
               if (uRole === 'admin' || uRole === 'department head' || uRole === 'faculty' || !firestoreUserDoc) {
                 firestoreUserDoc = usernameDoc;
-                break;
               }
             }
-            if (attempt < 2) {
-              await new Promise(resolve => setTimeout(resolve, 300));
-            }
+          } catch (findErr) {
+            console.warn('Could not find user by username:', findErr);
           }
         }
 
