@@ -38,13 +38,80 @@ const RecycleBin = ({ onBack, user }) => {
     }
   };
 
+
+  const getItemDetails = (item) => {
+    const data = item.data || {};
+    let title = data.name || data.code || data.username || data.title || item.originalId || 'Untitled Item';
+    if (data.code && data.title && data.code !== data.title) {
+      title = `${data.code} — ${data.title}`;
+    } else if (data.code && data.name && data.code !== data.name) {
+      title = `${data.code} — ${data.name}`;
+    }
+
+    const ignoredKeys = new Set([
+      'name', 'code', 'title', 'id', 'createdAt', 'updatedAt',
+      'deletedAt', 'originalId', 'firstName', 'lastName',
+      'searchKeywords', 'normalizedName'
+    ]);
+
+    const details = [];
+
+    if (data.program) details.push({ label: 'Program', value: data.program });
+    if (data.yearLevel) {
+      const yr = Number(data.yearLevel);
+      details.push({
+        label: 'Year Level',
+        value: yr ? `${yr}${yr === 1 ? 'st' : yr === 2 ? 'nd' : yr === 3 ? 'rd' : 'th'} Year` : String(data.yearLevel)
+      });
+    }
+    if (data.department) details.push({ label: 'Department', value: data.department });
+    if (data.building) details.push({ label: 'Building', value: data.building });
+    if (data.type && item.type === 'room') details.push({ label: 'Type', value: data.type });
+    if (data.capacity) details.push({ label: 'Capacity', value: data.capacity });
+    if (data.units !== undefined) details.push({ label: 'Units', value: data.units });
+    if (data.maxUnits !== undefined) details.push({ label: 'Max Units', value: data.maxUnits });
+    if (data.employmentType) details.push({ label: 'Employment', value: data.employmentType });
+    if (data.role) details.push({ label: 'Role', value: data.role });
+    if (data.email) details.push({ label: 'Email', value: data.email });
+
+    const handledKeys = new Set([
+      'program', 'yearLevel', 'department', 'building', 'type',
+      'capacity', 'units', 'maxUnits', 'employmentType', 'role', 'email'
+    ]);
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (ignoredKeys.has(key) || handledKeys.has(key)) return;
+      if (value === null || value === undefined || typeof value === 'object') return;
+      const strVal = String(value).trim();
+      if (!strVal) return;
+      const formattedLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
+      details.push({ label: formattedLabel, value: strVal });
+    });
+
+    return { title, details };
+  };
+
   const handleRestore = async (item) => {
+    const { title } = getItemDetails(item);
+    const typeLabel = item.type ? (item.type.charAt(0).toUpperCase() + item.type.slice(1)) : 'Item';
+    const schedCount = item.cascadedSchedules?.length || 0;
+    const schedNote = schedCount > 0 ? ` and its ${schedCount} associated schedule${schedCount > 1 ? 's' : ''}` : '';
+
+    const isConfirmed = await confirm({
+      title: `Restore ${typeLabel}?`,
+      text: `Are you sure you want to restore "${title}"${schedNote}?`,
+      icon: 'info',
+      confirmButtonText: 'Restore',
+    });
+
+    if (!isConfirmed) return;
+
     try {
       await restoreFromTrash(item);
       setSelectedIds(prev => prev.filter(id => id !== item.id));
-      const itemName = item.data?.name || item.data?.code || item.data?.username || item.originalId;
+      const itemName = item.data?.name || item.data?.code || item.data?.username || item.originalId || title;
       logActivity({ user, action: LOG_ACTIONS.RESTORE_DATA, details: `Restored ${item.type}: ${itemName}` });
-      toast.success(`${item.type.charAt(0).toUpperCase() + item.type.slice(1)} restored successfully!`);
+      toast.success(`${typeLabel} restored successfully!`);
     } catch (err) {
       console.error("Error restoring item:", err);
       toast.error('Failed to restore item.');
@@ -192,57 +259,6 @@ const RecycleBin = ({ onBack, user }) => {
     return { date, time };
   };
 
-  const getItemDetails = (item) => {
-    const data = item.data || {};
-    let title = data.name || data.code || data.username || data.title || item.originalId || 'Untitled Item';
-    if (data.code && data.title && data.code !== data.title) {
-      title = `${data.code} — ${data.title}`;
-    } else if (data.code && data.name && data.code !== data.name) {
-      title = `${data.code} — ${data.name}`;
-    }
-
-    const ignoredKeys = new Set([
-      'name', 'code', 'title', 'id', 'createdAt', 'updatedAt',
-      'deletedAt', 'originalId', 'firstName', 'lastName',
-      'searchKeywords', 'normalizedName'
-    ]);
-
-    const details = [];
-
-    if (data.program) details.push({ label: 'Program', value: data.program });
-    if (data.yearLevel) {
-      const yr = Number(data.yearLevel);
-      details.push({
-        label: 'Year Level',
-        value: yr ? `${yr}${yr === 1 ? 'st' : yr === 2 ? 'nd' : yr === 3 ? 'rd' : 'th'} Year` : String(data.yearLevel)
-      });
-    }
-    if (data.department) details.push({ label: 'Department', value: data.department });
-    if (data.building) details.push({ label: 'Building', value: data.building });
-    if (data.type && item.type === 'room') details.push({ label: 'Type', value: data.type });
-    if (data.capacity) details.push({ label: 'Capacity', value: data.capacity });
-    if (data.units !== undefined) details.push({ label: 'Units', value: data.units });
-    if (data.maxUnits !== undefined) details.push({ label: 'Max Units', value: data.maxUnits });
-    if (data.employmentType) details.push({ label: 'Employment', value: data.employmentType });
-    if (data.role) details.push({ label: 'Role', value: data.role });
-    if (data.email) details.push({ label: 'Email', value: data.email });
-
-    const handledKeys = new Set([
-      'program', 'yearLevel', 'department', 'building', 'type',
-      'capacity', 'units', 'maxUnits', 'employmentType', 'role', 'email'
-    ]);
-
-    Object.entries(data).forEach(([key, value]) => {
-      if (ignoredKeys.has(key) || handledKeys.has(key)) return;
-      if (value === null || value === undefined || typeof value === 'object') return;
-      const strVal = String(value).trim();
-      if (!strVal) return;
-      const formattedLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
-      details.push({ label: formattedLabel, value: strVal });
-    });
-
-    return { title, details };
-  };
 
   const getTypeColor = (type) => {
     switch (type) {
