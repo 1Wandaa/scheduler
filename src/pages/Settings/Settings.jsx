@@ -39,15 +39,12 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
-  const [phone, setPhone] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('');
   const [studentId, setStudentId] = useState('');
   const [department, setDepartment] = useState('');
   const [yearLevel, setYearLevel] = useState('');
   const [section, setSection] = useState('');
-  const [academicRank, setAcademicRank] = useState('');
-  const [officeLocation, setOfficeLocation] = useState('');
 
   // Password / Security States
   const [currentPassword, setCurrentPassword] = useState('');
@@ -198,15 +195,12 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
           setName(data.name || user.name || '');
           setEmail(data.email || user.email || '');
           setUsername(data.username || user.username || '');
-          setPhone(data.phone || '');
           setAge(data.age ? String(data.age) : '');
           setGender(data.gender || '');
           setStudentId(data.studentId || '');
           setDepartment(data.department || '');
           setYearLevel(data.yearLevel ? String(data.yearLevel) : '');
           setSection(data.section || '');
-          setAcademicRank(data.academicRank || data.title || '');
-          setOfficeLocation(data.officeLocation || data.office || '');
 
           if (data.settings) {
             if (data.settings.timeFormat) setTimeFormat(data.settings.timeFormat);
@@ -283,7 +277,6 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
         name: name.trim(),
         username: username.trim(),
         email: email.trim(),
-        phone: phone.trim(),
         gender: gender || null,
         department: department || null,
         program: derivedProgram || null,
@@ -291,8 +284,6 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
         ...(studentId.trim() && { studentId: studentId.trim() }),
         ...(yearLevel && { yearLevel: parseInt(yearLevel) }),
         ...(section && { section }),
-        ...(academicRank.trim() && { academicRank: academicRank.trim() }),
-        ...(officeLocation.trim() && { officeLocation: officeLocation.trim() }),
         settings: {
           timeFormat,
           compactSpacing,
@@ -579,16 +570,6 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
             </div>
 
             <div className="settings-field">
-              <label>Phone / Contact Number</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+63 912 345 6789"
-              />
-            </div>
-
-            <div className="settings-field">
               <label>Gender</label>
               <select value={gender} onChange={(e) => setGender(e.target.value)}>
                 <option value="">Select Gender</option>
@@ -682,31 +663,6 @@ const Settings = ({ user, onUpdateUser, onBack }) => {
                       </option>
                     ))}
                   </select>
-                </div>
-              </>
-            )}
-
-            {/* Faculty specific fields */}
-            {(isFaculty || isAdmin) && (
-              <>
-                <div className="settings-field">
-                  <label>Academic Rank / Title</label>
-                  <input
-                    type="text"
-                    value={academicRank}
-                    onChange={(e) => setAcademicRank(e.target.value)}
-                    placeholder="e.g. Associate Professor IV"
-                  />
-                </div>
-
-                <div className="settings-field">
-                  <label>Consultation Office / Room</label>
-                  <input
-                    type="text"
-                    value={officeLocation}
-                    onChange={(e) => setOfficeLocation(e.target.value)}
-                    placeholder="e.g. Faculty Room 204"
-                  />
                 </div>
               </>
             )}

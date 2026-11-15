@@ -1970,30 +1970,21 @@ const TeachingLoadManagement = ({
           <div className="hub-form-grid-3">
             <div className="hub-form-field">
               <label className="hub-form-label">Lecture Hours/wk</label>
-              <select
-                className="hub-form-select"
+              <HoursPerMeetingSelect
                 value={form.lectureHours || 2}
-                onChange={e => setNestedEditing(prev => ({ ...prev, form: { ...prev.form, lectureHours: Number(e.target.value) } }))}
-              >
-                <option value={1}>1.0 Hour</option>
-                <option value={2}>2.0 Hours (Standard)</option>
-                <option value={3}>3.0 Hours</option>
-                <option value={4}>4.0 Hours</option>
-              </select>
+                onChange={val => setNestedEditing(prev => ({ ...prev, form: { ...prev.form, lectureHours: Number(val) || 2 } }))}
+                selectClassName="hub-form-select"
+                inputClassName="hub-form-input"
+              />
             </div>
             <div className="hub-form-field">
               <label className="hub-form-label">Lab Hours/wk</label>
-              <select
-                className="hub-form-select"
+              <HoursPerMeetingSelect
                 value={form.labHours || 3}
-                onChange={e => setNestedEditing(prev => ({ ...prev, form: { ...prev.form, labHours: Number(e.target.value) } }))}
-              >
-                <option value={2}>2.0 Hours</option>
-                <option value={3}>3.0 Hours (Standard)</option>
-                <option value={4}>4.0 Hours</option>
-                <option value={5}>5.0 Hours</option>
-                <option value={6}>6.0 Hours</option>
-              </select>
+                onChange={val => setNestedEditing(prev => ({ ...prev, form: { ...prev.form, labHours: Number(val) || 3 } }))}
+                selectClassName="hub-form-select"
+                inputClassName="hub-form-input"
+              />
             </div>
             <div className="hub-form-field">
               <label className="hub-form-label">Total Hours</label>
@@ -2003,16 +1994,22 @@ const TeachingLoadManagement = ({
             </div>
           </div>
         ) : (
-          <div className="hub-form-field">
-            <label className="hub-form-label">Hours Per Meeting</label>
-            <HoursPerMeetingSelect
-              value={form.hoursPerMeeting || 1.5}
-              onChange={val => setNestedEditing(prev => ({ ...prev, form: { ...prev.form, hoursPerMeeting: val } }))}
-              label="Hours / Meeting"
-              labelClassName="hub-form-label"
-              selectClassName="hub-form-select"
-              inputClassName="hub-form-input"
-            />
+          <div className="hub-form-grid-2">
+            <div className="hub-form-field">
+              <label className="hub-form-label">Hours Per Meeting</label>
+              <HoursPerMeetingSelect
+                value={form.hoursPerMeeting || 1.5}
+                onChange={val => setNestedEditing(prev => ({ ...prev, form: { ...prev.form, hoursPerMeeting: val } }))}
+                selectClassName="hub-form-select"
+                inputClassName="hub-form-input"
+              />
+            </div>
+            <div className="hub-form-field">
+              <label className="hub-form-label">Classroom Mode</label>
+              <div className="hub-single-session-box">
+                Single classroom session schedule
+              </div>
+            </div>
           </div>
         )}
 
@@ -3781,30 +3778,21 @@ const TeachingLoadManagement = ({
                     <div className="hub-form-grid-3">
                       <div className="hub-form-field">
                         <label className="hub-form-label">Lecture Hours (Weekly)</label>
-                        <select
-                          className="hub-form-select"
+                        <HoursPerMeetingSelect
                           value={stagedEntityForm.lectureHours || 2}
-                          onChange={e => setStagedEntityForm(prev => ({ ...prev, lectureHours: Number(e.target.value) }))}
-                        >
-                          <option value={1}>1.0 Hour</option>
-                          <option value={2}>2.0 Hours (Standard)</option>
-                          <option value={3}>3.0 Hours</option>
-                          <option value={4}>4.0 Hours</option>
-                        </select>
+                          onChange={val => setStagedEntityForm(prev => ({ ...prev, lectureHours: Number(val) || 2 }))}
+                          selectClassName="hub-form-select"
+                          inputClassName="hub-form-input"
+                        />
                       </div>
                       <div className="hub-form-field">
                         <label className="hub-form-label">Laboratory Hours (Weekly)</label>
-                        <select
-                          className="hub-form-select"
+                        <HoursPerMeetingSelect
                           value={stagedEntityForm.labHours || 3}
-                          onChange={e => setStagedEntityForm(prev => ({ ...prev, labHours: Number(e.target.value) }))}
-                        >
-                          <option value={2}>2.0 Hours</option>
-                          <option value={3}>3.0 Hours (Standard)</option>
-                          <option value={4}>4.0 Hours</option>
-                          <option value={5}>5.0 Hours</option>
-                          <option value={6}>6.0 Hours</option>
-                        </select>
+                          onChange={val => setStagedEntityForm(prev => ({ ...prev, labHours: Number(val) || 3 }))}
+                          selectClassName="hub-form-select"
+                          inputClassName="hub-form-input"
+                        />
                       </div>
                       <div className="hub-form-field">
                         <label className="hub-form-label">Weekly Contact Total</label>
@@ -3820,8 +3808,6 @@ const TeachingLoadManagement = ({
                         <HoursPerMeetingSelect
                           value={stagedEntityForm.hoursPerMeeting || 1.5}
                           onChange={val => setStagedEntityForm(prev => ({ ...prev, hoursPerMeeting: val }))}
-                          label="Hours / Meeting"
-                          labelClassName="hub-form-label"
                           selectClassName="hub-form-select"
                           inputClassName="hub-form-input"
                         />

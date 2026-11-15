@@ -462,51 +462,39 @@ const QuickCreateModal = ({
                     onChange={e => setSubjectData({ ...subjectData, credits: e.target.value })}
                   />
                 </div>
-                {!subjectData.hasLecLab && (
-                  <div className="quick-form-group" style={{ flex: 1 }}>
-                    <label className="quick-form-label">Hours / Meeting</label>
+              </div>
+
+              {subjectData.hasLecLab ? (
+                <div className="quick-form-row">
+                  <div className="quick-form-group" style={{ flex: 1, minWidth: 0 }}>
+                    <label className="quick-form-label">Lecture Hours (Weekly)</label>
                     <HoursPerMeetingSelect
-                      value={subjectData.hoursPerMeeting}
-                      onChange={val => setSubjectData({ ...subjectData, hoursPerMeeting: val })}
-                      label="Hours / Meeting"
-                      labelClassName="quick-form-label"
+                      value={subjectData.lectureHours || 2}
+                      onChange={val => setSubjectData({ ...subjectData, lectureHours: Number(val) || 2 })}
                       selectClassName="quick-form-select"
                       inputClassName="quick-form-input"
                     />
                   </div>
-                )}
-              </div>
-
-              {subjectData.hasLecLab && (
-                <div className="quick-form-row">
-                  <div className="quick-form-group" style={{ flex: 1 }}>
-                    <label className="quick-form-label">Lecture Hours</label>
-                    <select
-                      className="quick-form-select"
-                      value={subjectData.lectureHours || 2}
-                      onChange={e => setSubjectData({ ...subjectData, lectureHours: Number(e.target.value) })}
-                    >
-                      <option value={1}>1.0 Hour</option>
-                      <option value={1.5}>1.5 Hours</option>
-                      <option value={2}>2.0 Hours</option>
-                      <option value={2.5}>2.5 Hours</option>
-                      <option value={3}>3.0 Hours</option>
-                    </select>
-                  </div>
-                  <div className="quick-form-group" style={{ flex: 1 }}>
-                    <label className="quick-form-label">Lab Hours</label>
-                    <select
-                      className="quick-form-select"
+                  <div className="quick-form-group" style={{ flex: 1, minWidth: 0 }}>
+                    <label className="quick-form-label">Lab Hours (Weekly)</label>
+                    <HoursPerMeetingSelect
                       value={subjectData.labHours || 3}
-                      onChange={e => setSubjectData({ ...subjectData, labHours: Number(e.target.value) })}
-                    >
-                      <option value={1}>1.0 Hour</option>
-                      <option value={1.5}>1.5 Hours</option>
-                      <option value={2}>2.0 Hours</option>
-                      <option value={2.5}>2.5 Hours</option>
-                      <option value={3}>3.0 Hours</option>
-                      <option value={4}>4.0 Hours</option>
-                    </select>
+                      onChange={val => setSubjectData({ ...subjectData, labHours: Number(val) || 3 })}
+                      selectClassName="quick-form-select"
+                      inputClassName="quick-form-input"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="quick-form-row">
+                  <div className="quick-form-group" style={{ flex: 1, minWidth: 0, maxWidth: 'calc(50% - 7px)' }}>
+                    <label className="quick-form-label">Hours / Meeting</label>
+                    <HoursPerMeetingSelect
+                      value={subjectData.hoursPerMeeting}
+                      onChange={val => setSubjectData({ ...subjectData, hoursPerMeeting: val })}
+                      selectClassName="quick-form-select"
+                      inputClassName="quick-form-input"
+                    />
                   </div>
                 </div>
               )}

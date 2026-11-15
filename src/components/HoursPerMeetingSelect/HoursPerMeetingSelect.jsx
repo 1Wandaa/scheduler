@@ -1,5 +1,5 @@
 // src/components/HoursPerMeetingSelect/HoursPerMeetingSelect.jsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const PRESET_HOURS = [
   { value: 1, label: '1.0 Hour' },
@@ -10,13 +10,16 @@ const PRESET_HOURS = [
   { value: 3.5, label: '3.5 Hours' },
   { value: 4, label: '4.0 Hours' },
   { value: 5, label: '5.0 Hours' },
+  { value: 6, label: '6.0 Hours' },
 ];
+
+const isPresetHour = (v) => PRESET_HOURS.some((p) => p.value === Number(v));
 
 /**
  * Clean, customizable Hours per Meeting selector.
  * - In standard preset mode: Renders a native select matching the modal theme.
  * - In custom mode: The select displays "Custom..." alongside a clean number input for entering exact hours.
- * - Zero layout shifts: If label is omitted, returns the control directly without unnecessary wrapper divs.
+ * - Zero layout shifts: If label is omitted, returns the control directly without unnecessary wrapper divs or duplicate labels.
  */
 const HoursPerMeetingSelect = ({
   value = 1.5,
@@ -29,25 +32,38 @@ const HoursPerMeetingSelect = ({
   style = {},
 }) => {
   const numValue = Number(value) || 1.5;
-  const isStandardPreset = PRESET_HOURS.some((p) => p.value === numValue);
+  const isStandardPreset = isPresetHour(numValue);
 
   const [isCustom, setIsCustom] = useState(!isStandardPreset);
   const [customInputVal, setCustomInputVal] = useState(numValue.toString());
-  const [prevValue, setPrevValue] = useState(value);
   const inputRef = useRef(null);
+  const lastEmittedValueRef = useRef(null);
+  const prevValueRef = useRef(value);
 
-  // Sync external changes (e.g., when switching active subject) without useEffect cascading renders
-  if (value !== prevValue) {
-    setPrevValue(value);
-    const isPreset = PRESET_HOURS.some((p) => p.value === Number(value));
-    if (!isPreset && value !== undefined && value !== null && value !== '') {
-      setIsCustom(true);
-      setCustomInputVal(value.toString());
-    } else {
-      setIsCustom(false);
-      setCustomInputVal((Number(value) || 1.5).toString());
+  // Sync external changes (e.g., when switching active subject or resetting)
+  useEffect(() => {
+    if (value !== prevValueRef.current) {
+      prevValueRef.current = value;
+
+      // If value change originated from user typing in custom mode, do NOT reset custom mode
+      if (
+        lastEmittedValueRef.current !== null &&
+        (Number(value) === Number(lastEmittedValueRef.current) || String(value) === String(lastEmittedValueRef.current))
+      ) {
+        return;
+      }
+
+      // External update: check whether it's preset or custom
+      const isPreset = isPresetHour(value);
+      if (!isPreset && value !== undefined && value !== null && value !== '') {
+        setIsCustom(true);
+        setCustomInputVal(value.toString());
+      } else if (isPreset) {
+        setIsCustom(false);
+        setCustomInputVal((Number(value) || 1.5).toString());
+      }
     }
-  }
+  }, [value]);
 
   const handleSelectChange = (e) => {
     const val = e.target.value;
@@ -55,9 +71,10 @@ const HoursPerMeetingSelect = ({
       setIsCustom(true);
       const nextVal = customInputVal || (Number(value) || 1.5).toString();
       setCustomInputVal(nextVal);
-      if (onChange) {
-        const parsed = parseFloat(nextVal);
-        if (!isNaN(parsed)) onChange(parsed);
+      const parsed = parseFloat(nextVal);
+      if (!isNaN(parsed)) {
+        lastEmittedValueRef.current = parsed;
+        if (onChange) onChange(parsed);
       }
       setTimeout(() => {
         if (inputRef.current) {
@@ -69,6 +86,7 @@ const HoursPerMeetingSelect = ({
       setIsCustom(false);
       const parsed = Number(val);
       setCustomInputVal(parsed.toString());
+      lastEmittedValueRef.current = parsed;
       if (onChange) onChange(parsed);
     }
   };
@@ -77,12 +95,26 @@ const HoursPerMeetingSelect = ({
     const raw = e.target.value;
     setCustomInputVal(raw);
     if (raw === '') {
+      lastEmittedValueRef.current = '';
       if (onChange) onChange('');
     } else {
       const parsed = parseFloat(raw);
-      if (!isNaN(parsed) && onChange) {
-        onChange(parsed);
+      if (!isNaN(parsed)) {
+        lastEmittedValueRef.current = parsed;
+        if (onChange) {
+          onChange(parsed);
+        }
       }
+    }
+  };
+
+  const handleCustomInputBlur = () => {
+    const parsed = parseFloat(customInputVal);
+    if (isNaN(parsed) || parsed <= 0) {
+      const fallback = 1.5;
+      setCustomInputVal(fallback.toString());
+      lastEmittedValueRef.current = fallback;
+      if (onChange) onChange(fallback);
     }
   };
 
@@ -91,7 +123,7 @@ const HoursPerMeetingSelect = ({
       className={selectClassName}
       value={numValue}
       onChange={handleSelectChange}
-      style={{ width: '100%', ...style }}
+      style={{ width: '100%', boxSizing: 'border-box', ...style }}
     >
       {PRESET_HOURS.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -107,6 +139,7 @@ const HoursPerMeetingSelect = ({
         alignItems: 'center',
         gap: '8px',
         width: '100%',
+        boxSizing: 'border-box',
         ...style,
       }}
     >
@@ -114,7 +147,7 @@ const HoursPerMeetingSelect = ({
         className={selectClassName}
         value="custom"
         onChange={handleSelectChange}
-        style={{ flex: 1, minWidth: 0 }}
+        style={{ flex: 1, minWidth: 0, boxSizing: 'border-box' }}
       >
         {PRESET_HOURS.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -141,12 +174,14 @@ const HoursPerMeetingSelect = ({
           placeholder="Hrs"
           value={customInputVal}
           onChange={handleCustomInputChange}
+          onBlur={handleCustomInputBlur}
           className={inputClassName}
           style={{
-            width: '68px',
+            width: '64px',
             textAlign: 'center',
             paddingLeft: '4px',
             paddingRight: '4px',
+            boxSizing: 'border-box',
           }}
         />
         <span
@@ -175,6 +210,7 @@ const HoursPerMeetingSelect = ({
         flexDirection: 'column',
         gap: '6px',
         width: '100%',
+        boxSizing: 'border-box',
         ...containerStyle,
       }}
     >

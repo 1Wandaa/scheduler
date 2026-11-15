@@ -147,6 +147,20 @@
   color: var(--text-main, #0f172a);
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.quick-session-mode-box {
+  padding: 9px 12px;
+  background: var(--bg-main, #f8fafc);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  height: 38px;
+  box-sizing: border-box;
 }
 
 .quick-form-input:focus,

@@ -815,8 +815,6 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                   <HoursPerMeetingSelect
                     value={formData.hoursPerMeeting || 1.5}
                     onChange={val => setFormData({ ...formData, hoursPerMeeting: val })}
-                    label="Hours / Meeting"
-                    labelClassName="form-label"
                     selectClassName="form-select"
                     inputClassName="form-input"
                   />
@@ -828,35 +826,21 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                   <label className="form-label">Lecture Hours</label>
-                  <select
-                    className="form-select"
+                  <HoursPerMeetingSelect
                     value={formData.lectureHours || 2}
-                    onChange={e => setFormData({ ...formData, lectureHours: Number(e.target.value) })}
-                  >
-                    <option value={1}>1.0 Hours</option>
-                    <option value={1.5}>1.5 Hours</option>
-                    <option value={2}>2.0 Hours</option>
-                    <option value={2.5}>2.5 Hours</option>
-                    <option value={3}>3.0 Hours</option>
-                    <option value={4}>4.0 Hours</option>
-                    <option value={5}>5.0 Hours</option>
-                  </select>
+                    onChange={val => setFormData({ ...formData, lectureHours: Number(val) || 2 })}
+                    selectClassName="form-select"
+                    inputClassName="form-input"
+                  />
                 </div>
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                   <label className="form-label">Lab Hours</label>
-                  <select
-                    className="form-select"
+                  <HoursPerMeetingSelect
                     value={formData.labHours || 3}
-                    onChange={e => setFormData({ ...formData, labHours: Number(e.target.value) })}
-                  >
-                    <option value={1}>1.0 Hours</option>
-                    <option value={1.5}>1.5 Hours</option>
-                    <option value={2}>2.0 Hours</option>
-                    <option value={2.5}>2.5 Hours</option>
-                    <option value={3}>3.0 Hours</option>
-                    <option value={4}>4.0 Hours</option>
-                    <option value={5}>5.0 Hours</option>
-                  </select>
+                    onChange={val => setFormData({ ...formData, labHours: Number(val) || 3 })}
+                    selectClassName="form-select"
+                    inputClassName="form-input"
+                  />
                 </div>
               </div>
             )}
