@@ -58,9 +58,9 @@ function resolveDeptCode(val) {
 }
 
 /**
- * Ultra-lightweight inline faculty selector for section subject rows.
- * Defers rendering large lists of faculty options until hovered, focused, or clicked,
- * reducing initial DOM elements on page mount by >98% and making opening instantaneous.
+ * Inline faculty selector for section subject rows.
+ * Static options rendering eliminates hover events, DOM mutations, and animation glitches.
+ * Optimistic local value binding ensures zero lag when selecting instructors.
  */
 const InlineInstructorSelect = React.memo(({
   section,
@@ -69,59 +69,80 @@ const InlineInstructorSelect = React.memo(({
   onAssign,
   getSubjectProfessors
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [optimisticProfId, setOptimisticProfId] = useState(assignedProf?.id || '');
 
-  // If expanded, resolve the full list of options on-demand
-  const { specProfs = [], otherProfs = [] } = isExpanded ? getSubjectProfessors(subRef) : {};
+  useEffect(() => {
+    setOptimisticProfId(assignedProf?.id || '');
+  }, [assignedProf?.id]);
 
-  const handleExpand = useCallback(() => {
-    if (!isExpanded) {
-      setIsExpanded(true);
-    }
-  }, [isExpanded]);
+  const { specProfs = [], otherProfs = [] } = getSubjectProfessors(subRef) || {};
 
   return (
     <select
-      className={`hub-instructor-select ${assignedProf ? 'has-assigned' : 'is-unassigned'}`}
-      value={assignedProf?.id || ''}
-      onFocus={handleExpand}
-      onPointerDown={handleExpand}
-      onTouchStart={handleExpand}
+      className={`hub-instructor-select ${optimisticProfId ? 'has-assigned' : 'is-unassigned'}`}
+      value={optimisticProfId}
       onChange={(e) => {
-        onAssign(section, subRef, e.target.value);
+        const val = e.target.value;
+        setOptimisticProfId(val);
+        onAssign(section, subRef, val);
       }}
     >
-      {!isExpanded ? (
-        // Ultra-minimal idle state (1 DOM option node instead of 100+)
-        assignedProf ? (
-          <option value={assignedProf.id}>
-            👤 {assignedProf.name || `${assignedProf.lastName}, ${assignedProf.firstName}`} ({assignedProf.department})
-          </option>
-        ) : (
-          <option value="">⚠️ — Assign Faculty to this Subject —</option>
-        )
-      ) : (
-        // Expanded state with full categorized options
-        <>
-          <option value="">— Assign Faculty...</option>
-          {specProfs.length > 0 && (
-            <optgroup label="Specialized in this Subject">
-              {specProfs.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
-                </option>
-              ))}
-            </optgroup>
-          )}
-          <optgroup label="Other Faculty Members">
-            {otherProfs.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
-              </option>
-            ))}
-          </optgroup>
-        </>
+      <option value="">— Assign Faculty...</option>
+      {specProfs.length > 0 && (
+        <optgroup label="Specialized in this Subject">
+          {specProfs.map(p => (
+            <option key={p.id} value={p.id}>
+              {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
+            </option>
+          ))}
+        </optgroup>
       )}
+      <optgroup label="Other Faculty Members">
+        {otherProfs.map(p => (
+          <option key={p.id} value={p.id}>
+            {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
+          </option>
+        ))}
+      </optgroup>
+    </select>
+  );
+});
+
+/**
+ * Direct selector for instructors inside the Section Configure modal.
+ */
+const ModalSubjectInstructorSelect = React.memo(({
+  subRef,
+  value,
+  onChange,
+  getSubjectProfessors
+}) => {
+  const { specProfs = [], otherProfs = [] } = getSubjectProfessors(subRef) || {};
+
+  return (
+    <select
+      className={`hub-instructor-select ${value ? 'has-assigned' : 'is-unassigned'}`}
+      value={value || ''}
+      onChange={onChange}
+      style={{ maxWidth: '280px' }}
+    >
+      <option value="">No Instructor Assigned</option>
+      {specProfs.length > 0 && (
+        <optgroup label="Specialized in this Subject">
+          {specProfs.map(p => (
+            <option key={p.id} value={p.id}>
+              {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
+            </option>
+          ))}
+        </optgroup>
+      )}
+      <optgroup label="All Faculty">
+        {otherProfs.map(p => (
+          <option key={p.id} value={p.id}>
+            {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
+          </option>
+        ))}
+      </optgroup>
     </select>
   );
 });
@@ -143,6 +164,18 @@ const TeachingLoadManagement = ({
   const [onlyNeedsAttention, setOnlyNeedsAttention] = useState(false);
   const [onlyLecLab, setOnlyLecLab] = useState(false);
   const [quickCreateState, setQuickCreateState] = useState({ isOpen: false, type: 'subject' });
+
+  // Local optimistic state for instant zero-latency UI responses
+  const [localSections, setLocalSections] = useState(sections);
+  const [localProfessors, setLocalProfessors] = useState(professors);
+
+  useEffect(() => {
+    setLocalSections(sections);
+  }, [sections]);
+
+  useEffect(() => {
+    setLocalProfessors(professors);
+  }, [professors]);
 
   // Modal state for editing an entity's in-depth configuration & connections
   const [editingEntity, setEditingEntity] = useState(null); // { type: 'section'|'faculty'|'subject', item: obj }
@@ -196,25 +229,25 @@ const TeachingLoadManagement = ({
 
   const profMap = useMemo(() => {
     const map = new Map();
-    professors.forEach(p => {
+    localProfessors.forEach(p => {
       map.set(String(p.id), p);
     });
     return map;
-  }, [professors]);
+  }, [localProfessors]);
 
   // Pre-indexed sections map for instant O(1) lookups by id or name
   const sectionMap = useMemo(() => {
     const map = new Map();
-    sections.forEach(s => {
+    localSections.forEach(s => {
       if (s.id) map.set(String(s.id).toLowerCase(), s);
       if (s.name) map.set(String(s.name).toLowerCase(), s);
     });
     return map;
-  }, [sections]);
+  }, [localSections]);
 
   const profsBySectionMap = useMemo(() => {
     const map = new Map();
-    professors.forEach(p => {
+    localProfessors.forEach(p => {
       (p.assignedSections || []).forEach(secRef => {
         if (!secRef) return;
         const key = String(secRef).toLowerCase();
@@ -223,7 +256,7 @@ const TeachingLoadManagement = ({
       });
     });
     return map;
-  }, [professors]);
+  }, [localProfessors]);
 
   const getSectionProfs = useCallback((sec) => {
     if (!sec) return [];
@@ -250,7 +283,7 @@ const TeachingLoadManagement = ({
 
   const profsBySubjectKey = useMemo(() => {
     const map = new Map();
-    professors.forEach(p => {
+    localProfessors.forEach(p => {
       (p.specialization || []).forEach(specRef => {
         if (!specRef) return;
         const key = String(specRef).toLowerCase();
@@ -259,16 +292,16 @@ const TeachingLoadManagement = ({
       });
     });
     return map;
-  }, [professors]);
+  }, [localProfessors]);
 
   // On-demand lazy cache for specialized & other faculty per subject (computed only when needed)
   const subjectProfOptionsCache = useRef(new Map());
   useEffect(() => {
     subjectProfOptionsCache.current.clear();
-  }, [subjects, professors, profsBySubjectKey]);
+  }, [subjects, localProfessors, profsBySubjectKey]);
 
   const getSubjectProfessors = useCallback((subRef) => {
-    if (!subRef) return { specProfs: [], otherProfs: professors };
+    if (!subRef) return { specProfs: [], otherProfs: localProfessors };
     const cacheKey = String(subRef).toLowerCase();
     if (subjectProfOptionsCache.current.has(cacheKey)) {
       return subjectProfOptionsCache.current.get(cacheKey);
@@ -291,7 +324,7 @@ const TeachingLoadManagement = ({
       const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
       return nameA.localeCompare(nameB);
     });
-    const otherProfs = professors.filter(p => !seen.has(p.id)).sort((a, b) => {
+    const otherProfs = localProfessors.filter(p => !seen.has(p.id)).sort((a, b) => {
       const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
       const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
       return nameA.localeCompare(nameB);
@@ -300,33 +333,33 @@ const TeachingLoadManagement = ({
     keys.forEach(k => subjectProfOptionsCache.current.set(String(k).toLowerCase(), result));
     subjectProfOptionsCache.current.set(cacheKey, result);
     return result;
-  }, [getSubject, profsBySubjectKey, professors]);
+  }, [getSubject, profsBySubjectKey, localProfessors]);
 
   // Pre-indexed set of enrolled and specialized subject keys for instant O(1) attention filtering
   const enrolledSubjectCodesSet = useMemo(() => {
     const set = new Set();
-    sections.forEach(sec => {
+    localSections.forEach(sec => {
       (sec.subjects || []).forEach(s => {
         if (s) set.add(String(s).toLowerCase());
       });
     });
     return set;
-  }, [sections]);
+  }, [localSections]);
 
   const specializedSubjectCodesSet = useMemo(() => {
     const set = new Set();
-    professors.forEach(p => {
+    localProfessors.forEach(p => {
       (p.specialization || []).forEach(s => {
         if (s) set.add(String(s).toLowerCase());
       });
     });
     return set;
-  }, [professors]);
+  }, [localProfessors]);
 
   // Pre-indexed mapping of subject -> sections for viewMode === 'subjects'
   const sectionsBySubjectKey = useMemo(() => {
     const map = new Map();
-    sections.forEach(sec => {
+    localSections.forEach(sec => {
       (sec.subjects || []).forEach(subRef => {
         if (!subRef) return;
         const key = String(subRef).toLowerCase();
@@ -335,7 +368,7 @@ const TeachingLoadManagement = ({
       });
     });
     return map;
-  }, [sections]);
+  }, [localSections]);
 
   const getSectionsForSubject = useCallback((sub) => {
     if (!sub) return [];
@@ -357,7 +390,7 @@ const TeachingLoadManagement = ({
   const assignedProfCache = useRef(new Map());
   useEffect(() => {
     assignedProfCache.current.clear();
-  }, [sections, professors, subjects]);
+  }, [localSections, localProfessors, subjects]);
 
   // Helper to accurately resolve assigned professor for a specific section and subject in O(1)
   const getAssignedProf = useCallback((sec, subRef) => {
@@ -373,12 +406,18 @@ const TeachingLoadManagement = ({
     const subObj = getSubject(subRef) || { id: subRef, code: subRef };
     const subKeyFound = subObj.id || subObj.code;
     const subId = subObj.id;
+    const subCode = subObj.code;
+    const subName = subObj.name;
 
     let result = null;
 
     // 1. Direct match on section.subjectInstructors (most authoritative)
     if (sec.subjectInstructors) {
-      const pId = sec.subjectInstructors[subKeyFound] || sec.subjectInstructors[subId] || sec.subjectInstructors[subRef];
+      const pId = sec.subjectInstructors[subKeyFound] ||
+                  sec.subjectInstructors[subId] ||
+                  sec.subjectInstructors[subRef] ||
+                  (subCode && sec.subjectInstructors[subCode]) ||
+                  (subName && sec.subjectInstructors[subName]);
       if (pId) {
         const found = profMap.get(String(pId));
         if (found) result = found;
@@ -390,7 +429,13 @@ const TeachingLoadManagement = ({
       const sectionProfs = getSectionProfs(sec);
       const profByMap = sectionProfs.find(p => {
         const mappedSubs = (p.sectionSubjectMap && (p.sectionSubjectMap[sec.id] || (sec.name && p.sectionSubjectMap[sec.name]))) || [];
-        return mappedSubs.some(s => String(s) === String(subKeyFound) || String(s) === String(subId) || String(s) === String(subRef));
+        return mappedSubs.some(s =>
+          String(s) === String(subKeyFound) ||
+          String(s) === String(subId) ||
+          String(s) === String(subRef) ||
+          (subCode && String(s) === String(subCode)) ||
+          (subName && String(s) === String(subName))
+        );
       });
       if (profByMap) result = profByMap;
     }
@@ -399,7 +444,12 @@ const TeachingLoadManagement = ({
     if (!result) {
       const sectionProfs = getSectionProfs(sec);
       const candidateProfs = sectionProfs.filter(p => {
-        return (p.specialization || []).some(sp => String(sp) === String(subId) || String(sp) === String(subKeyFound) || (subObj.name && String(sp) === String(subObj.name)));
+        return (p.specialization || []).some(sp =>
+          String(sp) === String(subId) ||
+          String(sp) === String(subKeyFound) ||
+          (subCode && String(sp) === String(subCode)) ||
+          (subName && String(sp) === String(subName))
+        );
       });
 
       if (candidateProfs.length === 1) {
@@ -414,6 +464,9 @@ const TeachingLoadManagement = ({
     if (subId && String(subId).toLowerCase() !== subKey) {
       assignedProfCache.current.set(`${secKey}:::${String(subId).toLowerCase()}`, result);
     }
+    if (subCode && String(subCode).toLowerCase() !== subKey) {
+      assignedProfCache.current.set(`${secKey}:::${String(subCode).toLowerCase()}`, result);
+    }
 
     return result;
   }, [getSubject, profMap, getSectionProfs, assignedProfCache]);
@@ -424,7 +477,7 @@ const TeachingLoadManagement = ({
     let totalAssignedLinks = 0;
     let sectionsNeedingTeachers = 0;
 
-    sections.forEach(sec => {
+    localSections.forEach(sec => {
       const enrolled = sec.subjects || [];
       totalEnrolledLinks += enrolled.length;
       let hasMissing = false;
@@ -445,7 +498,7 @@ const TeachingLoadManagement = ({
 
     const totalLecLabSubjects = subjects.filter(s => s.hasLecLab).length;
     let totalLecLabEnrolled = 0;
-    sections.forEach(sec => {
+    localSections.forEach(sec => {
       (sec.subjects || []).forEach(subRef => {
         const sub = getSubject(subRef);
         if (sub?.hasLecLab) totalLecLabEnrolled++;
@@ -453,8 +506,8 @@ const TeachingLoadManagement = ({
     });
 
     return {
-      totalSections: sections.length,
-      totalProfessors: professors.length,
+      totalSections: localSections.length,
+      totalProfessors: localProfessors.length,
       totalSubjects: subjects.length,
       totalLecLabSubjects,
       totalLecLabEnrolled,
@@ -462,42 +515,88 @@ const TeachingLoadManagement = ({
       totalAssignedLinks,
       sectionsNeedingTeachers
     };
-  }, [sections, professors, subjects, getAssignedProf, getSubject]);
+  }, [localSections, localProfessors, subjects, getAssignedProf, getSubject]);
 
-  // --- Inline Instructor Change for a Section Subject ---
+  // --- Inline Instructor Change for a Section Subject (Optimistic Instant Response) ---
   const handleAssignInstructorInline = async (section, subRef, newProfId) => {
-    const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef };
-    const subCode = sub.id || sub.code;
+    const sub = getSubject(subRef) || { id: subRef, code: subRef };
+    const subCode = sub.code || sub.id;
+    const subId = sub.id || subRef;
+    const keys = [subCode, subId, subRef].filter(Boolean);
 
+    const prevSections = localSections;
+    const prevProfessors = localProfessors;
+
+    const nextSubjectInstructors = { ...(section.subjectInstructors || {}) };
+    if (newProfId) {
+      keys.forEach(k => { nextSubjectInstructors[k] = newProfId; });
+    } else {
+      keys.forEach(k => { delete nextSubjectInstructors[k]; });
+    }
+
+    const updatedSection = {
+      ...section,
+      subjectInstructors: nextSubjectInstructors
+    };
+
+    const oldProf = getAssignedProf(section, subRef);
+
+    // Apply immediate optimistic state update (0ms delay)
+    setLocalSections(prev => prev.map(s => String(s.id) === String(section.id) ? updatedSection : s));
+
+    setLocalProfessors(prev => prev.map(p => {
+      if (oldProf && String(p.id) === String(oldProf.id) && String(oldProf.id) !== String(newProfId)) {
+        const oldMap = { ...(p.sectionSubjectMap || {}) };
+        const oldSecSubs = (oldMap[section.id] || []).filter(s => !keys.includes(String(s)));
+        let updatedSecs = p.assignedSections || [];
+        if (oldSecSubs.length === 0) {
+          delete oldMap[section.id];
+          updatedSecs = updatedSecs.filter(s => String(s) !== String(section.id) && String(s) !== String(section.name));
+        } else {
+          oldMap[section.id] = oldSecSubs;
+        }
+        return { ...p, assignedSections: updatedSecs, sectionSubjectMap: oldMap };
+      }
+      if (newProfId && String(p.id) === String(newProfId)) {
+        const curSecs = p.assignedSections || [];
+        const updatedSecs = curSecs.some(s => String(s) === String(section.id) || (section.name && String(s) === String(section.name)))
+          ? curSecs
+          : [...curSecs, section.id];
+        const curSpecs = p.specialization || [];
+        const updatedSpecs = curSpecs.some(sp => keys.includes(String(sp)))
+          ? curSpecs
+          : [...curSpecs, subCode];
+        const curMap = { ...(p.sectionSubjectMap || {}) };
+        const curSecSubs = curMap[section.id] || [];
+        const updatedSubs = curSecSubs.includes(subCode) ? curSecSubs : [...curSecSubs, subCode];
+        curMap[section.id] = updatedSubs;
+        return { ...p, assignedSections: updatedSecs, specialization: updatedSpecs, sectionSubjectMap: curMap };
+      }
+      return p;
+    }));
+
+    assignedProfCache.current.clear();
+
+    const profObj = localProfessors.find(p => String(p.id) === String(newProfId));
+    toast.success(profObj ? `Assigned ${profObj.name || `${profObj.lastName}, ${profObj.firstName}`} to ${subCode}!` : `Instructor cleared for ${subCode}`);
+
+    // Commit to Firestore in background
     try {
       const batch = writeBatch(db);
-
-      // 1. Update section's subjectInstructors mapping
-      const nextSubjectInstructors = { ...(section.subjectInstructors || {}) };
-      if (newProfId) {
-        nextSubjectInstructors[subCode] = newProfId;
-        nextSubjectInstructors[sub.id] = newProfId;
-      } else {
-        delete nextSubjectInstructors[subCode];
-        delete nextSubjectInstructors[sub.id];
-        delete nextSubjectInstructors[subRef];
-      }
 
       batch.update(doc(db, 'sections', String(section.id)), {
         subjectInstructors: nextSubjectInstructors
       });
 
-      // 2. Identify the old professor who taught this subject
-      const oldProf = getAssignedProf(section, subRef);
-      if (oldProf && oldProf.id !== newProfId) {
+      if (oldProf && String(oldProf.id) !== String(newProfId)) {
         const oldMap = { ...(oldProf.sectionSubjectMap || {}) };
-        const oldSecSubs = (oldMap[section.id] || []).filter(s => s !== subCode && s !== sub.id && s !== subRef);
+        const oldSecSubs = (oldMap[section.id] || []).filter(s => !keys.includes(String(s)));
         oldMap[section.id] = oldSecSubs;
 
         let updatedSecs = oldProf.assignedSections || [];
         if (oldSecSubs.length === 0) {
           delete oldMap[section.id];
-          updatedSecs = updatedSecs.filter(s => s !== section.id && s !== section.name);
+          updatedSecs = updatedSecs.filter(s => String(s) !== String(section.id) && String(s) !== String(section.name));
         }
 
         batch.update(doc(db, 'professors', String(oldProf.id)), {
@@ -506,17 +605,16 @@ const TeachingLoadManagement = ({
         });
       }
 
-      // 3. Update the newly assigned professor
       if (newProfId) {
-        const targetProf = professors.find(p => p.id === newProfId);
+        const targetProf = localProfessors.find(p => String(p.id) === String(newProfId));
         if (targetProf) {
           const curSecs = targetProf.assignedSections || [];
-          const updatedSecs = curSecs.includes(section.id) || (section.name && curSecs.includes(section.name))
+          const updatedSecs = curSecs.some(s => String(s) === String(section.id) || (section.name && String(s) === String(section.name)))
             ? curSecs
             : [...curSecs, section.id];
 
           const curSpecs = targetProf.specialization || [];
-          const updatedSpecs = curSpecs.some(sp => String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(subCode))
+          const updatedSpecs = curSpecs.some(sp => keys.includes(String(sp)))
             ? curSpecs
             : [...curSpecs, subCode];
 
@@ -535,66 +633,80 @@ const TeachingLoadManagement = ({
       }
 
       await batch.commit();
-      assignedProfCache.current.clear();
 
-      const profObj = professors.find(p => p.id === newProfId);
       logActivity({
         user,
         action: LOG_ACTIONS.UPDATE_SECTION,
         details: profObj
-          ? `Assigned ${profObj.name} to teach ${subCode} for section ${section.name}`
+          ? `Assigned ${profObj.name || `${profObj.lastName}, ${profObj.firstName}`} to teach ${subCode} for section ${section.name}`
           : `Removed assigned instructor for ${subCode} in section ${section.name}`
       });
-
-      toast.success(profObj ? `Assigned ${profObj.name} to ${subCode}!` : `Instructor cleared for ${subCode}`);
     } catch (err) {
       console.error("Error updating instructor inline:", err);
-      toast.error("Failed to update assignment.");
+      setLocalSections(prevSections);
+      setLocalProfessors(prevProfessors);
+      assignedProfCache.current.clear();
+      toast.error("Failed to update assignment on server.");
     }
   };
 
-  // Inline removal of an enrolled or orphan subject from a section
+  // Inline removal of an enrolled or orphan subject from a section (Optimistic)
   const handleRemoveSubjectFromSectionInline = async (section, subRef) => {
+    const sub = getSubject(subRef) || { id: subRef, code: subRef };
+    const keys = [subRef, sub.id, sub.code, sub.name].filter(Boolean);
+
+    const prevSections = localSections;
+    const prevProfessors = localProfessors;
+
+    const nextSubjects = (section.subjects || []).filter(s => !keys.includes(String(s)));
+    const nextSubjectInstructors = { ...(section.subjectInstructors || {}) };
+    keys.forEach(k => delete nextSubjectInstructors[k]);
+
+    // Optimistic local update
+    setLocalSections(prev => prev.map(s => String(s.id) === String(section.id) ? {
+      ...s,
+      subjects: nextSubjects,
+      subjectInstructors: nextSubjectInstructors
+    } : s));
+
+    assignedProfCache.current.clear();
+    toast.success(`Removed ${sub.code || subRef} from section ${section.name}!`);
+
     try {
       const batch = writeBatch(db);
-      const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef };
-      const keys = [subRef, sub.id, sub.code].filter(Boolean);
-
-      const nextSubjects = (section.subjects || []).filter(s => !keys.includes(s));
-      const nextSubjectInstructors = { ...(section.subjectInstructors || {}) };
-      keys.forEach(k => delete nextSubjectInstructors[k]);
-
       batch.update(doc(db, 'sections', String(section.id)), {
         subjects: nextSubjects,
         subjectInstructors: nextSubjectInstructors
       });
 
       await batch.commit();
-      assignedProfCache.current.clear();
-      toast.success(`Removed ${subRef} from section ${section.name}!`);
     } catch (err) {
       console.error("Error removing subject from section inline:", err);
-      toast.error("Failed to remove subject.");
+      setLocalSections(prevSections);
+      setLocalProfessors(prevProfessors);
+      assignedProfCache.current.clear();
+      toast.error("Failed to remove subject on server.");
     }
   };
 
-  // Auto-Match Teachers for a Section
+  // Auto-Match Teachers for a Section (Optimistic)
   const handleAutoMatchSectionTeachers = async (sec) => {
     const enrolled = sec.subjects || [];
     let matchCount = 0;
-    const batch = writeBatch(db);
     const updatedSubjectInstructors = { ...(sec.subjectInstructors || {}) };
     const profUpdates = {}; // profId -> { assignedSections, sectionSubjectMap }
 
     enrolled.forEach(subRef => {
-      const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef);
-      const subCode = sub?.id || sub?.code || subRef;
+      const sub = getSubject(subRef) || { id: subRef, code: subRef };
+      const subCode = sub.code || sub.id;
+      const subId = sub.id || subRef;
       const alreadyAssigned = getAssignedProf(sec, subRef);
 
       if (!alreadyAssigned && sub) {
-        const candidates = professors.filter(p => (p.specialization || []).some(sp => String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name)));
+        const candidates = localProfessors.filter(p => (p.specialization || []).some(sp => 
+          String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name)
+        ));
         if (candidates.length > 0) {
-          // Choose candidate with lowest current assigned section count
           const best = [...candidates].sort((a, b) => {
             const countA = (profUpdates[a.id]?.assignedSections || a.assignedSections || []).length;
             const countB = (profUpdates[b.id]?.assignedSections || b.assignedSections || []).length;
@@ -602,7 +714,8 @@ const TeachingLoadManagement = ({
           })[0];
 
           updatedSubjectInstructors[subCode] = best.id;
-          updatedSubjectInstructors[sub.id] = best.id;
+          updatedSubjectInstructors[subId] = best.id;
+          updatedSubjectInstructors[subRef] = best.id;
 
           if (!profUpdates[best.id]) {
             profUpdates[best.id] = {
@@ -626,40 +739,72 @@ const TeachingLoadManagement = ({
     });
 
     if (matchCount > 0) {
-      batch.update(doc(db, 'sections', String(sec.id)), {
+      const prevSections = localSections;
+      const prevProfessors = localProfessors;
+
+      // Optimistic update
+      setLocalSections(prev => prev.map(s => String(s.id) === String(sec.id) ? {
+        ...s,
         subjectInstructors: updatedSubjectInstructors
-      });
+      } : s));
 
-      Object.entries(profUpdates).forEach(([pId, data]) => {
-        batch.update(doc(db, 'professors', String(pId)), data);
-      });
+      setLocalProfessors(prev => prev.map(p => {
+        if (profUpdates[p.id]) {
+          return {
+            ...p,
+            assignedSections: profUpdates[p.id].assignedSections,
+            sectionSubjectMap: profUpdates[p.id].sectionSubjectMap
+          };
+        }
+        return p;
+      }));
 
-      await batch.commit();
       assignedProfCache.current.clear();
       toast.success(`Automatically matched teachers for ${matchCount} subject(s) in ${sec.name}!`);
+
+      try {
+        const batch = writeBatch(db);
+        batch.update(doc(db, 'sections', String(sec.id)), {
+          subjectInstructors: updatedSubjectInstructors
+        });
+
+        Object.entries(profUpdates).forEach(([pId, data]) => {
+          batch.update(doc(db, 'professors', String(pId)), data);
+        });
+
+        await batch.commit();
+      } catch (err) {
+        console.error("Error committing auto-match:", err);
+        setLocalSections(prevSections);
+        setLocalProfessors(prevProfessors);
+        assignedProfCache.current.clear();
+        toast.error("Failed to save auto-matched assignments to server.");
+      }
     } else {
       toast.info(`All subjects in ${sec.name} already have instructors or no specialized faculty were found.`);
     }
   };
 
-  // Auto-Match Teachers across ALL sections
+  // Auto-Match Teachers across ALL sections (Optimistic)
   const handleAutoMatchAllSections = async () => {
     let totalMatches = 0;
-    const batch = writeBatch(db);
     const secUpdates = {}; // secId -> updatedSubjectInstructors
     const profUpdates = {}; // profId -> { assignedSections, sectionSubjectMap }
 
-    sections.forEach(sec => {
+    localSections.forEach(sec => {
       const enrolled = sec.subjects || [];
       const updatedMap = { ...(secUpdates[sec.id] || sec.subjectInstructors || {}) };
 
       enrolled.forEach(subRef => {
-        const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef);
-        const subCode = sub?.id || sub?.code || subRef;
+        const sub = getSubject(subRef) || { id: subRef, code: subRef };
+        const subCode = sub.code || sub.id;
+        const subId = sub.id || subRef;
         const alreadyAssigned = getAssignedProf(sec, subRef);
 
         if (!alreadyAssigned && sub) {
-          const candidates = professors.filter(p => (p.specialization || []).some(sp => String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name)));
+          const candidates = localProfessors.filter(p => (p.specialization || []).some(sp => 
+            String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name)
+          ));
           if (candidates.length > 0) {
             const best = [...candidates].sort((a, b) => {
               const countA = (profUpdates[a.id]?.assignedSections || a.assignedSections || []).length;
@@ -668,7 +813,8 @@ const TeachingLoadManagement = ({
             })[0];
 
             updatedMap[subCode] = best.id;
-            updatedMap[sub.id] = best.id;
+            updatedMap[subId] = best.id;
+            updatedMap[subRef] = best.id;
             secUpdates[sec.id] = updatedMap;
 
             if (!profUpdates[best.id]) {
@@ -694,17 +840,37 @@ const TeachingLoadManagement = ({
     });
 
     if (totalMatches > 0) {
-      Object.entries(secUpdates).forEach(([sId, subjInstMap]) => {
-        batch.update(doc(db, 'sections', String(sId)), { subjectInstructors: subjInstMap });
-      });
+      const prevSections = localSections;
+      const prevProfessors = localProfessors;
 
-      Object.entries(profUpdates).forEach(([pId, data]) => {
-        batch.update(doc(db, 'professors', String(pId)), data);
-      });
+      setLocalSections(prev => prev.map(s => secUpdates[s.id] ? { ...s, subjectInstructors: secUpdates[s.id] } : s));
+      setLocalProfessors(prev => prev.map(p => profUpdates[p.id] ? {
+        ...p,
+        assignedSections: profUpdates[p.id].assignedSections,
+        sectionSubjectMap: profUpdates[p.id].sectionSubjectMap
+      } : p));
 
-      await batch.commit();
       assignedProfCache.current.clear();
       toast.success(`Auto-matched ${totalMatches} teacher assignment(s) across all sections!`);
+
+      try {
+        const batch = writeBatch(db);
+        Object.entries(secUpdates).forEach(([sId, subjInstMap]) => {
+          batch.update(doc(db, 'sections', String(sId)), { subjectInstructors: subjInstMap });
+        });
+
+        Object.entries(profUpdates).forEach(([pId, data]) => {
+          batch.update(doc(db, 'professors', String(pId)), data);
+        });
+
+        await batch.commit();
+      } catch (err) {
+        console.error("Error committing batch auto-match:", err);
+        setLocalSections(prevSections);
+        setLocalProfessors(prevProfessors);
+        assignedProfCache.current.clear();
+        toast.error("Failed to save assignments on server.");
+      }
     } else {
       toast.info("All sections are already fully assigned or no matching specialized faculty were found.");
     }
@@ -715,14 +881,18 @@ const TeachingLoadManagement = ({
     const nextMap = { ...stagedFacultyMap };
     let count = 0;
     stagedAssignedSubjects.forEach(subRef => {
-      const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef);
-      const key = sub?.id || sub?.code || subRef;
+      const sub = getSubject(subRef) || { id: subRef, code: subRef };
+      const key = sub.id || sub.code || subRef;
       if (!nextMap[key] && !nextMap[subRef]) {
-        const candidates = professors.filter(p => sub && (p.specialization || []).some(sp => String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name)));
+        const candidates = localProfessors.filter(p => (p.specialization || []).some(sp => 
+          String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name)
+        ));
         if (candidates.length > 0) {
           const best = [...candidates].sort((a, b) => (a.assignedSections || []).length - (b.assignedSections || []).length)[0];
           nextMap[key] = best.id;
           nextMap[subRef] = best.id;
+          if (sub.id) nextMap[sub.id] = best.id;
+          if (sub.code) nextMap[sub.code] = best.id;
           count++;
         }
       }
@@ -822,7 +992,7 @@ const TeachingLoadManagement = ({
       const secSubjectMap = { ...(item.sectionSubjectMap || {}) };
       const assignedSecs = item.assignedSections || [];
       assignedSecs.forEach(secId => {
-        const sec = sections.find(s => String(s.id) === String(secId) || String(s.name) === String(secId));
+        const sec = localSections.find(s => String(s.id) === String(secId) || String(s.name) === String(secId));
         if (sec && (!secSubjectMap[sec.id] || secSubjectMap[sec.id].length === 0)) {
           const matching = (sec.subjects || []).filter(subRef => {
             const assigned = getAssignedProf(sec, subRef);
@@ -835,7 +1005,7 @@ const TeachingLoadManagement = ({
       const uniqueSecs = [];
       const seenSecs = new Set();
       assignedSecs.forEach(ref => {
-        const secObj = sections.find(s => String(s.id) === String(ref) || String(s.name) === String(ref));
+        const secObj = localSections.find(s => String(s.id) === String(ref) || String(s.name) === String(ref));
         const key = secObj ? String(secObj.id) : String(ref);
         if (!seenSecs.has(key)) {
           seenSecs.add(key);
@@ -923,10 +1093,10 @@ const TeachingLoadManagement = ({
         labHours: item.labHours !== undefined ? Number(item.labHours) : 3,
       });
 
-      const enrolled = sections.filter(s =>
+      const enrolled = localSections.filter(s =>
         (s.subjects || []).some(sub => String(sub) === String(item.id) || String(sub) === String(item.code) || String(sub) === String(item.name))
       ).map(s => s.id);
-      const specialized = professors.filter(p =>
+      const specialized = localProfessors.filter(p =>
         (p.specialization || []).some(sub => String(sub) === String(item.id) || String(sub) === String(item.code) || String(sub) === String(item.name))
       ).map(p => p.id);
       setStagedAssignedSections(enrolled);
@@ -972,7 +1142,7 @@ const TeachingLoadManagement = ({
 
   const handleToggleNestedFaculty = (profId) => {
     if (!profId) return;
-    const prof = professors.find(p => String(p.id) === String(profId));
+    const prof = localProfessors.find(p => String(p.id) === String(profId));
     if (!prof) return;
 
     if (nestedEditing && nestedEditing.type === 'faculty' && nestedEditing.id === prof.id) {
@@ -1009,7 +1179,7 @@ const TeachingLoadManagement = ({
 
   const handleToggleNestedSection = (secId) => {
     if (!secId) return;
-    const sec = sections.find(s => String(s.id) === String(secId) || String(s.name) === String(secId));
+    const sec = localSections.find(s => String(s.id) === String(secId) || String(s.name) === String(secId));
     if (!sec) return;
 
     if (nestedEditing && nestedEditing.type === 'section' && nestedEditing.id === sec.id) {
@@ -1120,6 +1290,21 @@ const TeachingLoadManagement = ({
         }
         const combinedName = `${lName}, ${fName}`;
 
+        setLocalProfessors(prev => prev.map(p => {
+          if (String(p.id) === targetId) {
+            return {
+              ...p,
+              firstName: fName,
+              lastName: lName,
+              name: combinedName,
+              department: form.department,
+              maxUnits: Number(form.maxUnits) || 12,
+              preferredRooms: form.preferredRooms || []
+            };
+          }
+          return p;
+        }));
+
         await updateDoc(doc(db, 'professors', targetId), {
           firstName: fName,
           lastName: lName,
@@ -1146,6 +1331,18 @@ const TeachingLoadManagement = ({
           return;
         }
 
+        setLocalSections(prev => prev.map(s => {
+          if (String(s.id) === targetId) {
+            return {
+              ...s,
+              name,
+              program: form.program,
+              yearLevel: Number(form.yearLevel) || 1
+            };
+          }
+          return s;
+        }));
+
         await updateDoc(doc(db, 'sections', targetId), {
           name,
           program: form.program,
@@ -1169,11 +1366,15 @@ const TeachingLoadManagement = ({
     }
   };
 
-  // --- Save Staged Entity in Modal ---
+  // --- Save Staged Entity in Modal (Optimistic Zero-Latency UI) ---
   const handleSaveModal = async () => {
     if (!editingEntity) return;
     setModalError(null);
     setIsSaving(true);
+
+    const prevSections = localSections;
+    const prevProfessors = localProfessors;
+
     try {
       const batch = writeBatch(db);
       const { type, item } = editingEntity;
@@ -1186,7 +1387,7 @@ const TeachingLoadManagement = ({
           setIsSaving(false);
           return;
         }
-        const isDuplicate = sections.some(s => String(s.id) !== String(item.id) && s.name?.trim().toUpperCase() === name.toUpperCase());
+        const isDuplicate = localSections.some(s => String(s.id) !== String(item.id) && s.name?.trim().toUpperCase() === name.toUpperCase());
         if (isDuplicate) {
           setModalError(`A section named "${name}" already exists.`);
           setIsSaving(false);
@@ -1202,18 +1403,27 @@ const TeachingLoadManagement = ({
           subjectInstructors: stagedFacultyMap
         });
 
-        // 2. Map professors: profId -> list of subjects taught in this section
+        // 2. Map professors: profId -> list of subjects taught in this section (deduplicated & canonical)
         const profToSubjects = {};
-        Object.entries(stagedFacultyMap).forEach(([subRef, pId]) => {
-          if (pId && stagedAssignedSubjects.some(s => String(s) === String(subRef))) {
+        stagedAssignedSubjects.forEach(subRef => {
+          const subObj = getSubject(subRef);
+          const subKey = subObj?.id || subObj?.code || subRef;
+          const pId = stagedFacultyMap[subKey] ||
+                      stagedFacultyMap[subRef] ||
+                      (subObj?.id && stagedFacultyMap[subObj.id]) ||
+                      (subObj?.code && stagedFacultyMap[subObj.code]);
+          if (pId) {
+            const canonical = subObj?.id || subObj?.code || subRef;
             if (!profToSubjects[pId]) profToSubjects[pId] = [];
-            profToSubjects[pId].push(subRef);
+            if (!profToSubjects[pId].includes(canonical)) {
+              profToSubjects[pId].push(canonical);
+            }
           }
         });
 
         // 3. Update professors who are assigned
         Object.entries(profToSubjects).forEach(([pId, subRefs]) => {
-          const prof = professors.find(p => p.id === pId);
+          const prof = localProfessors.find(p => String(p.id) === String(pId));
           if (prof) {
             const curSecs = prof.assignedSections || [];
             const newSecs = curSecs.some(id => String(id) === String(item.id) || (name && String(id) === String(name)) || (item.name && String(id) === String(item.name)))
@@ -1222,7 +1432,7 @@ const TeachingLoadManagement = ({
 
             let curSpecs = [...(prof.specialization || [])];
             subRefs.forEach(subRef => {
-              const subObj = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef));
+              const subObj = getSubject(subRef);
               const codeOrId = subObj?.id || subObj?.code || subRef;
               if (!curSpecs.some(sp => String(sp) === String(codeOrId)) && (!subObj || !curSpecs.some(sp => String(sp) === String(subObj.id)))) {
                 curSpecs.push(codeOrId);
@@ -1241,7 +1451,7 @@ const TeachingLoadManagement = ({
         });
 
         // 4. Remove section from professors no longer teaching here
-        professors.forEach(prof => {
+        localProfessors.forEach(prof => {
           const hadSec = (prof.assignedSections || []).some(id => String(id) === String(item.id) || (item.name && String(id) === String(item.name)));
           if (hadSec && !profToSubjects[prof.id]) {
             const newSecs = (prof.assignedSections || []).filter(s => String(s) !== String(item.id) && String(s) !== String(item.name) && String(s) !== String(name));
@@ -1257,12 +1467,50 @@ const TeachingLoadManagement = ({
           }
         });
 
+        // OPTIMISTIC LOCAL STATE UPDATE (0ms delay)
+        const updatedSection = {
+          ...item,
+          name,
+          program,
+          yearLevel: Number(stagedEntityForm.yearLevel) || 1,
+          subjects: stagedAssignedSubjects,
+          subjectInstructors: stagedFacultyMap
+        };
+
+        setLocalSections(prev => prev.map(s => String(s.id) === String(item.id) ? updatedSection : s));
+        setLocalProfessors(prev => prev.map(p => {
+          if (profToSubjects[p.id]) {
+            const curSecs = p.assignedSections || [];
+            const newSecs = curSecs.some(id => String(id) === String(item.id) || (name && String(id) === String(name)))
+              ? curSecs
+              : [...curSecs, item.id];
+            const curMap = { ...(p.sectionSubjectMap || {}), [item.id]: profToSubjects[p.id] };
+            return { ...p, assignedSections: newSecs, sectionSubjectMap: curMap };
+          }
+          const hadSec = (p.assignedSections || []).some(id => String(id) === String(item.id) || (item.name && String(id) === String(item.name)));
+          if (hadSec && !profToSubjects[p.id]) {
+            const newSecs = (p.assignedSections || []).filter(s => String(s) !== String(item.id) && String(s) !== String(name));
+            const newMap = { ...(p.sectionSubjectMap || {}) };
+            delete newMap[item.id];
+            delete newMap[item.name];
+            delete newMap[name];
+            return { ...p, assignedSections: newSecs, sectionSubjectMap: newMap };
+          }
+          return p;
+        }));
+
+        assignedProfCache.current.clear();
+        subjectProfOptionsCache.current.clear();
+        setEditingEntity(null);
+        toast.success(`Section ${name} saved successfully!`);
+
         logActivity({
           user,
           action: LOG_ACTIONS.UPDATE_SECTION,
           details: `Updated section: ${name} (${program})`
         });
-        toast.success(`Section ${name} saved successfully!`);
+
+        await batch.commit();
 
       } else if (type === 'faculty') {
         const fName = (stagedEntityForm.firstName || '').trim();
@@ -1273,7 +1521,7 @@ const TeachingLoadManagement = ({
           return;
         }
         const combinedName = `${lName}, ${fName}`;
-        const isDuplicate = professors.some(p => String(p.id) !== String(item.id) && (p.name || '').trim().toLowerCase() === combinedName.toLowerCase());
+        const isDuplicate = localProfessors.some(p => String(p.id) !== String(item.id) && (p.name || '').trim().toLowerCase() === combinedName.toLowerCase());
         if (isDuplicate) {
           setModalError(`A faculty member named "${combinedName}" already exists.`);
           setIsSaving(false);
@@ -1294,7 +1542,8 @@ const TeachingLoadManagement = ({
         });
 
         // 2. Synchronize sections to reflect this professor's specific subject assignments
-        sections.forEach(sec => {
+        const updatedSecsList = [];
+        localSections.forEach(sec => {
           const isNowAssignedSection = stagedAssignedSections.some(id => String(id) === String(sec.id) || String(id) === String(sec.name));
           const wasAssignedSection = (item.assignedSections || []).some(id => String(id) === String(sec.id) || String(id) === String(sec.name));
           
@@ -1306,7 +1555,7 @@ const TeachingLoadManagement = ({
             const chosenSubs = stagedFacultyMap[sec.id] || [];
             
             chosenSubs.forEach(subRef => {
-              const subObj = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
+              const subObj = getSubject(subRef);
               const val = subObj?.id || subObj?.code || subRef;
               
               if (!updatedSubjs.some(existing => String(existing) === String(val) || (subObj && (String(existing) === String(subObj.id) || String(existing) === String(subObj.code))))) {
@@ -1325,7 +1574,7 @@ const TeachingLoadManagement = ({
 
             const oldChosenSubs = item.sectionSubjectMap?.[sec.id] || [];
             oldChosenSubs.forEach(oldSubRef => {
-              const subObj = subjects.find(s => String(s.id) === String(oldSubRef) || String(s.code) === String(oldSubRef) || String(s.name) === String(oldSubRef));
+              const subObj = getSubject(oldSubRef);
               const val = subObj?.code || subObj?.id || oldSubRef;
               
               const isStillChosen = chosenSubs.some(c => String(c) === String(oldSubRef) || String(c) === String(val) || (subObj && (String(c) === String(subObj.id) || String(c) === String(subObj.code))));
@@ -1344,7 +1593,7 @@ const TeachingLoadManagement = ({
           } else if (wasAssignedSection) {
             const oldChosenSubs = item.sectionSubjectMap?.[sec.id] || [];
             oldChosenSubs.forEach(oldSubRef => {
-              const subObj = subjects.find(s => String(s.id) === String(oldSubRef) || String(s.code) === String(oldSubRef) || String(s.name) === String(oldSubRef));
+              const subObj = getSubject(oldSubRef);
               const val = subObj?.code || subObj?.id || oldSubRef;
               if (updatedSubjectInstructors[val] === item.id) {
                 delete updatedSubjectInstructors[val];
@@ -1362,15 +1611,41 @@ const TeachingLoadManagement = ({
               subjects: updatedSubjs,
               subjectInstructors: updatedSubjectInstructors
             });
+            updatedSecsList.push({ id: sec.id, subjects: updatedSubjs, subjectInstructors: updatedSubjectInstructors });
           }
         });
+
+        // OPTIMISTIC LOCAL UPDATE
+        setLocalProfessors(prev => prev.map(p => String(p.id) === String(item.id) ? {
+          ...p,
+          firstName: fName,
+          lastName: lName,
+          name: combinedName,
+          department: stagedEntityForm.department,
+          maxUnits: Number(stagedEntityForm.maxUnits) || 12,
+          preferredRooms: stagedEntityForm.preferredRooms || [],
+          specialization: stagedAssignedSubjects,
+          assignedSections: stagedAssignedSections,
+          sectionSubjectMap: stagedFacultyMap
+        } : p));
+
+        if (updatedSecsList.length > 0) {
+          const secMapUpdates = new Map(updatedSecsList.map(s => [s.id, s]));
+          setLocalSections(prev => prev.map(s => secMapUpdates.has(s.id) ? { ...s, ...secMapUpdates.get(s.id) } : s));
+        }
+
+        assignedProfCache.current.clear();
+        subjectProfOptionsCache.current.clear();
+        setEditingEntity(null);
+        toast.success(`Faculty ${combinedName} saved successfully!`);
 
         logActivity({
           user,
           action: LOG_ACTIONS.UPDATE_FACULTY,
           details: `Updated faculty: ${combinedName} (${stagedEntityForm.department})`
         });
-        toast.success(`Faculty ${combinedName} saved successfully!`);
+
+        await batch.commit();
 
       } else if (type === 'subject') {
         const code = (stagedEntityForm.code || '').trim().toUpperCase();
@@ -1419,7 +1694,7 @@ const TeachingLoadManagement = ({
 
         // 2. Sync sections
         const oldCode = item.code || item.id;
-        sections.forEach(sec => {
+        localSections.forEach(sec => {
           const wasEnrolled = (sec.subjects || []).some(s => String(s) === String(item.id) || String(s) === String(oldCode) || String(s) === String(code));
           const isNowEnrolled = stagedAssignedSections.some(id => String(id) === String(sec.id) || String(id) === String(sec.name));
 
@@ -1438,7 +1713,7 @@ const TeachingLoadManagement = ({
             });
 
             // Clean professor map
-            professors.forEach(prof => {
+            localProfessors.forEach(prof => {
               const curMap = { ...(prof.sectionSubjectMap || {}) };
               const secSubs = curMap[sec.id] || [];
               if (secSubs.some(s => String(s) === String(item.id) || String(s) === String(oldCode) || String(s) === String(code))) {
@@ -1472,7 +1747,7 @@ const TeachingLoadManagement = ({
 
         // 3. Sync professors' specializations
         const profIds = stagedFacultyMap.assignedProfessors || [];
-        professors.forEach(prof => {
+        localProfessors.forEach(prof => {
           const wasAssigned = (prof.specialization || []).some(s => String(s) === String(item.id) || String(s) === String(oldCode) || String(s) === String(code));
           const isNowAssigned = profIds.some(id => String(id) === String(prof.id));
 
@@ -1487,20 +1762,25 @@ const TeachingLoadManagement = ({
           }
         });
 
+        assignedProfCache.current.clear();
+        subjectProfOptionsCache.current.clear();
+        setEditingEntity(null);
+        toast.success(`Subject ${code} saved successfully!`);
+
         logActivity({
           user,
           action: LOG_ACTIONS.UPDATE_SUBJECT,
           details: `Updated subject: ${code} - ${name} (${subjectDocPayload.credits} units)`
         });
-        toast.success(`Subject ${code} saved successfully!`);
-      }
 
-      await batch.commit();
-      assignedProfCache.current.clear();
-      subjectProfOptionsCache.current.clear();
-      setEditingEntity(null);
+        await batch.commit();
+      }
     } catch (err) {
       console.error("Error saving assignments modal:", err);
+      setLocalSections(prevSections);
+      setLocalProfessors(prevProfessors);
+      assignedProfCache.current.clear();
+      subjectProfOptionsCache.current.clear();
       toast.error("Failed to save changes. Please try again.");
       setModalError("Failed to save changes. Please check fields and try again.");
     } finally {
@@ -1510,7 +1790,7 @@ const TeachingLoadManagement = ({
 
   // --- Filtering & Searching ---
   const filteredSections = useMemo(() => {
-    return sections.filter(sec => {
+    return localSections.filter(sec => {
       const secDept = resolveDeptCode(sec.program) || resolveDeptCode(sec.department);
       const matchDept = departmentFilter === 'All' || secDept === departmentFilter;
       const cleanStr = (s) => String(s || '').toLowerCase().replace(/[\s\-_]/g, '');
@@ -1538,10 +1818,10 @@ const TeachingLoadManagement = ({
 
       return true;
     }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [sections, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, getAssignedProf, getSubject]);
+  }, [localSections, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, getAssignedProf, getSubject]);
 
   const filteredFaculty = useMemo(() => {
-    return professors.filter(prof => {
+    return localProfessors.filter(prof => {
       const profDept = resolveDeptCode(prof.department);
       const matchDept = departmentFilter === 'All' || profDept === departmentFilter || prof.department === departmentFilter;
       const cleanStr = (s) => String(s || '').toLowerCase().replace(/[\s\-_]/g, '');
@@ -1574,7 +1854,7 @@ const TeachingLoadManagement = ({
       const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
       return nameA.localeCompare(nameB);
     });
-  }, [professors, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, getSubject, sectionMap, getAssignedProf]);
+  }, [localProfessors, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, getSubject, sectionMap, getAssignedProf]);
 
   const filteredSubjects = useMemo(() => {
     return subjects.filter(sub => {
@@ -3206,6 +3486,24 @@ const TeachingLoadManagement = ({
                           return [...prev, id];
                         });
                       }}
+                      onBatchSelect={(items) => {
+                        const idsToAdd = items.map(item => typeof item === 'object' && item !== null ? item.id : item);
+                        setStagedAssignedSubjects(prev => {
+                          const existing = new Set(prev.map(String));
+                          const next = [...prev];
+                          for (const id of idsToAdd) {
+                            if (!existing.has(String(id))) {
+                              next.push(id);
+                              existing.add(String(id));
+                            }
+                          }
+                          return next;
+                        });
+                      }}
+                      onBatchDeselect={(items) => {
+                        const idsToRemove = new Set(items.map(item => typeof item === 'object' && item !== null ? item.id : item).map(String));
+                        setStagedAssignedSubjects(prev => prev.filter(x => !idsToRemove.has(String(x))));
+                      }}
                       renderChip={renderSubjectChip}
                       renderOption={renderSubjectOption}
                       placeholder="Search subject code or name..."
@@ -3220,17 +3518,6 @@ const TeachingLoadManagement = ({
                         const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef, name: subRef };
                         const subKey = sub.id || sub.code;
                         const curProfId = stagedFacultyMap[subKey] || stagedFacultyMap[subRef] || '';
-                        const specProfs = professors.filter(p => (p.specialization || []).some(sp => String(sp) === String(sub.id) || String(sp) === String(sub.code) || String(sp) === String(sub.name))).sort((a, b) => {
-                          const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
-                          const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
-                          return nameA.localeCompare(nameB);
-                        });
-                        
-                        const otherProfs = professors.filter(p => !specProfs.some(sp => sp.id === p.id)).sort((a, b) => {
-                          const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
-                          const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
-                          return nameA.localeCompare(nameB);
-                        });
 
                         const isEditingThisSub = nestedEditing?.type === 'subject' && (String(nestedEditing?.id) === String(subKey) || String(nestedEditing?.id) === String(sub.id));
                         const isEditingThisProf = nestedEditing?.type === 'faculty' && String(nestedEditing?.id) === String(curProfId);
@@ -3295,8 +3582,8 @@ const TeachingLoadManagement = ({
                               </div>
 
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                <select
-                                  className="hub-instructor-select"
+                                <ModalSubjectInstructorSelect
+                                  subRef={subRef}
                                   value={curProfId}
                                   onChange={e => {
                                     const val = e.target.value;
@@ -3306,25 +3593,8 @@ const TeachingLoadManagement = ({
                                       [subRef]: val
                                     }));
                                   }}
-                                >
-                                  <option value="">No Instructor Assigned</option>
-                                  {specProfs.length > 0 && (
-                                    <optgroup label="Specialized in this subject">
-                                      {specProfs.map(p => (
-                                        <option key={p.id} value={p.id}>
-                                          {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
-                                        </option>
-                                      ))}
-                                    </optgroup>
-                                  )}
-                                  <optgroup label="All Faculty">
-                                    {otherProfs.map(p => (
-                                      <option key={p.id} value={p.id}>
-                                        {p.name || `${p.lastName}, ${p.firstName}`} ({p.department})
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                </select>
+                                  getSubjectProfessors={getSubjectProfessors}
+                                />
 
                                 <div className="hub-inline-btn-group">
                                   <button
@@ -3345,10 +3615,26 @@ const TeachingLoadManagement = ({
                                       title="Configure assigned faculty (Max units, Preferred rooms)"
                                     >
                                       <UserCheck size={12} />
-                                      Edit Prof
+                                      Prof
                                       {isEditingThisProf ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                                     </button>
                                   )}
+                                  <button
+                                    type="button"
+                                    className="hub-micro-action-btn delete-btn"
+                                    onClick={() => {
+                                      setStagedAssignedSubjects(prev => prev.filter(x => String(x) !== String(subRef) && String(x) !== String(subKey)));
+                                      setStagedFacultyMap(prev => {
+                                        const next = { ...prev };
+                                        delete next[subKey];
+                                        delete next[subRef];
+                                        return next;
+                                      });
+                                    }}
+                                    title="Remove this subject from section"
+                                  >
+                                    <X size={12} />
+                                  </button>
                                 </div>
                               </div>
                             </div>
@@ -3534,8 +3820,8 @@ const TeachingLoadManagement = ({
                   <div className="hub-form-field">
                     <label className="hub-form-label">Assigned Sections</label>
                     <AutocompleteMultiSelect
-                      allOptions={sections}
-                      options={sections}
+                      allOptions={localSections}
+                      options={localSections}
                       selectedIds={stagedAssignedSections}
                       onToggle={(item) => {
                         const id = typeof item === 'object' && item !== null ? item.id : item;
@@ -3553,7 +3839,7 @@ const TeachingLoadManagement = ({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
                       <label className="hub-form-label">Choose Specific Subject(s) Taught per Section</label>
                       {stagedAssignedSections.map(secId => {
-                        const sec = sections.find(s => s.id === secId || s.name === secId) || { id: secId, name: secId };
+                        const sec = localSections.find(s => s.id === secId || s.name === secId) || { id: secId, name: secId };
                         const chosenSubs = stagedFacultyMap[sec.id] || [];
 
                         return (
@@ -3896,8 +4182,8 @@ const TeachingLoadManagement = ({
                   <div className="hub-form-field">
                     <label className="hub-form-label">Enrolled Sections (Offering this Subject)</label>
                     <AutocompleteMultiSelect
-                      allOptions={sections}
-                      options={sections}
+                      allOptions={localSections}
+                      options={localSections}
                       selectedIds={stagedAssignedSections}
                       onToggle={(item) => {
                         const id = typeof item === 'object' && item !== null ? item.id : item;
@@ -3915,7 +4201,7 @@ const TeachingLoadManagement = ({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                       <label className="hub-form-label" style={{ fontSize: '0.74rem' }}>Enrolled Sections List & Quick Config</label>
                       {stagedAssignedSections.map(secId => {
-                        const sec = sections.find(s => s.id === secId || s.name === secId) || { id: secId, name: secId };
+                        const sec = localSections.find(s => s.id === secId || s.name === secId) || { id: secId, name: secId };
                         const isEditingSec = nestedEditing?.type === 'section' && String(nestedEditing?.id) === String(sec.id);
 
                         return (
@@ -3944,8 +4230,8 @@ const TeachingLoadManagement = ({
                   <div className="hub-form-field">
                     <label className="hub-form-label">Specialized Faculty (Eligible Instructors)</label>
                     <AutocompleteMultiSelect
-                      allOptions={professors}
-                      options={professors}
+                      allOptions={localProfessors}
+                      options={localProfessors}
                       selectedIds={stagedFacultyMap.assignedProfessors || []}
                       onToggle={(item) => {
                         const profId = typeof item === 'object' && item !== null ? item.id : item;
@@ -3965,7 +4251,7 @@ const TeachingLoadManagement = ({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                       <label className="hub-form-label" style={{ fontSize: '0.74rem' }}>Specialized Faculty List & Quick Config</label>
                       {(stagedFacultyMap.assignedProfessors || []).map(profId => {
-                        const prof = professors.find(p => p.id === profId) || { id: profId, name: profId };
+                        const prof = localProfessors.find(p => p.id === profId) || { id: profId, name: profId };
                         const isEditingProf = nestedEditing?.type === 'faculty' && String(nestedEditing?.id) === String(prof.id);
 
                         return (
@@ -4021,12 +4307,56 @@ const TeachingLoadManagement = ({
         departments={departments}
         courses={courses}
         subjects={subjects}
-        sections={sections}
-        professors={professors}
+        sections={localSections}
+        professors={localProfessors}
         user={user}
         activeSemester={activeSemester}
         onSuccess={(newItem, type) => {
           toast.success(`Created new ${type}: ${newItem.name || newItem.code}`);
+          if (type === 'section') {
+            const id = newItem.id || newItem.docId;
+            const sectionWithDefaults = {
+              id,
+              docId: id,
+              subjects: [],
+              subjectInstructors: {},
+              ...newItem
+            };
+            setLocalSections(prev => {
+              const exists = prev.some(s => String(s.id) === String(id));
+              if (exists) return prev;
+              return [sectionWithDefaults, ...prev];
+            });
+            setViewMode('sections');
+            if (searchQuery) setSearchQuery('');
+            const secDept = resolveDeptCode(sectionWithDefaults.program) || resolveDeptCode(sectionWithDefaults.department);
+            if (departmentFilter !== 'All' && secDept && secDept !== departmentFilter) {
+              setDepartmentFilter('All');
+            }
+            // Seamlessly open the Section Configure Modal right away so subjects and faculty can be assigned with 0 latency
+            handleOpenEditModal('section', sectionWithDefaults);
+          } else if (type === 'faculty') {
+            const id = newItem.id || newItem.docId;
+            const profWithDefaults = {
+              id,
+              docId: id,
+              assignedSections: [],
+              specialization: [],
+              ...newItem
+            };
+            setLocalProfessors(prev => {
+              const exists = prev.some(p => String(p.id) === String(id));
+              if (exists) return prev;
+              return [profWithDefaults, ...prev];
+            });
+            setViewMode('faculty');
+            if (searchQuery) setSearchQuery('');
+            const profDept = resolveDeptCode(profWithDefaults.department);
+            if (departmentFilter !== 'All' && profDept && profDept !== departmentFilter) {
+              setDepartmentFilter('All');
+            }
+            handleOpenEditModal('faculty', profWithDefaults);
+          }
         }}
       />
     </div>

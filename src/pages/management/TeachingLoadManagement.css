@@ -610,11 +610,14 @@
   height: 34px;
   cursor: pointer;
   outline: none;
+  transition: none !important;
+  animation: none !important;
 }
 
 .hub-instructor-select:focus {
   border-color: var(--accent-primary, #5645ee);
-  box-shadow: 0 0 0 2px rgba(86, 69, 238, 0.15);
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 /* ==========================================================================
@@ -1011,6 +1014,8 @@
   margin-top: 4px;
   padding-top: 8px;
   border-top: 1px dashed rgba(0, 0, 0, 0.07);
+  transition: none !important;
+  animation: none !important;
 }
 
 .hub-instructor-select-wrapper {
@@ -1018,6 +1023,8 @@
   min-width: 0;
   display: flex;
   align-items: center;
+  transition: none !important;
+  animation: none !important;
 }
 
 .hub-instructor-select {
@@ -1033,11 +1040,22 @@
   width: 100%;
   outline: none;
   cursor: pointer;
+  transition: none !important;
+  animation: none !important;
+}
+
+.hub-instructor-select:hover {
+  transition: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 .hub-instructor-select:focus {
   border-color: var(--accent-primary, #5645ee);
-  box-shadow: 0 0 0 2px rgba(86, 69, 238, 0.15);
+  box-shadow: none !important;
+  outline: none !important;
+  transition: none !important;
 }
 
 .hub-instructor-select.has-assigned {
@@ -1045,6 +1063,15 @@
   background: rgba(86, 69, 238, 0.04);
   color: var(--accent-dark, #0f172a);
   font-weight: 600;
+  transition: none !important;
+  animation: none !important;
+}
+
+.hub-instructor-select.has-assigned:hover {
+  background: rgba(86, 69, 238, 0.04) !important;
+  border-color: rgba(86, 69, 238, 0.3) !important;
+  transition: none !important;
+  animation: none !important;
 }
 
 .hub-instructor-select.is-unassigned {
@@ -1053,6 +1080,15 @@
   background: rgba(239, 68, 68, 0.03);
   color: #dc2626;
   font-weight: 600;
+  transition: none !important;
+  animation: none !important;
+}
+
+.hub-instructor-select.is-unassigned:hover {
+  background: rgba(239, 68, 68, 0.03) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  transition: none !important;
+  animation: none !important;
 }
 
 .hub-prof-action-btn {
@@ -1064,12 +1100,18 @@
   border-color: rgba(59, 130, 246, 0.25);
   background: rgba(59, 130, 246, 0.05);
   flex-shrink: 0;
+  transition: none !important;
+  animation: none !important;
 }
 
 .hub-prof-action-btn:hover {
-  background: rgba(59, 130, 246, 0.12);
-  border-color: #2563eb;
-  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.05) !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+  color: #2563eb !important;
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .hub-micro-delete-btn {
