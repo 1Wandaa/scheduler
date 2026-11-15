@@ -59,7 +59,53 @@ textarea {
 .day-selector {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+}
+
+/* Universal Vertical Scroll Passthrough:
+   Ensure all management views, tables, cards, grids, and content wrappers
+   pass mouse wheel and touch vertical scrolling up to .main-content
+   so users can scroll anywhere in the content, not only on the sides. */
+.main-content,
+.card,
+.card-body,
+.table-wrapper,
+.table-responsive,
+.table-container,
+.data-table-container,
+.data-table,
+.data-table th,
+.data-table td,
+.data-table tr,
+.data-table tbody,
+.schedule-table-wrapper,
+.colored-schedule-wrapper,
+.hub-scroll-container,
+.assignment-hub-container,
+.hub-cards-grid,
+.hub-entity-card,
+.hub-mappings-list,
+.hub-section-subject-row,
+.workload-list,
+.pw-container,
+.pw-card,
+.pw-assignments,
+.schedule-summary-container,
+.day-selector,
+.custom-scrollbar {
+  overscroll-behavior-y: auto !important;
+}
+
+/* Modals & isolated dropdown menus contain their own scroll */
+.modal-overlay,
+.modal-content,
+.hub-modal-overlay,
+.dialog-overlay,
+.dialog-content,
+.dropdown-menu,
+.autocomplete-dropdown,
+.select-dropdown,
+.custom-select-menu {
+  overscroll-behavior: contain !important;
 }
 
 /* Smooth transitions for interactive elements

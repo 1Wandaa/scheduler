@@ -4,7 +4,7 @@
   padding: 24px 28px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: auto;
   scroll-behavior: smooth;
   display: block;
   position: relative;

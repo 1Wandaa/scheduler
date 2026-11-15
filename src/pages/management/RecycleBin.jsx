@@ -303,7 +303,7 @@ const RecycleBin = ({ onBack, user }) => {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '5px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', overscrollBehaviorY: 'auto', paddingRight: '5px' }}>
         {loading ? (
           <div className="content-loading">
             <div className="content-loading-spinner"></div>

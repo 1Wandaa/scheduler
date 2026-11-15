@@ -11,6 +11,7 @@
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  overscroll-behavior-y: auto !important;
 }
 
 /* ==========================================================================
@@ -462,6 +463,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
   gap: 16px;
+  overscroll-behavior-y: auto !important;
 }
 
 .hub-entity-card {
@@ -473,6 +475,7 @@
   flex-direction: column;
   gap: 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  overscroll-behavior-y: auto !important;
 }
 
 .hub-entity-header {

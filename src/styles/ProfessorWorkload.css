@@ -165,6 +165,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 20px;
+  overscroll-behavior-y: auto !important;
 }
 
 /* --- Card --- */
@@ -176,7 +177,8 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
 
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  overscroll-behavior-y: auto !important;
   display: flex;
   flex-direction: column;
 }
@@ -188,6 +190,7 @@
   left: 0;
   right: 0;
   height: 5px;
+  border-radius: 16px 16px 0 0;
   background: var(--status-color, #10b981);
   opacity: 0.8;
 
@@ -306,6 +309,7 @@
   padding-top: 16px;
   border-top: 1px solid var(--border-color);
   flex-grow: 1;
+  overscroll-behavior-y: auto !important;
 }
 
 .pw-assignments-title {

@@ -378,8 +378,8 @@
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
-  overscroll-behavior-x: contain;
-  overscroll-behavior-y: auto;
+  overscroll-behavior-x: auto;
+  overscroll-behavior-y: auto !important;
   max-width: 100%;
   background: rgba(255, 255, 255, 0.97);
   border: 1px solid var(--border-color);
@@ -388,7 +388,7 @@
 }
 
 .colored-schedule-wrapper {
-  overscroll-behavior-y: auto;
+  overscroll-behavior-y: auto !important;
 }
 
 .schedule-table {

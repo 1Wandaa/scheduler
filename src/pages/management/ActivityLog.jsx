@@ -467,7 +467,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
             <p style={{ margin: '6px 0 0', fontSize: '0.85rem' }}>Try clearing your search query or selecting a broader category filter.</p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto', width: '100%' }}>
+          <div style={{ overflowX: 'auto', width: '100%', overscrollBehaviorY: 'auto' }}>
             <div className="activity-table-container" style={{ minWidth: '850px' }}>
               {/* Table Header */}
               <div className="activity-table-header" style={{ display: 'grid', gridTemplateColumns: '2.2fr 1.6fr 3.5fr 1.3fr 40px', gap: 0, padding: '12px 20px', background: 'var(--bg-main)', borderBottom: '1px solid var(--border-color)' }}>
@@ -477,7 +477,7 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
               </div>
 
               {/* Rows */}
-              <div style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+              <div style={{ maxHeight: '65vh', overflowY: 'auto', overscrollBehaviorY: 'auto' }}>
                 {filteredLogs.map((log, idx) => {
                   const color = ACTION_COLORS[log.action] || '#64748b';
                   const label = ACTION_LABELS[log.action] || log.action;

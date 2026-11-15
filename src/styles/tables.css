@@ -147,9 +147,20 @@
 .table-responsive {
   width: 100%;
   overflow-x: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
-  overscroll-behavior-x: contain;
+  overscroll-behavior-x: auto;
+  overscroll-behavior-y: auto !important;
+}
+
+.table-responsive table,
+.data-table,
+.data-table th,
+.data-table td,
+.data-table tr,
+.data-table tbody {
+  overscroll-behavior-y: auto !important;
 }
 
 /* ─── Checkbox Styling ─── */
