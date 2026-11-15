@@ -689,7 +689,6 @@ const QuickCreateModal = ({
                   <input
                     type="text"
                     className={`quick-form-input${isFacNameDuplicate ? ' mgmt-input-duplicate' : ''}`}
-                    placeholder="e.g. Maria"
                     value={facultyData.firstName}
                     onChange={e => setFacultyData({ ...facultyData, firstName: e.target.value })}
                     autoFocus
@@ -700,7 +699,6 @@ const QuickCreateModal = ({
                   <input
                     type="text"
                     className={`quick-form-input${isFacNameDuplicate ? ' mgmt-input-duplicate' : ''}`}
-                    placeholder="e.g. Santos"
                     value={facultyData.lastName}
                     onChange={e => setFacultyData({ ...facultyData, lastName: e.target.value })}
                   />

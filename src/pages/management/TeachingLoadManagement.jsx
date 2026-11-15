@@ -3672,7 +3672,6 @@ const TeachingLoadManagement = ({
                         className="hub-form-input"
                         value={stagedEntityForm.firstName || ''}
                         onChange={e => setStagedEntityForm(prev => ({ ...prev, firstName: e.target.value }))}
-                        placeholder="e.g. Maria"
                       />
                     </div>
                     <div className="hub-form-field">
@@ -3682,7 +3681,6 @@ const TeachingLoadManagement = ({
                         className="hub-form-input"
                         value={stagedEntityForm.lastName || ''}
                         onChange={e => setStagedEntityForm(prev => ({ ...prev, lastName: e.target.value }))}
-                        placeholder="e.g. Santos"
                       />
                     </div>
                   </div>
