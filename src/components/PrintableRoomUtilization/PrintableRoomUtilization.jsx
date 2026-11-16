@@ -189,6 +189,19 @@ const PrintableRoomUtilization = ({
         return { cellSpanMap: spanMap, skippedCellsSet: skipped };
     }, [activeTimeSlots, displayDays, scheduleGridMap, scheduleMode]);
 
+    // Dynamically calculate row heights to maximize 1-page Portrait space without overflowing
+    const subjRowCount = uniqueSubjectsList.length > 0 ? uniqueSubjectsList.length + 2 : 2;
+    const isDenseSubjects = subjRowCount > 10;
+    const subjFontSize = isDenseSubjects ? '7.5pt' : '8pt';
+    const subjCellPad = isDenseSubjects ? '2px 4px' : '3px 5px';
+    const estimatedSubjRowHeight = isDenseSubjects ? 16 : 19;
+    const fixedContentHeight = 225;
+    const estimatedSubjTableHeight = (subjRowCount * estimatedSubjRowHeight) + 8;
+    const targetPageHeight = 900;
+    const availableTimetableHeight = targetPageHeight - fixedContentHeight - estimatedSubjTableHeight;
+    const printThHeight = 22;
+    const printSlotHeight = Math.max(18, Math.min(25, Math.floor((availableTimetableHeight - printThHeight) / Math.max(1, activeTimeSlots.length))));
+
     return (
         <div className="printable-room-utilization-wrapper" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginTop: '24px' }}>
             <div className="printable-room-utilization" style={{ 
@@ -239,7 +252,7 @@ const PrintableRoomUtilization = ({
                     border: 1px solid #000 !important;
                 }
                 .room-util-timetable td {
-                    height: 25px; /* Minimum height for a 30-min block */
+                    height: var(--room-slot-height, 23px);
                 }
                 .room-util-timetable .time-cell,
                 .room-util-timetable th.time-header {
@@ -334,23 +347,23 @@ const PrintableRoomUtilization = ({
                         break-inside: avoid !important;
                     }
                     .room-util-header img {
-                        height: 50px !important;
+                        height: 52px !important;
                         object-fit: contain !important;
                         margin-right: 12px !important;
                     }
                     .room-util-header-text .republic {
-                        font-size: 8pt !important;
+                        font-size: 8.5pt !important;
                         line-height: 1.15 !important;
                     }
                     .room-util-header-text .univ {
-                        font-size: 13.5pt !important;
+                        font-size: 14pt !important;
                         font-weight: bold !important;
                         color: #002060 !important;
                         letter-spacing: 0.5px !important;
                         line-height: 1.15 !important;
                     }
                     .room-util-header-text .campus {
-                        font-size: 9pt !important;
+                        font-size: 9.5pt !important;
                         color: #002060 !important;
                         font-weight: bold !important;
                         line-height: 1.15 !important;
@@ -362,7 +375,7 @@ const PrintableRoomUtilization = ({
                         break-inside: avoid !important;
                     }
                     .room-util-titles h2 {
-                        font-size: 10.5pt !important;
+                        font-size: 11pt !important;
                         font-weight: bold !important;
                         color: #2e5296 !important;
                         text-transform: uppercase !important;
@@ -370,13 +383,13 @@ const PrintableRoomUtilization = ({
                         line-height: 1.15 !important;
                     }
                     .room-util-titles h3 {
-                        font-size: 10.5pt !important;
+                        font-size: 11pt !important;
                         font-weight: bold !important;
                         margin: 0 0 2px 0 !important;
                         line-height: 1.15 !important;
                     }
                     .room-util-titles p {
-                        font-size: 8.5pt !important;
+                        font-size: 9pt !important;
                         margin: 0 !important;
                         line-height: 1.15 !important;
                     }
@@ -386,9 +399,9 @@ const PrintableRoomUtilization = ({
                         break-inside: avoid !important;
                     }
                     .room-util-room-name {
-                        font-size: 9.5pt !important;
+                        font-size: 10pt !important;
                         font-weight: bold !important;
-                        padding: 2px 8px !important;
+                        padding: 2.5px 9px !important;
                         background-color: #ffff00 !important;
                         border: 1px solid #000 !important;
                         display: inline-block !important;
@@ -402,7 +415,7 @@ const PrintableRoomUtilization = ({
                     }
                     .room-util-subjects {
                         width: 100% !important;
-                        font-size: 7.5pt !important;
+                        font-size: var(--room-subj-font, 8pt) !important;
                         border-collapse: collapse !important;
                         border: 1px solid #000 !important;
                         table-layout: fixed !important;
@@ -410,7 +423,7 @@ const PrintableRoomUtilization = ({
                     .room-util-subjects th,
                     .room-util-subjects td {
                         border: 1px solid #000 !important;
-                        padding: 2.5px 4px !important;
+                        padding: var(--room-subj-pad, 3px 5px) !important;
                         line-height: 1.15 !important;
                         box-sizing: border-box !important;
                         text-align: center !important;
@@ -430,7 +443,7 @@ const PrintableRoomUtilization = ({
                     .room-util-timetable {
                         min-width: unset !important;
                         width: 100% !important;
-                        font-size: 7.5pt !important;
+                        font-size: 8pt !important;
                         border-collapse: collapse !important;
                         table-layout: fixed !important;
                         border: 1px solid #000 !important;
@@ -445,23 +458,23 @@ const PrintableRoomUtilization = ({
                         box-sizing: border-box !important;
                     }
                     .room-util-timetable th {
-                        font-size: 7.5pt !important;
+                        font-size: 8pt !important;
                         font-weight: bold !important;
                         padding: 2px 2px !important;
                         background-color: #f2f2f2 !important;
-                        height: 19px !important;
+                        height: var(--room-th-height, 22px) !important;
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                     }
                     .room-util-timetable td {
-                        height: 19px !important;
-                        max-height: 19px !important;
-                        line-height: 1.1 !important;
+                        height: var(--room-slot-height, 23px) !important;
+                        max-height: var(--room-slot-height, 23px) !important;
+                        line-height: 1.15 !important;
                     }
                     .room-util-timetable .time-col,
                     .room-util-timetable .time-cell {
                         position: static !important;
-                        font-size: 7.5pt !important;
+                        font-size: 8pt !important;
                         font-weight: bold !important;
                         padding: 1px 2px !important;
                         background-color: #f8fafc !important;
@@ -508,26 +521,26 @@ const PrintableRoomUtilization = ({
                         text-align: center !important;
                     }
                     .room-util-timetable .cell-line-subj {
-                        font-size: 7.5pt !important;
+                        font-size: 8pt !important;
                         font-weight: bold !important;
-                        line-height: 1.1 !important;
+                        line-height: 1.15 !important;
                     }
                     .room-util-timetable .cell-line-comp {
-                        font-size: 6.5pt !important;
-                        line-height: 1.0 !important;
+                        font-size: 7pt !important;
+                        line-height: 1.05 !important;
                         font-weight: normal !important;
                         color: #111 !important;
                     }
                     .room-util-timetable .cell-line-prof {
-                        font-size: 7pt !important;
+                        font-size: 7.5pt !important;
                         font-weight: 600 !important;
-                        line-height: 1.1 !important;
+                        line-height: 1.15 !important;
                     }
                     .room-util-timetable .cell-line-room,
                     .room-util-timetable .cell-line-sec,
                     .room-util-timetable .cell-line-room-sec {
-                        font-size: 6.5pt !important;
-                        line-height: 1.05 !important;
+                        font-size: 7pt !important;
+                        line-height: 1.1 !important;
                     }
                     .room-util-signatures {
                         display: flex !important;
@@ -535,7 +548,7 @@ const PrintableRoomUtilization = ({
                         margin-top: 10px !important;
                         padding: 0 10px !important;
                         font-family: Arial, "Times New Roman", Times, serif !important;
-                        font-size: 8.5pt !important;
+                        font-size: 9pt !important;
                         width: 100% !important;
                         box-sizing: border-box !important;
                         page-break-inside: avoid !important;
@@ -548,8 +561,8 @@ const PrintableRoomUtilization = ({
                         max-width: 32% !important;
                     }
                     .sig-label {
-                        margin-bottom: 14px !important;
-                        font-size: 8.5pt !important;
+                        margin-bottom: 16px !important;
+                        font-size: 9pt !important;
                     }
                     .sig-name {
                         font-weight: bold !important;
@@ -558,7 +571,7 @@ const PrintableRoomUtilization = ({
                         font-size: 9.5pt !important;
                     }
                     .sig-title {
-                        font-size: 8pt !important;
+                        font-size: 8.5pt !important;
                         margin-top: 1px !important;
                     }
                 }
@@ -566,47 +579,47 @@ const PrintableRoomUtilization = ({
 
             {/* Header matching PDF and ExportOptions */}
             <div className="room-util-header" style={{ display: 'flex', alignItems: 'center', borderBottom: '2.5px solid #f2a900', paddingBottom: '4px', marginBottom: '8px' }}>
-                <img src="/download.jpg" alt="University Logo" style={{ height: '50px', marginRight: '12px', objectFit: 'contain' }} />
+                <img src="/download.jpg" alt="University Logo" style={{ height: '52px', marginRight: '12px', objectFit: 'contain' }} />
                 <div className="room-util-header-text" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                    <span className="republic" style={{ fontSize: '8pt', fontFamily: 'Arial, sans-serif', lineHeight: 1.15 }}>Republic of the Philippines</span>
-                    <span className="univ" style={{ fontSize: '13.5pt', fontWeight: 'bold', color: '#002060', fontFamily: 'Arial, sans-serif', letterSpacing: '0.5px', lineHeight: 1.15 }}>CAPIZ STATE UNIVERSITY</span>
-                    <span className="campus" style={{ fontSize: '9pt', fontWeight: 'bold', color: '#002060', fontFamily: 'Arial, sans-serif', lineHeight: 1.15 }}>MAMBUSAO SATELLITE COLLEGE</span>
+                    <span className="republic" style={{ fontSize: '8.5pt', fontFamily: 'Arial, sans-serif', lineHeight: 1.15 }}>Republic of the Philippines</span>
+                    <span className="univ" style={{ fontSize: '14pt', fontWeight: 'bold', color: '#002060', fontFamily: 'Arial, sans-serif', letterSpacing: '0.5px', lineHeight: 1.15 }}>CAPIZ STATE UNIVERSITY</span>
+                    <span className="campus" style={{ fontSize: '9.5pt', fontWeight: 'bold', color: '#002060', fontFamily: 'Arial, sans-serif', lineHeight: 1.15 }}>MAMBUSAO SATELLITE COLLEGE</span>
                 </div>
             </div>
 
             {/* Titles dynamically resolved */}
             <div className="room-util-titles" style={{ textAlign: 'center', marginBottom: '6px' }}>
-                <h2 style={{ fontFamily: 'Arial, sans-serif', color: '#2e5296', fontSize: '10.5pt', fontWeight: 'bold', textTransform: 'uppercase', margin: '0 0 2px 0', lineHeight: 1.15 }}>{fullDepartmentName}</h2>
-                <h3 style={{ fontSize: '10.5pt', fontWeight: 'bold', margin: '0 0 2px 0', lineHeight: 1.15 }}>Room Utilization</h3>
-                <p style={{ fontSize: '8.5pt', margin: '0', lineHeight: 1.15 }}>{semesterInfo || "First Semester, School Year 2026-2027"}</p>
+                <h2 style={{ fontFamily: 'Arial, sans-serif', color: '#2e5296', fontSize: '11pt', fontWeight: 'bold', textTransform: 'uppercase', margin: '0 0 2px 0', lineHeight: 1.15 }}>{fullDepartmentName}</h2>
+                <h3 style={{ fontSize: '11pt', fontWeight: 'bold', margin: '0 0 2px 0', lineHeight: 1.15 }}>Room Utilization</h3>
+                <p style={{ fontSize: '9pt', margin: '0', lineHeight: 1.15 }}>{semesterInfo || "First Semester, School Year 2026-2027"}</p>
             </div>
 
             {/* Room Name */}
             <div className="room-util-room-name-wrapper" style={{ marginBottom: '6px', paddingLeft: '5px' }}>
-                <span className="room-util-room-name" style={{ fontSize: '9.5pt', fontWeight: 'bold', backgroundColor: '#ffff00', padding: '2px 8px', display: 'inline-block', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', border: '1px solid #000' }}>Room: {roomName || 'N/A'}</span>
+                <span className="room-util-room-name" style={{ fontSize: '10pt', fontWeight: 'bold', backgroundColor: '#ffff00', padding: '2.5px 9px', display: 'inline-block', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact', border: '1px solid #000' }}>Room: {roomName || 'N/A'}</span>
             </div>
 
             {/* Subjects Table */}
             <div className="room-util-subjects-wrapper" style={{ width: '100%', overflowX: 'auto', marginBottom: '8px' }}>
-                <table className="room-util-subjects" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '7.5pt' }}>
+                <table className="room-util-subjects" style={{ width: '100%', borderCollapse: 'collapse', fontSize: subjFontSize, '--room-subj-font': subjFontSize, '--room-subj-pad': subjCellPad }}>
                     <thead>
                         <tr>
-                            <th style={{ width: '15%', border: '1px solid #000', padding: '2.5px 4px', textAlign: 'center', fontWeight: 'bold' }}>Subject</th>
-                            <th style={{ width: '35%', border: '1px solid #000', padding: '2.5px 4px', textAlign: 'center', fontWeight: 'bold' }}>Description</th>
-                            <th style={{ width: '10%', border: '1px solid #000', padding: '2.5px 4px', textAlign: 'center', fontWeight: 'bold' }}>Unit</th>
-                            <th style={{ width: '20%', border: '1px solid #000', padding: '2.5px 4px', textAlign: 'center', fontWeight: 'bold' }}>Faculty</th>
-                            <th style={{ width: '20%', border: '1px solid #000', padding: '2.5px 4px', textAlign: 'center', fontWeight: 'bold' }}>Course/Section</th>
+                            <th style={{ width: '15%', border: '1px solid #000', padding: subjCellPad, textAlign: 'center', fontWeight: 'bold' }}>Subject</th>
+                            <th style={{ width: '35%', border: '1px solid #000', padding: subjCellPad, textAlign: 'center', fontWeight: 'bold' }}>Description</th>
+                            <th style={{ width: '10%', border: '1px solid #000', padding: subjCellPad, textAlign: 'center', fontWeight: 'bold' }}>Unit</th>
+                            <th style={{ width: '20%', border: '1px solid #000', padding: subjCellPad, textAlign: 'center', fontWeight: 'bold' }}>Faculty</th>
+                            <th style={{ width: '20%', border: '1px solid #000', padding: subjCellPad, textAlign: 'center', fontWeight: 'bold' }}>Course/Section</th>
                         </tr>
                     </thead>
                     <tbody>
                         {uniqueSubjectsList.length > 0 ? (
                             uniqueSubjectsList.map((subj, i) => (
                                 <tr key={i}>
-                                    <td style={{ border: '1px solid #000', padding: '2.5px 4px', textAlign: 'center' }}>{subj.code}</td>
-                                    <td style={{ border: '1px solid #000', padding: '2.5px 4px', textAlign: 'center' }}>{subj.description}</td>
-                                    <td style={{ border: '1px solid #000', padding: '2.5px 4px', textAlign: 'center' }}>{subj.unit}</td>
-                                    <td style={{ border: '1px solid #000', padding: '2.5px 4px', textAlign: 'center' }}>{subj.faculty}</td>
-                                    <td style={{ border: '1px solid #000', padding: '2.5px 4px', textAlign: 'center' }}>{subj.sections}</td>
+                                    <td style={{ border: '1px solid #000', padding: subjCellPad, textAlign: 'center' }}>{subj.code}</td>
+                                    <td style={{ border: '1px solid #000', padding: subjCellPad, textAlign: 'center' }}>{subj.description}</td>
+                                    <td style={{ border: '1px solid #000', padding: subjCellPad, textAlign: 'center' }}>{subj.unit}</td>
+                                    <td style={{ border: '1px solid #000', padding: subjCellPad, textAlign: 'center' }}>{subj.faculty}</td>
+                                    <td style={{ border: '1px solid #000', padding: subjCellPad, textAlign: 'center' }}>{subj.sections}</td>
                                 </tr>
                             ))
                         ) : (
@@ -616,9 +629,9 @@ const PrintableRoomUtilization = ({
                         )}
                         {uniqueSubjectsList.length > 0 && (
                             <tr>
-                                <td colSpan="2" style={{ border: '1px solid #000', padding: '2.5px 4px', textAlign: 'center', fontWeight: 'bold' }}>Total</td>
-                                <td style={{ border: '1px solid #000', padding: '2.5px 4px', textAlign: 'center', fontWeight: 'bold' }}>{totalUnits}</td>
-                                <td colSpan="2" style={{ border: '1px solid #000', padding: '2.5px 4px' }}></td>
+                                <td colSpan="2" style={{ border: '1px solid #000', padding: subjCellPad, textAlign: 'center', fontWeight: 'bold' }}>Total</td>
+                                <td style={{ border: '1px solid #000', padding: subjCellPad, textAlign: 'center', fontWeight: 'bold' }}>{totalUnits}</td>
+                                <td colSpan="2" style={{ border: '1px solid #000', padding: subjCellPad }}></td>
                             </tr>
                         )}
                     </tbody>
@@ -627,12 +640,12 @@ const PrintableRoomUtilization = ({
 
             {/* Timetable Grid with responsive horizontal scroll and sticky time header */}
             <div className="room-util-timetable-wrapper" style={{ width: '100%', marginBottom: '8px' }}>
-                <table className="room-util-timetable" style={{ width: '100%', minWidth: '680px', borderCollapse: 'collapse', fontFamily: 'Arial, sans-serif', fontSize: '7.5pt', tableLayout: 'fixed', flex: 'none' }}>
+                <table className="room-util-timetable" style={{ width: '100%', minWidth: '680px', borderCollapse: 'collapse', fontFamily: 'Arial, sans-serif', fontSize: '8pt', tableLayout: 'fixed', flex: 'none', '--room-slot-height': `${printSlotHeight}px`, '--room-th-height': `${printThHeight}px` }}>
                     <thead>
                         <tr>
-                            <th className="time-header" style={{ border: '1px solid #000', padding: '2px 2px', width: '13%', fontWeight: 'bold', height: '19px', fontSize: '7.5pt' }}>Time</th>
+                            <th className="time-header" style={{ border: '1px solid #000', padding: '2px 2px', width: '13%', fontWeight: 'bold', height: `${printThHeight}px`, fontSize: '8pt' }}>Time</th>
                             {displayDays.map(day => (
-                                <th key={day} style={{ border: '1px solid #000', padding: '2px 2px', fontWeight: 'bold', height: '19px', fontSize: '7.5pt' }}>{day}</th>
+                                <th key={day} style={{ border: '1px solid #000', padding: '2px 2px', fontWeight: 'bold', height: `${printThHeight}px`, fontSize: '8pt' }}>{day}</th>
                             ))}
                         </tr>
                     </thead>
@@ -648,7 +661,7 @@ const PrintableRoomUtilization = ({
                             return (
                                 <tr key={timeSlot.id} className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
                                     {isHourGroupHead && (
-                                        <td className="time-cell time-col" rowSpan={timeRowSpan} style={{ border: '1px solid #000', padding: '1px 2px', textAlign: 'center', fontWeight: 'bold', fontSize: '7.5pt' }}>
+                                        <td className="time-cell time-col" rowSpan={timeRowSpan} style={{ border: '1px solid #000', padding: '1px 2px', textAlign: 'center', fontWeight: 'bold', fontSize: '8pt' }}>
                                             {hourLabel}
                                         </td>
                                     )}
@@ -669,7 +682,7 @@ const PrintableRoomUtilization = ({
                                                     padding: '1px 2px', 
                                                     textAlign: 'center', 
                                                     verticalAlign: 'middle',
-                                                    height: '19px',
+                                                    height: `${printSlotHeight}px`,
                                                     backgroundColor: isScheduled ? '#00b0f0' : 'transparent',
                                                     WebkitPrintColorAdjust: 'exact',
                                                     printColorAdjust: 'exact',

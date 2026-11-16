@@ -132,7 +132,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             tempContainer.style.position = 'absolute';
                             tempContainer.style.top = '-10000px';
                             tempContainer.style.left = '-10000px';
-                            tempContainer.style.width = isRoom ? '1100px' : '850px';
+                            tempContainer.style.width = (isRoom || isWorkload) ? '850px' : '1100px';
                             tempContainer.style.backgroundColor = 'white';
 
                             const isoStyles = `
@@ -178,8 +178,8 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     font-family: Arial, "Times New Roman", Times, serif;
                                     color: #000;
                                     background: #fff;
-                                    width: 1100px;
-                                    padding: 25px 35px;
+                                    width: 850px;
+                                    padding: 20px 30px;
                                     box-sizing: border-box;
                                     display: block;
                                 }
@@ -475,7 +475,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
 
                             try {
                                 const html2canvas = (await import('html2canvas')).default;
-                                const renderWidth = isRoom ? 1100 : 850;
+                                const renderWidth = (isRoom || isWorkload) ? 850 : 1100;
                                 const canvas = await html2canvas(tempContainer, {
                                     scale: 3,
                                     useCORS: true,
@@ -541,7 +541,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
 
                             const isoPrintStyles = `
                                         @page { 
-                                            size: letter portrait; 
+                                            size: letter landscape; 
                                             margin: 0.2in 0.25in; 
                                         }
                                         *, *::before, *::after {
@@ -593,7 +593,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             width: 100% !important; 
                                             border-collapse: collapse !important; 
                                             margin-bottom: 6px !important; 
-                                            font-size: 8.5pt !important; 
+                                            font-size: 9pt !important; 
                                             font-family: "Times New Roman", Times, serif !important;
                                             page-break-inside: avoid !important;
                                             break-inside: avoid !important;
@@ -604,8 +604,8 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             text-align: left !important; 
                                         }
                                         .iso-header-table img {
-                                            max-width: 55px !important;
-                                            max-height: 52px !important;
+                                            max-width: 58px !important;
+                                            max-height: 54px !important;
                                             height: auto !important;
                                             display: block !important;
                                             margin: 0 auto !important;
@@ -617,7 +617,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             display: flex !important; 
                                             justify-content: space-between !important; 
                                             align-items: center !important;
-                                            font-size: 9.5pt !important; 
+                                            font-size: 10pt !important; 
                                             font-weight: bold !important; 
                                             margin-top: 2px !important;
                                             margin-bottom: 6px !important; 
@@ -633,7 +633,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                         .iso-schedule-table { 
                                             width: 100% !important; 
                                             border-collapse: collapse !important; 
-                                            font-size: 8.5pt !important; 
+                                            font-size: 9pt !important; 
                                             font-family: "Times New Roman", Times, serif !important;
                                             table-layout: fixed !important; 
                                             margin: 0 0 6px 0 !important; 
@@ -642,28 +642,28 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             break-inside: avoid !important;
                                         }
                                         .iso-schedule-table tr { 
-                                            height: 44px !important; 
-                                            max-height: 44px !important; 
+                                            height: 55px !important; 
+                                            max-height: 55px !important; 
                                         }
                                         .iso-schedule-table tr.lunch-row { 
-                                            height: 26px !important; 
-                                            max-height: 26px !important; 
+                                            height: 28px !important; 
+                                            max-height: 28px !important; 
                                         }
                                         .iso-schedule-table th, .iso-schedule-table td { 
                                             border: 1px solid #000 !important; 
                                             padding: 0 !important; 
                                             text-align: center !important; 
                                             vertical-align: middle !important; 
-                                            height: 44px !important; 
-                                            max-height: 44px !important; 
+                                            height: 55px !important; 
+                                            max-height: 55px !important; 
                                             overflow: hidden !important; 
                                             box-sizing: border-box !important; 
                                         }
                                         .iso-schedule-table td.lunch-break-cell { 
-                                            height: 26px !important; 
-                                            max-height: 26px !important; 
+                                            height: 28px !important; 
+                                            max-height: 28px !important; 
                                             font-weight: bold !important; 
-                                            font-size: 9.5pt !important; 
+                                            font-size: 10pt !important; 
                                             letter-spacing: 2px !important; 
                                             text-align: center !important; 
                                             vertical-align: middle !important; 
@@ -672,14 +672,14 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                         .iso-schedule-table th { 
                                             background-color: transparent !important; 
                                             padding: 4px 2px !important; 
-                                            font-size: 9pt !important; 
+                                            font-size: 9.5pt !important; 
                                             font-weight: bold !important;
-                                            height: 24px !important; 
+                                            height: 28px !important; 
                                         }
                                         .iso-schedule-table .time-cell { 
                                             white-space: nowrap !important; 
                                             font-weight: bold !important; 
-                                            font-size: 8.5pt !important; 
+                                            font-size: 9.5pt !important; 
                                             padding: 2px 4px !important; 
                                         }
                                         .iso-schedule-table td.scheduled-cell { 
@@ -688,8 +688,8 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                         .iso-schedule-table .schedule-cell { 
                                             padding: 0 !important; 
                                             overflow: hidden !important; 
-                                            height: 44px !important; 
-                                            max-height: 44px !important; 
+                                            height: 55px !important; 
+                                            max-height: 55px !important; 
                                         }
                                         .cell-wrapper { 
                                             display: flex !important; 
@@ -711,7 +711,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             justify-content: center !important; 
                                             padding: 2px 4px !important; 
                                             height: 100% !important; 
-                                            max-height: 44px !important; 
+                                            max-height: 55px !important; 
                                             overflow: hidden !important; 
                                             box-sizing: border-box !important; 
                                             line-height: 1.2 !important; 
@@ -721,11 +721,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                         }
                                         .cell-content.compact { 
                                             padding: 1px 2px !important; 
-                                            line-height: 1.05 !important; 
+                                            line-height: 1.1 !important; 
                                         }
                                         .cell-subject { 
                                             font-weight: bold !important; 
-                                            font-size: 9pt !important; 
+                                            font-size: 9.5pt !important; 
                                             line-height: 1.2 !important; 
                                             white-space: nowrap !important; 
                                             overflow: hidden !important; 
@@ -734,11 +734,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             text-align: center !important; 
                                         }
                                         .cell-content.compact .cell-subject { 
-                                            font-size: 7.5pt !important; 
-                                            line-height: 1.05 !important; 
+                                            font-size: 8pt !important; 
+                                            line-height: 1.1 !important; 
                                         }
                                         .cell-section, .cell-professor { 
-                                            font-size: 8pt !important; 
+                                            font-size: 8.5pt !important; 
                                             line-height: 1.2 !important; 
                                             white-space: nowrap !important; 
                                             overflow: hidden !important; 
@@ -753,13 +753,13 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             font-weight: bold !important; 
                                         }
                                         .cell-content.compact .cell-section, .cell-content.compact .cell-professor { 
-                                            font-size: 6.5pt !important; 
-                                            line-height: 1.05 !important; 
+                                            font-size: 7pt !important; 
+                                            line-height: 1.1 !important; 
                                             padding-left: 3px !important; 
                                             margin-top: 0 !important; 
                                         }
                                         .cell-room { 
-                                            font-size: 8pt !important; 
+                                            font-size: 8.5pt !important; 
                                             line-height: 1.2 !important; 
                                             white-space: nowrap !important; 
                                             overflow: hidden !important; 
@@ -771,17 +771,17 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             margin-top: 1px !important; 
                                         }
                                         .cell-content.compact .cell-room { 
-                                            font-size: 6.5pt !important; 
-                                            line-height: 1.05 !important; 
+                                            font-size: 7pt !important; 
+                                            line-height: 1.1 !important; 
                                             padding-left: 3px !important; 
                                             margin-top: 0 !important; 
                                         }
                                         .signatures-section { 
                                             display: flex !important; 
                                             justify-content: space-between !important; 
-                                            margin-top: 10px !important; 
-                                            padding: 0 10px !important; 
-                                            font-size: 8.5pt !important; 
+                                            margin-top: 8px !important; 
+                                            padding: 0 20px !important; 
+                                            font-size: 9.5pt !important; 
                                             font-family: "Times New Roman", Times, serif !important; 
                                             color: #000 !important; 
                                             page-break-inside: avoid !important;
@@ -789,11 +789,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             page-break-after: avoid !important;
                                             break-after: avoid !important; 
                                         }
-                                        .signature-block { text-align: left !important; min-width: 200px !important; }
-                                        .signature-block.right-aligned { text-align: left !important; min-width: 200px !important; padding-right: 10px !important; }
-                                        .sig-label { margin-bottom: 20px !important; font-size: 8.5pt !important; }
-                                        .sig-name { text-decoration: underline !important; font-weight: bold !important; font-size: 9pt !important; }
-                                        .sig-title { font-size: 8pt !important; margin-top: 2px !important; }
+                                        .signature-block { text-align: left !important; min-width: 250px !important; }
+                                        .signature-block.right-aligned { text-align: left !important; min-width: 280px !important; padding-right: 40px !important; }
+                                        .sig-label { margin-bottom: 20px !important; font-size: 9.5pt !important; }
+                                        .sig-name { text-decoration: underline !important; font-weight: bold !important; font-size: 10pt !important; }
+                                        .sig-title { font-size: 9pt !important; margin-top: 2px !important; }
                             `;
 
                             const roomPrintStyles = `
@@ -854,7 +854,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     break-inside: avoid !important;
                                 }
                                 .room-util-header img { 
-                                    height: 50px !important; 
+                                    height: 52px !important; 
                                     object-fit: contain !important; 
                                     margin-right: 12px !important; 
                                 }
@@ -863,12 +863,12 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     flex-direction: column !important; 
                                 }
                                 .room-util-header-text .republic { 
-                                    font-size: 8pt !important; 
+                                    font-size: 8.5pt !important; 
                                     font-family: Arial, sans-serif !important; 
                                     line-height: 1.15 !important;
                                 }
                                 .room-util-header-text .univ { 
-                                    font-size: 13.5pt !important; 
+                                    font-size: 14pt !important; 
                                     font-weight: bold !important; 
                                     color: #002060 !important; 
                                     font-family: Arial, sans-serif !important; 
@@ -876,7 +876,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     line-height: 1.15 !important;
                                 }
                                 .room-util-header-text .campus { 
-                                    font-size: 9pt !important; 
+                                    font-size: 9.5pt !important; 
                                     font-family: Arial, sans-serif !important; 
                                     color: #002060 !important; 
                                     font-weight: bold !important; 
@@ -892,21 +892,21 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 .room-util-titles h2 { 
                                     font-family: Arial, sans-serif !important; 
                                     color: #2e5296 !important; 
-                                    font-size: 10.5pt !important; 
+                                    font-size: 11pt !important; 
                                     font-weight: bold !important; 
                                     text-transform: uppercase !important; 
                                     margin: 0 0 2px 0 !important; 
                                     line-height: 1.15 !important;
                                 }
                                 .room-util-titles h3 { 
-                                    font-size: 10.5pt !important; 
+                                    font-size: 11pt !important; 
                                     font-weight: bold !important; 
                                     margin: 0 0 2px 0 !important; 
                                     font-family: Arial, sans-serif !important; 
                                     line-height: 1.15 !important;
                                 }
                                 .room-util-titles p { 
-                                    font-size: 8.5pt !important; 
+                                    font-size: 9pt !important; 
                                     margin: 0 !important; 
                                     font-family: Arial, sans-serif !important; 
                                     line-height: 1.15 !important;
@@ -918,11 +918,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     break-inside: avoid !important;
                                 }
                                 .room-util-room-name { 
-                                    font-size: 9.5pt !important; 
+                                    font-size: 10pt !important; 
                                     font-weight: bold !important; 
                                     background-color: #ffff00 !important; 
                                     display: inline-block !important; 
-                                    padding: 2px 8px !important; 
+                                    padding: 2.5px 9px !important; 
                                     border: 1px solid #000 !important; 
                                     -webkit-print-color-adjust: exact !important;
                                     print-color-adjust: exact !important;
@@ -937,13 +937,13 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     width: 100% !important; 
                                     border-collapse: collapse !important; 
                                     font-family: Arial, sans-serif !important; 
-                                    font-size: 7.5pt !important; 
+                                    font-size: var(--room-subj-font, 8pt) !important; 
                                     border: 1px solid #000 !important; 
                                     table-layout: fixed !important; 
                                 }
                                 .room-util-subjects th, .room-util-subjects td { 
                                     border: 1px solid #000 !important; 
-                                    padding: 2.5px 4px !important; 
+                                    padding: var(--room-subj-pad, 3px 5px) !important; 
                                     text-align: center !important; 
                                     line-height: 1.15 !important;
                                     box-sizing: border-box !important; 
@@ -966,7 +966,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     min-width: unset !important; 
                                     border-collapse: collapse !important; 
                                     font-family: Arial, sans-serif !important; 
-                                    font-size: 7.5pt !important; 
+                                    font-size: 8pt !important; 
                                     table-layout: fixed !important; 
                                     border: 1px solid #000 !important; 
                                     flex: none !important;
@@ -979,11 +979,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     box-sizing: border-box !important; 
                                 }
                                 .room-util-timetable th { 
-                                    font-size: 7.5pt !important; 
+                                    font-size: 8pt !important; 
                                     font-weight: bold !important; 
                                     background-color: #f2f2f2 !important; 
                                     padding: 2px 2px !important; 
-                                    height: 19px !important;
+                                    height: var(--room-th-height, 22px) !important;
                                     -webkit-print-color-adjust: exact !important;
                                     print-color-adjust: exact !important;
                                 }
@@ -991,7 +991,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 .room-util-timetable .time-cell { 
                                     width: 13% !important; 
                                     min-width: 80px !important; 
-                                    font-size: 7.5pt !important; 
+                                    font-size: 8pt !important; 
                                     font-weight: bold !important; 
                                     background-color: #f8fafc !important; 
                                     padding: 1px 2px !important; 
@@ -1010,9 +1010,9 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     border-top: none !important; 
                                 }
                                 .room-util-timetable td { 
-                                    height: 19px !important; 
-                                    max-height: 19px !important;
-                                    line-height: 1.1 !important;
+                                    height: var(--room-slot-height, 23px) !important; 
+                                    max-height: var(--room-slot-height, 23px) !important;
+                                    line-height: 1.15 !important;
                                 }
                                 .room-util-timetable td.scheduled-cell,
                                 .room-util-timetable td.cell-scheduled { 
@@ -1042,26 +1042,26 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     text-align: center !important; 
                                 }
                                 .room-util-timetable .cell-line-subj {
-                                    font-size: 7.5pt !important;
+                                    font-size: 8pt !important;
                                     font-weight: bold !important;
-                                    line-height: 1.1 !important;
+                                    line-height: 1.15 !important;
                                 }
                                 .room-util-timetable .cell-line-comp {
-                                    font-size: 6.5pt !important;
-                                    line-height: 1.0 !important;
+                                    font-size: 7pt !important;
+                                    line-height: 1.05 !important;
                                     font-weight: normal !important;
                                     color: #111 !important;
                                 }
                                 .room-util-timetable .cell-line-prof {
-                                    font-size: 7pt !important;
+                                    font-size: 7.5pt !important;
                                     font-weight: 600 !important;
-                                    line-height: 1.1 !important;
+                                    line-height: 1.15 !important;
                                 }
                                 .room-util-timetable .cell-line-room,
                                 .room-util-timetable .cell-line-sec,
                                 .room-util-timetable .cell-line-room-sec {
-                                    font-size: 6.5pt !important;
-                                    line-height: 1.05 !important;
+                                    font-size: 7pt !important;
+                                    line-height: 1.1 !important;
                                 }
                                 .room-util-signatures { 
                                     display: flex !important; 
@@ -1069,7 +1069,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     padding: 0 10px !important; 
                                     margin-top: 10px !important; 
                                     font-family: Arial, "Times New Roman", Times, serif !important; 
-                                    font-size: 8.5pt !important; 
+                                    font-size: 9pt !important; 
                                     width: 100% !important; 
                                     box-sizing: border-box !important; 
                                     page-break-inside: avoid !important;
@@ -1082,8 +1082,8 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     max-width: 32% !important; 
                                 }
                                 .sig-label { 
-                                    margin-bottom: 14px !important; 
-                                    font-size: 8.5pt !important; 
+                                    margin-bottom: 16px !important; 
+                                    font-size: 9pt !important; 
                                 }
                                 .sig-name { 
                                     font-weight: bold !important; 
@@ -1092,7 +1092,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     font-size: 9.5pt !important; 
                                 }
                                 .sig-title { 
-                                    font-size: 8pt !important; 
+                                    font-size: 8.5pt !important; 
                                     margin-top: 1px !important; 
                                 }
                             `;
