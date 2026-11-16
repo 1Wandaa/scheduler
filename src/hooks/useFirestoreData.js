@@ -160,6 +160,193 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
         if (!settingsDoc.exists()) {
           await setDoc(doc(db, 'meta', 'settings'), { semesters: SEMESTERS, schoolYears: SCHOOL_YEARS });
         }
+
+        // One-time sync for 1st Semester SY 2026-2027 subjects and professor specializations
+        // Removes subjects/professors not on the main page of the Excel file, skips existing valid subjects,
+        // assigns professors to their subjects (specialization), and clears pre-recorded section loads so workload starts at 0 without schedules.
+        const syncDoc = await getDoc(doc(db, 'meta', 'firstSem2627Sync_v3'));
+        if (!syncDoc.exists()) {
+          const normStr = (str) => String(str || '').replace(/\s+/g, '').toUpperCase();
+          const normProfName = (str) =>
+            String(str || '')
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/\b(dr|prof|mr|mrs|ms|engr|atty)\.?\b/gi, '')
+              .replace(/[^a-z]/gi, '')
+              .toLowerCase();
+
+          const [subjSnap, profSnap, secSnap] = await Promise.all([
+            getDocs(collection(db, 'subjects')),
+            getDocs(collection(db, 'professors')),
+            getDocs(collection(db, 'sections'))
+          ]);
+
+          const validSubjCodes = new Set(initialSubjects.map((s) => normStr(s.code)));
+          const existingSubjByCode = new Map();
+          const existingSubjByName = new Map();
+          const ops = [];
+
+          // 1. Remove subjects not on the main page of the Excel file; keep existing valid ones
+          subjSnap.docs.forEach((d) => {
+            const data = { ...d.data(), id: d.id };
+            const codeKey = normStr(data.code);
+            if (!validSubjCodes.has(codeKey)) {
+              ops.push({ type: 'delete', col: 'subjects', id: String(d.id) });
+            } else {
+              if (data.code) existingSubjByCode.set(codeKey, data);
+              if (data.name) existingSubjByName.set(normStr(data.name), data);
+            }
+          });
+
+          // 2. Add only missing subjects from the Excel list (skip subjects currently in the system)
+          for (const sub of initialSubjects) {
+            const codeKey = normStr(sub.code);
+            const nameKey = normStr(sub.name);
+            if (existingSubjByCode.has(codeKey) || existingSubjByName.has(nameKey)) {
+              continue; // Skip existing subject
+            }
+            const subData = { ...sub, id: String(sub.id) };
+            ops.push({ type: 'set', col: 'subjects', id: String(sub.id), data: subData });
+            existingSubjByCode.set(codeKey, subData);
+            existingSubjByName.set(nameKey, subData);
+          }
+
+          // Build set of valid subject IDs and codes
+          const validSubjTokens = new Set();
+          for (const sub of existingSubjByCode.values()) {
+            if (sub.id) validSubjTokens.add(normStr(sub.id));
+            if (sub.code) validSubjTokens.add(normStr(sub.code));
+          }
+
+          // 3. Clean sections and add any missing sections
+          const secByNormName = new Map();
+          const secById = new Map();
+
+          secSnap.docs.forEach((d) => {
+            const data = { ...d.data(), id: d.id };
+            const prevSubs = Array.isArray(data.subjects) ? data.subjects : [];
+            const filteredSubs = prevSubs.filter((s) => validSubjTokens.has(normStr(s)));
+            data.subjects = filteredSubs;
+            data.subjectInstructors = {};
+            ops.push({ type: 'set', col: 'sections', id: String(d.id), data });
+            secById.set(String(d.id), data);
+            if (data.name) secByNormName.set(normStr(data.name), data);
+          });
+
+          for (const sec of initialSections) {
+            const normName = normStr(sec.name);
+            if (!secByNormName.has(normName) && !secById.has(String(sec.id))) {
+              const secData = { ...sec, id: String(sec.id), subjectInstructors: {} };
+              secById.set(String(sec.id), secData);
+              secByNormName.set(normName, secData);
+              ops.push({ type: 'set', col: 'sections', id: String(sec.id), data: secData });
+            }
+          }
+
+          // 4. Map existing professors
+          const profById = new Map();
+          const profByNormName = new Map();
+          profSnap.docs.forEach((d) => {
+            const data = { ...d.data(), id: d.id };
+            profById.set(String(d.id), data);
+            const fullName = data.name || `${data.lastName || ''}, ${data.firstName || ''}`;
+            if (fullName) profByNormName.set(normProfName(fullName), data);
+          });
+
+          const matchedProfIds = new Set();
+
+          // 5. Assign professors strictly to their subjects (specialization) without pre-recording section loads
+          for (const item of initialProfessors) {
+            let prof =
+              profById.get(String(item.id)) ||
+              profByNormName.get(normProfName(item.name));
+
+            if (!prof) {
+              const targetLast = normProfName(item.name.split(',')[0]);
+              if (targetLast) {
+                for (const p of profById.values()) {
+                  const pLast = normProfName((p.name || p.lastName || '').split(',')[0]);
+                  if (pLast && pLast === targetLast) {
+                    prof = p;
+                    break;
+                  }
+                }
+              }
+            }
+
+            const isNewProf = !prof;
+            const parts = item.name.split(',');
+            const lastName = (parts[0] || '').trim();
+            const firstName = parts.slice(1).join(',').trim();
+
+            const specSet = new Set();
+            for (const rawCode of item.specialization || []) {
+              const codeKey = normStr(rawCode);
+              const matchedSub = existingSubjByCode.get(codeKey);
+              specSet.add(matchedSub?.code || rawCode);
+            }
+
+            const profDoc = prof
+              ? {
+                  ...prof,
+                  specialization: Array.from(specSet),
+                  assignedSections: [],
+                  sectionSubjectMap: {},
+                  maxUnits: item.maxUnits ?? prof.maxUnits ?? 15
+                }
+              : {
+                  id: String(item.id),
+                  name: item.name,
+                  firstName,
+                  lastName,
+                  department: item.department,
+                  maxUnits: item.maxUnits ?? 15,
+                  specialization: Array.from(specSet),
+                  assignedSections: [],
+                  sectionSubjectMap: {},
+                  preferredRooms: []
+                };
+
+            matchedProfIds.add(String(profDoc.id));
+            profById.set(String(profDoc.id), profDoc);
+            ops.push({
+              type: isNewProf ? 'set' : 'update',
+              col: 'professors',
+              id: String(profDoc.id),
+              data: profDoc
+            });
+          }
+
+          // Delete professors not on the Excel list (e.g. P05, P07, P20)
+          for (const existingProfId of profById.keys()) {
+            if (!matchedProfIds.has(String(existingProfId))) {
+              ops.push({ type: 'delete', col: 'professors', id: String(existingProfId) });
+            }
+          }
+
+          const BATCH_LIMIT = 450;
+          for (let i = 0; i < ops.length; i += BATCH_LIMIT) {
+            const chunk = ops.slice(i, i + BATCH_LIMIT);
+            const b = writeBatch(db);
+            chunk.forEach((op) => {
+              const ref = doc(db, op.col, op.id);
+              if (op.type === 'delete') {
+                b.delete(ref);
+              } else if (op.type === 'update') {
+                b.update(ref, op.data);
+              } else {
+                b.set(ref, op.data, { merge: true });
+              }
+            });
+            await b.commit();
+          }
+
+          await setDoc(doc(db, 'meta', 'firstSem2627Sync_v3'), {
+            syncedAt: new Date().toISOString(),
+            operationsCount: ops.length
+          });
+          console.log(`Synced 1st Semester SY 2026-2027 subjects and professor specializations (${ops.length} updates).`);
+        }
       } catch (err) {
         console.error('Data initialization failed:', err);
       }

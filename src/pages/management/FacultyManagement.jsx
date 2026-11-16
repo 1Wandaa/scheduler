@@ -494,25 +494,25 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], schedules = 
                 let currentUnits = 0;
 
                 if (editMode && currentId) {
-                  if (formData.sectionSubjectMap) {
-                    Object.values(formData.sectionSubjectMap).forEach(subRefs => {
-                      subRefs.forEach(subRef => {
-                        const sub = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
-                        if (sub) {
-                          currentUnits += (Number(sub.credits) || 3);
-                        }
-                      });
+                  const profSchedules = schedules.filter(s => {
+                    const pId = s?.professor?.id ?? s?.professorId ?? null;
+                    return pId != null && String(pId) === String(currentId);
+                  });
+                  if (profSchedules.length > 0) {
+                    const countedAssignments = new Set();
+                    profSchedules.forEach(s => {
+                      if (!s.subject || !s.section) return;
+                      const comp = s.component || '';
+                      const key = `${s.subject.id || s.subject.code}-${s.section.id || s.section.name}${comp ? '-' + comp : ''}`;
+                      if (!countedAssignments.has(key)) {
+                        countedAssignments.add(key);
+                        const compUnit = s.subject.hasLecLab
+                          ? (comp === 'Lecture' ? (Number(s.subject.lectureHours) || 2) : (Number(s.subject.labHours) || 3))
+                          : (Number(s.subject.units ?? s.subject.credits) || 3);
+                        currentUnits += compUnit;
+                      }
                     });
                   }
-                } else {
-                  const selectedIds = formData.specialization || [];
-                  const assignedSectionsCount = (formData.assignedSections || []).length;
-
-                  const baseUnits = subjects
-                    .filter(s => selectedIds.includes(s.id) || selectedIds.includes(s.code) || selectedIds.includes(s.name))
-                    .reduce((sum, s) => sum + (Number(s.credits) || 3), 0);
-
-                  currentUnits = baseUnits * Math.max(1, assignedSectionsCount);
                 }
 
                 return (

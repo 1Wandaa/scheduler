@@ -10,7 +10,6 @@ function ProfessorWorkload({
   professors, 
   schedules, 
   departments = [], 
-  subjects = [],
   activeSemester,
   activeSchoolYear,
   semesterInfo,
@@ -103,18 +102,9 @@ function ProfessorWorkload({
             units += compUnit;
           }
         });
-      } else if (professor.sectionSubjectMap) {
-        Object.entries(professor.sectionSubjectMap).forEach(([, subRefs]) => {
-          subRefs.forEach(subRef => {
-            const sub = subjects?.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
-            if (sub) {
-              units += (Number(sub.credits) || 3);
-            }
-          });
-        });
       }
-      const cap = Math.max(1, Number(professor.maxUnits || professor.maxHours || 12));
-      const utilization = (units / cap) * 100;
+      const cap = Math.max(1, Number(professor.maxUnits ?? professor.maxHours ?? 12));
+      const utilization = cap > 0 ? (units / cap) * 100 : 0;
 
       let statusColor = '#10b981'; // Green
       let statusBg = 'rgba(16,185,129,0.15)';
@@ -136,7 +126,7 @@ function ProfessorWorkload({
         statusBg
       };
     });
-  }, [professors, schedules, subjects]);
+  }, [professors, schedules]);
 
   const filteredAndSortedProfessors = useMemo(() => {
     let result = processedProfessors;

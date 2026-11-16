@@ -1,7 +1,7 @@
 import React from 'react';
 import { getDeptColor } from '../../config/constants';
 
-const FacultyTable = ({ facultyList, subjects = [], departments = [], onEdit, onDelete, selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
+const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments = [], onEdit, onDelete, selectedIds = [], onToggleSelect, onToggleSelectAll }) => {
   const allSelected = facultyList.length > 0 && facultyList.every(p => selectedIds.includes(p.id));
   const someSelected = facultyList.some(p => selectedIds.includes(p.id)) && !allSelected;
   const headerCheckboxRef = React.useRef(null);
@@ -49,16 +49,25 @@ const FacultyTable = ({ facultyList, subjects = [], departments = [], onEdit, on
         </thead>
         <tbody>
           {facultyList.map(p => {
-            // Calculate units based on assignments to ensure it immediately reflects Teaching Load Management changes
+            // Calculate units based on actual scheduled classes
             let currentUnits = 0;
-            if (p.sectionSubjectMap) {
-              Object.entries(p.sectionSubjectMap).forEach(([, subRefs]) => {
-                subRefs.forEach(subRef => {
-                  const sub = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
-                  if (sub) {
-                    currentUnits += (Number(sub.credits) || 3);
-                  }
-                });
+            const profSchedules = schedules.filter(s => {
+              const pId = s?.professor?.id ?? s?.professorId ?? null;
+              return pId != null && String(pId) === String(p.id);
+            });
+            if (profSchedules.length > 0) {
+              const countedAssignments = new Set();
+              profSchedules.forEach(s => {
+                if (!s.subject || !s.section) return;
+                const comp = s.component || '';
+                const key = `${s.subject.id || s.subject.code}-${s.section.id || s.section.name}${comp ? '-' + comp : ''}`;
+                if (!countedAssignments.has(key)) {
+                  countedAssignments.add(key);
+                  const compUnit = s.subject.hasLecLab
+                    ? (comp === 'Lecture' ? (Number(s.subject.lectureHours) || 2) : (Number(s.subject.labHours) || 3))
+                    : (Number(s.subject.units ?? s.subject.credits) || 3);
+                  currentUnits += compUnit;
+                }
               });
             }
             
@@ -66,7 +75,7 @@ const FacultyTable = ({ facultyList, subjects = [], departments = [], onEdit, on
             const assignedSubjectIds = p.specialization || [];
             const currentSubjects = subjects.filter(sub => assignedSubjectIds.includes(sub.id) || assignedSubjectIds.includes(sub.code) || assignedSubjectIds.includes(sub.name));
             
-            const maxUnits = p.maxUnits || p.maxHours || 12;
+            const maxUnits = p.maxUnits ?? p.maxHours ?? 12;
             const utilization = maxUnits > 0 ? (currentUnits / maxUnits) * 100 : 0;
             
             let statusColor = 'var(--success)';
