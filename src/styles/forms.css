@@ -1029,12 +1029,6 @@
     text-rendering: optimizeLegibility !important;
     image-rendering: -webkit-optimize-contrast !important;
   }
-
-  /* Force landscape-friendly table printing */
-  @page {
-    size: landscape;
-    margin: 1cm;
-  }
 }
 
 /* =========================================

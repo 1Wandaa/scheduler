@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../../styles/ProfessorWorkload.css';
 import PrintableFacultyWorkload from '../PrintableFacultyWorkload/PrintableFacultyWorkload';
 import { exportFacultyWorkloadToWord } from '../../utils/scheduleExportUtils';
+import { getFacultyFreeTimeActivities } from '../../utils/freeTimeUtils';
 
 const professorIdOf = (s) => s?.professor?.id ?? s?.professorId ?? null;
 const matchesProfessor = (s, professor) => professorIdOf(s) != null && String(professorIdOf(s)) === String(professor?.id);
@@ -18,6 +20,7 @@ function ProfessorWorkload({
 }) {
   const LOGO_SRC = '/logo.png?v=1';
   const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
+  const navigate = useNavigate();
 
   const derivedSemesterInfo = semesterInfo || (activeSemester && activeSchoolYear ? `${activeSemester}, School Year ${activeSchoolYear}` : '1st Semester, School Year 2026-2027');
 
@@ -38,7 +41,10 @@ function ProfessorWorkload({
   }, []);
 
   const handlePrint = (prof) => {
-    setPrintingProf(prof);
+    setPrintingProf({
+      ...prof,
+      freeTimeActivities: getFacultyFreeTimeActivities(prof)
+    });
     setTimeout(() => {
       document.title = ""; // Strips "SMARTSCHED" from browser print header
       document.body.classList.add('printing-faculty-workload');
@@ -48,7 +54,10 @@ function ProfessorWorkload({
 
   const handleExportWord = async (prof) => {
     await exportFacultyWorkloadToWord({
-      professor: prof,
+      professor: {
+        ...prof,
+        freeTimeActivities: getFacultyFreeTimeActivities(prof)
+      },
       schedules: prof.profSchedules || schedules.filter(s => matchesProfessor(s, prof)),
       semesterInfo: derivedSemesterInfo,
       user
@@ -264,6 +273,15 @@ function ProfessorWorkload({
                     {prof.utilization.toFixed(0)}%
                   </div>
                   <div className="pw-card-btn-group">
+                    <button
+                      className="pw-freetime-btn"
+                      onClick={() => navigate('/dashboard/view-schedules', { state: { viewTarget: { viewType: 'faculty', selectedId: prof.id, openFreeTime: true } } })}
+                      title="Edit Free Time Activity Text in Schedule Viewer"
+                      style={{ background: 'none', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-main)', whiteSpace: 'nowrap' }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                      Free Time
+                    </button>
                     <button 
                       className="pw-print-btn" 
                       onClick={() => handlePrint(prof)}

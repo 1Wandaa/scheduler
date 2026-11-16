@@ -1,7 +1,29 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { getMeetingTimeLabel, parseTimeToMinutes } from '../../utils/scheduleUtils';
+import {
+    FW_ISO_TIME_BLOCKS,
+    getFacultyFreeTimeActivities,
+    buildFacultyWorkloadScheduleGrid,
+    computeTeachingAssignments
+} from '../../utils/freeTimeUtils';
 import '../../styles/PrintableFacultyWorkload.css';
+
+const formatRoomAndSection = (cls) => {
+    const rawRoom = cls?.room?.name
+        ? cls.room.name.replace(/^Room\s+/i, 'RM ').replace(/^ROOM\s+/i, 'RM ')
+        : 'TBA';
+    const secName = cls?.section?.name || '';
+    return secName ? `${rawRoom} - ${secName}` : rawRoom;
+};
+
+const formatCleanSubjectCode = (cls) => {
+    const raw = cls?.subject?.code || '';
+    return raw
+        .replace(/\s*\((?:Lecture|Laboratory|Lec|Lab)\)/gi, '')
+        .replace(/^Free Elective\b/i, 'Free Elect')
+        .replace(/^CS Elective\b/i, 'CS Elect')
+        .trim();
+};
 
 const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) => {
     const LOGO_SRC = '/capsu-logo.jpg';
@@ -9,96 +31,83 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
     const activeSemester = semesterInfo || '1st Semester, School Year 2026-2027';
     const profName = professor?.name || '';
     const profRank = professor?.rank || '';
+    const profDesignation = professor?.designation || '';
 
-    const uniqueAssignments = useMemo(() => {
-        const assignmentsMap = new Map();
-        schedules.forEach(s => {
-            if (!s.subject || !s.section) return;
-            const comp = s.component || '';
-            const key = `${s.subject.id}-${s.section.id}${comp ? '-' + comp : ''}`;
-            const compHours = Number(s.hours) || (s.subject.hasLecLab 
-                ? (comp === 'Lecture' ? (Number(s.subject.lectureHours) || 2) : (Number(s.subject.labHours) || 3))
-                : (Number(s.subject.hoursPerMeeting) || 3));
-            const compUnit = s.subject.hasLecLab
-                ? (comp === 'Lecture' ? (Number(s.subject.lectureHours) || 2) : (Number(s.subject.labHours) || 3))
-                : (s.subject.units ?? s.subject.credits ?? 3);
-            if (!assignmentsMap.has(key)) {
-                assignmentsMap.set(key, {
-                    id: key,
-                    subjectCode: (s.subject.code || 'N/A') + (comp ? ` (${comp})` : ''),
-                    subjectName: s.subject.name || 'N/A',
-                    unit: compUnit,
-                    hoursPerWeek: compHours,
-                    sectionName: s.section.name || 'N/A',
-                    studentsCount: s.section.studentsCount || ''
-                });
-            }
-        });
-        return Array.from(assignmentsMap.values());
-    }, [schedules]);
+    const [freeTimeVersion, setFreeTimeVersion] = useState(0);
+    useEffect(() => {
+        const handleUpdate = () => setFreeTimeVersion(v => v + 1);
+        window.addEventListener('smartsched_free_time_updated', handleUpdate);
+        return () => window.removeEventListener('smartsched_free_time_updated', handleUpdate);
+    }, []);
 
-    const totalUnits = uniqueAssignments.reduce((sum, a) => sum + Number(a.unit), 0);
-    const totalHours = uniqueAssignments.reduce((sum, a) => sum + Number(a.hoursPerWeek), 0);
+    const freeTimeActivities = useMemo(() => {
+        void freeTimeVersion;
+        return getFacultyFreeTimeActivities(professor, profName);
+    }, [professor, profName, freeTimeVersion]);
+
+    const {
+        uniqueAssignments,
+        totalUnits,
+        totalHoursDisplay,
+        totalStudents
+    } = useMemo(() => computeTeachingAssignments(schedules), [schedules]);
 
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-    const uniqueTimeBlocks = useMemo(() => {
-        const rawUniqueTimes = new Set();
-        schedules.forEach(schedule => {
-            if (!schedule.day || !schedule.timeSlot) return;
-            const sHours = Number(schedule.hours) || (schedule.subject?.hasLecLab 
-                ? (schedule.component === 'Lecture' ? ((Number(schedule.subject.lectureHours) || 2) / 2) : ((Number(schedule.subject.labHours) || 3) / 2))
-                : (Number(schedule.subject?.hoursPerMeeting) || 1.5));
-            const label = getMeetingTimeLabel(schedule.timeSlot, sHours, 'standard');
-            if (label) rawUniqueTimes.add(label);
-        });
-        return Array.from(rawUniqueTimes).map(label => {
-            const parts = label.split('-');
-            const startStr = parts[0]?.trim() || '';
-            const startMinutes = parseTimeToMinutes(startStr) || 0;
-            return { label, startMinutes };
-        }).sort((a, b) => a.startMinutes - b.startMinutes);
-    }, [schedules]);
+    const scheduleGrid = useMemo(() => {
+        return buildFacultyWorkloadScheduleGrid(schedules, freeTimeActivities, 'standard');
+    }, [schedules, freeTimeActivities]);
 
+    // Maximize vertical space on the portrait page based on assignment count
     const schedRowHeight = useMemo(() => {
-        if (uniqueTimeBlocks.length <= 2) return '54px';
-        if (uniqueTimeBlocks.length <= 4) return '46px';
-        if (uniqueTimeBlocks.length <= 6) return '38px';
-        return '28px';
-    }, [uniqueTimeBlocks.length]);
+        const count = uniqueAssignments.length;
+        if (count <= 4) return '54px';
+        if (count <= 6) return '48px';
+        if (count <= 8) return '42px';
+        if (count <= 10) return '36px';
+        return '30px';
+    }, [uniqueAssignments.length]);
 
-    const rowsCount = uniqueAssignments.length + uniqueTimeBlocks.length;
     const densityClass = useMemo(() => {
-        if (rowsCount <= 8) return 'fw-density-normal';
-        if (rowsCount <= 13) return 'fw-density-compact';
-        if (rowsCount <= 18) return 'fw-density-dense';
+        const count = uniqueAssignments.length;
+        if (count <= 8) return 'fw-density-normal';
+        if (count <= 11) return 'fw-density-compact';
+        if (count <= 14) return 'fw-density-dense';
         return 'fw-density-ultra';
-    }, [rowsCount]);
+    }, [uniqueAssignments.length]);
 
     const containerRef = React.useRef(null);
     const [scale, setScale] = React.useState(1);
 
     React.useLayoutEffect(() => {
         if (!containerRef.current) return;
-        // Reset transform first to get accurate unscaled height
         containerRef.current.style.transform = 'none';
         
-        // 10.3 inches at 96 DPI is ~988px
-        const MAX_PAGE_HEIGHT = 980;
+        // 10.5in printable height on Portrait Letter at 96 DPI is ~1008px
+        const MAX_PAGE_HEIGHT = 1015;
         const actualHeight = containerRef.current.scrollHeight;
         
         if (actualHeight > MAX_PAGE_HEIGHT) {
-            const newScale = Math.min(1, Number(((MAX_PAGE_HEIGHT / actualHeight) * 0.98).toFixed(3)));
+            const newScale = Math.min(1, Number(((MAX_PAGE_HEIGHT / actualHeight) * 0.99).toFixed(3)));
             setScale(newScale);
         } else {
             setScale(1);
         }
-    }, [uniqueAssignments, uniqueTimeBlocks, densityClass, schedRowHeight]);
+    }, [uniqueAssignments, scheduleGrid, densityClass, schedRowHeight]);
 
     return ReactDOM.createPortal(
         <div className={`faculty-workload-iso-document ${densityClass}`}>
+            <style>{`
+                @media print {
+                    @page {
+                        size: letter portrait !important;
+                        margin: 0.25in 0.35in !important;
+                    }
+                }
+            `}</style>
             <div 
                 ref={containerRef} 
+                className="fw-document-inner"
                 style={{ 
                     '--fw-row-height': schedRowHeight,
                     zoom: scale < 1 ? scale : undefined,
@@ -156,51 +165,51 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
                     <tr>
                         <td rowSpan="3" className="fw-profile-level">BACCALAUREATE</td>
                         <td className="fw-profile-field">Degree</td>
-                        <td className="fw-profile-val"></td>
+                        <td className="fw-profile-val">{professor?.baccalaureateDegree || ''}</td>
                         <td className="fw-profile-empty"></td>
                     </tr>
                     <tr>
                         <td className="fw-profile-field">School</td>
-                        <td className="fw-profile-val"></td>
+                        <td className="fw-profile-val">{professor?.baccalaureateSchool || ''}</td>
                         <td className="fw-profile-empty"></td>
                     </tr>
                     <tr>
                         <td className="fw-profile-field">Major</td>
-                        <td className="fw-profile-val"></td>
+                        <td className="fw-profile-val">{professor?.baccalaureateMajor || ''}</td>
                         <td className="fw-profile-empty"></td>
                     </tr>
                     
                     <tr>
                         <td rowSpan="3" className="fw-profile-level">MASTER'S DEGREE</td>
                         <td className="fw-profile-field">Degree</td>
-                        <td className="fw-profile-val"></td>
+                        <td className="fw-profile-val">{professor?.mastersDegree || ''}</td>
                         <td className="fw-profile-extra">Rank/Position: {profRank}</td>
                     </tr>
                     <tr>
                         <td className="fw-profile-field">School</td>
-                        <td className="fw-profile-val"></td>
-                        <td className="fw-profile-extra">Designation:</td>
+                        <td className="fw-profile-val">{professor?.mastersSchool || ''}</td>
+                        <td className="fw-profile-extra">Designation: {profDesignation}</td>
                     </tr>
                     <tr>
                         <td className="fw-profile-field">Major</td>
-                        <td className="fw-profile-val"></td>
+                        <td className="fw-profile-val">{professor?.mastersMajor || ''}</td>
                         <td className="fw-profile-extra"></td>
                     </tr>
 
                     <tr>
                         <td rowSpan="3" className="fw-profile-level">DOCTORATE</td>
                         <td className="fw-profile-field">Degree</td>
-                        <td className="fw-profile-val"></td>
+                        <td className="fw-profile-val">{professor?.doctorateDegree || ''}</td>
                         <td className="fw-profile-empty"></td>
                     </tr>
                     <tr>
                         <td className="fw-profile-field">School</td>
-                        <td className="fw-profile-val"></td>
+                        <td className="fw-profile-val">{professor?.doctorateSchool || ''}</td>
                         <td className="fw-profile-empty"></td>
                     </tr>
                     <tr>
                         <td className="fw-profile-field">Major</td>
-                        <td className="fw-profile-val"></td>
+                        <td className="fw-profile-val">{professor?.doctorateMajor || ''}</td>
                         <td className="fw-profile-empty"></td>
                     </tr>
                 </tbody>
@@ -211,8 +220,8 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
             <table className="fw-teaching-table">
                 <thead>
                     <tr>
-                        <th rowSpan="2" style={{ width: '12%' }}>Course No.</th>
-                        <th rowSpan="2" style={{ width: '40%' }}>Course Title</th>
+                        <th rowSpan="2" style={{ width: '14%' }}>Course No.</th>
+                        <th rowSpan="2" style={{ width: '38%' }}>Course Title</th>
                         <th rowSpan="2" style={{ width: '8%' }}>Units</th>
                         <th colSpan="1" style={{ width: '15%' }}>No. of Hours</th>
                         <th rowSpan="2" style={{ width: '15%' }}>Course and<br/>Year Level</th>
@@ -234,20 +243,21 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
                         </tr>
                     ))}
                     {uniqueAssignments.length === 0 && (
-                        <tr><td colSpan="6" style={{ height: '36px', fontStyle: 'italic', color: '#666' }}>No teaching assignments recorded</td></tr>
+                        <tr><td colSpan="6" style={{ height: '32px', fontStyle: 'italic', color: '#666' }}>No teaching assignments recorded</td></tr>
                     )}
                     <tr className="fw-total-row">
                         <td colSpan="2" className="fw-total-label">TOTAL</td>
                         <td className="fw-bold">{totalUnits > 0 ? totalUnits : ''}</td>
-                        <td className="fw-bold">{totalHours > 0 ? totalHours : ''}</td>
-                        <td colSpan="2"></td>
+                        <td className="fw-bold">{totalHoursDisplay}</td>
+                        <td></td>
+                        <td className="fw-bold">{totalStudents > 0 ? totalStudents : ''}</td>
                     </tr>
                     <tr className="fw-other-assign-header">
                         <td colSpan="6">Other Assignments:</td>
                     </tr>
                     <tr className="fw-blank-row">
                         <td>&nbsp;</td>
-                        <td></td>
+                        <td style={{ textAlign: 'left', paddingLeft: '6px' }}>{professor?.otherAssignments || ''}</td>
                         <td></td>
                         <td></td>
                         <td></td>
@@ -276,40 +286,84 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
                     </tr>
                 </thead>
                 <tbody>
-                    {uniqueTimeBlocks.map((block, rowIdx) => (
-                        <tr key={rowIdx}>
-                            <td className="fw-schedule-time-col">
-                                {block.label.replace('-', '–')}
-                            </td>
-                            {days.map(day => {
-                                const classes = schedules.filter(s => {
-                                    if (s.day !== day) return false;
-                                    const sHours = Number(s.hours) || (s.subject?.hasLecLab 
-                                        ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2))
-                                        : (Number(s.subject?.hoursPerMeeting) || 1.5));
-                                    const label = getMeetingTimeLabel(s.timeSlot, sHours, 'standard');
-                                    return label === block.label;
-                                });
-                                
-                                return (
-                                    <td key={day} className="fw-schedule-cell">
-                                        {classes.map((cls, idx) => (
-                                            <div key={idx} className="fw-sched-class-item" style={{ marginBottom: idx < classes.length - 1 ? '4px' : '0' }}>
-                                                <div className="fw-sched-subj-code">{cls.subject?.code}</div>
-                                                <div className="fw-sched-room-sec">
-                                                    {cls.room?.name ? cls.room.name.replace('Room', 'RM').replace('ROOM', 'RM') : 'TBA'}
-                                                    {cls.section?.name ? ` - ${cls.section.name}` : ''}
+                    {FW_ISO_TIME_BLOCKS.map((block, rowIdx) => {
+                        if (block.isLunch) {
+                            return (
+                                <tr key={block.id} className="fw-lunch-row">
+                                    <td className="fw-schedule-time-col">{block.label}</td>
+                                    {days.map(day => (
+                                        <td key={day} className="fw-schedule-lunch-cell"></td>
+                                    ))}
+                                </tr>
+                            );
+                        }
+
+                        return (
+                            <tr key={block.id} className="fw-regular-sched-row">
+                                <td className="fw-schedule-time-col">
+                                    {block.label}
+                                </td>
+                                {days.map(day => {
+                                    const cell = scheduleGrid[day]?.[rowIdx];
+                                    if (!cell || cell.skip) return null;
+
+                                    const items = cell.items || [];
+                                    const isSplit = items.length > 1;
+                                    const tdStyle = {};
+                                    if (cell.mergeBottomWithNext) tdStyle.borderBottom = 'none';
+                                    if (cell.mergeTopWithPrev) tdStyle.borderTop = 'none';
+                                    if (isSplit) tdStyle.padding = 0;
+
+                                    return (
+                                        <td
+                                            key={day}
+                                            rowSpan={cell.rowSpan || 1}
+                                            className={`fw-schedule-cell ${isSplit ? 'fw-schedule-cell-split' : ''}`}
+                                            style={tdStyle}
+                                        >
+                                            {items.length === 1 && items[0].type === 'class' && (
+                                                <div className="fw-sched-class-item">
+                                                    <div className="fw-sched-subj-code">{formatCleanSubjectCode(items[0].schedule)}</div>
+                                                    <div className="fw-sched-room-sec">{formatRoomAndSection(items[0].schedule)}</div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </td>
-                                );
-                            })}
-                        </tr>
-                    ))}
-                    {uniqueTimeBlocks.length === 0 && (
-                        <tr><td colSpan="6" className="fw-schedule-empty-cell">No scheduled classes</td></tr>
-                    )}
+                                            )}
+
+                                            {items.length === 1 && items[0].type === 'activity' && (
+                                                <div className="fw-sched-activity-text">
+                                                    {items[0].text}
+                                                </div>
+                                            )}
+
+                                            {isSplit && (
+                                                <div className="fw-sched-split-container">
+                                                    {items.map((item, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className="fw-sched-subcell"
+                                                            style={{
+                                                                borderTop: idx > 0 ? '1px solid #000' : 'none'
+                                                            }}
+                                                        >
+                                                            {item.type === 'class' ? (
+                                                                <div className="fw-sched-class-item">
+                                                                    <div className="fw-sched-subj-code">{formatCleanSubjectCode(item.schedule)}</div>
+                                                                    <div className="fw-sched-room-sec">{formatRoomAndSection(item.schedule)}</div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="fw-sched-activity-text">
+                                                                    {cell.mergeTopWithPrev && idx === 0 ? '\u00A0' : item.text}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        );
+                    })}
                 </tbody>
             </table>
 

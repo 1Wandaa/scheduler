@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { DAYS, getProgramChairInfo, isLunchSlot } from '../../config/constants';
 import { getScheduleTimeRange, normalizeDay, isStandardOneAndHalfHourClass } from '../../utils/scheduleUtils';
+import { SLOT_WINDOWS } from '../../utils/freeTimeUtils';
 import '../../styles/PrintableSchedule.css';
 
 // Helper: Format professor name compactly (e.g. "C. Bernabe")
@@ -20,14 +21,14 @@ function formatProfessorName(name) {
 }
 
 const ISO_TIME_BLOCKS = [
-    { id: 'b1', label: '7:00   –   8:30', start: 420, end: 510 },
-    { id: 'b2', label: '8:30   –   10:00', start: 510, end: 600 },
-    { id: 'b3', label: '10:00  –   11:30', start: 600, end: 690 },
-    { id: 'lunch', label: '11:30  –  12:30', start: 690, end: 750, isLunch: true },
-    { id: 'b4', label: '12:30  –   2:00', start: 750, end: 840 },
-    { id: 'b5', label: '2:00   –   3:30', start: 840, end: 930 },
-    { id: 'b6', label: '3:30   –   5:00', start: 930, end: 1020 },
-    { id: 'b7', label: '5:00   –   6:00', start: 1020, end: 1080 }
+    { id: 'b1', label: '7:00   –   8:30', start: 420, end: 510, slotIds: [1, 2, 3] },
+    { id: 'b2', label: '8:30   –   10:00', start: 510, end: 600, slotIds: [4, 5, 6] },
+    { id: 'b3', label: '10:00  –   11:30', start: 600, end: 690, slotIds: [7, 8, 9] },
+    { id: 'lunch', label: '11:30  –  12:30', start: 690, end: 750, slotIds: [10, 19], isLunch: true },
+    { id: 'b4', label: '12:30  –   2:00', start: 750, end: 840, slotIds: [11, 12, 13] },
+    { id: 'b5', label: '2:00   –   3:30', start: 840, end: 930, slotIds: [14, 15, 16] },
+    { id: 'b6', label: '3:30   –   5:00', start: 930, end: 1020, slotIds: [17, 18, 20] },
+    { id: 'b7', label: '5:00   –   6:00', start: 1020, end: 1080, slotIds: [21, 22] }
 ];
 
 const PrintableSchedule = ({ 
@@ -38,7 +39,8 @@ const PrintableSchedule = ({
     semesterInfo = '', 
     scheduleMode = 'standard',
     viewType = 'department',
-    facultyName = ''
+    facultyName = '',
+    freeTimeActivities = {}
 }) => {
     const days = DAYS; // Always 5 days (Mon - Fri) to match the official INS-CLS-08 table
     const isFaculty = viewType === 'faculty' || (!sectionName && !!facultyName);
@@ -218,13 +220,52 @@ const PrintableSchedule = ({
                                     const isScheduled = cellSchedules.length > 0;
                                     const isMulti = cellSchedules.length > 1;
 
+                                    let freeBeforeText = '';
+                                    let freeAfterText = '';
+                                    let freeFullText = '';
+
+                                    if (isFaculty && block.slotIds && freeTimeActivities) {
+                                        if (!isScheduled) {
+                                            freeFullText = block.slotIds
+                                                .map(sid => freeTimeActivities[`${day}-${sid}`] || '')
+                                                .find(t => t.trim() !== '') || '';
+                                        } else {
+                                            const firstClsStart = cellSchedules[0]?._range?.start ?? block.start;
+                                            const lastClsEnd = cellSchedules[cellSchedules.length - 1]?._range?.end ?? block.end;
+                                            block.slotIds.forEach(sid => {
+                                                const sw = SLOT_WINDOWS[sid];
+                                                const txt = (freeTimeActivities[`${day}-${sid}`] || '').trim();
+                                                if (!sw || !txt) return;
+                                                if (sw.end <= firstClsStart + 5 && !freeBeforeText) {
+                                                    freeBeforeText = txt;
+                                                } else if (sw.start >= lastClsEnd - 5 && !freeAfterText) {
+                                                    freeAfterText = txt;
+                                                }
+                                            });
+                                        }
+                                    }
+
+                                    const hasAnyContent = isScheduled || Boolean(freeFullText);
+
                                     return (
                                         <td
                                             key={cellKey}
-                                            className={`schedule-cell ${isScheduled ? 'scheduled-cell' : ''}`}
+                                            className={`schedule-cell ${hasAnyContent ? 'scheduled-cell' : ''}`}
                                         >
+                                            {!isScheduled && freeFullText && (
+                                                <div className="cell-wrapper">
+                                                    <div className="cell-free-activity" style={{ fontSize: '8.5pt', textAlign: 'center', padding: '2px 4px' }}>
+                                                        {freeFullText}
+                                                    </div>
+                                                </div>
+                                            )}
                                             {isScheduled && (
                                                 <div className={`cell-wrapper ${isMulti ? 'cell-multi' : ''}`}>
+                                                    {freeBeforeText && !isMulti && (
+                                                        <div className="cell-free-activity" style={{ fontSize: '7.5pt', textAlign: 'center', width: '100%', borderBottom: '1px solid #000', padding: '1px 2px' }}>
+                                                            {freeBeforeText}
+                                                        </div>
+                                                    )}
                                                     {cellSchedules.map((cls, idx) => {
                                                         const profFormatted = formatProfessorName(cls.professor?.name);
                                                         const rawCode = cls.subject?.code || cls.subjectCode || '—';
@@ -235,7 +276,7 @@ const PrintableSchedule = ({
                                                         return (
                                                             <div
                                                                 key={cls.id || idx}
-                                                                className={`cell-content ${isMulti ? 'compact' : ''}`}
+                                                                className={`cell-content ${(isMulti || freeBeforeText || freeAfterText) ? 'compact' : ''}`}
                                                                 style={idx > 0 && isMulti ? { borderLeft: '1px solid #000' } : undefined}
                                                             >
                                                                 <div className="cell-subject">{subjCode}</div>
@@ -253,6 +294,11 @@ const PrintableSchedule = ({
                                                             </div>
                                                         );
                                                     })}
+                                                    {freeAfterText && !isMulti && (
+                                                        <div className="cell-free-activity" style={{ fontSize: '7.5pt', textAlign: 'center', width: '100%', borderTop: '1px solid #000', padding: '1px 2px' }}>
+                                                            {freeAfterText}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </td>

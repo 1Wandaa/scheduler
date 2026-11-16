@@ -5,6 +5,7 @@ import { TIME_SLOTS, DAYS, FOUR_DAY_TIME_SLOTS, getScheduleConfig, isLunchSlot, 
 import { slotsNeededFromIndex, schedulesOverlap, parseTimeToMinutes, getScheduleTimeRange, isStandardOneAndHalfHourClass, formatTimeRange } from '../../utils/scheduleUtils';
 import { triggerSoundFeedback } from '../../utils/soundEffects';
 import { exportGridToWord, exportGridToExcel } from '../../utils/scheduleExportUtils';
+import { FW_ISO_TIME_BLOCKS, FREE_TIME_PRESETS, getSegmentTimeLabel } from '../../utils/freeTimeUtils';
 import '../../styles/ScheduleTable.css';
 
 // Department color palette
@@ -85,6 +86,113 @@ function computeDeptColor(schedule, departments = []) {
   return DEFAULT_DEPT_COLOR;
 }
 
+function FreeTimeCellEditor({ day, freeSeg, activePresetBrush, onUpdateFreeTimeSegment }) {
+  const [draft, setDraft] = useState(freeSeg?.text || '');
+  const isFocusedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isFocusedRef.current) {
+      setDraft(freeSeg?.text || '');
+    }
+  }, [freeSeg?.text]);
+
+  const handleApplyPreset = (e) => {
+    if (activePresetBrush && onUpdateFreeTimeSegment) {
+      e.stopPropagation();
+      setDraft(activePresetBrush);
+      onUpdateFreeTimeSegment(day, freeSeg.slotIds, activePresetBrush);
+    }
+  };
+
+  return (
+    <div
+      className="free-time-edit-controls"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        gap: '3px',
+        width: '100%',
+        height: '100%',
+        minHeight: '32px'
+      }}
+      onClick={handleApplyPreset}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }}>
+        <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#2563eb', background: '#dbeafe', padding: '1px 5px', borderRadius: '4px', lineHeight: 1.2 }}>
+          {freeSeg.timeLabel}
+        </span>
+        {draft && onUpdateFreeTimeSegment && (
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDraft('');
+              onUpdateFreeTimeSegment(day, freeSeg.slotIds, '');
+            }}
+            title="Clear activity text"
+            style={{
+              background: '#fee2e2',
+              border: '1px solid #fca5a5',
+              borderRadius: '4px',
+              color: '#dc2626',
+              cursor: 'pointer',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              padding: '0 4px',
+              lineHeight: 1.2
+            }}
+          >
+            ×
+          </button>
+        )}
+      </div>
+      <input
+        type="text"
+        list="faculty-free-time-presets"
+        value={draft}
+        onFocus={() => {
+          isFocusedRef.current = true;
+        }}
+        onBlur={() => {
+          isFocusedRef.current = false;
+        }}
+        onChange={(e) => {
+          const val = e.target.value;
+          setDraft(val);
+          if (onUpdateFreeTimeSegment) {
+            onUpdateFreeTimeSegment(day, freeSeg.slotIds, val);
+          }
+        }}
+        onClick={handleApplyPreset}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === 'Enter') {
+            e.currentTarget.blur();
+          }
+        }}
+        placeholder={activePresetBrush ? `Click to fill "${activePresetBrush}"...` : 'Type activity...'}
+        style={{
+          width: '100%',
+          padding: '4px 6px',
+          fontSize: '0.75rem',
+          fontWeight: draft ? 600 : 400,
+          color: '#0f172a',
+          backgroundColor: draft ? '#eff6ff' : '#ffffff',
+          border: `1.5px solid ${draft ? '#3b82f6' : '#94a3b8'}`,
+          borderRadius: '6px',
+          outline: 'none',
+          textAlign: 'center',
+          boxSizing: 'border-box',
+          pointerEvents: 'auto',
+          userSelect: 'text'
+        }}
+      />
+    </div>
+  );
+}
+
 const ScheduleTable = React.memo(function ScheduleTable({
   schedules = [],
   activeSchedules = [],
@@ -100,9 +208,16 @@ const ScheduleTable = React.memo(function ScheduleTable({
   user,
   isAdmin = false,
   onDeleteAll,
-  onToggleDeleteMode
+  onToggleDeleteMode,
+  viewType = 'department',
+  freeTimeActivities = {},
+  isFreeTimeMode = false,
+  onToggleFreeTimeMode,
+  onUpdateFreeTimeSegment,
+  onClearAllFreeTime
 }) {
   const { confirm } = useGlobalDialog();
+  const [activePresetBrush, setActivePresetBrush] = useState('');
 
   // Full department title resolution
   const fullDepartmentName = useMemo(() => {
@@ -326,6 +441,98 @@ const ScheduleTable = React.memo(function ScheduleTable({
     return { cellSpanMap: spanMap, skippedCellsSet: skipped };
   }, [activeTimeSlots, displayDays, scheduleGridMap, scheduleMode]);
 
+  // Pre-calculate contiguous free-time segments per ISO block when viewing a Faculty schedule
+  const { freeTimeSegmentMap, freeTimeSkippedSet } = useMemo(() => {
+    const segMap = new Map();
+    const freeSkipped = new Set();
+
+    if (viewType !== 'faculty') {
+      return { freeTimeSegmentMap: segMap, freeTimeSkippedSet: freeSkipped };
+    }
+
+    displayDays.forEach(day => {
+      FW_ISO_TIME_BLOCKS.forEach(block => {
+        if (block.isLunch) return;
+
+        const runs = [];
+        let curRun = [];
+        block.slotIds.forEach(sid => {
+          const ck = `${day}-${sid}`;
+          const isOccupied = (scheduleGridMap.get(ck)?.length > 0) || skippedCellsSet.has(ck);
+          if (!isOccupied) {
+            curRun.push(sid);
+          } else {
+            if (curRun.length > 0) {
+              runs.push(curRun);
+              curRun = [];
+            }
+          }
+        });
+        if (curRun.length > 0) {
+          runs.push(curRun);
+        }
+
+        runs.forEach(runSlotIds => {
+          if (isFreeTimeMode) {
+            const headId = runSlotIds[0];
+            const existingText = runSlotIds
+              .map(sid => freeTimeActivities[`${day}-${sid}`] || '')
+              .find(t => t.trim() !== '') || '';
+            segMap.set(`${day}-${headId}`, {
+              day,
+              slotIds: runSlotIds,
+              rowSpan: runSlotIds.length,
+              timeLabel: getSegmentTimeLabel(runSlotIds),
+              text: existingText
+            });
+            for (let i = 1; i < runSlotIds.length; i++) {
+              freeSkipped.add(`${day}-${runSlotIds[i]}`);
+            }
+          } else {
+            let groupText = null;
+            let groupSlots = [];
+            const flushGroup = () => {
+              if (groupText && groupSlots.length > 0) {
+                const headId = groupSlots[0];
+                segMap.set(`${day}-${headId}`, {
+                  day,
+                  slotIds: [...groupSlots],
+                  rowSpan: groupSlots.length,
+                  timeLabel: getSegmentTimeLabel(groupSlots),
+                  text: groupText
+                });
+                for (let i = 1; i < groupSlots.length; i++) {
+                  freeSkipped.add(`${day}-${groupSlots[i]}`);
+                }
+              }
+              groupText = null;
+              groupSlots = [];
+            };
+
+            runSlotIds.forEach(sid => {
+              const raw = freeTimeActivities[`${day}-${sid}`] || '';
+              const trimmed = raw.trim();
+              if (trimmed) {
+                if (groupText && groupText.toLowerCase() === trimmed.toLowerCase()) {
+                  groupSlots.push(sid);
+                } else {
+                  flushGroup();
+                  groupText = trimmed;
+                  groupSlots = [sid];
+                }
+              } else {
+                flushGroup();
+              }
+            });
+            flushGroup();
+          }
+        });
+      });
+    });
+
+    return { freeTimeSegmentMap: segMap, freeTimeSkippedSet: freeSkipped };
+  }, [viewType, displayDays, scheduleGridMap, skippedCellsSet, isFreeTimeMode, freeTimeActivities]);
+
   // Department colors per schedule ID
   const deptColorMap = useMemo(() => {
     const map = new Map();
@@ -384,7 +591,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
   // Helper: prepare a clean, desktop-like clone of the schedule for export / print
   const prepareExportClone = useCallback((clone) => {
     // 1. Remove non-printable and interactive elements as well as conflict badges
-    clone.querySelectorAll('.schedule-toolbar, .floating-exit-btn, .rotate-device-hint, .schedule-card-view, .remove-btn, .dept-legend, .schedule-conflict-tag').forEach(el => el.remove());
+    clone.querySelectorAll('.schedule-toolbar, .free-time-mode-banner, .free-time-edit-controls, .floating-exit-btn, .rotate-device-hint, .schedule-card-view, .remove-btn, .dept-legend, .schedule-conflict-tag').forEach(el => el.remove());
     clone.querySelectorAll('.schedule-item.has-conflict').forEach(item => {
       item.style.outline = 'none';
       item.style.backgroundColor = 'transparent';
@@ -1099,9 +1306,9 @@ const ScheduleTable = React.memo(function ScheduleTable({
 
       {/* Toolbar Row */}
       <div className="schedule-toolbar no-print">
-        {(isAdmin && (onDeleteAll || onToggleDeleteMode)) ? (
+        {((isAdmin && (onDeleteAll || onToggleDeleteMode)) || (viewType === 'faculty' && onToggleFreeTimeMode)) ? (
           <div className="schedule-toolbar-actions">
-            {onDeleteAll && (
+            {isAdmin && onDeleteAll && (
               <button
                 className="btn btn-sm schedule-viewer-btn schedule-viewer-delete-btn"
                 onClick={onDeleteAll}
@@ -1119,7 +1326,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
                 Delete All
               </button>
             )}
-            {onToggleDeleteMode && (
+            {isAdmin && onToggleDeleteMode && (
               <button
                 className={`btn btn-sm schedule-viewer-btn schedule-viewer-edit-btn ${isDeleteMode ? 'btn-danger' : 'btn-outline'}`}
                 onClick={onToggleDeleteMode}
@@ -1137,6 +1344,29 @@ const ScheduleTable = React.memo(function ScheduleTable({
                 {isDeleteMode ? 'Done Editing' : 'Edit Schedules'}
               </button>
             )}
+            {viewType === 'faculty' && onToggleFreeTimeMode && (
+              <button
+                type="button"
+                className={`btn btn-sm schedule-viewer-btn schedule-viewer-freetime-btn ${isFreeTimeMode ? 'active' : ''}`}
+                onClick={onToggleFreeTimeMode}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: isFreeTimeMode ? '#eff6ff' : 'white',
+                  color: isFreeTimeMode ? '#2563eb' : 'var(--text-main)',
+                  border: `1.5px solid ${isFreeTimeMode ? '#3b82f6' : 'var(--border-color)'}`,
+                  fontWeight: 600
+                }}
+                title="Type or assign activity text in the faculty's available/free time slots"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                {isFreeTimeMode ? 'Done Free Time Text' : 'Free Time Activity Text'}
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ marginLeft: 'auto' }}></div>
@@ -1147,7 +1377,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
           className="fullscreen-btn"
           onClick={toggleFullscreen}
           title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-          style={{ marginLeft: isAdmin ? 'auto' : undefined }}
+          style={{ marginLeft: 'auto' }}
         >
           {isFullscreen ? (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" /></svg>
@@ -1157,6 +1387,107 @@ const ScheduleTable = React.memo(function ScheduleTable({
           <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
         </button>
       </div>
+
+      {/* Free Time Activity Mode Interactive Banner */}
+      {viewType === 'faculty' && isFreeTimeMode && (
+        <div
+          className="free-time-mode-banner no-print"
+          style={{
+            marginBottom: '14px',
+            padding: '12px 16px',
+            backgroundColor: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            borderRadius: '10px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e3a8a', fontSize: '0.84rem', fontWeight: 600 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>
+                Free Time Activity Mode Active — Type directly into any available time slot below, or pick a quick-fill preset and click a free slot:
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {Object.keys(freeTimeActivities || {}).length > 0 && onClearAllFreeTime && (
+                <button
+                  type="button"
+                  onClick={onClearAllFreeTime}
+                  style={{
+                    background: '#fee2e2',
+                    color: '#dc2626',
+                    border: '1px solid #fca5a5',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear All Free Time
+                </button>
+              )}
+              {activePresetBrush && (
+                <button
+                  type="button"
+                  onClick={() => setActivePresetBrush('')}
+                  style={{
+                    background: '#ffffff',
+                    color: '#475569',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Unselect Preset
+                </button>
+              )}
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginRight: '4px' }}>
+              Quick Fill:
+            </span>
+            {FREE_TIME_PRESETS.map(preset => {
+              const isSelected = activePresetBrush === preset;
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setActivePresetBrush(isSelected ? '' : preset)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '16px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: isSelected ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                    backgroundColor: isSelected ? '#2563eb' : '#ffffff',
+                    color: isSelected ? '#ffffff' : '#1e293b',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title={isSelected ? 'Click any free slot below to fill with this activity' : `Select "${preset}" to quick-fill free slots`}
+                >
+                  {isSelected ? `✓ ${preset}` : preset}
+                </button>
+              );
+            })}
+          </div>
+          <datalist id="faculty-free-time-presets">
+            {FREE_TIME_PRESETS.map(preset => (
+              <option key={preset} value={preset} />
+            ))}
+          </datalist>
+        </div>
+      )}
 
       {/* Header */}
       <div className="schedule-doc-header">
@@ -1255,24 +1586,80 @@ const ScheduleTable = React.memo(function ScheduleTable({
                   {displayDays.map(day => {
                     const cellKey = `${day}-${timeSlot.id}`;
 
-                    if (skippedCellsSet.has(cellKey)) {
+                    if (skippedCellsSet.has(cellKey) || freeTimeSkippedSet.has(cellKey)) {
                       return null;
                     }
 
                     const isDropTarget = dragOverCell === cellKey;
                     const cellSchedules = scheduleGridMap.get(cellKey) || [];
-                    const rowSpan = cellSpanMap.get(cellKey) || 1;
+                    const freeSeg = cellSchedules.length === 0 ? freeTimeSegmentMap.get(cellKey) : null;
+                    const rowSpan = cellSchedules.length > 0 ? (cellSpanMap.get(cellKey) || 1) : (freeSeg ? freeSeg.rowSpan : 1);
                     const primaryColor = cellSchedules.length > 0 ? getDeptColor(cellSchedules[0]) : null;
 
                     return (
                       <td
                         key={cellKey}
                         rowSpan={rowSpan}
-                        className={`schedule-cell ${isDropTarget ? 'drag-over' : ''} ${cellSchedules.length > 0 ? 'has-schedule' : ''}`}
+                        className={`schedule-cell ${isDropTarget ? 'drag-over' : ''} ${cellSchedules.length > 0 ? 'has-schedule' : ''} ${freeSeg ? 'has-free-time-seg' : ''}`}
                         onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
                         onDrop={(e) => handleDrop(e, day, timeSlot.id)}
-                        style={primaryColor ? { backgroundColor: primaryColor.bg, padding: 0 } : undefined}
+                        style={
+                          primaryColor
+                            ? { backgroundColor: primaryColor.bg, padding: 0 }
+                            : freeSeg
+                              ? {
+                                  backgroundColor: isFreeTimeMode ? '#f8fafc' : (freeSeg.text ? '#f8fafc' : undefined),
+                                  padding: '4px 6px',
+                                  verticalAlign: 'middle',
+                                  border: isFreeTimeMode ? '1.5px dashed #93c5fd' : (freeSeg.text ? '1px solid #cbd5e1' : undefined)
+                                }
+                              : undefined
+                        }
                       >
+                        {cellSchedules.length === 0 && freeSeg && isFreeTimeMode && (
+                          <FreeTimeCellEditor
+                            day={day}
+                            freeSeg={freeSeg}
+                            activePresetBrush={activePresetBrush}
+                            onUpdateFreeTimeSegment={onUpdateFreeTimeSegment}
+                          />
+                        )}
+
+                        {cellSchedules.length === 0 && freeSeg && !isFreeTimeMode && freeSeg.text && (
+                          <div
+                            className="free-time-activity-display"
+                            onClick={() => {
+                              if (onToggleFreeTimeMode) onToggleFreeTimeMode();
+                            }}
+                            title="Click to edit free time activity"
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '100%',
+                              height: '100%',
+                              padding: '4px',
+                              textAlign: 'center',
+                              boxSizing: 'border-box',
+                              cursor: onToggleFreeTimeMode ? 'pointer' : 'default'
+                            }}
+                          >
+                            <span
+                              className="free-time-activity-text"
+                              style={{
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                                color: '#1e293b',
+                                lineHeight: 1.25,
+                                wordBreak: 'break-word'
+                              }}
+                            >
+                              {freeSeg.text}
+                            </span>
+                          </div>
+                        )}
+
                         {cellSchedules.map((schedule) => {
                           const deptColor = getDeptColor(schedule);
                           const profFormatted = formatProfessorName(schedule.professor?.name);

@@ -8,6 +8,12 @@
 import { toast } from 'sonner';
 import { logActivity, LOG_ACTIONS } from './activityLogger';
 import { getMeetingTimeLabel, parseTimeToMinutes } from './scheduleUtils';
+import {
+  FW_ISO_TIME_BLOCKS,
+  getFacultyFreeTimeActivities,
+  buildFacultyWorkloadScheduleGrid,
+  computeTeachingAssignments
+} from './freeTimeUtils';
 
 /**
  * Downloads content as a file with a given MIME type
@@ -403,21 +409,21 @@ function wrapFacultyWorkloadWordHtml(bodyHtml, title = 'Faculty Workload') {
   <![endif]-->
   <style>
     @page Section1 {
-      size: 8.28in 11.71in; /* A4 Portrait matching reference docx (11918 x 16858 dxa) */
+      size: 8.5in 11.0in; /* Portrait Letter maximized 1-page layout */
       mso-page-orientation: portrait;
-      margin: 0.35in 0.5in 0.4in 0.5in;
-      mso-header-margin: 0.35in;
-      mso-footer-margin: 0.4in;
+      margin: 0.25in 0.35in 0.25in 0.35in;
+      mso-header-margin: 0.2in;
+      mso-footer-margin: 0.2in;
       mso-paper-source: 0;
     }
     div.Section1 {
       page: Section1;
-      width: 525pt;
+      width: 560pt;
       margin: 0 auto;
     }
     body {
       font-family: "Times New Roman", Times, serif !important;
-      font-size: 8pt;
+      font-size: 8.5pt;
       line-height: 1.15;
       color: #000000;
       background-color: #ffffff;
@@ -431,7 +437,7 @@ function wrapFacultyWorkloadWordHtml(bodyHtml, title = 'Faculty Workload') {
       line-height: 1.15;
       font-family: "Times New Roman", Times, serif !important;
       mso-pagination: none;
-      mso-line-height-rule: exactly;
+      mso-line-height-rule: at-least;
     }
     table {
       border-collapse: collapse;
@@ -443,14 +449,14 @@ function wrapFacultyWorkloadWordHtml(bodyHtml, title = 'Faculty Workload') {
       page-break-inside: avoid;
       mso-padding-alt: 0pt;
       margin: 0 auto;
-      width: 525pt;
+      width: 560pt;
     }
     td, th {
       font-family: "Times New Roman", Times, serif !important;
       border: 1.0pt solid #000000;
       vertical-align: middle;
       text-align: center;
-      padding: 1.5pt 2pt;
+      padding: 2pt 3pt;
     }
     .fw-bold {
       font-weight: bold;
@@ -789,10 +795,16 @@ export async function exportIsoToWord(user) {
                 ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${rawRoom}</p>` : ''}
               `;
             } else {
+              const freeAct = td.querySelector('.cell-free-activity')?.textContent.trim() || '';
               td.setAttribute('align', 'center');
               td.setAttribute('valign', 'middle');
               td.style.verticalAlign = 'middle';
-              td.innerHTML = '&nbsp;';
+              if (freeAct) {
+                td.style.border = '1.0pt solid #000000';
+                td.innerHTML = `<p align="center" style="font-family: 'Times New Roman', Times, serif; font-size: 9.5pt; margin: 0; padding: 2pt; text-align: center; color: #000000; line-height: 1.15;">${freeAct}</p>`;
+              } else {
+                td.innerHTML = '&nbsp;';
+              }
             }
           }
         }
@@ -1341,297 +1353,337 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
 
     const profName = professor?.name || 'Faculty';
     const profRank = professor?.rank || '';
+    const profDesignation = professor?.designation || '';
     const activeSemester = semesterInfo || '1st Semester, School Year 2026-2027';
 
-    // 1. Process Unique Assignments
-    const assignmentsMap = new Map();
-    (schedules || []).forEach(s => {
-      if (!s.subject || !s.section) return;
-      const comp = s.component || '';
-      const key = `${s.subject.id || s.subject.code}-${s.section.id || s.section.name}${comp ? '-' + comp : ''}`;
-      const compHours = Number(s.hours) || (s.subject.hasLecLab 
-          ? (comp === 'Lecture' ? (Number(s.subject.lectureHours) || 2) : (Number(s.subject.labHours) || 3))
-          : (Number(s.subject.hoursPerMeeting) || 3));
-      const compUnit = s.subject.hasLecLab
-          ? (comp === 'Lecture' ? (Number(s.subject.lectureHours) || 2) : (Number(s.subject.labHours) || 3))
-          : (s.subject.units ?? s.subject.credits ?? 3);
-      if (!assignmentsMap.has(key)) {
-        assignmentsMap.set(key, {
-          id: key,
-          subjectCode: (s.subject.code || 'N/A') + (comp ? ` (${comp})` : ''),
-          subjectName: s.subject.name || s.subject.title || 'N/A',
-          unit: compUnit,
-          hoursPerWeek: compHours,
-          sectionName: s.section.name || 'N/A',
-          studentsCount: s.section.studentsCount || ''
-        });
-      }
-    });
-    const uniqueAssignments = Array.from(assignmentsMap.values());
-    const totalUnits = uniqueAssignments.reduce((sum, a) => sum + Number(a.unit || 0), 0);
-    const totalHours = uniqueAssignments.reduce((sum, a) => sum + Number(a.hoursPerWeek || 0), 0);
+    // 1. Process Unique Assignments (matching INS F22 1st-Sem-26-27_FW.pdf)
+    const {
+      uniqueAssignments,
+      totalUnits,
+      totalHoursDisplay,
+      totalStudents
+    } = computeTeachingAssignments(schedules);
 
-    // 2. Process Unique Time Blocks
+    // 2. Process 8-Block Class Schedule with Free-Time Activities
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const rawUniqueTimes = new Set();
-    (schedules || []).forEach(schedule => {
-      if (!schedule.day || !schedule.timeSlot) return;
-      const sHours = Number(schedule.hours) || (schedule.subject?.hasLecLab 
-          ? (schedule.component === 'Lecture' ? ((Number(schedule.subject.lectureHours) || 2) / 2) : ((Number(schedule.subject.labHours) || 3) / 2))
-          : (Number(schedule.subject?.hoursPerMeeting) || 1.5));
-      const label = getMeetingTimeLabel(schedule.timeSlot, sHours, 'standard');
-      if (label) rawUniqueTimes.add(label);
-    });
-    const uniqueTimeBlocks = Array.from(rawUniqueTimes).map(label => {
-      const parts = label.split('-');
-      const startStr = parts[0]?.trim() || '';
-      const startMinutes = parseTimeToMinutes(startStr) || 0;
-      return { label, startMinutes };
-    }).sort((a, b) => a.startMinutes - b.startMinutes);
+    const dayColWidths = { Monday: 94, Tuesday: 94, Wednesday: 94, Thursday: 94, Friday: 94 };
+    const freeTimeActivities = getFacultyFreeTimeActivities(professor, profName);
+    const scheduleGrid = buildFacultyWorkloadScheduleGrid(schedules, freeTimeActivities, 'standard');
+    const assignRows = Math.max(1, uniqueAssignments.length);
+    const schedBlockRowHeightPt = assignRows <= 4 ? 38 : (assignRows <= 6 ? 34 : (assignRows <= 8 ? 30 : 25));
+
+    const formatRoomAndSec = (cls) => {
+      const rawRoom = cls?.room?.name
+        ? cls.room.name.replace(/^Room\s+/i, 'RM ').replace(/^ROOM\s+/i, 'RM ')
+        : 'TBA';
+      const secName = cls?.section?.name || '';
+      return secName ? `${rawRoom} - ${secName}` : rawRoom;
+    };
+
+    const formatCleanSubjCode = (cls) => {
+      const raw = cls?.subject?.code || '';
+      return raw
+        .replace(/\s*\((?:Lecture|Laboratory|Lec|Lab)\)/gi, '')
+        .replace(/^Free Elective\b/i, 'Free Elect')
+        .replace(/^CS Elective\b/i, 'CS Elect')
+        .trim();
+    };
 
     // 3. Fetch Logo
     const logoBase64 = await getImageAsBase64('/capsu-logo.jpg') || await getImageAsBase64('/download.jpg') || await getImageAsBase64('/logo.png');
     const logoHtml = logoBase64 
-      ? `<img src="${logoBase64}" width="46" height="46" style="display: block; margin: 0 auto;" alt="Logo" />`
-      : `<p align="center" style="font-weight: bold; font-size: 8.5pt; color: #1e3a8a; margin: 0;">CapSU</p>`;
+      ? `<img src="${logoBase64}" width="48" height="48" style="display: block; margin: 0 auto;" alt="Logo" />`
+      : `<p align="center" style="font-weight: bold; font-size: 9pt; color: #1e3a8a; margin: 0;">CapSU</p>`;
 
-    // 4. ISO Header Table (525pt matching reference docx)
+    // 4. ISO Header Table (560pt maximized Portrait width: 80 + 248 + 116 + 116 = 560pt)
     const headerHtml = `
-      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="2" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000;">
+      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="2" style="width: 560pt; border-collapse: collapse; margin-bottom: 4pt; border: 1.0pt solid #000000;">
         <colgroup>
-          <col width="75" style="width: 75pt;">
-          <col width="230" style="width: 230pt;">
-          <col width="110" style="width: 110pt;">
-          <col width="110" style="width: 110pt;">
+          <col width="80" style="width: 80pt;">
+          <col width="248" style="width: 248pt;">
+          <col width="116" style="width: 116pt;">
+          <col width="116" style="width: 116pt;">
         </colgroup>
         <tr>
-          <td rowspan="4" align="center" valign="middle" width="75" style="width: 75pt; text-align: center; vertical-align: middle; padding: 1pt;">
+          <td rowspan="4" align="center" valign="middle" width="80" style="width: 80pt; text-align: center; vertical-align: middle; padding: 2pt;">
             ${logoHtml}
           </td>
-          <td rowspan="2" valign="middle" width="230" style="width: 230pt; padding: 2pt 4pt; font-size: 8.5pt; vertical-align: middle;">
-            <div style="font-size: 8.5pt;">Document Type: <span style="font-weight: bold; margin-left: 12pt;">FORM</span></div>
+          <td rowspan="2" valign="middle" width="248" style="width: 248pt; padding: 2pt 5pt; font-size: 9pt; vertical-align: middle;">
+            <div style="font-size: 9pt;">Document Type: <span style="font-weight: bold; margin-left: 14pt;">FORM</span></div>
             <div style="font-size: 8.5pt; font-weight: bold; text-align: center; margin-top: 1pt;">ISO 9001:2015</div>
           </td>
-          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: left; padding-left: 4pt;">Document Code</td>
-          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: center;">INS F22</td>
+          <td width="116" style="width: 116pt; font-size: 8.5pt; font-weight: bold; text-align: left; padding-left: 5pt;">Document Code</td>
+          <td width="116" style="width: 116pt; font-size: 8.5pt; font-weight: bold; text-align: center;">INS F22</td>
         </tr>
         <tr>
-          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: left; padding-left: 4pt;">Revision No.</td>
-          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: center;">00</td>
+          <td width="116" style="width: 116pt; font-size: 8.5pt; font-weight: bold; text-align: left; padding-left: 5pt;">Revision No.</td>
+          <td width="116" style="width: 116pt; font-size: 8.5pt; font-weight: bold; text-align: center;">00</td>
         </tr>
         <tr>
-          <td rowspan="2" valign="middle" width="230" style="width: 230pt; padding: 2pt 4pt; font-size: 8.5pt; vertical-align: middle;">
+          <td rowspan="2" valign="middle" width="248" style="width: 248pt; padding: 2pt 5pt; font-size: 8.5pt; vertical-align: middle;">
             <div style="font-size: 8.5pt;">Document Type:</div>
-            <div style="font-size: 11.5pt; font-weight: bold; text-align: center; margin-top: 1pt;">FACULTY WORKLOAD</div>
+            <div style="font-size: 12pt; font-weight: bold; text-align: center; margin-top: 1pt;">FACULTY WORKLOAD</div>
           </td>
-          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: left; padding-left: 4pt;">Effective Date</td>
-          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: center;">August 5, 2024</td>
+          <td width="116" style="width: 116pt; font-size: 8.5pt; font-weight: bold; text-align: left; padding-left: 5pt;">Effective Date</td>
+          <td width="116" style="width: 116pt; font-size: 8.5pt; font-weight: bold; text-align: center;">August 5, 2024</td>
         </tr>
         <tr>
-          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: left; padding-left: 4pt;">Page</td>
-          <td width="110" style="width: 110pt; font-size: 8.5pt; font-weight: bold; text-align: center;">1 of 1</td>
+          <td width="116" style="width: 116pt; font-size: 8.5pt; font-weight: bold; text-align: left; padding-left: 5pt;">Page</td>
+          <td width="116" style="width: 116pt; font-size: 8.5pt; font-weight: bold; text-align: center;">1 of 1</td>
         </tr>
       </table>
     `;
 
     // 5. Semester & Faculty Meta
     const metaHtml = `
-      <p align="center" style="text-align: center; font-size: 9.5pt; font-weight: bold; margin: 3pt 0 2pt 0; text-decoration: underline;">
+      <p align="center" style="text-align: center; font-size: 10pt; font-weight: bold; margin: 4pt 0 3pt 0; text-decoration: underline;">
         ${activeSemester}
       </p>
-      <p style="font-size: 8.5pt; margin: 2pt 0 3pt 0;">
+      <p style="font-size: 9.5pt; margin: 2pt 0 4pt 0;">
         Name of Faculty: <span style="font-weight: bold; text-decoration: underline;">${profName}</span>
       </p>
     `;
 
-    // 6. Faculty Profile Table (525pt)
+    // 6. Faculty Profile Table (560pt: 126 + 48 + 224 + 162 = 560pt)
     const profileTableHtml = `
-      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7.5pt;">
+      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="2" style="width: 560pt; border-collapse: collapse; margin-bottom: 4pt; border: 1.0pt solid #000000; font-size: 8pt;">
         <colgroup>
-          <col width="122" style="width: 122pt;">
-          <col width="45" style="width: 45pt;">
-          <col width="207" style="width: 207pt;">
-          <col width="151" style="width: 151pt;">
+          <col width="126" style="width: 126pt;">
+          <col width="48" style="width: 48pt;">
+          <col width="224" style="width: 224pt;">
+          <col width="162" style="width: 162pt;">
         </colgroup>
         <tr style="background-color: #f2f2f2;">
-          <th colspan="4" style="font-weight: bold; font-size: 8pt; text-align: center; padding: 2pt;">FACULTY PROFILE</th>
+          <th colspan="4" style="font-weight: bold; font-size: 8.5pt; text-align: center; padding: 2.5pt;">FACULTY PROFILE</th>
         </tr>
         <tr>
           <td rowspan="3" style="font-weight: bold; text-align: center; vertical-align: middle;">BACCALAUREATE</td>
           <td style="text-align: left; padding-left: 4pt;">Degree</td>
-          <td></td>
+          <td style="text-align: left; padding-left: 4pt;">${professor?.baccalaureateDegree || ''}</td>
           <td></td>
         </tr>
         <tr>
           <td style="text-align: left; padding-left: 4pt;">School</td>
-          <td></td>
+          <td style="text-align: left; padding-left: 4pt;">${professor?.baccalaureateSchool || ''}</td>
           <td></td>
         </tr>
         <tr>
           <td style="text-align: left; padding-left: 4pt;">Major</td>
-          <td></td>
+          <td style="text-align: left; padding-left: 4pt;">${professor?.baccalaureateMajor || ''}</td>
           <td></td>
         </tr>
         <tr>
           <td rowspan="3" style="font-weight: bold; text-align: center; vertical-align: middle;">MASTER'S DEGREE</td>
           <td style="text-align: left; padding-left: 4pt;">Degree</td>
-          <td></td>
-          <td style="text-align: left; padding-left: 4pt; font-size: 7.5pt;">Rank/Position: <b>${profRank}</b></td>
+          <td style="text-align: left; padding-left: 4pt;">${professor?.mastersDegree || ''}</td>
+          <td style="text-align: left; padding-left: 4pt; font-size: 8pt;">Rank/Position: <b>${profRank}</b></td>
         </tr>
         <tr>
           <td style="text-align: left; padding-left: 4pt;">School</td>
-          <td></td>
-          <td style="text-align: left; padding-left: 4pt; font-size: 7.5pt;">Designation:</td>
+          <td style="text-align: left; padding-left: 4pt;">${professor?.mastersSchool || ''}</td>
+          <td style="text-align: left; padding-left: 4pt; font-size: 8pt;">Designation: ${profDesignation}</td>
         </tr>
         <tr>
           <td style="text-align: left; padding-left: 4pt;">Major</td>
-          <td></td>
+          <td style="text-align: left; padding-left: 4pt;">${professor?.mastersMajor || ''}</td>
           <td></td>
         </tr>
         <tr>
           <td rowspan="3" style="font-weight: bold; text-align: center; vertical-align: middle;">DOCTORATE</td>
           <td style="text-align: left; padding-left: 4pt;">Degree</td>
-          <td></td>
+          <td style="text-align: left; padding-left: 4pt;">${professor?.doctorateDegree || ''}</td>
           <td></td>
         </tr>
         <tr>
           <td style="text-align: left; padding-left: 4pt;">School</td>
-          <td></td>
+          <td style="text-align: left; padding-left: 4pt;">${professor?.doctorateSchool || ''}</td>
           <td></td>
         </tr>
         <tr>
           <td style="text-align: left; padding-left: 4pt;">Major</td>
-          <td></td>
+          <td style="text-align: left; padding-left: 4pt;">${professor?.doctorateMajor || ''}</td>
           <td></td>
         </tr>
       </table>
     `;
 
-    // 7. Teaching Assignment Table (525pt matching reference docx)
+    // 7. Teaching Assignment Table (560pt: 78 + 218 + 42 + 94 + 72 + 56 = 560pt)
     const teachingAssignmentHtml = `
-      <p style="font-size: 8pt; font-weight: bold; margin: 3pt 0 1pt 0;">TEACHING ASSIGNMENT:</p>
-      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7.5pt;">
+      <p style="font-size: 8.5pt; font-weight: bold; margin: 4pt 0 2pt 0;">TEACHING ASSIGNMENT:</p>
+      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="2" style="width: 560pt; border-collapse: collapse; margin-bottom: 4pt; border: 1.0pt solid #000000; font-size: 8pt;">
         <colgroup>
+          <col width="78" style="width: 78pt;">
+          <col width="218" style="width: 218pt;">
+          <col width="42" style="width: 42pt;">
+          <col width="94" style="width: 94pt;">
           <col width="72" style="width: 72pt;">
-          <col width="203" style="width: 203pt;">
-          <col width="40" style="width: 40pt;">
-          <col width="90" style="width: 90pt;">
-          <col width="68" style="width: 68pt;">
-          <col width="52" style="width: 52pt;">
+          <col width="56" style="width: 56pt;">
         </colgroup>
         <tr style="background-color: #f2f2f2; font-weight: bold;">
-          <th rowspan="2" style="width: 72pt; vertical-align: middle;">Course No.</th>
-          <th rowspan="2" style="width: 203pt; vertical-align: middle;">Course Title</th>
-          <th rowspan="2" style="width: 40pt; vertical-align: middle;">Units</th>
-          <th style="width: 90pt;">No. of Hours</th>
-          <th rowspan="2" style="width: 68pt; vertical-align: middle;">Course and<br/>Year Level</th>
-          <th rowspan="2" style="width: 52pt; vertical-align: middle;">No. of<br/>Students</th>
+          <th rowspan="2" style="width: 78pt; vertical-align: middle;">Course No.</th>
+          <th rowspan="2" style="width: 218pt; vertical-align: middle;">Course Title</th>
+          <th rowspan="2" style="width: 42pt; vertical-align: middle;">Units</th>
+          <th style="width: 94pt;">No. of Hours</th>
+          <th rowspan="2" style="width: 72pt; vertical-align: middle;">Course and<br/>Year Level</th>
+          <th rowspan="2" style="width: 56pt; vertical-align: middle;">No. of<br/>Students</th>
         </tr>
         <tr style="background-color: #f2f2f2; font-weight: bold;">
-          <th style="font-size: 7pt;">Lec/Lab</th>
+          <th style="font-size: 7.5pt;">Lec/Lab</th>
         </tr>
         ${uniqueAssignments.map(a => `
           <tr>
             <td style="text-align: center; font-weight: bold;">${a.subjectCode}</td>
-            <td style="text-align: left; padding-left: 3pt;">${a.subjectName}</td>
+            <td style="text-align: left; padding-left: 4pt;">${a.subjectName}</td>
             <td style="text-align: center; font-weight: bold;">${a.unit}</td>
             <td style="text-align: center;">${a.hoursPerWeek}</td>
             <td style="text-align: center;">${a.sectionName}</td>
             <td style="text-align: center; font-weight: bold;">${a.studentsCount}</td>
           </tr>
         `).join('')}
-        ${uniqueAssignments.length === 0 ? `<tr><td colspan="6" style="height: 18pt; font-style: italic; text-align: center;">No teaching assignments recorded</td></tr>` : ''}
+        ${uniqueAssignments.length === 0 ? `<tr><td colspan="6" style="height: 20pt; font-style: italic; text-align: center;">No teaching assignments recorded</td></tr>` : ''}
         <tr style="font-weight: bold; background-color: #fafafa;">
-          <td colspan="2" style="text-align: right; padding-right: 6pt;">TOTAL</td>
+          <td colspan="2" style="text-align: left; padding-left: 6pt;">TOTAL</td>
           <td style="text-align: center;">${totalUnits > 0 ? totalUnits : ''}</td>
-          <td style="text-align: center;">${totalHours > 0 ? totalHours : ''}</td>
-          <td colspan="2"></td>
+          <td style="text-align: center;">${totalHoursDisplay}</td>
+          <td></td>
+          <td style="text-align: center;">${totalStudents > 0 ? totalStudents : ''}</td>
         </tr>
         <tr>
-          <td colspan="6" style="text-align: left; font-weight: bold; padding-left: 3pt; font-size: 7pt;">Other Assignments:</td>
+          <td colspan="6" style="text-align: left; font-weight: bold; padding-left: 4pt; font-size: 7.5pt;">Other Assignments:</td>
         </tr>
-        <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td>&nbsp;</td><td style="text-align: left; padding-left: 4pt;">${professor?.otherAssignments || ''}</td><td></td><td></td><td></td><td></td></tr>
         <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
       </table>
     `;
 
-    // 8. Class Schedule Table (525pt matching reference docx)
+    // 8. Class Schedule Table (560pt: 90 + 94 + 94 + 94 + 94 + 94 = 560pt)
     const classScheduleHtml = `
-      <p style="font-size: 8pt; font-weight: bold; margin: 3pt 0 1pt 0;">Class Schedule:</p>
-      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="1" style="width: 525pt; border-collapse: collapse; margin-bottom: 3pt; border: 1.0pt solid #000000; font-size: 7.5pt;">
+      <p style="font-size: 8.5pt; font-weight: bold; margin: 4pt 0 2pt 0;">Class Schedule:</p>
+      <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="2" style="width: 560pt; border-collapse: collapse; margin-bottom: 4pt; border: 1.0pt solid #000000; font-size: 8pt;">
         <colgroup>
-          <col width="89" style="width: 89pt;">
-          <col width="87" style="width: 87pt;">
-          <col width="87" style="width: 87pt;">
-          <col width="91" style="width: 91pt;">
-          <col width="88" style="width: 88pt;">
-          <col width="83" style="width: 83pt;">
+          <col width="90" style="width: 90pt;">
+          <col width="94" style="width: 94pt;">
+          <col width="94" style="width: 94pt;">
+          <col width="94" style="width: 94pt;">
+          <col width="94" style="width: 94pt;">
+          <col width="94" style="width: 94pt;">
         </colgroup>
-        <tr style="background-color: #f2f2f2; font-weight: bold;">
-          <th style="width: 89pt;">TIME</th>
-          <th style="width: 87pt;">MONDAY</th>
-          <th style="width: 87pt;">TUESDAY</th>
-          <th style="width: 91pt;">WEDNESDAY</th>
-          <th style="width: 88pt;">THURSDAY</th>
-          <th style="width: 83pt;">FRIDAY</th>
+        <tr style="background-color: #f2f2f2; font-weight: bold; height: 18pt;">
+          <th style="width: 90pt;">TIME</th>
+          <th style="width: 94pt;">MONDAY</th>
+          <th style="width: 94pt;">TUESDAY</th>
+          <th style="width: 94pt;">WEDNESDAY</th>
+          <th style="width: 94pt;">THURSDAY</th>
+          <th style="width: 94pt;">FRIDAY</th>
         </tr>
-        ${uniqueTimeBlocks.map(block => `
-          <tr>
-            <td style="text-align: center; font-weight: bold; font-size: 7.5pt; white-space: nowrap;">${block.label.replace('-', '–')}</td>
-            ${days.map(day => {
-              const classes = (schedules || []).filter(s => {
-                if (s.day !== day) return false;
-                const sHours = Number(s.hours) || (s.subject?.hasLecLab 
-                    ? (s.component === 'Lecture' ? ((Number(s.subject.lectureHours) || 2) / 2) : ((Number(s.subject.labHours) || 3) / 2))
-                    : (Number(s.subject?.hoursPerMeeting) || 1.5));
-                const label = getMeetingTimeLabel(s.timeSlot, sHours, 'standard');
-                return label === block.label;
-              });
+        ${FW_ISO_TIME_BLOCKS.map((block, rowIdx) => {
+          if (block.isLunch) {
+            return `
+              <tr style="height: 13pt;">
+                <td style="text-align: center; font-weight: bold; font-size: 8pt; white-space: nowrap;">${block.label}</td>
+                <td></td><td></td><td></td><td></td><td></td>
+              </tr>
+            `;
+          }
 
-              if (classes.length === 0) {
-                return `<td></td>`;
-              }
+          return `
+            <tr style="height: ${schedBlockRowHeightPt}pt;">
+              <td style="text-align: center; font-weight: bold; font-size: 8pt; white-space: nowrap;">${block.label}</td>
+              ${days.map(day => {
+                const cell = scheduleGrid[day]?.[rowIdx];
+                if (!cell || cell.skip) return '';
 
-              return `
-                <td style="text-align: center; vertical-align: middle; padding: 1.5pt;">
-                  ${classes.map(cls => `
-                    <div style="font-weight: bold; font-size: 8pt;">${cls.subject?.code || ''}</div>
-                    <div style="font-size: 7pt; color: #111;">${cls.room?.name ? cls.room.name.replace('Room', 'RM').replace('ROOM', 'RM') : 'TBA'}${cls.section?.name ? ' - ' + cls.section.name : ''}</div>
-                  `).join('<div style="height: 1.5pt;"></div>')}
-                </td>
-              `;
-            }).join('')}
-          </tr>
-        `).join('')}
-        ${uniqueTimeBlocks.length === 0 ? `<tr><td colspan="6" style="height: 18pt; font-style: italic; text-align: center;">No scheduled classes</td></tr>` : ''}
+                const items = cell.items || [];
+                const colW = dayColWidths[day] || 94;
+                const rowSpanAttr = cell.rowSpan > 1 ? ` rowspan="${cell.rowSpan}"` : '';
+                let borderStyles = '';
+                if (cell.mergeBottomWithNext) borderStyles += 'border-bottom: none; ';
+                if (cell.mergeTopWithPrev) borderStyles += 'border-top: none; ';
+
+                if (items.length === 0) {
+                  return `<td width="${colW}"${rowSpanAttr} style="width: ${colW}pt; ${borderStyles}">&nbsp;</td>`;
+                }
+
+                if (items.length === 1) {
+                  const item = items[0];
+                  if (item.type === 'class') {
+                    return `
+                      <td width="${colW}"${rowSpanAttr} style="width: ${colW}pt; text-align: center; vertical-align: middle; padding: 2pt; ${borderStyles}">
+                        <div style="font-weight: bold; font-size: 8pt;">${formatCleanSubjCode(item.schedule)}</div>
+                        <div style="font-size: 7.2pt; color: #111;">${formatRoomAndSec(item.schedule)}</div>
+                      </td>
+                    `;
+                  }
+                  return `
+                    <td width="${colW}"${rowSpanAttr} style="width: ${colW}pt; text-align: center; vertical-align: middle; padding: 2pt 3pt; font-size: 7.8pt; ${borderStyles}">
+                      ${item.text}
+                    </td>
+                  `;
+                }
+
+                // Split cell (e.g. Class Preparation + Class, or Class + Consultation Hour)
+                const subRowH = Math.max(12, Math.floor(schedBlockRowHeightPt / items.length));
+                const subRowsHtml = items.map((item, idx) => {
+                  const topBorder = idx > 0 ? 'border-top: 1.0pt solid #000000;' : 'border-top: none;';
+                  if (item.type === 'class') {
+                    return `
+                      <tr style="height: ${subRowH}pt;">
+                        <td style="border: none; ${topBorder} text-align: center; vertical-align: middle; padding: 1.5pt 2pt;">
+                          <div style="font-weight: bold; font-size: 8pt;">${formatCleanSubjCode(item.schedule)}</div>
+                          <div style="font-size: 7pt; color: #111;">${formatRoomAndSec(item.schedule)}</div>
+                        </td>
+                      </tr>
+                    `;
+                  }
+                  const textContent = (cell.mergeTopWithPrev && idx === 0) ? '&nbsp;' : item.text;
+                  return `
+                    <tr style="height: ${subRowH}pt;">
+                      <td style="border: none; ${topBorder} text-align: center; vertical-align: middle; padding: 1.5pt 2pt; font-size: 7.5pt;">
+                        ${textContent}
+                      </td>
+                    </tr>
+                  `;
+                }).join('');
+
+                return `
+                  <td width="${colW}"${rowSpanAttr} style="width: ${colW}pt; padding: 0; vertical-align: middle; ${borderStyles}">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; border: none; table-layout: fixed;">
+                      ${subRowsHtml}
+                    </table>
+                  </td>
+                `;
+              }).join('')}
+            </tr>
+          `;
+        }).join('')}
       </table>
     `;
 
-    // 9. Signatures Block (525pt matching reference docx)
+    // 9. Signatures Block (560pt: 280 + 280 = 560pt)
     const signaturesHtml = `
-      <table border="0" cellspacing="0" cellpadding="0" style="width: 525pt; border-collapse: collapse; margin-top: 6pt; border: none;">
+      <table border="0" cellspacing="0" cellpadding="0" style="width: 560pt; border-collapse: collapse; margin-top: 8pt; border: none;">
         <colgroup>
-          <col width="265" style="width: 265pt;">
-          <col width="260" style="width: 260pt;">
+          <col width="280" style="width: 280pt;">
+          <col width="280" style="width: 280pt;">
         </colgroup>
         <tr>
           <td style="border: none; text-align: left; vertical-align: top; padding: 0;">
-            <div style="font-size: 8pt;">Prepared by:</div>
-            <div style="height: 14pt;"></div>
-            <div style="font-size: 9pt; font-weight: bold;"><u>JELLY L. PAREDES, EdD</u></div>
-            <div style="font-size: 7.5pt; color: #333;">Program Chairperson</div>
+            <div style="font-size: 8.5pt;">Prepared by:</div>
+            <div style="height: 16pt;"></div>
+            <div style="font-size: 9.5pt; font-weight: bold;"><u>JELLY L. PAREDES, EdD</u></div>
+            <div style="font-size: 8pt; color: #333;">Program Chairperson</div>
             
-            <div style="height: 8pt;"></div>
-            <div style="font-size: 8pt;">Approved:</div>
-            <div style="height: 14pt;"></div>
-            <div style="font-size: 9pt; font-weight: bold;"><u>RAMY LLOYD L. LOTILLA, EdD</u></div>
-            <div style="font-size: 7.5pt; color: #333;">Satellite College Director</div>
+            <div style="height: 10pt;"></div>
+            <div style="font-size: 8.5pt;">Approved:</div>
+            <div style="height: 16pt;"></div>
+            <div style="font-size: 9.5pt; font-weight: bold;"><u>RAMY LLOYD L. LOTILLA, EdD</u></div>
+            <div style="font-size: 8pt; color: #333;">Satellite College Director</div>
           </td>
-          <td style="border: none; text-align: left; vertical-align: top; padding: 0 0 0 20pt;">
-            <div style="font-size: 8pt;">Conforme:</div>
-            <div style="height: 14pt;"></div>
-            <div style="font-size: 9pt; font-weight: bold;"><u>${profName}</u></div>
-            <div style="font-size: 7.5pt; color: #333;">Faculty</div>
+          <td style="border: none; text-align: left; vertical-align: top; padding: 0 0 0 24pt;">
+            <div style="font-size: 8.5pt;">Conforme:</div>
+            <div style="height: 16pt;"></div>
+            <div style="font-size: 9.5pt; font-weight: bold;"><u>${profName}</u></div>
+            <div style="font-size: 8pt; color: #333;">Faculty</div>
           </td>
         </tr>
       </table>
@@ -1966,21 +2018,30 @@ export async function exportGridToWord(tableContainer, user) {
               ${roomSecLine ? `<p style="font-size: 8.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.15;">${roomSecLine}</p>` : ''}
             `;
           } else {
-            // Empty cell: keep clean, with border styling for 1-hour groups
-            td.style.backgroundColor = '#ffffff';
-            td.setAttribute('bgcolor', '#ffffff');
-            td.style.borderLeft = '1.0pt solid #000000';
-            td.style.borderRight = '1.0pt solid #000000';
-            if (isHourHead) {
-              td.style.borderTop = '1.0pt solid #000000';
-              td.style.borderBottom = '0.5pt dashed #cbd5e1';
-            } else if (isHalfHour) {
-              td.style.borderTop = 'none';
-              td.style.borderBottom = '1.0pt solid #000000';
-            } else {
+            const freeTextEl = td.querySelector('.free-time-activity-text');
+            const freeText = freeTextEl?.textContent.trim() || '';
+            if (freeText) {
+              td.style.backgroundColor = '#ffffff';
+              td.setAttribute('bgcolor', '#ffffff');
               td.style.border = '1.0pt solid #000000';
+              td.innerHTML = `<p style="font-size: 9pt; margin: 0; padding: 2pt; text-align: center; color: #000000; line-height: 1.15;">${freeText}</p>`;
+            } else {
+              // Empty cell: keep clean, with border styling for 1-hour groups
+              td.style.backgroundColor = '#ffffff';
+              td.setAttribute('bgcolor', '#ffffff');
+              td.style.borderLeft = '1.0pt solid #000000';
+              td.style.borderRight = '1.0pt solid #000000';
+              if (isHourHead) {
+                td.style.borderTop = '1.0pt solid #000000';
+                td.style.borderBottom = '0.5pt dashed #cbd5e1';
+              } else if (isHalfHour) {
+                td.style.borderTop = 'none';
+                td.style.borderBottom = '1.0pt solid #000000';
+              } else {
+                td.style.border = '1.0pt solid #000000';
+              }
+              td.innerHTML = '&nbsp;';
             }
-            td.innerHTML = '&nbsp;';
           }
         }
       });

@@ -21,13 +21,21 @@
   max-width: 8.5in;
   margin: 0 auto;
   background: white;
-  padding: 0.35in 0.45in;
+  padding: 0.2in 0.3in;
   box-sizing: border-box;
   font-size: var(--fw-base-font-size);
   line-height: 1.25;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.fw-document-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 10.3in;
+  box-sizing: border-box;
 }
 
 /* Header Section */
@@ -239,6 +247,7 @@
 /* Class Schedule Table */
 .fw-schedule-table {
   width: 100%;
+  flex: 1;
   border-collapse: collapse;
   margin-bottom: var(--fw-section-gap);
   table-layout: fixed;
@@ -272,17 +281,54 @@
   padding: 3px 4px !important;
 }
 
+.fw-schedule-cell.fw-schedule-cell-split {
+  padding: 0 !important;
+}
+
+.fw-sched-split-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: var(--fw-row-height);
+  justify-content: stretch;
+}
+
+.fw-sched-subcell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.fw-sched-activity-text {
+  font-size: 8.5pt;
+  line-height: 1.15;
+  color: #111;
+  text-align: center;
+  word-break: break-word;
+}
+
+.fw-lunch-row td {
+  height: 18px !important;
+  padding: 1.5px 4px !important;
+}
+
 .fw-sched-class-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
 }
 
 .fw-sched-subj-code {
   font-weight: bold;
-  font-size: 9.5pt;
+  font-size: 9pt;
   line-height: 1.15;
 }
 
@@ -361,8 +407,8 @@
    ========================================================================== */
 @media print {
   @page {
-    size: portrait;
-    margin: 0 !important;
+    size: letter portrait !important;
+    margin: 0.25in 0.35in !important;
   }
 
   *, *::before, *::after {
@@ -395,9 +441,9 @@
     position: static !important;
     display: block !important;
     width: 100% !important;
-    max-width: 8.5in !important;
+    max-width: 100% !important;
     margin: 0 auto !important;
-    padding: 0.35in 0.45in !important;
+    padding: 0 !important;
     box-sizing: border-box !important;
     background: white !important;
     opacity: 1 !important;
@@ -407,9 +453,12 @@
     break-inside: avoid !important;
   }
 
-  .faculty-workload-iso-document > div {
+  .faculty-workload-iso-document > .fw-document-inner {
     transform: none !important;
     width: 100% !important;
+    min-height: 10.3in !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 }
 

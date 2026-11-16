@@ -8,6 +8,7 @@ import ExportOptions from './components/ExportOptions';
 import PreviewModal from './components/PreviewModal';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import CustomSelect from '../../components/CustomSelect/CustomSelect';
+import { getFacultyFreeTimeActivities, saveFacultyFreeTimeActivities } from '../../utils/freeTimeUtils';
 
 function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, isFaculty = false, onUpdateSchedule, onRemoveSchedule, onRemoveSchedulesBatch, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true, onBack }) {
     const { confirm } = useGlobalDialog();
@@ -20,6 +21,8 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     const [previewImage, setPreviewImage] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isDeleteMode, setIsDeleteMode] = useState(false);
+    const [isFreeTimeMode, setIsFreeTimeMode] = useState(Boolean(location.state?.viewTarget?.openFreeTime));
+    const [freeTimeActivities, setFreeTimeActivities] = useState({});
 
     const hasAppliedInitialTargetRef = React.useRef(!!location.state?.viewTarget);
     const initialUserAppliedRef = React.useRef(false);
@@ -220,17 +223,74 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     const activeEntity = React.useMemo(() => {
         if (viewType === 'department') {
             if (deptSectionId) {
-                const sec = sections.find(s => s.id === deptSectionId);
+                const sec = sections.find(s => String(s.id) === String(deptSectionId));
                 return { name: sec ? sec.name : selectedId };
             }
             return { name: selectedId };
         } else if (viewType === 'room') {
-            return rooms.find(r => r.id === selectedId);
+            return rooms.find(r => String(r.id) === String(selectedId));
         } else if (viewType === 'faculty') {
-            return professors.find(p => p.id === selectedId);
+            return professors.find(p => String(p.id) === String(selectedId));
         }
         return null;
     }, [viewType, deptSectionId, selectedId, sections, rooms, professors]);
+
+    const freeTimeRef = React.useRef(freeTimeActivities);
+    freeTimeRef.current = freeTimeActivities;
+
+    const activeFacultyId = viewType === 'faculty' ? String(activeEntity?.id || selectedId || '') : '';
+
+    useEffect(() => {
+        if (viewType !== 'faculty') {
+            setIsFreeTimeMode(false);
+            setFreeTimeActivities({});
+            return;
+        }
+        if (activeFacultyId) {
+            const loaded = getFacultyFreeTimeActivities(activeEntity || activeFacultyId, activeEntity?.name || '');
+            freeTimeRef.current = loaded;
+            setFreeTimeActivities(loaded);
+        } else {
+            freeTimeRef.current = {};
+            setFreeTimeActivities({});
+        }
+        // Only reload when viewType or the selected faculty ID changes
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewType, activeFacultyId]);
+
+    const handleUpdateFreeTimeSegment = React.useCallback((day, slotIds, text) => {
+        const targetProfId = activeEntity?.id || selectedId;
+        if (viewType !== 'faculty' || !targetProfId) return;
+        const next = { ...freeTimeRef.current };
+        (slotIds || []).forEach(sid => {
+            const key = `${day}-${sid}`;
+            if (typeof text === 'string' && text.trim() !== '') {
+                next[key] = text;
+            } else {
+                delete next[key];
+            }
+        });
+        freeTimeRef.current = next;
+        setFreeTimeActivities(next);
+        saveFacultyFreeTimeActivities(targetProfId, next, activeEntity?.name || '');
+    }, [viewType, activeEntity, selectedId]);
+
+    const handleClearAllFreeTime = React.useCallback(async () => {
+        const targetProfId = activeEntity?.id || selectedId;
+        if (viewType !== 'faculty' || !targetProfId) return;
+        const isConfirmed = await confirm({
+            title: 'Clear Free Time Activities',
+            text: `Are you sure you want to clear all free-time activity text for ${activeEntity?.name || 'this faculty'}?`,
+            icon: 'warning',
+            isDestructive: true,
+            confirmButtonText: 'Clear All'
+        });
+        if (isConfirmed) {
+            freeTimeRef.current = {};
+            setFreeTimeActivities({});
+            saveFacultyFreeTimeActivities(targetProfId, {}, activeEntity?.name || '');
+        }
+    }, [viewType, activeEntity, selectedId, confirm]);
 
     const targetOptions = React.useMemo(() => {
         if (viewType === 'department') {
@@ -411,6 +471,38 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                             </select>
                         </div>
                     )}
+
+                    {viewType === 'faculty' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Free Time Activity</label>
+                            <button
+                                type="button"
+                                className="form-select"
+                                onClick={() => setIsFreeTimeMode(prev => !prev)}
+                                style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                    borderColor: isFreeTimeMode ? '#2563eb' : 'var(--border-color)',
+                                    backgroundColor: isFreeTimeMode ? '#2563eb' : '#f8fafc',
+                                    color: isFreeTimeMode ? '#ffffff' : 'var(--text-main)',
+                                    backgroundImage: 'none',
+                                    paddingRight: '12px'
+                                }}
+                                title="Trigger text input for free time activities of this faculty"
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                {isFreeTimeMode ? 'Done Free Time Text' : 'Edit Free Time Text'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -439,6 +531,12 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     isAdmin={isAdmin}
                     onDeleteAll={handleDeleteSchedules}
                     onToggleDeleteMode={() => setIsDeleteMode(!isDeleteMode)}
+                    viewType={viewType}
+                    freeTimeActivities={freeTimeActivities}
+                    isFreeTimeMode={isFreeTimeMode}
+                    onToggleFreeTimeMode={() => setIsFreeTimeMode(prev => !prev)}
+                    onUpdateFreeTimeSegment={handleUpdateFreeTimeSegment}
+                    onClearAllFreeTime={handleClearAllFreeTime}
                 />
             </div>
 
@@ -458,6 +556,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     department={viewType === 'department' ? selectedId : (activeEntity?.department || '')}
                     viewType={viewType}
                     facultyName={viewType === 'faculty' ? titleName : ''}
+                    freeTimeActivities={viewType === 'faculty' ? freeTimeActivities : undefined}
                     sectionName={
                         viewType === 'department' && deptSectionId
                             ? (sections.find(s => s.id === deptSectionId)?.name || titleName)
