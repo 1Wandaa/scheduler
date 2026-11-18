@@ -1,5 +1,5 @@
 // src/Dashboard.jsx
-import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SEMESTERS, SCHOOL_YEARS } from '../../config/constants';
 import { useFirestoreData } from '../../hooks/useFirestoreData';
@@ -60,9 +60,9 @@ const TeachingLoadManagement = React.lazy(() => import('../management/TeachingLo
 const TabLoader = () => (
   <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '100px 0', gap: '16px' }}>
     <div className="loading-logo-wrapper">
-      <img 
-        src="/logo.png?v=1" 
-        alt="Loading" 
+      <img
+        src="/logo.png?v=1"
+        alt="Loading"
         className="loading-logo-img"
         onError={e => e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png'}
       />
@@ -124,13 +124,47 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
 
   // UI state
   const [isManageDataOpen, setIsManageDataOpen] = useState(true);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isScheduleFormOpen, setIsScheduleFormOpen] = useState(false);
   const [targetProfileUsername, setTargetProfileUsername] = useState(null);
   const [assignmentOriginTab, setAssignmentOriginTab] = useState(null);
   const [isFabHidden, setIsFabHidden] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  const sidebarRef = useRef(null);
+  const overlayRef = useRef(null);
+  const isMobileMenuOpenRef = useRef(false);
+  const isScheduleFormOpenRef = useRef(false);
+
+  useEffect(() => {
+    isScheduleFormOpenRef.current = isScheduleFormOpen;
+  }, [isScheduleFormOpen]);
+
+  // Toggle mobile sidebar via refs/DOM classes to avoid re-rendering Dashboard on open/close
+  const setMobileMenuOpen = useCallback((nextOpen) => {
+    const resolved = typeof nextOpen === 'function'
+      ? nextOpen(isMobileMenuOpenRef.current)
+      : Boolean(nextOpen);
+
+    isMobileMenuOpenRef.current = resolved;
+
+    const sidebarEl = sidebarRef.current;
+    const overlayEl = overlayRef.current;
+
+    if (sidebarEl) {
+      sidebarEl.classList.remove('dragging');
+      sidebarEl.style.transform = '';
+      sidebarEl.classList.toggle('open', resolved);
+      sidebarEl.dataset.mobileOpen = resolved ? 'true' : 'false';
+    }
+    if (overlayEl) {
+      overlayEl.classList.remove('dragging');
+      overlayEl.style.opacity = '';
+      overlayEl.style.pointerEvents = '';
+      overlayEl.classList.toggle('active', resolved);
+      overlayEl.dataset.mobileOpen = resolved ? 'true' : 'false';
+    }
+  }, []);
 
   // Auto-expand Academic Data menu if an academic entity tab is active
   useEffect(() => {
@@ -158,7 +192,13 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
 
   // Responsive handler
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile && isMobileMenuOpenRef.current) {
+        setMobileMenuOpen(false);
+      }
+    };
     const handleTabChangeEvent = (e) => {
       if (e.detail) setActiveTabRef.current(e.detail);
     };
@@ -168,11 +208,11 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('change-tab', handleTabChangeEvent);
     };
-  }, []);
+}, [setMobileMenuOpen]);
 
-  const handleTabClick = (tab) => { 
-    setIsMobileMenuOpen(false); 
-    setActiveTab(tab); 
+  const handleTabClick = (tab) => {
+    setMobileMenuOpen(false);
+    setActiveTab(tab);
   };
 
   const handleAutoScheduleAction = async (mode) => {
@@ -187,186 +227,377 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
     }
   };
 
-  // --- Mobile Swipe Gesture for Sidebar ---
+  // --- Mobile Swipe Gesture for Sidebar (GPU-composited interactive drag) ---
   useEffect(() => {
-    let touchStartX = 0;
-    let touchStartY = 0;
+    const EDGE_ZONE = 68;
+    const SLOP = 8;
+    const VELOCITY_THRESHOLD = 0.32;
+    const MIN_FLICK_DISTANCE = 24;
+    const DEFAULT_SIDEBAR_WIDTH = 220;
 
-    const handleTouchStart = (e) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
+    let tracking = false;
+    let isDragging = false;
+    let gestureMode = null; // 'open-left' | 'open-right' | 'close'
+    let startX = 0;
+    let startY = 0;
+    let lastX = 0;
+    let lastTime = 0;
+    let velocityX = 0;
+    let sidebarWidth = DEFAULT_SIDEBAR_WIDTH;
+    let latestProgress = 0;
+    let rafId = 0;
+
+    const hasScrollableHorizontalAncestor = (target, diffX) => {
+      let el = target instanceof Element ? target : null;
+      while (el && el !== document.body) {
+        if (el.scrollWidth > el.clientWidth + 2) {
+          const overflowX = window.getComputedStyle(el).overflowX;
+          if (overflowX === 'auto' || overflowX === 'scroll') {
+            if (diffX > 0 && el.scrollLeft > 1) return true;
+            if (diffX < 0 && el.scrollLeft + el.clientWidth < el.scrollWidth - 1) return true;
+          }
+        }
+        el = el.parentElement;
+      }
+      return false;
     };
 
-    const handleTouchEnd = (e) => {
-      const touchEndX = e.changedTouches[0].clientX;
-      const touchEndY = e.changedTouches[0].clientY;
+    const resetDragState = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      tracking = false;
+      isDragging = false;
+      gestureMode = null;
+      sidebarRef.current?.classList.remove('dragging');
+      overlayRef.current?.classList.remove('dragging');
+    };
 
-      const diffX = touchEndX - touchStartX;
-      const diffY = touchEndY - touchStartY;
-
-      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
-        if (!isMobileMenuOpen && touchStartX < 60 && diffX > 40) {
-          setIsMobileMenuOpen(true);
-        }
-        else if (isMobileMenuOpen && diffX < -40) {
-          setIsMobileMenuOpen(false);
-        }
-        else if (!isMobileMenuOpen && touchStartX > window.innerWidth - 60 && diffX < -40) {
-          setIsMobileMenuOpen(true);
-        }
+    const applyDragFrame = () => {
+      rafId = 0;
+      if (!isDragging) return;
+      const sidebarEl = sidebarRef.current;
+      const overlayEl = overlayRef.current;
+      const translateX = (latestProgress - 1) * sidebarWidth;
+      if (sidebarEl) {
+        sidebarEl.style.transform = `translate3d(${translateX.toFixed(1)}px, 0, 0)`;
+      }
+      if (overlayEl) {
+        overlayEl.style.opacity = latestProgress.toFixed(3);
       }
     };
 
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    const handleTouchStart = (e) => {
+      if (window.innerWidth > 768) return;
+      if (e.touches.length !== 1) {
+        if (isDragging) setMobileMenuOpen(isMobileMenuOpenRef.current);
+        resetDragState();
+        return;
+      }
 
-    return () => {
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchend', handleTouchEnd);
+      const target = e.target instanceof Element ? e.target : null;
+      if (
+        isScheduleFormOpenRef.current ||
+        target?.closest('.chatbot-container, .speed-dial-wrapper, input, textarea, select, [role="slider"]') ||
+        document.querySelector('.modal-overlay, .hub-modal-overlay, .swal2-container')
+      ) {
+        tracking = false;
+        return;
+      }
+
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      lastX = startX;
+      lastTime = performance.now();
+      velocityX = 0;
+
+      if (isMobileMenuOpenRef.current) {
+        gestureMode = 'close';
+        tracking = true;
+      } else if (startX <= EDGE_ZONE) {
+        gestureMode = 'open-left';
+        tracking = true;
+      } else if (startX >= window.innerWidth - EDGE_ZONE) {
+        gestureMode = 'open-right';
+        tracking = true;
+      } else {
+        gestureMode = null;
+        tracking = false;
+      }
     };
-  }, [isMobileMenuOpen]);
 
-  // CRUD wrappers (delegate to services)
+      const handleTouchMove = (e) => {
+        if (!tracking || e.touches.length !== 1) return;
+        const touch = e.touches[0];
+        const curX = touch.clientX;
+        const curY = touch.clientY;
+        const dx = curX - startX;
+        const dy = curY - startY;
 
-  // Log login once per browser session
-  useEffect(() => {
-    const SESSION_KEY = `smartsched_login_logged_${user?.username}`;
-    if (user && !sessionStorage.getItem(SESSION_KEY)) {
-      // Mark immediately to prevent the Strict Mode double-invocation
-      sessionStorage.setItem(SESSION_KEY, '1');
-      logActivity({ user, action: LOG_ACTIONS.LOGIN, details: `${user.name || user.username} signed in as ${user.role}` });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+        const now = performance.now();
+        const dt = now - lastTime;
+        if (dt > 0) {
+          const instV = (curX - lastX) / dt;
+          velocityX = velocityX * 0.4 + instV * 0.6;
+        }
+        lastX = curX;
+        lastTime = now;
 
-  const handleAddSchedule = async (newSchedule, scheduleMode = 'standard') => {
-    const res = await addSchedule(newSchedule, enrichedSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode);
-    if (res?.ok !== false) {
-      triggerSoundFeedback();
-      logActivity({
-        user,
-        action: LOG_ACTIONS.ADD_SCHEDULE,
-        details: `Added schedule: ${newSchedule.subject?.code || 'Subject'} (${newSchedule.section?.name || 'Section'}) on ${newSchedule.day} in ${newSchedule.room?.name || 'Room'}`
-      });
-    }
-    return res;
-  };
+            if (!isDragging) {
+              if (Math.abs(dy) > SLOP && Math.abs(dy) >= Math.abs(dx)) {
+                tracking = false;
+                return;
+              }
+                if (Math.abs(dx) < SLOP) return;
 
-  const handleUpdateSchedule = async (scheduleId, newDay, newTimeSlot) => {
-    const sched = schedules.find(s => String(s.id) === String(scheduleId)) || enrichedSchedules.find(s => String(s.id) === String(scheduleId));
-    const res = await updateSchedule(scheduleId, newDay, newTimeSlot, schedules, enrichedSchedules, rooms, isAdmin);
-    if (res?.ok !== false) {
-      triggerSoundFeedback();
-      logActivity({
-        user,
-        action: LOG_ACTIONS.UPDATE_SCHEDULE,
-        details: `Moved schedule: ${sched?.subject?.code || 'Subject'} (${sched?.section?.name || 'Section'}) to ${newDay} (${newTimeSlot?.label || newTimeSlot?.customLabel || 'slot'})`
-      });
-    }
-    return res;
-  };
+                if (gestureMode === 'open-left' && dx <= 0) { tracking = false; return; }
+                if (gestureMode === 'open-right' && dx >= 0) { tracking = false; return; }
+                if (gestureMode === 'close' && dx >= 0) { tracking = false; return; }
 
-  const handleRemoveSchedule = async (scheduleId) => {
-    const sched = schedules.find(s => String(s.id) === String(scheduleId)) || enrichedSchedules.find(s => String(s.id) === String(scheduleId));
-    const res = await removeSchedule(scheduleId, isAdmin);
-    if (res?.ok !== false) {
-      logActivity({
-        user,
-        action: LOG_ACTIONS.DELETE_SCHEDULE,
-        details: `Deleted schedule: ${sched?.subject?.code || 'Subject'} (${sched?.section?.name || 'Section'}) on ${sched?.day || 'Day'}`
-      });
-    }
-    return res;
-  };
+                if (gestureMode !== 'close' && hasScrollableHorizontalAncestor(e.target, dx)) {
+                  tracking = false;
+                  return;
+                }
 
-  const handleRemoveSchedulesBatch = async (scheduleIds) => {
-    const res = await removeSchedulesBatch(scheduleIds, isAdmin);
-    if (res?.ok !== false) {
-      logActivity({
-        user,
-        action: LOG_ACTIONS.BATCH_DELETE_SCHEDULES,
-        details: `Batch deleted ${scheduleIds.length} schedule entries`
-      });
-    }
-    return res;
-  };
+                  isDragging = true;
+                  sidebarWidth = sidebarRef.current?.offsetWidth || DEFAULT_SIDEBAR_WIDTH;
+                  sidebarRef.current?.classList.add('dragging');
+                  overlayRef.current?.classList.add('dragging');
+                  if (overlayRef.current) {
+                    overlayRef.current.style.pointerEvents = 'auto';
+                  }
+                }
 
-  const handleAddSchedulesBatch = async (newSchedules, scheduleMode, options = {}) => {
-    const res = await addSchedulesBatch(newSchedules, enrichedSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode, options);
-    if (res?.ok !== false) {
-      triggerSoundFeedback();
-      logActivity({
-        user,
-        action: LOG_ACTIONS.AUTO_SCHEDULE,
-        details: `Batch scheduled ${newSchedules.length} classes for ${activeSemester} (${activeSchoolYear})`
-      });
-    }
-    return res;
-  };
+                if (gestureMode === 'open-left') {
+                  latestProgress = Math.max(0, Math.min(1, dx / sidebarWidth));
+                } else if (gestureMode === 'open-right') {
+                  latestProgress = Math.max(0, Math.min(1, (-dx) / sidebarWidth));
+                } else {
+                  latestProgress = Math.max(0, Math.min(1, 1 + dx / sidebarWidth));
+                }
 
-  const handleClearAllSchedules = async () => {
-    const res = await clearAllSchedules(activeSemester, activeSchoolYear);
+                if (!rafId) {
+                  rafId = requestAnimationFrame(applyDragFrame);
+                }
+              };
+
+              const finishGesture = (e, cancelled = false) => {
+                if (!tracking) return;
+                tracking = false;
+
+                if (!isDragging) {
+                  if (rafId) {
+                    cancelAnimationFrame(rafId);
+                    rafId = 0;
+                  }
+                  if (!cancelled && e?.changedTouches?.length) {
+                    const endX = e.changedTouches[0].clientX;
+                    const endY = e.changedTouches[0].clientY;
+                    const diffX = endX - startX;
+                    const diffY = endY - startY;
+                    if (Math.abs(diffX) > Math.abs(diffY) * 1.15 && Math.abs(diffX) > 36) {
+                      if (gestureMode === 'open-left' && diffX > 36 && !hasScrollableHorizontalAncestor(e.target, diffX)) {
+                        setMobileMenuOpen(true);
+                      } else if (gestureMode === 'open-right' && diffX < -36 && !hasScrollableHorizontalAncestor(e.target, diffX)) {
+                        setMobileMenuOpen(true);
+                      } else if (gestureMode === 'close' && diffX < -36) {
+                        setMobileMenuOpen(false);
+                      }
+                    }
+                  }
+                  gestureMode = null;
+                  return;
+                }
+
+                if (rafId) {
+                  cancelAnimationFrame(rafId);
+                  rafId = 0;
+                  applyDragFrame();
+                }
+                // Lock current dragged transform as transition start point before removing .dragging
+                void sidebarRef.current?.offsetWidth;
+
+                isDragging = false;
+                const endX = e?.changedTouches?.[0]?.clientX ?? lastX;
+                const totalDx = endX - startX;
+
+                let shouldOpen = isMobileMenuOpenRef.current;
+                if (!cancelled) {
+                  if (gestureMode === 'open-left') {
+                    shouldOpen = (velocityX > VELOCITY_THRESHOLD && totalDx > MIN_FLICK_DISTANCE) || latestProgress >= 0.28;
+                  } else if (gestureMode === 'open-right') {
+                    shouldOpen = (velocityX < -VELOCITY_THRESHOLD && -totalDx > MIN_FLICK_DISTANCE) || latestProgress >= 0.28;
+                  } else if (gestureMode === 'close') {
+                    shouldOpen = !((velocityX < -VELOCITY_THRESHOLD && -totalDx > MIN_FLICK_DISTANCE) || latestProgress <= 0.72);
+                  }
+                }
+
+                gestureMode = null;
+                setMobileMenuOpen(shouldOpen);
+              };
+
+              const handleTouchEnd = (e) => finishGesture(e, false);
+              const handleTouchCancel = (e) => finishGesture(e, true);
+
+              window.addEventListener('touchstart', handleTouchStart, { passive: true });
+              window.addEventListener('touchmove', handleTouchMove, { passive: true });
+              window.addEventListener('touchend', handleTouchEnd, { passive: true });
+              window.addEventListener('touchcancel', handleTouchCancel, { passive: true });
+
+              return () => {
+                resetDragState();
+                window.removeEventListener('touchstart', handleTouchStart);
+                window.removeEventListener('touchmove', handleTouchMove);
+                window.removeEventListener('touchend', handleTouchEnd);
+                window.removeEventListener('touchcancel', handleTouchCancel);
+              };
+}, [setMobileMenuOpen]);
+
+// CRUD wrappers (delegate to services)
+
+// Log login once per browser session
+useEffect(() => {
+  const SESSION_KEY = `smartsched_login_logged_${user?.username}`;
+  if (user && !sessionStorage.getItem(SESSION_KEY)) {
+    // Mark immediately to prevent the Strict Mode double-invocation
+    sessionStorage.setItem(SESSION_KEY, '1');
+    logActivity({ user, action: LOG_ACTIONS.LOGIN, details: `${user.name || user.username} signed in as ${user.role}` });
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
+const handleAddSchedule = async (newSchedule, scheduleMode = 'standard') => {
+  const res = await addSchedule(newSchedule, enrichedSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode);
+  if (res?.ok !== false) {
+    triggerSoundFeedback();
     logActivity({
       user,
-      action: LOG_ACTIONS.CLEAR_SCHEDULES,
-      details: `Cleared all schedules for ${activeSemester} (${activeSchoolYear})`
+      action: LOG_ACTIONS.ADD_SCHEDULE,
+      details: `Added schedule: ${newSchedule.subject?.code || 'Subject'} (${newSchedule.section?.name || 'Section'}) on ${newSchedule.day} in ${newSchedule.room?.name || 'Room'}`
     });
-    return res;
-  };
+  }
+  return res;
+};
 
-  const handleLogHistory = async (historyData) => {
-    return logScheduleHistory(historyData, isAdmin);
-  };
+const handleUpdateSchedule = async (scheduleId, newDay, newTimeSlot) => {
+  const sched = schedules.find(s => String(s.id) === String(scheduleId)) || enrichedSchedules.find(s => String(s.id) === String(scheduleId));
+  const res = await updateSchedule(scheduleId, newDay, newTimeSlot, schedules, enrichedSchedules, rooms, isAdmin);
+  if (res?.ok !== false) {
+    triggerSoundFeedback();
+    logActivity({
+      user,
+      action: LOG_ACTIONS.UPDATE_SCHEDULE,
+      details: `Moved schedule: ${sched?.subject?.code || 'Subject'} (${sched?.section?.name || 'Section'}) to ${newDay} (${newTimeSlot?.label || newTimeSlot?.customLabel || 'slot'})`
+    });
+  }
+  return res;
+};
 
-  // Validator object (passed to child components)
-  const schedulerContext = { professors, rooms, subjects, sections, activeSchedules: enrichedSchedules };
+const handleRemoveSchedule = async (scheduleId) => {
+  const sched = schedules.find(s => String(s.id) === String(scheduleId)) || enrichedSchedules.find(s => String(s.id) === String(scheduleId));
+  const res = await removeSchedule(scheduleId, isAdmin);
+  if (res?.ok !== false) {
+    logActivity({
+      user,
+      action: LOG_ACTIONS.DELETE_SCHEDULE,
+      details: `Deleted schedule: ${sched?.subject?.code || 'Subject'} (${sched?.section?.name || 'Section'}) on ${sched?.day || 'Day'}`
+    });
+  }
+  return res;
+};
 
-  const validator = {
-    validateAssignment: (room, professor, subject, section, day, timeSlot, scheduleMode = 'standard', hours, component) =>
-      validateScheduleEntry({ room, professor, subject, section, day, timeSlot, scheduleMode, hours, component, allowNonSpecialized: true }, enrichedSchedules, rooms),
-    addSchedule: (room, professor, subject, section, day, timeSlot, hours, component) => ({
-      schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear, hours, component }
-    }),
-    clearAllSchedules: handleClearAllSchedules,
-    removeSchedulesBatch: handleRemoveSchedulesBatch,
-    addSchedulesBatch: (schedules, scheduleMode, options) => handleAddSchedulesBatch(schedules, scheduleMode, options),
-    autoScheduleForSection: (sectionId, constraints, options) =>
-      autoScheduleForSection(sectionId, schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
-    autoScheduleForRoom: (roomId, constraints, options) =>
-      autoScheduleForRoom(roomId, schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
-    autoScheduleForFaculty: (professorId, constraints, options) =>
-      autoScheduleForFaculty(professorId, schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
-    autoScheduleFull: (constraints, options) =>
-      autoScheduleFull(schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
-  };
+const handleRemoveSchedulesBatch = async (scheduleIds) => {
+  const res = await removeSchedulesBatch(scheduleIds, isAdmin);
+  if (res?.ok !== false) {
+    logActivity({
+      user,
+      action: LOG_ACTIONS.BATCH_DELETE_SCHEDULES,
+      details: `Batch deleted ${scheduleIds.length} schedule entries`
+    });
+  }
+  return res;
+};
 
-  const firstName = user?.name?.split?.(/\s+/)?.[0] ?? 'there';
+const handleAddSchedulesBatch = async (newSchedules, scheduleMode, options = {}) => {
+  const res = await addSchedulesBatch(newSchedules, enrichedSchedules, rooms, activeSemester, activeSchoolYear, isAdmin, scheduleMode, options);
+  if (res?.ok !== false) {
+    triggerSoundFeedback();
+    logActivity({
+      user,
+      action: LOG_ACTIONS.AUTO_SCHEDULE,
+      details: `Batch scheduled ${newSchedules.length} classes for ${activeSemester} (${activeSchoolYear})`
+    });
+  }
+  return res;
+};
 
-  const displaySchedules = useMemo(() => {
-    return (!isAdmin && publishedTerms[`${activeSemester}_${activeSchoolYear}`] !== true) ? [] : enrichedSchedules;
-  }, [isAdmin, publishedTerms, activeSemester, activeSchoolYear, enrichedSchedules]);
+const handleClearAllSchedules = async () => {
+  const res = await clearAllSchedules(activeSemester, activeSchoolYear);
+  logActivity({
+    user,
+    action: LOG_ACTIONS.CLEAR_SCHEDULES,
+    details: `Cleared all schedules for ${activeSemester} (${activeSchoolYear})`
+  });
+  return res;
+};
 
- // Render
-  return (
-    <div className={`smartsched-container ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+const handleLogHistory = async (historyData) => {
+  return logScheduleHistory(historyData, isAdmin);
+};
 
-      {/* Animated background */}
-      <div className="mesh-bg"></div>
+// Validator object (passed to child components)
+const schedulerContext = { professors, rooms, subjects, sections, activeSchedules: enrichedSchedules };
 
-      {/* Mobile Drawer Backdrop Overlay */}
-      <div 
-        className={`sidebar-overlay ${isMobileMenuOpen ? 'active' : ''}`}
-        onClick={() => setIsMobileMenuOpen(false)}
-        aria-hidden="true"
-      />
+const validator = {
+  validateAssignment: (room, professor, subject, section, day, timeSlot, scheduleMode = 'standard', hours, component) =>
+    validateScheduleEntry({ room, professor, subject, section, day, timeSlot, scheduleMode, hours, component, allowNonSpecialized: true }, enrichedSchedules, rooms),
+  addSchedule: (room, professor, subject, section, day, timeSlot, hours, component) => ({
+    schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear, hours, component }
+  }),
+  clearAllSchedules: handleClearAllSchedules,
+  removeSchedulesBatch: handleRemoveSchedulesBatch,
+  addSchedulesBatch: (schedules, scheduleMode, options) => handleAddSchedulesBatch(schedules, scheduleMode, options),
+  autoScheduleForSection: (sectionId, constraints, options) =>
+    autoScheduleForSection(sectionId, schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
+  autoScheduleForRoom: (roomId, constraints, options) =>
+    autoScheduleForRoom(roomId, schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
+  autoScheduleForFaculty: (professorId, constraints, options) =>
+    autoScheduleForFaculty(professorId, schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
+  autoScheduleFull: (constraints, options) =>
+    autoScheduleFull(schedulerContext, constraints, async () => ({ ok: true }), activeSemester, options),
+};
 
-      {/* Sidebar */}
-      <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''} ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+const firstName = user?.name?.split?.(/\s+/)?.[0] ?? 'there';
+
+const displaySchedules = useMemo(() => {
+  return (!isAdmin && publishedTerms[`${activeSemester}_${activeSchoolYear}`] !== true) ? [] : enrichedSchedules;
+}, [isAdmin, publishedTerms, activeSemester, activeSchoolYear, enrichedSchedules]);
+
+// Render
+return (
+  <div className={`smartsched-container ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+
+    {/* Animated background */}
+    <div className="mesh-bg"></div>
+
+    {/* Mobile Drawer Backdrop Overlay */}
+      <div
+      ref={overlayRef}
+      className="sidebar-overlay"
+      onClick={() => setMobileMenuOpen(false)}
+      aria-hidden="true"
+    />
+
+    {/* Sidebar */}
+      <aside ref={sidebarRef} className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
 
         {/* Mobile Close Button */}
-        <button 
+        <button
+          type="button"
           className="sidebar-mobile-close-btn"
-          onClick={() => setIsMobileMenuOpen(false)}
+          onClick={() => setMobileMenuOpen(false)}
           title="Close Menu"
           aria-label="Close Menu"
         >
@@ -696,9 +927,9 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
               <Icon d={NAV_ICONS.settings} size={18} />
             </button>
 
-            <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(o => !o)}>
-              <Icon d={NAV_ICONS.menu} size={22} />
-            </button>
+              <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(o => !o)}>
+                <Icon d={NAV_ICONS.menu} size={22} />
+              </button>
           </div>
         </header>
 
@@ -1062,7 +1293,7 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
       <Suspense fallback={null}>
         <Chatbot schedules={displaySchedules} professors={professors} subjects={subjects} sections={sections} rooms={rooms} />
       </Suspense>
-      <BottomNav activeTab={activeTab} handleTabClick={handleTabClick} isAdmin={isAdmin} isFaculty={isFaculty} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+      <BottomNav activeTab={activeTab} handleTabClick={handleTabClick} isAdmin={isAdmin} isFaculty={isFaculty} setIsMobileMenuOpen={setMobileMenuOpen} />
 
       {/* --- Mobile Floating Action Button (FAB) --- */}
       {isAdmin && isMobile && (activeTab === 'view-schedules' || activeTab === 'schedule') && (
@@ -1079,7 +1310,7 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
           position: 'fixed', inset: 0, zIndex: 100000,
           background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'flex-end',
-          
+
         }} onClick={() => setIsScheduleFormOpen(false)}>
           <div style={{
             background: 'var(--bg-main)',
@@ -1089,7 +1320,7 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
             borderTopLeftRadius: '24px',
             borderTopRightRadius: '24px',
             padding: '20px',
-            
+
             position: 'relative'
           }} onClick={e => e.stopPropagation()}>
             <div style={{ width: '40px', height: '5px', background: 'var(--border-color)', borderRadius: '3px', margin: '0 auto 16px' }} />
@@ -1114,8 +1345,8 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
           </div>
         </div>
       )}
-    </div>
-  );
+  </div>
+);
 };
 
 export default Dashboard;
