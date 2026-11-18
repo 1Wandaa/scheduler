@@ -272,88 +272,90 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
   return (
     <>
       <div className="card" style={{ position: 'relative' }}>
-        <div className="mgmt-header">
-          <div className="mgmt-header-left">
-            {onBack && (
-              <button className="back-btn" onClick={onBack}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-                Back
-              </button>
-            )}
-            <div className="mgmt-header-info">
-              <h3 className="card-title">
-                <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
-                Manage Courses / Programs
-              </h3>
-              <p>Configure academic courses</p>
+        <div className="sticky-mgmt-header">
+          <div className="mgmt-header">
+            <div className="mgmt-header-left">
+              {onBack && (
+                <button className="back-btn" onClick={onBack}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                  Back
+                </button>
+              )}
+              <div className="mgmt-header-info">
+                <h3 className="card-title">
+                  <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+                  Manage Courses / Programs
+                </h3>
+                <p>Configure academic courses</p>
+              </div>
             </div>
-          </div>
-          <div className="mgmt-header-actions">
-            <button
-              className={`select-mode-btn${selectionMode ? ' active' : ''}`}
-              onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
-              title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              {selectionMode ? 'Cancel' : 'Select'}
-            </button>
-            <button className="btn" onClick={handleOpenAdd}>+ Add Course</button>
-          </div>
-        </div>
-
-        <div className="mgmt-toolbar">
-          <div className="mgmt-toolbar-row">
-            <span className="mgmt-toolbar-label">Filter by Department:</span>
-            <div className="mgmt-filter-pills">
+            <div className="mgmt-header-actions">
               <button
-                className={`mgmt-filter-pill${departmentFilter === 'All' ? ' active' : ''}`}
-                onClick={() => setDepartmentFilter('All')}
-                style={departmentFilter === 'All' ? { background: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' } : undefined}
+                className={`select-mode-btn${selectionMode ? ' active' : ''}`}
+                onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
+                title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
               >
-                All Departments
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                {selectionMode ? 'Cancel' : 'Select'}
               </button>
-              {departments.map(dept => {
-                const isActive = departmentFilter === dept.id;
-                return (
-                  <button
-                    key={dept.id}
-                    className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
-                    onClick={() => setDepartmentFilter(dept.id)}
-                    style={isActive ? { background: dept.color, borderColor: dept.color } : undefined}
-                  >
-                    {dept.name}
-                  </button>
-                )
-              })}
+              <button className="btn" onClick={handleOpenAdd}>+ Add Course</button>
             </div>
           </div>
-          <div className="mgmt-search-wrapper">
-            <span className="mgmt-search-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            </span>
-            <input
-              type="text"
-              className="mgmt-search-input"
-              placeholder="Search course code or title..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ maxWidth: '300px' }}
-            />
-          </div>
-        </div>
 
-        {selectionMode && (
-          <BatchActionBar
-            selectedCount={selectedIds.filter(id => filteredCourses.some(c => c.id === id)).length}
-            totalCount={filteredCourses.length}
-            itemName="course"
-            onSelectAll={handleSelectAllFiltered}
-            onDeselectAll={handleDeselectAll}
-            onDeleteSelected={handleDeleteSelected}
-            onDeleteAll={handleDeleteAll}
-            onExitSelectionMode={handleExitSelectionMode}
-          />
-        )}
+          <div className="mgmt-toolbar">
+            <div className="mgmt-toolbar-row">
+              <span className="mgmt-toolbar-label">Filter by Department:</span>
+              <div className="mgmt-filter-pills">
+                <button
+                  className={`mgmt-filter-pill${departmentFilter === 'All' ? ' active' : ''}`}
+                  onClick={() => setDepartmentFilter('All')}
+                  style={departmentFilter === 'All' ? { background: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' } : undefined}
+                >
+                  All Departments
+                </button>
+                {departments.map(dept => {
+                  const isActive = departmentFilter === dept.id;
+                  return (
+                    <button
+                      key={dept.id}
+                      className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
+                      onClick={() => setDepartmentFilter(dept.id)}
+                      style={isActive ? { background: dept.color, borderColor: dept.color } : undefined}
+                    >
+                      {dept.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="mgmt-search-wrapper">
+              <span className="mgmt-search-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+              <input
+                type="text"
+                className="mgmt-search-input"
+                placeholder="Search course code or title..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ maxWidth: '300px' }}
+              />
+            </div>
+          </div>
+
+          {selectionMode && (
+            <BatchActionBar
+              selectedCount={selectedIds.filter(id => filteredCourses.some(c => c.id === id)).length}
+              totalCount={filteredCourses.length}
+              itemName="course"
+              onSelectAll={handleSelectAllFiltered}
+              onDeselectAll={handleDeselectAll}
+              onDeleteSelected={handleDeleteSelected}
+              onDeleteAll={handleDeleteAll}
+              onExitSelectionMode={handleExitSelectionMode}
+            />
+          )}
+        </div>
 
         <div className="table-responsive">
           <table className="data-table">

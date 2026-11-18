@@ -512,96 +512,98 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
   return (
     <>
       <div className="card" style={{ position: 'relative' }}>
-        <div className="mgmt-header">
-          <div className="mgmt-header-left">
-            {onBack && (
-              <button className="back-btn" onClick={onBack}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-                Back
-              </button>
-            )}
-            <div className="mgmt-header-info">
-              <h3 className="card-title">
-                <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-                Subject Requirements
-              </h3>
-              <p>Manage courses and their scheduling constraints</p>
+        <div className="sticky-mgmt-header">
+          <div className="mgmt-header">
+            <div className="mgmt-header-left">
+              {onBack && (
+                <button className="back-btn" onClick={onBack}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                  Back
+                </button>
+              )}
+              <div className="mgmt-header-info">
+                <h3 className="card-title">
+                  <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                  Subject Requirements
+                </h3>
+                <p>Manage courses and their scheduling constraints</p>
+              </div>
             </div>
-          </div>
-          <div className="mgmt-header-actions">
-            {onNavigateToHub && (
+            <div className="mgmt-header-actions">
+              {onNavigateToHub && (
+                <button
+                  className="btn"
+                  onClick={onNavigateToHub}
+                  style={{ background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-color)', boxShadow: 'none' }}
+                >
+                  ⇄ Teaching Load Management
+                </button>
+              )}
               <button
-                className="btn"
-                onClick={onNavigateToHub}
-                style={{ background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-color)', boxShadow: 'none' }}
+                className={`select-mode-btn${selectionMode ? ' active' : ''}`}
+                onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
+                title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
               >
-                ⇄ Teaching Load Management
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                {selectionMode ? 'Cancel' : 'Select'}
               </button>
-            )}
-            <button
-              className={`select-mode-btn${selectionMode ? ' active' : ''}`}
-              onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
-              title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              {selectionMode ? 'Cancel' : 'Select'}
-            </button>
-            <button className="btn" onClick={handleOpenAdd}>+ Add Subject</button>
-          </div>
-        </div>
-
-        {/* Department Filter and Search Bar */}
-        <div className="mgmt-toolbar">
-          <div className="mgmt-toolbar-row">
-            <span className="mgmt-toolbar-label">Filter by:</span>
-            <div className="mgmt-filter-pills">
-              {['All', 'Minor', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
-                const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
-                const isActive = departmentFilter === dept;
-                return (
-                  <button
-                    key={dept}
-                    className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
-                    onClick={() => setDepartmentFilter(dept)}
-                    style={isActive ? { background: deptColor, borderColor: deptColor } : undefined}
-                  >
-                    {dept === 'All' ? 'All Subjects' : dept === 'Minor' ? 'General Ed / Minor' : dept}
-                  </button>
-                )
-              })}
+              <button className="btn" onClick={handleOpenAdd}>+ Add Subject</button>
             </div>
-            {departmentFilter !== 'All' && (
-              <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: '500' }}>
-                Showing {departmentFilter === 'Minor' ? minorSubjects.length : majorSubjects.filter(s => getSubjectDepts(s).includes(departmentFilter)).length} subjects
-              </span>
-            )}
           </div>
-          <div className="mgmt-search-wrapper">
-            <span className="mgmt-search-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            </span>
-            <input
-              type="text"
-              className="mgmt-search-input"
-              placeholder="Search subject code or name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
 
-        {selectionMode && (
-          <BatchActionBar
-            selectedCount={selectedIds.filter(id => allVisibleSubjects.some(s => s.id === id)).length}
-            totalCount={allVisibleSubjects.length}
-            itemName="subject"
-            onSelectAll={handleSelectAllFiltered}
-            onDeselectAll={handleDeselectAll}
-            onDeleteSelected={handleDeleteSelected}
-            onDeleteAll={handleDeleteAll}
-            onExitSelectionMode={handleExitSelectionMode}
-          />
-        )}
+          {/* Department Filter and Search Bar */}
+          <div className="mgmt-toolbar">
+            <div className="mgmt-toolbar-row">
+              <span className="mgmt-toolbar-label">Filter by:</span>
+              <div className="mgmt-filter-pills">
+                {['All', 'Minor', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
+                  const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+                  const isActive = departmentFilter === dept;
+                  return (
+                    <button
+                      key={dept}
+                      className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
+                      onClick={() => setDepartmentFilter(dept)}
+                      style={isActive ? { background: deptColor, borderColor: deptColor } : undefined}
+                    >
+                      {dept === 'All' ? 'All Subjects' : dept === 'Minor' ? 'General Ed / Minor' : dept}
+                    </button>
+                  )
+                })}
+              </div>
+              {departmentFilter !== 'All' && (
+                <span style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: '500' }}>
+                  Showing {departmentFilter === 'Minor' ? minorSubjects.length : majorSubjects.filter(s => getSubjectDepts(s).includes(departmentFilter)).length} subjects
+                </span>
+              )}
+            </div>
+            <div className="mgmt-search-wrapper">
+              <span className="mgmt-search-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+              <input
+                type="text"
+                className="mgmt-search-input"
+                placeholder="Search subject code or name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {selectionMode && (
+            <BatchActionBar
+              selectedCount={selectedIds.filter(id => allVisibleSubjects.some(s => s.id === id)).length}
+              totalCount={allVisibleSubjects.length}
+              itemName="subject"
+              onSelectAll={handleSelectAllFiltered}
+              onDeselectAll={handleDeselectAll}
+              onDeleteSelected={handleDeleteSelected}
+              onDeleteAll={handleDeleteAll}
+              onExitSelectionMode={handleExitSelectionMode}
+            />
+          )}
+        </div>
 
         {/* --- DYNAMIC TABLES INSTEAD OF ONE BIG TABLE --- */}
 

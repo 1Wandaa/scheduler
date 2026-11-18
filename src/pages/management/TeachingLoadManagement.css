@@ -18,14 +18,17 @@
    Header & Action Area
    ========================================================================== */
 .hub-main-header {
+  position: sticky;
+  top: -24px;
+  z-index: 45;
   background: var(--bg-surface, #ffffff);
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 16px;
-  padding: 24px 28px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.02);
+  padding: 18px 24px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
 }
 
 .hub-header-top {
@@ -183,7 +186,7 @@
   background: var(--bg-main, #f8fafc);
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -196,8 +199,8 @@
 }
 
 .hub-metric-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -212,7 +215,7 @@
 }
 
 .hub-metric-value {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--accent-dark, #0f172a);
   line-height: 1.1;
@@ -237,8 +240,8 @@
 .hub-control-bar {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding-top: 18px;
+  gap: 10px;
+  padding-top: 12px;
   border-top: 1px solid var(--border-color, #e2e8f0);
 }
 
@@ -1489,7 +1492,22 @@
 
 @media (max-width: 768px) {
   .hub-main-header {
-    padding: 18px 16px;
+    top: -16px;
+    padding: 14px 14px;
+    gap: 10px;
+  }
+
+  .hub-metrics-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding-bottom: 2px;
+  }
+
+  .hub-metric-card {
+    flex: 0 0 auto;
+    min-width: 145px;
+    padding: 8px 10px;
   }
 
   .hub-header-top, .hub-control-top, .hub-control-bottom {
@@ -1545,10 +1563,6 @@
 }
 
 @media (max-width: 480px) {
-  .hub-metrics-grid {
-    grid-template-columns: 1fr;
-  }
-
   .hub-header-title {
     font-size: 1.1rem;
   }

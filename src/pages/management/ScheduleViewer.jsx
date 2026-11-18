@@ -384,9 +384,9 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         <div className="card" style={{ backgroundColor: '#ffffff' }}>
 
             {/* Header & Filters */}
-            <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '20px' }}>
+            <div className="sticky-mgmt-header no-print">
                 {/* Header Row: Title & Print Button separated from filters */}
-                <div className="mgmt-header no-print">
+                <div className="mgmt-header">
                     <div className="mgmt-header-left">
                         {onBack && (
                             <button className="back-btn" onClick={onBack}>

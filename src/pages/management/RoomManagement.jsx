@@ -249,7 +249,7 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
     <>
       <div className="card" style={{ position: 'relative', backgroundImage: 'none', backgroundColor: '#ffffff' }}>
         {/* Sticky Wrapper for Header & Filters */}
-        <div className="sticky-mgmt-header" style={{ position: 'sticky', top: '-24px', zIndex: 40, backgroundColor: '#ffffff', paddingTop: '24px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', margin: '-24px -24px 20px -24px', paddingLeft: '24px', paddingRight: '24px' }}>
+        <div className="sticky-mgmt-header">
           <div className="mgmt-header">
             <div className="mgmt-header-left">
               {onBack && (
@@ -329,20 +329,20 @@ const RoomManagement = ({ rooms, professors, schedules, departments = [], onBack
               </div>
             </div>
           </div>
-        </div>
 
-        {selectionMode && (
-          <BatchActionBar
-            selectedCount={selectedIds.filter(id => filteredRooms.some(r => r.id === id)).length}
-            totalCount={filteredRooms.length}
-            itemName="room"
-            onSelectAll={handleSelectAllFiltered}
-            onDeselectAll={handleDeselectAll}
-            onDeleteSelected={handleDeleteSelected}
-            onDeleteAll={handleDeleteAll}
-            onExitSelectionMode={handleExitSelectionMode}
-          />
-        )}
+          {selectionMode && (
+            <BatchActionBar
+              selectedCount={selectedIds.filter(id => filteredRooms.some(r => r.id === id)).length}
+              totalCount={filteredRooms.length}
+              itemName="room"
+              onSelectAll={handleSelectAllFiltered}
+              onDeselectAll={handleDeselectAll}
+              onDeleteSelected={handleDeleteSelected}
+              onDeleteAll={handleDeleteAll}
+              onExitSelectionMode={handleExitSelectionMode}
+            />
+          )}
+        </div>
 
         <RoomTable
           roomList={filteredRooms}

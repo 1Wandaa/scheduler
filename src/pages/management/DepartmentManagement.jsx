@@ -240,62 +240,64 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
   return (
     <>
       <div className="card" style={{  position: 'relative' }}>
-        <div className="mgmt-header">
-          <div className="mgmt-header-left">
-            {onBack && (
-              <button className="back-btn" onClick={onBack}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                Back
-              </button>
-            )}
-            <div className="mgmt-header-info">
-              <h3 className="card-title">
-                <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                Manage Departments
-              </h3>
-              <p>Configure academic departments</p>
+        <div className="sticky-mgmt-header">
+          <div className="mgmt-header">
+            <div className="mgmt-header-left">
+              {onBack && (
+                <button className="back-btn" onClick={onBack}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  Back
+                </button>
+              )}
+              <div className="mgmt-header-info">
+                <h3 className="card-title">
+                  <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                  Manage Departments
+                </h3>
+                <p>Configure academic departments</p>
+              </div>
+            </div>
+              <div className="mgmt-header-actions">
+                <button
+                  className={`select-mode-btn${selectionMode ? ' active' : ''}`}
+                  onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
+                  title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  {selectionMode ? 'Cancel' : 'Select'}
+                </button>
+                <button className="btn" onClick={handleOpenAdd}>+ Add Department</button>
+              </div>
+          </div>
+
+          <div className="mgmt-toolbar">
+            <div className="mgmt-search-wrapper" style={{ maxWidth: '300px' }}>
+              <span className="mgmt-search-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+              <input 
+                type="text" 
+                className="mgmt-search-input" 
+                placeholder="Search department..." 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+              />
             </div>
           </div>
-            <div className="mgmt-header-actions">
-              <button
-                className={`select-mode-btn${selectionMode ? ' active' : ''}`}
-                onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
-                title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                {selectionMode ? 'Cancel' : 'Select'}
-              </button>
-              <button className="btn" onClick={handleOpenAdd}>+ Add Department</button>
-            </div>
-        </div>
 
-        <div className="mgmt-toolbar">
-          <div className="mgmt-search-wrapper" style={{ maxWidth: '300px' }}>
-            <span className="mgmt-search-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            </span>
-            <input 
-              type="text" 
-              className="mgmt-search-input" 
-              placeholder="Search department..." 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
+          {selectionMode && (
+            <BatchActionBar
+              selectedCount={selectedIds.filter(id => filteredDepartments.some(d => d.id === id)).length}
+              totalCount={filteredDepartments.length}
+              itemName="department"
+              onSelectAll={handleSelectAllFiltered}
+              onDeselectAll={handleDeselectAll}
+              onDeleteSelected={handleDeleteSelected}
+              onDeleteAll={handleDeleteAll}
+              onExitSelectionMode={handleExitSelectionMode}
             />
-          </div>
+          )}
         </div>
-
-        {selectionMode && (
-          <BatchActionBar
-            selectedCount={selectedIds.filter(id => filteredDepartments.some(d => d.id === id)).length}
-            totalCount={filteredDepartments.length}
-            itemName="department"
-            onSelectAll={handleSelectAllFiltered}
-            onDeselectAll={handleDeselectAll}
-            onDeleteSelected={handleDeleteSelected}
-            onDeleteAll={handleDeleteAll}
-            onExitSelectionMode={handleExitSelectionMode}
-          />
-        )}
 
         <div className="table-responsive">
           <table className="data-table">

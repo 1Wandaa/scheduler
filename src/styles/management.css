@@ -4,6 +4,23 @@
    management page components
    ========================================= */
 
+/* ─── Sticky Header & Filter Wrapper ─── */
+.sticky-mgmt-header {
+  position: sticky;
+  top: -24px;
+  z-index: 45;
+  background-color: var(--bg-surface, #ffffff);
+  margin: -22px -22px 20px -22px;
+  padding: 22px 22px 14px 22px;
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.sticky-mgmt-header > *:last-child {
+  margin-bottom: 0;
+}
+
 /* ─── Page Header Row ─── */
 .mgmt-header {
   display: flex;
@@ -427,6 +444,13 @@
 
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
+  .sticky-mgmt-header {
+    top: -16px;
+    margin: -16px -16px 16px -16px;
+    padding: 16px 16px 12px 16px;
+    border-radius: 14px 14px 0 0;
+  }
+
   .mgmt-header {
     flex-direction: column;
     align-items: flex-start;
@@ -661,6 +685,15 @@
   .availability-block-subtext,
   .availability-block-time {
     display: none;
+  }
+}
+
+@media print {
+  .sticky-mgmt-header {
+    position: static !important;
+    margin: 0 0 16px 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
   }
 }
 

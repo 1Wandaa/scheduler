@@ -350,7 +350,17 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
       </div>
 
       {/* Filter Tabs & Toolbar */}
-      <div className="card" style={{ padding: '16px 20px' }}>
+      <div
+        className="card activity-sticky-toolbar"
+        style={{
+          padding: '16px 20px',
+          position: 'sticky',
+          top: '-24px',
+          zIndex: 45,
+          backgroundColor: '#ffffff',
+          boxShadow: '0 6px 20px rgba(15, 23, 42, 0.08)'
+        }}
+      >
         {/* Category Pills */}
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
           {CATEGORY_FILTERS.map(cat => {
@@ -604,6 +614,9 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
       <style>{`
         /* Mobile specific styling for ActivityLog */
         @media (max-width: 768px) {
+          .activity-sticky-toolbar {
+            top: -16px !important;
+          }
           .activity-mgmt-header {
             flex-direction: column;
             align-items: flex-start;

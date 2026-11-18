@@ -587,97 +587,99 @@ const UserManagement = ({ user, onBack }) => {
   return (
     <>
       <div className="card" style={{  position: 'relative' }}>
-        {/* --- HEADER SECTION --- */}
-        <div className="mgmt-header">
-          <div className="mgmt-header-left">
-            {onBack && (
-              <button className="back-btn" onClick={onBack}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                Back
+        <div className="sticky-mgmt-header">
+          {/* --- HEADER SECTION --- */}
+          <div className="mgmt-header">
+            <div className="mgmt-header-left">
+              {onBack && (
+                <button className="back-btn" onClick={onBack}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  Back
+                </button>
+              )}
+              <div className="mgmt-header-info">
+                <h3 className="card-title">
+                  <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+                  User Management
+                </h3>
+                <p>Manage system users and permissions</p>
+              </div>
+            </div>
+            <div className="mgmt-header-actions">
+              <button
+                className={`select-mode-btn${selectionMode ? ' active' : ''}`}
+                onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
+                title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                {selectionMode ? 'Cancel' : 'Select'}
               </button>
-            )}
-            <div className="mgmt-header-info">
-              <h3 className="card-title">
-                <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-                User Management
-              </h3>
-              <p>Manage system users and permissions</p>
+              <button className="btn" onClick={handleOpenAdd}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
+                Add User
+              </button>
             </div>
           </div>
-          <div className="mgmt-header-actions">
-            <button
-              className={`select-mode-btn${selectionMode ? ' active' : ''}`}
-              onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
-              title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              {selectionMode ? 'Cancel' : 'Select'}
-            </button>
-            <button className="btn" onClick={handleOpenAdd}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
-              Add User
-            </button>
-          </div>
-        </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '20px', borderBottom: '1px solid var(--border-color)', marginBottom: '20px' }}>
-          <div 
-            onClick={() => setActiveTab('staff')}
-            style={{ 
-              padding: '10px 5px', 
-              cursor: 'pointer', 
-              fontWeight: activeTab === 'staff' ? 'bold' : 'normal',
-              color: activeTab === 'staff' ? 'var(--accent-primary)' : 'var(--text-muted)',
-              borderBottom: activeTab === 'staff' ? '2px solid var(--accent-primary)' : 'none'
-            }}>
-            Administrators & Staff
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: '20px', borderBottom: '1px solid var(--border-color)', marginBottom: '14px' }}>
+            <div 
+              onClick={() => setActiveTab('staff')}
+              style={{ 
+                padding: '10px 5px', 
+                cursor: 'pointer', 
+                fontWeight: activeTab === 'staff' ? 'bold' : 'normal',
+                color: activeTab === 'staff' ? 'var(--accent-primary)' : 'var(--text-muted)',
+                borderBottom: activeTab === 'staff' ? '2px solid var(--accent-primary)' : 'none'
+              }}>
+              Administrators & Staff
+            </div>
+            <div 
+              onClick={() => setActiveTab('student')}
+              style={{ 
+                padding: '10px 5px', 
+                cursor: 'pointer', 
+                fontWeight: activeTab === 'student' ? 'bold' : 'normal',
+                color: activeTab === 'student' ? 'var(--accent-primary)' : 'var(--text-muted)',
+                borderBottom: activeTab === 'student' ? '2px solid var(--accent-primary)' : 'none'
+              }}>
+              Users & Students
+            </div>
           </div>
-          <div 
-            onClick={() => setActiveTab('student')}
-            style={{ 
-              padding: '10px 5px', 
-              cursor: 'pointer', 
-              fontWeight: activeTab === 'student' ? 'bold' : 'normal',
-              color: activeTab === 'student' ? 'var(--accent-primary)' : 'var(--text-muted)',
-              borderBottom: activeTab === 'student' ? '2px solid var(--accent-primary)' : 'none'
-            }}>
-            Users & Students
-          </div>
-        </div>
 
-        {/* Search Bar */}
-        <div className="mgmt-toolbar">
-          <div className="mgmt-search-wrapper" style={{ maxWidth: '300px' }}>
-            <span className="mgmt-search-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            </span>
-            <input 
-              type="text" 
-              className="mgmt-search-input" 
-              placeholder="Search user by name, username or role..." 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
+          {/* Search Bar */}
+          <div className="mgmt-toolbar">
+            <div className="mgmt-search-wrapper" style={{ maxWidth: '300px' }}>
+              <span className="mgmt-search-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+              <input 
+                type="text" 
+                className="mgmt-search-input" 
+                placeholder="Search user by name, username or role..." 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+              />
+            </div>
+          </div>
+          {selectionMode && (
+            <BatchActionBar
+              selectedCount={selectedIds.filter(id => filteredUsers.some(u => u.id === id)).length}
+              totalCount={filteredUsers.length}
+              itemName="user"
+              onSelectAll={handleSelectAllFiltered}
+              onDeselectAll={handleDeselectAll}
+              onDeleteSelected={handleDeleteSelected}
+              onDeleteAll={handleDeleteAll}
+              onExitSelectionMode={handleExitSelectionMode}
             />
-          </div>
+          )}
         </div>
-        {selectionMode && (
-          <BatchActionBar
-            selectedCount={selectedIds.filter(id => filteredUsers.some(u => u.id === id)).length}
-            totalCount={filteredUsers.length}
-            itemName="user"
-            onSelectAll={handleSelectAllFiltered}
-            onDeselectAll={handleDeselectAll}
-            onDeleteSelected={handleDeleteSelected}
-            onDeleteAll={handleDeleteAll}
-            onExitSelectionMode={handleExitSelectionMode}
-          />
-        )}
 
         {/* --- DATA TABLE --- */}
         <UserTable

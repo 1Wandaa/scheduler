@@ -292,91 +292,93 @@ const SectionManagement = ({ sections, professors, schedules, subjects, departme
   return (
     <>
       <div className="card" style={{ position: 'relative' }}>
-        <div className="mgmt-header">
-          <div className="mgmt-header-left">
-            {onBack && (
-              <button className="back-btn" onClick={onBack}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-                Back
-              </button>
-            )}
-            <div className="mgmt-header-info">
-              <h3 className="card-title">
-                <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                Section Management
-              </h3>
-              <p>Manage student sections and their enrolled subjects</p>
+        <div className="sticky-mgmt-header">
+          <div className="mgmt-header">
+            <div className="mgmt-header-left">
+              {onBack && (
+                <button className="back-btn" onClick={onBack}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                  Back
+                </button>
+              )}
+              <div className="mgmt-header-info">
+                <h3 className="card-title">
+                  <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                  Section Management
+                </h3>
+                <p>Manage student sections and their enrolled subjects</p>
+              </div>
             </div>
-          </div>
-          <div className="mgmt-header-actions">
-            {onNavigateToHub && (
+            <div className="mgmt-header-actions">
+              {onNavigateToHub && (
+                <button
+                  className="btn"
+                  onClick={onNavigateToHub}
+                  style={{ background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-color)', boxShadow: 'none' }}
+                >
+                  ⇄ Teaching Load Management
+                </button>
+              )}
               <button
-                className="btn"
-                onClick={onNavigateToHub}
-                style={{ background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border-color)', boxShadow: 'none' }}
+                className={`select-mode-btn${selectionMode ? ' active' : ''}`}
+                onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
+                title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
               >
-                ⇄ Teaching Load Management
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                {selectionMode ? 'Cancel' : 'Select'}
               </button>
-            )}
-            <button
-              className={`select-mode-btn${selectionMode ? ' active' : ''}`}
-              onClick={() => selectionMode ? handleExitSelectionMode() : setSelectionMode(true)}
-              title={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              {selectionMode ? 'Cancel' : 'Select'}
-            </button>
-            <button className="btn" onClick={handleOpenAdd}>+ Add Section</button>
-          </div>
-        </div>
-
-        {/* Department Filter and Search Bar */}
-        <div className="mgmt-toolbar">
-          <div className="mgmt-toolbar-row">
-            <span className="mgmt-toolbar-label">Filter by Department:</span>
-            <div className="mgmt-filter-pills">
-              {['All', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
-                const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
-                const isActive = departmentFilter === dept;
-                return (
-                  <button
-                    key={dept}
-                    className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
-                    onClick={() => setDepartmentFilter(dept)}
-                    style={isActive ? { background: deptColor, borderColor: deptColor } : undefined}
-                  >
-                    {dept === 'All' ? 'All Departments' : dept}
-                  </button>
-                )
-              })}
+              <button className="btn" onClick={handleOpenAdd}>+ Add Section</button>
             </div>
           </div>
-          <div className="mgmt-search-wrapper">
-            <span className="mgmt-search-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            </span>
-            <input
-              type="text"
-              className="mgmt-search-input"
-              placeholder="Search section name or program..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
 
-        {selectionMode && (
-          <BatchActionBar
-            selectedCount={selectedIds.filter(id => filteredSections.some(s => s.id === id)).length}
-            totalCount={filteredSections.length}
-            itemName="section"
-            onSelectAll={handleSelectAllFiltered}
-            onDeselectAll={handleDeselectAll}
-            onDeleteSelected={handleDeleteSelected}
-            onDeleteAll={handleDeleteAll}
-            onExitSelectionMode={handleExitSelectionMode}
-          />
-        )}
+          {/* Department Filter and Search Bar */}
+          <div className="mgmt-toolbar">
+            <div className="mgmt-toolbar-row">
+              <span className="mgmt-toolbar-label">Filter by Department:</span>
+              <div className="mgmt-filter-pills">
+                {['All', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
+                  const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
+                  const isActive = departmentFilter === dept;
+                  return (
+                    <button
+                      key={dept}
+                      className={`mgmt-filter-pill${isActive ? ' active' : ''}`}
+                      onClick={() => setDepartmentFilter(dept)}
+                      style={isActive ? { background: deptColor, borderColor: deptColor } : undefined}
+                    >
+                      {dept === 'All' ? 'All Departments' : dept}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="mgmt-search-wrapper">
+              <span className="mgmt-search-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </span>
+              <input
+                type="text"
+                className="mgmt-search-input"
+                placeholder="Search section name or program..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {selectionMode && (
+            <BatchActionBar
+              selectedCount={selectedIds.filter(id => filteredSections.some(s => s.id === id)).length}
+              totalCount={filteredSections.length}
+              itemName="section"
+              onSelectAll={handleSelectAllFiltered}
+              onDeselectAll={handleDeselectAll}
+              onDeleteSelected={handleDeleteSelected}
+              onDeleteAll={handleDeleteAll}
+              onExitSelectionMode={handleExitSelectionMode}
+            />
+          )}
+        </div>
 
         {/* Render sections grouped by their Department */}
         {(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS).map(dept => {

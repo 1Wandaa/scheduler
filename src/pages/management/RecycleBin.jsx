@@ -303,6 +303,32 @@ const RecycleBin = ({ onBack, user }) => {
         </div>
       </div>
 
+      {!loading && trashItems.length > 0 && selectionMode && (
+        <div style={{ flexShrink: 0, marginTop: '12px' }}>
+          <BatchActionBar
+            selectedCount={selectedIds.length}
+            totalCount={trashItems.length}
+            itemName="trashed item"
+            onSelectAll={handleToggleSelectAll}
+            onDeselectAll={() => setSelectedIds([])}
+            onDeleteSelected={handlePermanentDeleteSelected}
+            onDeleteAll={handleEmptyTrash}
+            onExitSelectionMode={() => { setSelectionMode(false); setSelectedIds([]); }}
+            extraActions={selectedIds.length > 0 ? (
+              <button
+                type="button"
+                className="batch-btn batch-btn-success"
+                onClick={handleRestoreSelected}
+                title={`Restore ${selectedIds.length} items`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                <span>Restore Selected ({selectedIds.length})</span>
+              </button>
+            ) : null}
+          />
+        </div>
+      )}
+
       <div style={{ flex: 1, overflowY: 'auto', overscrollBehaviorY: 'auto', paddingRight: '5px' }}>
         {loading ? (
           <div className="content-loading">
@@ -317,29 +343,6 @@ const RecycleBin = ({ onBack, user }) => {
           </div>
         ) : (
           <>
-            {selectionMode && (
-              <BatchActionBar
-                selectedCount={selectedIds.length}
-                totalCount={trashItems.length}
-                itemName="trashed item"
-                onSelectAll={handleToggleSelectAll}
-                onDeselectAll={() => setSelectedIds([])}
-                onDeleteSelected={handlePermanentDeleteSelected}
-                onDeleteAll={handleEmptyTrash}
-                onExitSelectionMode={() => { setSelectionMode(false); setSelectedIds([]); }}
-                extraActions={selectedIds.length > 0 ? (
-                  <button
-                    type="button"
-                    className="batch-btn batch-btn-success"
-                    onClick={handleRestoreSelected}
-                    title={`Restore ${selectedIds.length} items`}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-                    <span>Restore Selected ({selectedIds.length})</span>
-                  </button>
-                ) : null}
-              />
-            )}
 
             <div className="table-responsive">
               <table className="data-table recycle-bin-table">

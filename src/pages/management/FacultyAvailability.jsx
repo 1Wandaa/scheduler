@@ -59,62 +59,64 @@ function FacultyAvailability({ professors, schedules, activeSemester, activeScho
 
   return (
     <div className="card" style={{ backgroundImage: 'none', backgroundColor: '#ffffff' }}>
-      <div className="mgmt-header">
-        <div className="mgmt-header-left">
-          {onBack && (
-            <button className="back-btn" onClick={onBack}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-              Back
-            </button>
-          )}
-          <div className="mgmt-header-info">
-            <h3 className="card-title">
-              <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-              Faculty Availability
-            </h3>
-            <p>Real-time faculty matrix for {activeSemester} {activeSchoolYear}</p>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: '200px' }}>
-          <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' }}>Day of Week</label>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {DAYS.map(day => (
-              <button
-                key={day}
-                onClick={() => setSelectedDay(day)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  border: selectedDay === day ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                  background: selectedDay === day ? 'var(--accent-primary)' : 'transparent',
-                  color: selectedDay === day ? '#fff' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontSize: '0.82rem',
-                  fontWeight: '600',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {day}
+      <div className="sticky-mgmt-header">
+        <div className="mgmt-header">
+          <div className="mgmt-header-left">
+            {onBack && (
+              <button className="back-btn" onClick={onBack}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                Back
               </button>
-            ))}
+            )}
+            <div className="mgmt-header-info">
+              <h3 className="card-title">
+                <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                Faculty Availability
+              </h3>
+              <p>Real-time faculty matrix for {activeSemester} {activeSchoolYear}</p>
+            </div>
           </div>
         </div>
-        
-        <div style={{ minWidth: '200px', flex: 1 }}>
-          <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' }}>Filter Department</label>
-          <select 
-            className="form-select" 
-            style={{ width: '100%' }}
-            value={selectedDepartment} 
-            onChange={(e) => setSelectedDepartment(e.target.value)}
-          >
-            {departments.map(d => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
+
+        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' }}>Day of Week</label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {DAYS.map(day => (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: selectedDay === day ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                    background: selectedDay === day ? 'var(--accent-primary)' : 'transparent',
+                    color: selectedDay === day ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '0.82rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div style={{ minWidth: '200px', flex: 1 }}>
+            <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' }}>Filter Department</label>
+            <select 
+              className="form-select" 
+              style={{ width: '100%' }}
+              value={selectedDepartment} 
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+            >
+              {departments.map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

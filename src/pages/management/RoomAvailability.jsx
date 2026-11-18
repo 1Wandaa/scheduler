@@ -55,67 +55,69 @@ function RoomAvailability({ rooms, schedules, activeSemester, activeSchoolYear, 
 
   return (
     <div className="card" style={{ backgroundImage: 'none', backgroundColor: '#ffffff' }}>
-      <div className="mgmt-header">
-        <div className="mgmt-header-left">
-          {onBack && (
-            <button className="back-btn" onClick={onBack}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-              Back
-            </button>
-          )}
-          <div className="mgmt-header-info">
-            <h3 className="card-title">
-              <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
-              Room Availability
-            </h3>
-            <p>Real-time room matrix for {activeSemester} {activeSchoolYear}</p>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: '200px' }}>
-          <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' }}>Day of Week</label>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {DAYS.map(day => (
-              <button
-                key={day}
-                onClick={() => setSelectedDay(day)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  border: selectedDay === day ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                  background: selectedDay === day ? 'var(--accent-primary)' : 'transparent',
-                  color: selectedDay === day ? '#fff' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontSize: '0.82rem',
-                  fontWeight: '600',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {day}
+      <div className="sticky-mgmt-header">
+        <div className="mgmt-header">
+          <div className="mgmt-header-left">
+            {onBack && (
+              <button className="back-btn" onClick={onBack}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                Back
               </button>
-            ))}
+            )}
+            <div className="mgmt-header-info">
+              <h3 className="card-title">
+                <svg className="mgmt-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                Room Availability
+              </h3>
+              <p>Real-time room matrix for {activeSemester} {activeSchoolYear}</p>
+            </div>
           </div>
         </div>
-        
-        <div style={{ minWidth: '200px', flex: 1 }}>
-          <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' }}>Filter Building</label>
-          <select 
-            className="form-select" 
-            style={{ width: '100%' }}
-            value={selectedBuilding} 
-            onChange={(e) => setSelectedBuilding(e.target.value)}
-          >
-            {buildings.map(b => (
-              <option key={b} value={b}>{b}</option>
-            ))}
-          </select>
+
+        <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' }}>Day of Week</label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {DAYS.map(day => (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: selectedDay === day ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                    background: selectedDay === day ? 'var(--accent-primary)' : 'transparent',
+                    color: selectedDay === day ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '0.82rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div style={{ minWidth: '200px', flex: 1 }}>
+            <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' }}>Filter Building</label>
+            <select 
+              className="form-select" 
+              style={{ width: '100%' }}
+              value={selectedBuilding} 
+              onChange={(e) => setSelectedBuilding(e.target.value)}
+            >
+              {buildings.map(b => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

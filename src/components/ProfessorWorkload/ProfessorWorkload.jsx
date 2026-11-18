@@ -171,15 +171,6 @@ function ProfessorWorkload({
   return (
     <div className="professor-workload-container pw-animate">
 
-      {onBack && (
-        <div className="no-print" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center' }}>
-          <button className="back-btn" onClick={onBack}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-            Back
-          </button>
-        </div>
-      )}
-
       {/* Header */}
       <div className="pw-header">
         <div className="pw-header-logo">
@@ -206,6 +197,12 @@ function ProfessorWorkload({
 
       {/* --- Controls --- */}
       <div className="pw-controls">
+        {onBack && (
+          <button className="back-btn" onClick={onBack}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            Back
+          </button>
+        )}
         <div className="pw-search">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           <input 
