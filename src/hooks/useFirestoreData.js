@@ -292,7 +292,8 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
                   specialization: Array.from(specSet),
                   assignedSections: [],
                   sectionSubjectMap: {},
-                  maxUnits: item.maxUnits ?? prof.maxUnits ?? 15
+                  maxUnits: item.maxUnits ?? prof.maxUnits ?? 15,
+                  ...(item.stageLocked !== undefined ? { stageLocked: item.stageLocked } : {})
                 }
               : {
                   id: String(item.id),
@@ -304,7 +305,8 @@ export function useFirestoreData(activeSemester, activeSchoolYear, isAdmin = tru
                   specialization: Array.from(specSet),
                   assignedSections: [],
                   sectionSubjectMap: {},
-                  preferredRooms: []
+                  preferredRooms: [],
+                  ...(item.stageLocked !== undefined ? { stageLocked: item.stageLocked } : {})
                 };
 
             matchedProfIds.add(String(profDoc.id));

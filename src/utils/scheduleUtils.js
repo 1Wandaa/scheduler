@@ -687,6 +687,19 @@ export function creditPerMeeting(subject) {
  * @param {Object[]} allRooms - Full rooms list (used to check if Stage exists)
  * @returns {boolean}
  */
+export function professorPrefersRoom(professor, room) {
+  if (!professor || !room) return false;
+  const prefs = professor.preferredRooms;
+  if (!Array.isArray(prefs) || prefs.length === 0) return false;
+  const rId = String(room.id || '').trim().toLowerCase();
+  const rName = String(room.name || '').trim().toLowerCase();
+  return prefs.some((p) => {
+    const token = String(p || '').trim().toLowerCase();
+    if (!token) return false;
+    return token === rId || token === rName || (rName && (rName.includes(token) || token.includes(rName)));
+  });
+}
+
 export function isProfessorAllowedInRoom(room, professor, subject, section, allRooms) {
   if (!room || !professor) return true;
 
@@ -697,8 +710,8 @@ export function isProfessorAllowedInRoom(room, professor, subject, section, allR
   // Stage constraint: only designated Stage professor(s) may use Stage, and they must use Stage
   const hasStage = (allRooms || []).some(r => r.isStage || (r.name || '').toLowerCase().includes('stage'));
   if (hasStage) {
-    const isStageProf = isProfessorStageLocked(professor);
-    const isStageRoom = room.isStage || (room.name || '').toLowerCase().includes('stage');
+    const isStageProf = isProfessorStageLocked(professor, allRooms);
+    const isStageRoom = Boolean(room.isStage || (room.name || '').toLowerCase().includes('stage'));
     if (isStageProf && !isStageRoom) return false;
     if (!isStageProf && isStageRoom) return false;
   }
@@ -732,13 +745,38 @@ export function isProfessorAllowedInRoom(room, professor, subject, section, allR
 
 /**
  * Determine if a professor is "Stage-locked" (must always use the Stage room).
- * Uses the `stageLocked` flag from the professor's data.
- *
- * To mark a professor as stage-locked, set `stageLocked: true` in their Firestore document.
+ * Checks the professor's `preferredRooms` first (whether Stage or Gym is selected),
+ * then falls back to `stageLocked: true` or the designated Stage professor (Ballera).
  */
-export function isProfessorStageLocked(professor) {
+export function isProfessorStageLocked(professor, allRooms = []) {
   if (!professor) return false;
-  return professor.stageLocked === true;
+  const prefs = Array.isArray(professor.preferredRooms) ? professor.preferredRooms : [];
+  if (prefs.length > 0) {
+    const prefersStage = prefs.some((pref) => {
+      const token = String(pref || '').trim().toLowerCase();
+      if (!token) return false;
+      if (token.includes('stage')) return true;
+      const matchedRoom = (allRooms || []).find(
+        (r) => String(r.id || '').trim().toLowerCase() === token || String(r.name || '').trim().toLowerCase() === token
+      );
+      return Boolean(matchedRoom && (matchedRoom.isStage || (matchedRoom.name || '').toLowerCase().includes('stage')));
+    });
+    if (prefersStage) return true;
+
+    const prefersGym = prefs.some((pref) => {
+      const token = String(pref || '').trim().toLowerCase();
+      if (!token) return false;
+      if (token.includes('gym')) return true;
+      const matchedRoom = (allRooms || []).find(
+        (r) => String(r.id || '').trim().toLowerCase() === token || String(r.name || '').trim().toLowerCase() === token
+      );
+      return Boolean(matchedRoom && (matchedRoom.name || '').toLowerCase().includes('gym'));
+    });
+    if (prefersGym) return false;
+  }
+  if (professor.stageLocked === true) return true;
+  if ((professor.name || '').toLowerCase().includes('ballera')) return true;
+  return false;
 }
 
 /**

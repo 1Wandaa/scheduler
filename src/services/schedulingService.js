@@ -21,6 +21,7 @@ import {
   isRoomAllowedFor,
   isProfessorAllowedInRoom,
   isProfessorStageLocked,
+  professorPrefersRoom,
   getMeetingTimeLabel,
   getScheduleTimeRange,
   DEFAULT_MAX_UNITS,
@@ -63,11 +64,17 @@ function getEligibleRooms(rooms, subject, section, constraints, component) {
   const fixedProf = constraints?.fixedProfessor;
   if (fixedProf) {
     const filterProf = (arr) => arr.filter((r) => isProfessorAllowedInRoom(r, fixedProf, activeSubject, section, rooms));
+    const flatFiltered = filterProf(tiers.flat);
+    const prefRooms = flatFiltered.filter((r) => professorPrefersRoom(fixedProf, r));
+    const tier1Base = filterProf(tiers.tier1);
+    const tier1Merged = prefRooms.length > 0
+      ? [...prefRooms, ...tier1Base.filter((r) => !prefRooms.some((pr) => String(pr.id) === String(r.id)))]
+      : tier1Base;
     return {
-      tier1: filterProf(tiers.tier1),
+      tier1: tier1Merged,
       tier2: filterProf(tiers.tier2),
       tier3: filterProf(tiers.tier3),
-      flat: filterProf(tiers.flat),
+      flat: flatFiltered,
     };
   }
   return tiers;
@@ -428,6 +435,9 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
           }
         }
       }
+      if (professorPrefersRoom(candidateProf, candidateRoom)) {
+        score += 100;
+      }
       return score;
     };
 
@@ -436,7 +446,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       await yieldToMain();
       if (signal?.aborted) return { success: false };
 
-      const isStageLocked = isProfessorStageLocked(professor);
+      const isStageLocked = isProfessorStageLocked(professor, rooms);
       const profSchedules = temp.filter((s) => String(s.professor?.id) === String(professor.id));
       const profCurrentLoad = computeProfessorWorkloadUnits(profSchedules);
       const compKey = group.component || (subject?.hasLecLab ? 'full' : 'std');
@@ -460,8 +470,8 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       const prefRoomIds = professor.preferredRooms || [];
       let sortedRoomPool = roomPool;
       if (prefRoomIds.length > 0) {
-        const validPrefRooms = roomPool.filter((r) => prefRoomIds.some(id => String(id) === String(r.id)));
-        const nonPrefRooms = roomPool.filter((r) => !prefRoomIds.some(id => String(id) === String(r.id)));
+        const validPrefRooms = roomPool.filter((r) => professorPrefersRoom(professor, r));
+        const nonPrefRooms = roomPool.filter((r) => !professorPrefersRoom(professor, r));
         sortedRoomPool = [...validPrefRooms, ...nonPrefRooms];
       }
 
@@ -473,7 +483,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         }
 
         if (hasStage) {
-          const isStage = (room.name || '').toLowerCase().includes('stage');
+          const isStage = Boolean(room.isStage || (room.name || '').toLowerCase().includes('stage'));
           if (isStageLocked && !isStage) continue;
           if (!isStageLocked && isStage) continue;
         }
@@ -568,12 +578,12 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
           continue;
         }
 
-        const isStageLocked = isProfessorStageLocked(professor);
+        const isStageLocked = isProfessorStageLocked(professor, rooms);
         const prefRoomIds = professor.preferredRooms || [];
         let sortedRoomPool = roomPool;
         if (prefRoomIds.length > 0) {
-          const validPrefRooms = roomPool.filter((r) => prefRoomIds.some(id => String(id) === String(r.id)));
-          const nonPrefRooms = roomPool.filter((r) => !prefRoomIds.some(id => String(id) === String(r.id)));
+          const validPrefRooms = roomPool.filter((r) => professorPrefersRoom(professor, r));
+          const nonPrefRooms = roomPool.filter((r) => !professorPrefersRoom(professor, r));
           sortedRoomPool = [...validPrefRooms, ...nonPrefRooms];
         }
 
@@ -585,7 +595,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
           for (let ri = 0; ri < sortedRoomPool.length && !placed; ri++) {
             const room = sortedRoomPool[ri];
             if (hasStage) {
-              const isStage = (room.name || '').toLowerCase().includes('stage');
+              const isStage = Boolean(room.isStage || (room.name || '').toLowerCase().includes('stage'));
               if (isStageLocked && !isStage) continue;
               if (!isStageLocked && isStage) continue;
             }
@@ -672,7 +682,12 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       };
     });
 
-    const evaluatedRooms = roomPool.map((r) => {
+    const allowedForProfRoomPool = roomPool.filter((r) =>
+      profPool.some((p) => isProfessorAllowedInRoom(r, p, subject, section, rooms))
+    );
+    const diagRoomPool = allowedForProfRoomPool.length > 0 ? allowedForProfRoomPool : roomPool;
+
+    const evaluatedRooms = diagRoomPool.map((r) => {
       const rScheds = temp.filter((s) => String(s.room?.id) === String(r.id));
       const busySamples = rScheds.slice(0, 4).map((s) => {
       const timeRange = getMeetingTimeLabel(s.timeSlot, s.hours || s.subject?.hoursPerMeeting, scheduleMode) || s.timeSlot?.label || 'slot';
@@ -713,7 +728,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     });
 
     const profNames = profPool.map((p) => p.name).join(', ');
-    const roomNames = roomPool.map((r) => r.name).join(', ');
+    const roomNames = diagRoomPool.map((r) => r.name).join(', ');
 
     if (!anyProfEligibleForRooms && profMaxUnitsReached) {
       const profLimitSummaries = evaluatedProfessors

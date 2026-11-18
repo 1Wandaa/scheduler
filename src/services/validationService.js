@@ -15,6 +15,7 @@ import {
   getSectionDepartment,
   isRoomAllowedFor,
   isProfessorAllowedInRoom,
+  isProfessorStageLocked,
   getMeetingTimeLabel,
   getScheduleTimeRange,
   validateTimeSlotAgainstTimetable,
@@ -115,13 +116,14 @@ export function validateScheduleEntry(
       const isSpeechLab = room.baelOnly || roomName.includes('SPEECH');
       const isBscsExclusive = room.bscsExclusive || roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
       const isStageRoom = room.isStage || (room.name || '').toLowerCase().includes('stage');
+      const isStageProf = isProfessorStageLocked(professor, rooms);
       if (isSpeechLab) {
         errors.push(`Room "${room.name}" can only be used by BAEL faculty for BAEL major subjects.`);
       } else if (isBscsExclusive && !subject?.requiredLab) {
         errors.push(`Room "${room.name}" cannot be used by non-BSCS faculty (${professor.name}) for non-lab subjects.`);
-      } else if (professor.stageLocked && !isStageRoom) {
+      } else if (isStageProf && !isStageRoom) {
         errors.push(`Faculty "${professor.name}" is assigned exclusively to the Stage room.`);
-      } else if (!professor.stageLocked && isStageRoom) {
+      } else if (!isStageProf && isStageRoom) {
         errors.push(`Room "${room.name}" is reserved for Stage-designated faculty.`);
       } else {
         errors.push(`Faculty "${professor.name}" is not permitted to use room "${room.name}" for "${subject.code}".`);
