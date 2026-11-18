@@ -65,6 +65,10 @@
     padding: 0 !important;
   }
 
+  .fs-overlay-root {
+    display: none !important;
+  }
+
   /* Force background colors to print */
   body.print-colored-mode {
     -webkit-print-color-adjust: exact !important;
@@ -83,112 +87,11 @@
   margin-bottom: 2rem;
 }
 
-.schedule-fullscreen {
-  position: fixed !important;
-  inset: 0;
-  z-index: 99999;
-  background: #ffffff !important;
-  padding: 0 !important;
-  overflow: hidden;
-  /* prevent scrolling to fit in one page */
-  border-radius: 0 !important;
-  margin: 0 !important;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-/* Hide all extra elements so it's JUST the grid */
-.schedule-fullscreen .schedule-toolbar,
-.schedule-fullscreen .schedule-doc-header,
-.schedule-fullscreen .dept-legend,
-.schedule-fullscreen .schedule-summary-container {
+/* Hide floating dashboard overlays when fullscreen timetable is active */
+body.schedule-fullscreen-active .chatbot-container,
+body.schedule-fullscreen-active .speed-dial-wrapper,
+body.schedule-fullscreen-active .bottom-nav {
   display: none !important;
-}
-
-.schedule-fullscreen .table-wrapper {
-  flex: 1;
-  overflow: auto;
-  /* allow panning */
-  box-shadow: none !important;
-  border-radius: 0 !important;
-  background: #fff;
-  border: none !important;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-.schedule-fullscreen .schedule-table {
-  width: auto;
-  min-width: 680px;
-  margin: auto;
-  /* Safe centering that doesn't clip top/left when overflowing */
-}
-
-.schedule-fullscreen .schedule-table th {
-  padding: 18px 12px;
-  font-size: 0.9rem;
-}
-
-.schedule-fullscreen .time-label {
-  font-size: 0.9rem;
-}
-
-.schedule-fullscreen .schedule-content .subject {
-  font-size: 1.1rem;
-  margin-bottom: 0.4rem;
-}
-
-.schedule-fullscreen .schedule-content p {
-  font-size: 0.95rem;
-  line-height: 1.4;
-}
-
-.floating-exit-btn {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 100000;
-  background: rgba(0, 0, 0, 0.4);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  backdrop-filter: blur(4px);
-}
-
-
-.rotate-device-hint {
-  display: none;
-}
-
-@media (max-width: 768px) and (orientation: portrait) {
-  .schedule-fullscreen .rotate-device-hint {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    position: absolute;
-    bottom: 2.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.75);
-    color: white;
-    padding: 10px 18px;
-    border-radius: 30px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    z-index: 100000;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-  }
 }
 
 
@@ -708,7 +611,7 @@
     display: none !important;
   }
 
-  .table-wrapper {
+  .schedule-table-container .table-wrapper {
     overflow-x: auto;
     zoom: 0.5;
   }
@@ -805,37 +708,37 @@
 
   /* Mobile Timetable Grid Shape Adjustments:
      Make schedule blocks square instead of tall vertical rectangles (matching PC proportions)
-     without deforming or stretching rows */
-  .schedule-table {
+     without deforming or stretching rows (scoped away from fullscreen portal) */
+  .schedule-table-container .schedule-table {
     min-width: 680px;
     width: 100%;
   }
 
-  .schedule-table th {
+  .schedule-table-container .schedule-table th {
     padding: 8px 4px !important;
     font-size: 0.70rem !important;
   }
 
-  .schedule-table th.sticky-col,
-  .schedule-table .time-label {
+  .schedule-table-container .schedule-table th.sticky-col,
+  .schedule-table-container .schedule-table .time-label {
     width: 90px !important;
     min-width: 90px !important;
     padding: 3px 4px !important;
     font-size: 0.70rem !important;
   }
 
-  .schedule-table td,
-  .schedule-table .schedule-cell {
+  .schedule-table-container .schedule-table td,
+  .schedule-table-container .schedule-table .schedule-cell {
     height: 30px !important;
     padding: 0 !important;
   }
 
-  .schedule-table .schedule-item {
+  .schedule-table-container .schedule-table .schedule-item {
     padding: 2px 4px !important;
     box-sizing: border-box !important;
   }
 
-  .schedule-table .schedule-content {
+  .schedule-table-container .schedule-table .schedule-content {
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
@@ -843,25 +746,25 @@
     overflow: hidden !important;
   }
 
-  .schedule-table .schedule-content .subject {
+  .schedule-table-container .schedule-table .schedule-content .subject {
     font-size: 0.70rem !important;
     line-height: 1.1 !important;
     word-break: break-word !important;
     margin: 0 !important;
   }
 
-  .schedule-table .schedule-content .subject span {
+  .schedule-table-container .schedule-table .schedule-content .subject span {
     display: inline !important;
     margin-left: 2px !important;
     font-size: 0.75em !important;
   }
 
-  .schedule-table .schedule-content .details {
+  .schedule-table-container .schedule-table .schedule-content .details {
     margin-top: 2px !important;
     gap: 0 !important;
   }
 
-  .schedule-table .schedule-content p {
+  .schedule-table-container .schedule-table .schedule-content p {
     margin: 0 !important;
     font-size: 0.64rem !important;
     line-height: 1.12 !important;
@@ -870,14 +773,14 @@
     text-overflow: ellipsis !important;
   }
 
-  .schedule-table .schedule-content .professor,
-  .schedule-table .schedule-content .room,
-  .schedule-table .schedule-content .section {
+  .schedule-table-container .schedule-table .schedule-content .professor,
+  .schedule-table-container .schedule-table .schedule-content .room,
+  .schedule-table-container .schedule-table .schedule-content .section {
     font-size: 0.64rem !important;
     line-height: 1.12 !important;
   }
 
-  .schedule-table .remove-btn {
+  .schedule-table-container .schedule-table .remove-btn {
     top: 2px !important;
     right: 2px !important;
     width: 18px !important;
@@ -1183,4 +1086,95 @@
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
+}
+
+/* ==========================================================================
+   Fullscreen Timetable View (Matches Main Grid Proportions, Uniform Scale)
+   ========================================================================== */
+.fs-overlay-root {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: 10000;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+}
+
+.fs-scale-box {
+  position: relative;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.fs-table-stage {
+  position: relative;
+  box-sizing: border-box;
+  background: #ffffff;
+  will-change: transform;
+}
+
+.fs-table-stage .schedule-table {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+.fs-table-stage .schedule-table thead th {
+  position: static;
+}
+
+/* Always-visible unobtrusive Exit button (works on desktop & mobile/touch) */
+.fs-exit-floating-btn {
+  position: fixed;
+  top: 12px;
+  right: 14px;
+  z-index: 10010;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(15, 23, 42, 0.86);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.88;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.22);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: opacity 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.fs-exit-floating-btn:hover,
+.fs-exit-floating-btn:focus-visible {
+  opacity: 1;
+  background: rgba(15, 23, 42, 0.96);
+  transform: translateY(-1px);
+  outline: 2px solid rgba(255, 255, 255, 0.45);
+  outline-offset: 2px;
+}
+
+.fs-exit-floating-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .fs-exit-floating-btn {
+    top: 8px;
+    right: 10px;
+    padding: 6px 11px;
+    font-size: 0.72rem;
+    opacity: 0.92;
+  }
 }

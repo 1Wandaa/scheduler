@@ -193,6 +193,18 @@ function FreeTimeCellEditor({ day, freeSeg, activePresetBrush, onUpdateFreeTimeS
   );
 }
 
+function getFullscreenElement() {
+  return (
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement ||
+    document.msFullscreenElement ||
+    null
+  );
+}
+
+const CANONICAL_FULLSCREEN_TABLE_WIDTH = 980;
+
 const ScheduleTable = React.memo(function ScheduleTable({
   schedules = [],
   activeSchedules = [],
@@ -299,10 +311,13 @@ const ScheduleTable = React.memo(function ScheduleTable({
   const [dragOverCell, setDragOverCell] = useState(null);
   const [draggingId, setDraggingId] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fsMetrics, setFsMetrics] = useState({ vw: 1280, vh: 720, tableW: CANONICAL_FULLSCREEN_TABLE_WIDTH, tableH: 925 });
   const containerRef = useRef(null);
+  const fsViewportRef = useRef(null);
+  const fsStageRef = useRef(null);
+  const nativeFsActiveRef = useRef(false);
   const [errorToast, setErrorToast] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
-  const [fitScale, setFitScale] = useState(1);
   const [previewImage, setPreviewImage] = useState(null);
 
   // Scheduler preferences: time format ('12h' | '24h') & conflict highlighting
@@ -1098,66 +1113,156 @@ const ScheduleTable = React.memo(function ScheduleTable({
     };
   }, [handleExportImage, handleExportPrint, user]);
 
-  // Fullscreen: lock body scroll when fullscreen
+  // Fullscreen: lock body scroll, add body class & exit native fullscreen if unmounted while active
   useEffect(() => {
-    document.body.style.overflow = isFullscreen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    if (isFullscreen) {
+      document.body.style.overflow = 'hidden';
+      document.body.classList.add('schedule-fullscreen-active');
+    } else {
+      document.body.style.overflow = '';
+      document.body.classList.remove('schedule-fullscreen-active');
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.classList.remove('schedule-fullscreen-active');
+    };
   }, [isFullscreen]);
 
-  // Fullscreen resize handler
-  useEffect(() => {
-    if (!isFullscreen) return;
-    const updateFitScale = () => {
-      const padding = 32;
-      const availableWidth = window.innerWidth - padding;
-      const availableHeight = window.innerHeight - padding;
-      const tableEl = containerRef.current?.querySelector('.schedule-table');
-      const contentWidth = tableEl ? (tableEl.offsetWidth / (fitScale || 1)) : 680;
-      const contentHeight = tableEl ? (tableEl.offsetHeight / (fitScale || 1)) : 500;
-      const scaleX = availableWidth / Math.max(contentWidth, 680);
-      const scaleY = availableHeight / Math.max(contentHeight, 300);
-      const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
-      const scale = isMobilePortrait ? Math.max(0.85, Math.min(scaleX, scaleY)) : Math.min(scaleX, scaleY);
-      setFitScale(scale);
-    };
-    updateFitScale();
-    window.addEventListener('resize', updateFitScale);
-    return () => window.removeEventListener('resize', updateFitScale);
-  }, [isFullscreen, fitScale]);
-
-  // Native fullscreen changes listener
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
-
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement && !isFullscreen) {
-      if (containerRef.current?.requestFullscreen) {
-        containerRef.current.requestFullscreen().catch(err => {
-          console.error(`Error enabling fullscreen: ${err.message}`);
-          setIsFullscreen(true);
-        });
-      } else if (containerRef.current?.webkitRequestFullscreen) {
-        containerRef.current.webkitRequestFullscreen();
-        setIsFullscreen(true);
-      } else {
-        setIsFullscreen(true);
-      }
-    } else {
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(() => setIsFullscreen(false));
+  const exitNativeFullscreen = useCallback(() => {
+    const fsEl = getFullscreenElement();
+    if (!fsEl) return;
+    try {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
       } else if (document.webkitExitFullscreen) {
         document.webkitExitFullscreen();
-        setIsFullscreen(false);
-      } else {
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
+    } catch {
+      // ignore exit fullscreen errors
+    }
+  }, []);
+
+  const enterFullscreen = useCallback(() => {
+    setIsFullscreen(true);
+
+    const rootEl = document.documentElement;
+    try {
+      if (rootEl?.requestFullscreen) {
+        rootEl.requestFullscreen().catch(() => {
+          // CSS full-viewport portal remains active as seamless fallback
+        });
+      } else if (rootEl?.webkitRequestFullscreen) {
+        rootEl.webkitRequestFullscreen();
+      } else if (rootEl?.mozRequestFullScreen) {
+        rootEl.mozRequestFullScreen();
+      } else if (rootEl?.msRequestFullscreen) {
+        rootEl.msRequestFullscreen();
+      }
+    } catch {
+      // CSS full-viewport portal handles unsupported environments (e.g. iOS Safari)
+    }
+  }, []);
+
+  const exitFullscreen = useCallback(() => {
+    nativeFsActiveRef.current = false;
+    setIsFullscreen(false);
+    exitNativeFullscreen();
+  }, [exitNativeFullscreen]);
+
+  const toggleFullscreen = useCallback(() => {
+    if (isFullscreen) {
+      exitFullscreen();
+    } else {
+      enterFullscreen();
+    }
+  }, [isFullscreen, enterFullscreen, exitFullscreen]);
+
+  // Listen to native fullscreen changes (e.g. user pressing ESC in native fullscreen)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const fsEl = getFullscreenElement();
+      if (fsEl) {
+        nativeFsActiveRef.current = true;
+      } else if (nativeFsActiveRef.current) {
+        nativeFsActiveRef.current = false;
         setIsFullscreen(false);
       }
-    }
-  }, [isFullscreen]);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Cleanup native fullscreen if component unmounts while active
+  useEffect(() => {
+    return () => {
+      if (nativeFsActiveRef.current && getFullscreenElement()) {
+        exitNativeFullscreen();
+      }
+    };
+  }, [exitNativeFullscreen]);
+
+  // Measure fullscreen viewport & unscaled main-style table stage via ResizeObserver (zero loop)
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const viewportEl = fsViewportRef.current;
+    if (!viewportEl) return;
+
+    const measure = () => {
+      const vw = viewportEl.clientWidth || window.innerWidth;
+      const vh = viewportEl.clientHeight || window.innerHeight;
+      const stageEl = fsStageRef.current;
+      // offsetWidth/offsetHeight are unaffected by CSS transform: scale()
+      const tableW = stageEl ? stageEl.offsetWidth : CANONICAL_FULLSCREEN_TABLE_WIDTH;
+      const tableH = stageEl ? stageEl.offsetHeight : 925;
+      setFsMetrics(prev => {
+        if (
+          Math.abs(prev.vw - vw) <= 1 &&
+          Math.abs(prev.vh - vh) <= 1 &&
+          Math.abs(prev.tableW - tableW) <= 1 &&
+          Math.abs(prev.tableH - tableH) <= 1
+        ) {
+          return prev;
+        }
+        return { vw, vh, tableW, tableH };
+      });
+    };
+
+    const rafId = requestAnimationFrame(measure);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (ro) ro.observe(viewportEl);
+    if (ro && fsStageRef.current) ro.observe(fsStageRef.current);
+    window.addEventListener('resize', measure);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [isFullscreen, activeTimeSlots.length, isFreeTimeMode, schedules]);
+
+  // Exit CSS fallback fullscreen with Escape
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (document.querySelector('.dialog-overlay, .modal-overlay') || previewImage) return;
+        e.preventDefault();
+        exitFullscreen();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen, previewImage, exitFullscreen]);
 
   const handleDragStart = useCallback((e, schedule) => {
     e.dataTransfer.setData('scheduleId', schedule.id);
@@ -1301,8 +1406,303 @@ const ScheduleTable = React.memo(function ScheduleTable({
     }
   }, [schedules, activeSchedules, onUpdateSchedule, scheduleMode, showToast]);
 
+  // Compute uniform scale so the exact main timetable fits cleanly in one screen without deformation or scrolling
+  const fsUniformScale = useMemo(() => {
+    const pad = fsMetrics.vw <= 640 ? 12 : 24;
+    const availW = Math.max(200, fsMetrics.vw - pad);
+    const availH = Math.max(200, fsMetrics.vh - pad);
+    const naturalW = Math.max(1, fsMetrics.tableW || CANONICAL_FULLSCREEN_TABLE_WIDTH);
+    const naturalH = Math.max(1, fsMetrics.tableH || 925);
+    return Math.min(availW / naturalW, availH / naturalH);
+  }, [fsMetrics]);
+
+  const renderFreeTimeBanner = () => {
+    if (viewType !== 'faculty' || !isFreeTimeMode) return null;
+    return (
+      <div
+        className="free-time-mode-banner no-print"
+        style={{
+          marginBottom: '14px',
+          padding: '12px 16px',
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '10px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px'
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e3a8a', fontSize: '0.84rem', fontWeight: 600 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>
+              Free Time Activity Mode Active — Type directly into any available time slot below, or pick a quick-fill preset and click a free slot:
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {Object.keys(freeTimeActivities || {}).length > 0 && onClearAllFreeTime && (
+              <button
+                type="button"
+                onClick={onClearAllFreeTime}
+                style={{
+                  background: '#fee2e2',
+                  color: '#dc2626',
+                  border: '1px solid #fca5a5',
+                  borderRadius: '6px',
+                  padding: '4px 10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Clear All Free Time
+              </button>
+            )}
+            {activePresetBrush && (
+              <button
+                type="button"
+                onClick={() => setActivePresetBrush('')}
+                style={{
+                  background: '#ffffff',
+                  color: '#475569',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  padding: '4px 10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Unselect Preset
+              </button>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginRight: '4px' }}>
+            Quick Fill:
+          </span>
+          {FREE_TIME_PRESETS.map(preset => {
+            const isSelected = activePresetBrush === preset;
+            return (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setActivePresetBrush(isSelected ? '' : preset)}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '16px',
+                  fontSize: '0.73rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: isSelected ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                  backgroundColor: isSelected ? '#2563eb' : '#ffffff',
+                  color: isSelected ? '#ffffff' : '#1e293b',
+                  transition: 'all 0.15s ease'
+                }}
+                title={isSelected ? 'Click any free slot below to fill with this activity' : `Select "${preset}" to quick-fill free slots`}
+              >
+                {isSelected ? `✓ ${preset}` : preset}
+              </button>
+            );
+          })}
+        </div>
+        <datalist id="faculty-free-time-presets">
+          {FREE_TIME_PRESETS.map(preset => (
+            <option key={preset} value={preset} />
+          ))}
+        </datalist>
+      </div>
+    );
+  };
+
+  const renderScheduleGrid = () => (
+    <table className="schedule-table">
+      <thead>
+        <tr>
+          <th className="sticky-col" style={{ width: '130px', minWidth: '130px', backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)', borderRight: '1px solid var(--border-color)' }}>Time Slot</th>
+          {displayDays.map(day => <th key={day} style={{ backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)' }}>{day}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {activeTimeSlots.map((timeSlot, tIdx) => {
+          const isHourGroupHead = tIdx % 2 === 0;
+          const nextSlot = activeTimeSlots[tIdx + 1];
+          const timeRowSpan = isHourGroupHead ? (nextSlot ? 2 : 1) : 0;
+          const hourLabel = isHourGroupHead
+            ? (nextSlot ? `${timeSlot.label.split(' - ')[0]} - ${nextSlot.label.split(' - ')[1]}` : timeSlot.label)
+            : '';
+          const displayHourLabel = isHourGroupHead && timeFormat === '24h'
+            ? formatTimeRange(hourLabel, '24h')
+            : hourLabel;
+
+          return (
+            <tr key={timeSlot.id} className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
+              {isHourGroupHead && (
+                <td className="time-label sticky-col" rowSpan={timeRowSpan} style={{ borderRight: '1px solid var(--border-color)' }}>
+                  <strong>{displayHourLabel}</strong>
+                </td>
+              )}
+              {displayDays.map(day => {
+                const cellKey = `${day}-${timeSlot.id}`;
+
+                if (skippedCellsSet.has(cellKey) || freeTimeSkippedSet.has(cellKey)) {
+                  return null;
+                }
+
+                const isDropTarget = dragOverCell === cellKey;
+                const cellSchedules = scheduleGridMap.get(cellKey) || [];
+                const freeSeg = cellSchedules.length === 0 ? freeTimeSegmentMap.get(cellKey) : null;
+                const rowSpan = cellSchedules.length > 0 ? (cellSpanMap.get(cellKey) || 1) : (freeSeg ? freeSeg.rowSpan : 1);
+                const primaryColor = cellSchedules.length > 0 ? getDeptColor(cellSchedules[0]) : null;
+
+                return (
+                  <td
+                    key={cellKey}
+                    rowSpan={rowSpan}
+                    className={`schedule-cell ${isDropTarget ? 'drag-over' : ''} ${cellSchedules.length > 0 ? 'has-schedule' : ''} ${freeSeg ? 'has-free-time-seg' : ''}`}
+                    onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
+                    onDrop={(e) => handleDrop(e, day, timeSlot.id)}
+                    style={
+                      primaryColor
+                        ? { backgroundColor: primaryColor.bg, padding: 0 }
+                        : freeSeg
+                          ? {
+                              backgroundColor: isFreeTimeMode ? '#f8fafc' : (freeSeg.text ? '#f8fafc' : undefined),
+                              padding: '4px 6px',
+                              verticalAlign: 'middle',
+                              border: isFreeTimeMode ? '1.5px dashed #93c5fd' : (freeSeg.text ? '1px solid #cbd5e1' : undefined)
+                            }
+                          : undefined
+                    }
+                  >
+                    {cellSchedules.length === 0 && freeSeg && isFreeTimeMode && (
+                      <FreeTimeCellEditor
+                        day={day}
+                        freeSeg={freeSeg}
+                        activePresetBrush={activePresetBrush}
+                        onUpdateFreeTimeSegment={onUpdateFreeTimeSegment}
+                      />
+                    )}
+
+                    {cellSchedules.length === 0 && freeSeg && !isFreeTimeMode && freeSeg.text && (
+                      <div
+                        className="free-time-activity-display"
+                        onClick={() => {
+                          if (onToggleFreeTimeMode) onToggleFreeTimeMode();
+                        }}
+                        title="Click to edit free time activity"
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '100%',
+                          padding: '4px',
+                          textAlign: 'center',
+                          boxSizing: 'border-box',
+                          cursor: onToggleFreeTimeMode ? 'pointer' : 'default'
+                        }}
+                      >
+                        <span
+                          className="free-time-activity-text"
+                          style={{
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
+                            color: '#1e293b',
+                            lineHeight: 1.25,
+                            wordBreak: 'break-word'
+                          }}
+                        >
+                          {freeSeg.text}
+                        </span>
+                      </div>
+                    )}
+
+                    {cellSchedules.map((schedule) => {
+                      const deptColor = getDeptColor(schedule);
+                      const profFormatted = formatProfessorName(schedule.professor?.name);
+                      const isConflicting = conflictAlertsEnabled && (cellSchedules.length > 1 || conflictingScheduleIds.has(schedule.id));
+
+                      return (
+                        <div
+                          key={schedule.id}
+                          className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''} ${isConflicting ? 'has-conflict' : ''}`}
+                          draggable={!!onUpdateSchedule && isDeleteMode}
+                          onDragStart={(e) => handleDragStart(e, schedule)}
+                          onDragEnd={handleDragEnd}
+                          style={{ cursor: (onUpdateSchedule && isDeleteMode) ? 'grab' : 'default' }}
+                        >
+                          <div className="schedule-content" style={{ display: 'flex', flexDirection: 'column', paddingRight: (onRemove && isDeleteMode) ? '24px' : '0' }}>
+                            <p className="subject" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0 }}>
+                              {schedule.subject?.code ?? '—'}
+                              {schedule.component && <span style={{ fontSize: '0.7em', display: 'block', fontWeight: 'normal', opacity: 0.9 }}>{schedule.component}</span>}
+                            </p>
+                            <div className="details" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <p className="professor" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
+                                {profFormatted}
+                              </p>
+                              <p className="room" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
+                                {schedule.room?.name ?? '—'}
+                              </p>
+                              {schedule.section && (
+                                <p className="section" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
+                                  {schedule.section.name}
+                                </p>
+                              )}
+                              {isConflicting && (
+                                <span className="schedule-conflict-tag" title="Overlapping schedule detected">
+                                  ⚠️ Conflict
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {onRemove && isDeleteMode && (
+                            <button
+                              className="remove-btn"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const isConfirmed = await confirm({
+                                  title: 'Delete Schedule',
+                                  text: 'Are you sure you want to delete this schedule?',
+                                  icon: 'warning',
+                                  confirmButtonText: 'Delete',
+                                  isDestructive: true
+                                });
+                                if (isConfirmed) {
+                                  onRemove(schedule.id);
+                                }
+                              }}
+                              title="Delete schedule"
+                              aria-label="Delete schedule"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                <line x1="10" y1="11" x2="10" y2="17" />
+                                <line x1="14" y1="11" x2="14" y2="17" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </td>
+                );
+              })}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+
   return (
-    <div ref={containerRef} className={`schedule-table-container ${isFullscreen ? 'schedule-fullscreen' : ''}`}>
+    <div ref={containerRef} className="schedule-table-container">
 
       {/* Toolbar Row */}
       <div className="schedule-toolbar no-print">
@@ -1389,105 +1789,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
       </div>
 
       {/* Free Time Activity Mode Interactive Banner */}
-      {viewType === 'faculty' && isFreeTimeMode && (
-        <div
-          className="free-time-mode-banner no-print"
-          style={{
-            marginBottom: '14px',
-            padding: '12px 16px',
-            backgroundColor: '#eff6ff',
-            border: '1px solid #bfdbfe',
-            borderRadius: '10px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e3a8a', fontSize: '0.84rem', fontWeight: 600 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-              <span>
-                Free Time Activity Mode Active — Type directly into any available time slot below, or pick a quick-fill preset and click a free slot:
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {Object.keys(freeTimeActivities || {}).length > 0 && onClearAllFreeTime && (
-                <button
-                  type="button"
-                  onClick={onClearAllFreeTime}
-                  style={{
-                    background: '#fee2e2',
-                    color: '#dc2626',
-                    border: '1px solid #fca5a5',
-                    borderRadius: '6px',
-                    padding: '4px 10px',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Clear All Free Time
-                </button>
-              )}
-              {activePresetBrush && (
-                <button
-                  type="button"
-                  onClick={() => setActivePresetBrush('')}
-                  style={{
-                    background: '#ffffff',
-                    color: '#475569',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
-                    padding: '4px 10px',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Unselect Preset
-                </button>
-              )}
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginRight: '4px' }}>
-              Quick Fill:
-            </span>
-            {FREE_TIME_PRESETS.map(preset => {
-              const isSelected = activePresetBrush === preset;
-              return (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setActivePresetBrush(isSelected ? '' : preset)}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: '16px',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: isSelected ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
-                    backgroundColor: isSelected ? '#2563eb' : '#ffffff',
-                    color: isSelected ? '#ffffff' : '#1e293b',
-                    transition: 'all 0.15s ease'
-                  }}
-                  title={isSelected ? 'Click any free slot below to fill with this activity' : `Select "${preset}" to quick-fill free slots`}
-                >
-                  {isSelected ? `✓ ${preset}` : preset}
-                </button>
-              );
-            })}
-          </div>
-          <datalist id="faculty-free-time-presets">
-            {FREE_TIME_PRESETS.map(preset => (
-              <option key={preset} value={preset} />
-            ))}
-          </datalist>
-        </div>
-      )}
+      {renderFreeTimeBanner()}
 
       {/* Header */}
       <div className="schedule-doc-header">
@@ -1554,212 +1856,51 @@ const ScheduleTable = React.memo(function ScheduleTable({
 
       {/* Main Grid View */}
       <div className="table-wrapper" style={{ overscrollBehaviorY: 'auto' }}>
-        <table
-          className="schedule-table"
-          style={isFullscreen && fitScale !== 1 ? { transform: `scale(${fitScale})`, transformOrigin: 'top center' } : undefined}
-        >
-          <thead>
-            <tr>
-              <th className="sticky-col" style={{ width: '130px', minWidth: '130px', backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)', borderRight: '1px solid var(--border-color)' }}>Time Slot</th>
-              {displayDays.map(day => <th key={day} style={{ backgroundClip: 'padding-box', backgroundColor: 'var(--table-header, #F8FAFC)' }}>{day}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {activeTimeSlots.map((timeSlot, tIdx) => {
-              const isHourGroupHead = tIdx % 2 === 0;
-              const nextSlot = activeTimeSlots[tIdx + 1];
-              const timeRowSpan = isHourGroupHead ? (nextSlot ? 2 : 1) : 0;
-              const hourLabel = isHourGroupHead
-                ? (nextSlot ? `${timeSlot.label.split(' - ')[0]} - ${nextSlot.label.split(' - ')[1]}` : timeSlot.label)
-                : '';
-              const displayHourLabel = isHourGroupHead && timeFormat === '24h'
-                ? formatTimeRange(hourLabel, '24h')
-                : hourLabel;
-
-              return (
-                <tr key={timeSlot.id} className={isHourGroupHead ? 'hour-row' : 'half-hour-row'}>
-                  {isHourGroupHead && (
-                    <td className="time-label sticky-col" rowSpan={timeRowSpan} style={{ borderRight: '1px solid var(--border-color)' }}>
-                      <strong>{displayHourLabel}</strong>
-                    </td>
-                  )}
-                  {displayDays.map(day => {
-                    const cellKey = `${day}-${timeSlot.id}`;
-
-                    if (skippedCellsSet.has(cellKey) || freeTimeSkippedSet.has(cellKey)) {
-                      return null;
-                    }
-
-                    const isDropTarget = dragOverCell === cellKey;
-                    const cellSchedules = scheduleGridMap.get(cellKey) || [];
-                    const freeSeg = cellSchedules.length === 0 ? freeTimeSegmentMap.get(cellKey) : null;
-                    const rowSpan = cellSchedules.length > 0 ? (cellSpanMap.get(cellKey) || 1) : (freeSeg ? freeSeg.rowSpan : 1);
-                    const primaryColor = cellSchedules.length > 0 ? getDeptColor(cellSchedules[0]) : null;
-
-                    return (
-                      <td
-                        key={cellKey}
-                        rowSpan={rowSpan}
-                        className={`schedule-cell ${isDropTarget ? 'drag-over' : ''} ${cellSchedules.length > 0 ? 'has-schedule' : ''} ${freeSeg ? 'has-free-time-seg' : ''}`}
-                        onDragOver={(e) => handleDragOver(e, day, timeSlot.id)}
-                        onDrop={(e) => handleDrop(e, day, timeSlot.id)}
-                        style={
-                          primaryColor
-                            ? { backgroundColor: primaryColor.bg, padding: 0 }
-                            : freeSeg
-                              ? {
-                                  backgroundColor: isFreeTimeMode ? '#f8fafc' : (freeSeg.text ? '#f8fafc' : undefined),
-                                  padding: '4px 6px',
-                                  verticalAlign: 'middle',
-                                  border: isFreeTimeMode ? '1.5px dashed #93c5fd' : (freeSeg.text ? '1px solid #cbd5e1' : undefined)
-                                }
-                              : undefined
-                        }
-                      >
-                        {cellSchedules.length === 0 && freeSeg && isFreeTimeMode && (
-                          <FreeTimeCellEditor
-                            day={day}
-                            freeSeg={freeSeg}
-                            activePresetBrush={activePresetBrush}
-                            onUpdateFreeTimeSegment={onUpdateFreeTimeSegment}
-                          />
-                        )}
-
-                        {cellSchedules.length === 0 && freeSeg && !isFreeTimeMode && freeSeg.text && (
-                          <div
-                            className="free-time-activity-display"
-                            onClick={() => {
-                              if (onToggleFreeTimeMode) onToggleFreeTimeMode();
-                            }}
-                            title="Click to edit free time activity"
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: '100%',
-                              height: '100%',
-                              padding: '4px',
-                              textAlign: 'center',
-                              boxSizing: 'border-box',
-                              cursor: onToggleFreeTimeMode ? 'pointer' : 'default'
-                            }}
-                          >
-                            <span
-                              className="free-time-activity-text"
-                              style={{
-                                fontSize: '0.78rem',
-                                fontWeight: 600,
-                                color: '#1e293b',
-                                lineHeight: 1.25,
-                                wordBreak: 'break-word'
-                              }}
-                            >
-                              {freeSeg.text}
-                            </span>
-                          </div>
-                        )}
-
-                        {cellSchedules.map((schedule) => {
-                          const deptColor = getDeptColor(schedule);
-                          const profFormatted = formatProfessorName(schedule.professor?.name);
-                          const isConflicting = conflictAlertsEnabled && (cellSchedules.length > 1 || conflictingScheduleIds.has(schedule.id));
-
-                          return (
-                            <div
-                              key={schedule.id}
-                              className={`schedule-item ${draggingId === schedule.id ? 'dragging' : ''} ${isConflicting ? 'has-conflict' : ''}`}
-                              draggable={!!onUpdateSchedule && isDeleteMode}
-                              onDragStart={(e) => handleDragStart(e, schedule)}
-                              onDragEnd={handleDragEnd}
-                              style={{ cursor: (onUpdateSchedule && isDeleteMode) ? 'grab' : 'default' }}
-                            >
-                              <div className="schedule-content" style={{ display: 'flex', flexDirection: 'column', paddingRight: (onRemove && isDeleteMode) ? '24px' : '0' }}>
-                                <p className="subject" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0 }}>
-                                  {schedule.subject?.code ?? '—'}
-                                  {schedule.component && <span style={{ fontSize: '0.7em', display: 'block', fontWeight: 'normal', opacity: 0.9 }}>{schedule.component}</span>}
-                                </p>
-                                <div className="details" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                  <p className="professor" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
-                                    {profFormatted}
-                                  </p>
-                                  <p className="room" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
-                                    {schedule.room?.name ?? '—'}
-                                  </p>
-                                  {schedule.section && (
-                                    <p className="section" style={{ color: deptColor.text, fontWeight: 'bold', margin: 0, lineHeight: '1.2' }}>
-                                      {schedule.section.name}
-                                    </p>
-                                  )}
-                                  {isConflicting && (
-                                    <span className="schedule-conflict-tag" title="Overlapping schedule detected">
-                                      ⚠️ Conflict
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              {onRemove && isDeleteMode && (
-                                <button
-                                  className="remove-btn"
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    const isConfirmed = await confirm({
-                                      title: 'Delete Schedule',
-                                      text: 'Are you sure you want to delete this schedule?',
-                                      icon: 'warning',
-                                      confirmButtonText: 'Delete',
-                                      isDestructive: true
-                                    });
-                                    if (isConfirmed) {
-                                      onRemove(schedule.id);
-                                    }
-                                  }}
-                                  title="Delete schedule"
-                                  aria-label="Delete schedule"
-                                >
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="3 6 5 6 21 6" />
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                    <line x1="10" y1="11" x2="10" y2="17" />
-                                    <line x1="14" y1="11" x2="14" y2="17" />
-                                  </svg>
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {renderScheduleGrid()}
       </div>
 
-      {/* Floating Exit Fullscreen Button */}
-      {isFullscreen && (
-        <>
-          <button
-            className="floating-exit-btn"
-            onClick={() => {
-              if (document.fullscreenElement && document.exitFullscreen) {
-                document.exitFullscreen();
-              } else {
-                setIsFullscreen(false);
-              }
+      {/* Fullscreen Timetable View — Identical Look, Uniform Square Scaling, Zero Scroll */}
+      {isFullscreen && createPortal(
+        <div
+          ref={fsViewportRef}
+          className="fs-overlay-root no-print"
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+        >
+          <div
+            className="fs-scale-box"
+            style={{
+              width: `${Math.round(fsMetrics.tableW * fsUniformScale)}px`,
+              height: `${Math.round(fsMetrics.tableH * fsUniformScale)}px`,
             }}
-            title="Exit Fullscreen"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" /></svg>
-          </button>
-
-          <div className="rotate-device-hint">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.34-11.14l1.5 1.5" /></svg>
-            <span>Rotate for best view</span>
+            <div
+              ref={fsStageRef}
+              className="fs-table-stage"
+              style={{
+                width: `${CANONICAL_FULLSCREEN_TABLE_WIDTH}px`,
+                transform: `scale(${fsUniformScale})`,
+                transformOrigin: 'top left',
+              }}
+            >
+              {renderScheduleGrid()}
+            </div>
           </div>
-        </>
+
+          <button
+            type="button"
+            className="fs-exit-floating-btn"
+            onClick={exitFullscreen}
+            title="Exit Fullscreen (Esc)"
+            aria-label="Exit Fullscreen"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+            </svg>
+          </button>
+        </div>,
+        document.body
       )}
 
       {/* Preview Modal */}

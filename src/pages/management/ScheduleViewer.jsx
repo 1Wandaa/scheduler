@@ -203,14 +203,16 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     const deptSections = React.useMemo(() => {
         if (viewType !== 'department' || !selectedId) return [];
         const targetDept = String(selectedId).trim().toUpperCase();
-        return sections.filter(sec => {
-            const secDept = (sec.program || sec.department || '').trim().toUpperCase();
-            const secName = (sec.name || '').trim().toUpperCase();
-            const matchesDept = secDept === targetDept || secName.startsWith(targetDept);
-            if (!matchesDept) return false;
-            if (selectedYearLevel) return String(sec.yearLevel) === String(selectedYearLevel);
-            return true;
-        });
+        return sections
+            .filter(sec => {
+                const secDept = (sec.program || sec.department || '').trim().toUpperCase();
+                const secName = (sec.name || '').trim().toUpperCase();
+                const matchesDept = secDept === targetDept || secName.startsWith(targetDept);
+                if (!matchesDept) return false;
+                if (selectedYearLevel) return String(sec.yearLevel) === String(selectedYearLevel);
+                return true;
+            })
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
     }, [viewType, selectedId, sections, selectedYearLevel]);
 
     const filteredSchedules = React.useMemo(() => {
