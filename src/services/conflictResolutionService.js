@@ -1,8 +1,9 @@
-import { 
-  findScheduleConflicts, 
-  isRoomAllowedFor, 
-  slotsNeededFromIndex, 
-  getTimeSlotIndex 
+import {
+  findScheduleConflicts,
+  isRoomAllowedFor,
+  isProfessorAllowedInRoom,
+  slotsNeededFromIndex,
+  getTimeSlotIndex
 } from '../utils/scheduleUtils';
 import { getScheduleConfig } from '../config/constants';
 
@@ -31,21 +32,26 @@ export function generateConflictResolutions(failedEntry, activeSchedules, allRoo
   const days = config.days;
 
   // 1. STRATEGY: Alternate Room (Same time, same day)
-  // Find rooms that are allowed for this subject/section
+  // Find rooms that are allowed for this subject/section and professor/lab requirements
   if (failedEntry.subject && failedEntry.timeSlot) {
-    const validRooms = allRooms.filter(room => 
-      isRoomAllowedFor(room, failedEntry.subject, failedEntry.section)
-    );
+    const isLectureComp = failedEntry.component === 'Lecture';
+    const validRooms = allRooms.filter(room => {
+      if (!isRoomAllowedFor(room, failedEntry.subject, failedEntry.section)) return false;
+      if (failedEntry.professor && !isProfessorAllowedInRoom(room, failedEntry.professor, failedEntry.subject, failedEntry.section, allRooms)) return false;
+      if (failedEntry.subject?.requiredLab && !isLectureComp && !room.hasComputers) return false;
+      if (failedEntry.subject?.isFoodLab && !isLectureComp && !room.isFoodLab) return false;
+      return true;
+    });
 
     for (const room of validRooms) {
       if (room.id === failedEntry.room?.id) continue;
 
       const testEntry = { ...failedEntry, room };
-      
+
       // Explicitly exclude the failed entry's schedule ID (if it's an edit)
       const excludeScheduleId = failedEntry.excludeScheduleId || failedEntry.id;
-      const conflicts = findScheduleConflicts(testEntry, activeSchedules, { excludeScheduleId });
-      
+      const conflicts = findScheduleConflicts(testEntry, activeSchedules, { excludeScheduleId, scheduleMode });
+
       if (Object.keys(conflicts).length === 0) {
         suggestions.push({
           type: 'ALTERNATE_ROOM',
@@ -68,14 +74,14 @@ export function generateConflictResolutions(failedEntry, activeSchedules, allRoo
         if (!checkSlotFits(slot, failedEntry.hours || failedEntry.subject?.hoursPerMeeting, scheduleMode)) continue;
 
         // Physical Education (PE) subjects cannot be scheduled in the first period.
-        if (failedEntry.subject?.code?.toUpperCase().startsWith('PE') && String(slot.id) === '2') {
-             continue;
+        if (failedEntry.subject?.code?.toUpperCase().startsWith('PE') && (String(slot.id) === '1' || String(slot.id) === '2')) {
+          continue;
         }
 
         const testEntry = { ...failedEntry, day, timeSlot: slot };
         const excludeScheduleId = failedEntry.excludeScheduleId || failedEntry.id;
-        const conflicts = findScheduleConflicts(testEntry, activeSchedules, { excludeScheduleId });
-        
+        const conflicts = findScheduleConflicts(testEntry, activeSchedules, { excludeScheduleId, scheduleMode });
+
         if (Object.keys(conflicts).length === 0) {
           const isSameDay = day === failedEntry.day;
           suggestions.push({

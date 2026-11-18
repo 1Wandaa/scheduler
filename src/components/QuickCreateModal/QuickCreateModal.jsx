@@ -530,7 +530,7 @@ const QuickCreateModal = ({
                       setSubjectData(prev => ({
                         ...prev,
                         hasLecLab: checked,
-                        requiredLab: checked ? true : prev.requiredLab
+                        requiredLab: checked ? (prev.requiredLab || !prev.isFoodLab) : prev.requiredLab
                       }));
                     }}
                   />

@@ -57,15 +57,15 @@ const CATEGORY_FILTERS = [
   { label: 'All', value: 'all' },
   { label: 'Auth', value: 'auth', actions: ['LOGIN', 'LOGOUT'] },
   { label: 'Schedule', value: 'schedule', actions: ['ADD_SCHEDULE', 'UPDATE_SCHEDULE', 'DELETE_SCHEDULE', 'BATCH_DELETE_SCHEDULES', 'CLEAR_SCHEDULES', 'AUTO_SCHEDULE'] },
-  { label: 'Faculty', value: 'faculty', actions: ['ADD_FACULTY', 'UPDATE_FACULTY', 'DELETE_FACULTY'] },
-  { label: 'Subjects', value: 'subjects', actions: ['ADD_SUBJECT', 'UPDATE_SUBJECT', 'DELETE_SUBJECT'] },
-  { label: 'Rooms', value: 'rooms', actions: ['ADD_ROOM', 'UPDATE_ROOM', 'DELETE_ROOM'] },
-  { label: 'Sections', value: 'sections', actions: ['ADD_SECTION', 'UPDATE_SECTION', 'DELETE_SECTION'] },
-  { label: 'Departments', value: 'departments', actions: ['ADD_DEPARTMENT', 'UPDATE_DEPARTMENT', 'DELETE_DEPARTMENT'] },
-  { label: 'Courses', value: 'courses', actions: ['ADD_COURSE', 'UPDATE_COURSE', 'DELETE_COURSE'] },
+  { label: 'Faculty', value: 'faculty', actions: ['ADD_FACULTY', 'UPDATE_FACULTY', 'DELETE_FACULTY', 'BATCH_DELETE_FACULTY'] },
+  { label: 'Subjects', value: 'subjects', actions: ['ADD_SUBJECT', 'UPDATE_SUBJECT', 'DELETE_SUBJECT', 'BATCH_DELETE_SUBJECTS'] },
+  { label: 'Rooms', value: 'rooms', actions: ['ADD_ROOM', 'UPDATE_ROOM', 'DELETE_ROOM', 'BATCH_DELETE_ROOMS'] },
+  { label: 'Sections', value: 'sections', actions: ['ADD_SECTION', 'UPDATE_SECTION', 'DELETE_SECTION', 'BATCH_DELETE_SECTIONS'] },
+  { label: 'Departments', value: 'departments', actions: ['ADD_DEPARTMENT', 'UPDATE_DEPARTMENT', 'DELETE_DEPARTMENT', 'BATCH_DELETE_DEPARTMENTS'] },
+  { label: 'Courses', value: 'courses', actions: ['ADD_COURSE', 'UPDATE_COURSE', 'DELETE_COURSE', 'BATCH_DELETE_COURSES'] },
   { label: 'Terms & Settings', value: 'terms', actions: ['ADD_TERM', 'UPDATE_TERM', 'DELETE_TERM', 'PUBLISH_TERM', 'UNPUBLISH_TERM'] },
-  { label: 'Users', value: 'users', actions: ['ADD_USER', 'UPDATE_USER', 'DELETE_USER'] },
-  { label: 'Recycle Bin', value: 'recycle-bin', actions: ['RESTORE_DATA', 'PERMANENT_DELETE', 'EMPTY_RECYCLE_BIN'] },
+  { label: 'Users', value: 'users', actions: ['ADD_USER', 'UPDATE_USER', 'DELETE_USER', 'BATCH_DELETE_USERS'] },
+  { label: 'Recycle Bin', value: 'recycle-bin', actions: ['RESTORE_DATA', 'BATCH_RESTORE_DATA', 'PERMANENT_DELETE', 'BATCH_PERMANENT_DELETE', 'EMPTY_RECYCLE_BIN'] },
   { label: 'Exports', value: 'exports', actions: ['EXPORT'] },
 ];
 
@@ -601,6 +601,67 @@ const ActivityLog = ({ onBack, onViewProfile }) => {
           </div>
         )}
       </div>
+      <style>{`
+        /* Mobile specific styling for ActivityLog */
+        @media (max-width: 768px) {
+          .activity-mgmt-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+          }
+          .activity-mgmt-header > div:last-child,
+          .activity-mgmt-header > div:last-child > button {
+            width: 100%;
+            justify-content: center;
+          }
+          
+          .activity-table-container {
+            min-width: 0 !important;
+          }
+          
+          .activity-table-header {
+            display: none !important;
+          }
+          
+          .activity-table-row {
+            display: flex !important;
+            flex-wrap: wrap;
+            gap: 10px !important;
+            position: relative;
+          }
+          
+          .activity-col-action {
+            width: 100%;
+          }
+          
+          .activity-col-user {
+            width: 45%;
+            display: flex;
+            flex-direction: column;
+          }
+          
+          .activity-col-time {
+            width: 45%;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+          }
+          
+          .activity-col-details {
+            width: 100%;
+            margin-top: 4px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--border-color);
+            white-space: normal !important;
+          }
+          
+          .activity-col-expand {
+            position: absolute;
+            top: 18px;
+            right: 20px;
+          }
+        }
+      `}</style>
     </div>
   );
 };
@@ -613,65 +674,3 @@ const DetailBox = ({ label, value, mono }) => (
 );
 
 export default ActivityLog;
-
-<style>{`
-  /* Mobile specific styling for ActivityLog */
-  @media (max-width: 768px) {
-    .activity-mgmt-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 16px;
-    }
-    .activity-mgmt-header > div:last-child,
-    .activity-mgmt-header > div:last-child > button {
-      width: 100%;
-      justify-content: center;
-    }
-    
-    .activity-table-container {
-      min-width: 0 !important;
-    }
-    
-    .activity-table-header {
-      display: none !important;
-    }
-    
-    .activity-table-row {
-      display: flex !important;
-      flex-wrap: wrap;
-      gap: 10px !important;
-      position: relative;
-    }
-    
-    .activity-col-action {
-      width: 100%;
-    }
-    
-    .activity-col-user {
-      width: 45%;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .activity-col-time {
-      width: 45%;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-    }
-    
-    .activity-col-details {
-      width: 100%;
-      margin-top: 4px;
-      padding-top: 10px;
-      border-top: 1px dashed var(--border-color);
-      white-space: normal !important;
-    }
-    
-    .activity-col-expand {
-      position: absolute;
-      top: 18px;
-      right: 20px;
-    }
-  }
-`}</style>

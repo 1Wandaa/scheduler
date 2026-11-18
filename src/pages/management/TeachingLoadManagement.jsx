@@ -989,15 +989,34 @@ const TeachingLoadManagement = ({
       setStagedFacultyMap(subInstructorMap);
 
     } else if (type === 'faculty') {
-      const secSubjectMap = { ...(item.sectionSubjectMap || {}) };
+      const rawSecSubjectMap = { ...(item.sectionSubjectMap || {}) };
+      const secSubjectMap = {};
+      Object.entries(rawSecSubjectMap).forEach(([secId, subList]) => {
+        const normalizedSubs = [];
+        const seen = new Set();
+        (Array.isArray(subList) ? subList : []).forEach(ref => {
+          const subObj = subjects.find(s => String(s.id) === String(ref) || String(s.code) === String(ref) || String(s.name) === String(ref));
+          const key = subObj ? String(subObj.id) : String(ref);
+          if (!seen.has(key)) {
+            seen.add(key);
+            normalizedSubs.push(key);
+          }
+        });
+        secSubjectMap[secId] = normalizedSubs;
+      });
       const assignedSecs = item.assignedSections || [];
       assignedSecs.forEach(secId => {
         const sec = localSections.find(s => String(s.id) === String(secId) || String(s.name) === String(secId));
         if (sec && (!secSubjectMap[sec.id] || secSubjectMap[sec.id].length === 0)) {
-          const matching = (sec.subjects || []).filter(subRef => {
-            const assigned = getAssignedProf(sec, subRef);
-            return assigned && assigned.id === item.id;
-          });
+          const matching = (sec.subjects || [])
+            .filter(subRef => {
+              const assigned = getAssignedProf(sec, subRef);
+              return assigned && assigned.id === item.id;
+            })
+            .map(subRef => {
+              const subObj = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
+              return subObj ? String(subObj.id) : String(subRef);
+            });
           secSubjectMap[sec.id] = matching;
         }
       });
@@ -1484,8 +1503,16 @@ const TeachingLoadManagement = ({
             const newSecs = curSecs.some(id => String(id) === String(item.id) || (name && String(id) === String(name)))
               ? curSecs
               : [...curSecs, item.id];
+            let curSpecs = [...(p.specialization || [])];
+            profToSubjects[p.id].forEach(subRef => {
+              const subObj = getSubject(subRef);
+              const codeOrId = subObj?.id || subObj?.code || subRef;
+              if (!curSpecs.some(sp => String(sp) === String(codeOrId)) && (!subObj || !curSpecs.some(sp => String(sp) === String(subObj.id) || String(sp) === String(subObj.code)))) {
+                curSpecs.push(codeOrId);
+              }
+            });
             const curMap = { ...(p.sectionSubjectMap || {}), [item.id]: profToSubjects[p.id] };
-            return { ...p, assignedSections: newSecs, sectionSubjectMap: curMap };
+            return { ...p, assignedSections: newSecs, specialization: curSpecs, sectionSubjectMap: curMap };
           }
           const hadSec = (p.assignedSections || []).some(id => String(id) === String(item.id) || (item.name && String(id) === String(item.name)));
           if (hadSec && !profToSubjects[p.id]) {
@@ -3587,11 +3614,14 @@ const TeachingLoadManagement = ({
                                   value={curProfId}
                                   onChange={e => {
                                     const val = e.target.value;
-                                    setStagedFacultyMap(prev => ({
-                                      ...prev,
-                                      [subKey]: val,
-                                      [subRef]: val
-                                    }));
+                                    setStagedFacultyMap(prev => {
+                                      const next = { ...prev };
+                                      [subKey, sub.id, sub.code, subRef].filter(Boolean).forEach(k => {
+                                        if (val) next[k] = val;
+                                        else delete next[k];
+                                      });
+                                      return next;
+                                    });
                                   }}
                                   getSubjectProfessors={getSubjectProfessors}
                                 />
@@ -3858,7 +3888,11 @@ const TeachingLoadManagement = ({
                               {stagedAssignedSubjects.map(subRef => {
                                 const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef };
                                 const subKey = sub.id || sub.code;
-                                const isChecked = chosenSubs.some(s => String(s) === String(subKey) || String(s) === String(sub.id));
+                                const matchesSub = (s) =>
+                                  String(s) === String(subKey) ||
+                                  String(s) === String(sub.id) ||
+                                  (sub.code && String(s) === String(sub.code));
+                                const isChecked = chosenSubs.some(matchesSub);
 
                                 return (
                                   <button
@@ -3867,8 +3901,8 @@ const TeachingLoadManagement = ({
                                     onClick={() => {
                                       setStagedFacultyMap(prev => {
                                         const current = prev[sec.id] || [];
-                                        const updated = current.some(s => String(s) === String(subKey) || String(s) === String(sub.id))
-                                          ? current.filter(s => String(s) !== String(subKey) && String(s) !== String(sub.id))
+                                        const updated = current.some(matchesSub)
+                                          ? current.filter(s => !matchesSub(s))
                                           : [...current, subKey];
                                         return { ...prev, [sec.id]: updated };
                                       });

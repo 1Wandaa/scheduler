@@ -16,6 +16,19 @@ import {
 } from './freeTimeUtils';
 
 /**
+ * Escapes HTML special characters to prevent DOM XSS when building export/print HTML.
+ */
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
  * Downloads content as a file with a given MIME type
  */
 function downloadFile(content, fileName, mimeType) {
@@ -737,9 +750,9 @@ export async function exportIsoToWord(user) {
 
                 return `
                   <td width="${subWidth}%" align="left" valign="middle" style="width: ${subWidth}%; font-family: 'Times New Roman', Times, serif; border: none; ${bIdx > 0 ? 'border-left: 1.0pt solid #000000;' : ''} padding: 1pt 2pt;">
-                    <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 8.5pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.05;">${cleanSubjCode}</p>
-                    ${detailLabel ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 1pt 0 0 3pt; mso-para-margin-left: 3pt; text-align: left; color: #000000; line-height: 1.05;">${detailLabel}</p>` : ''}
-                    ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; margin: 1pt 0 0 3pt; mso-para-margin-left: 3pt; text-align: left; color: #000000; line-height: 1.05;">${rawRoom}</p>` : ''}
+                    <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 8.5pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.05;">${escapeHtml(cleanSubjCode)}</p>
+                    ${detailLabel ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 1pt 0 0 3pt; mso-para-margin-left: 3pt; text-align: left; color: #000000; line-height: 1.05;">${escapeHtml(detailLabel)}</p>` : ''}
+                    ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; margin: 1pt 0 0 3pt; mso-para-margin-left: 3pt; text-align: left; color: #000000; line-height: 1.05;">${escapeHtml(rawRoom)}</p>` : ''}
                   </td>
                 `;
               }).join('');
@@ -766,9 +779,9 @@ export async function exportIsoToWord(user) {
               td.style.verticalAlign = 'middle';
               td.style.padding = '2pt 3pt';
               td.innerHTML = `
-                <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 10pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.15;">${cleanSubjCode}</p>
-                ${detailLabel ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${detailLabel}</p>` : ''}
-                ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${rawRoom}</p>` : ''}
+                <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 10pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.15;">${escapeHtml(cleanSubjCode)}</p>
+                ${detailLabel ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${escapeHtml(detailLabel)}</p>` : ''}
+                ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${escapeHtml(rawRoom)}</p>` : ''}
               `;
             }
           } else {
@@ -790,9 +803,9 @@ export async function exportIsoToWord(user) {
               td.style.verticalAlign = 'middle';
               td.style.padding = '2pt 3pt';
               td.innerHTML = `
-                <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 10pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.15;">${cleanSubjCode}</p>
-                ${detailLabel ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${detailLabel}</p>` : ''}
-                ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${rawRoom}</p>` : ''}
+                <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 10pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.15;">${escapeHtml(cleanSubjCode)}</p>
+                ${detailLabel ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${escapeHtml(detailLabel)}</p>` : ''}
+                ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${escapeHtml(rawRoom)}</p>` : ''}
               `;
             } else {
               const freeAct = td.querySelector('.cell-free-activity')?.textContent.trim() || '';
@@ -801,7 +814,7 @@ export async function exportIsoToWord(user) {
               td.style.verticalAlign = 'middle';
               if (freeAct) {
                 td.style.border = '1.0pt solid #000000';
-                td.innerHTML = `<p align="center" style="font-family: 'Times New Roman', Times, serif; font-size: 9.5pt; margin: 0; padding: 2pt; text-align: center; color: #000000; line-height: 1.15;">${freeAct}</p>`;
+                td.innerHTML = `<p align="center" style="font-family: 'Times New Roman', Times, serif; font-size: 9.5pt; margin: 0; padding: 2pt; text-align: center; color: #000000; line-height: 1.15;">${escapeHtml(freeAct)}</p>`;
               } else {
                 td.innerHTML = '&nbsp;';
               }
@@ -2013,9 +2026,9 @@ export async function exportGridToWord(tableContainer, user) {
               .trim();
 
             td.innerHTML = `
-              <p style="font-weight: bold; font-size: 10pt; margin: 0; padding: 0; text-align: center; color: #ffffff; line-height: 1.15;">${cleanSubj || '—'}</p>
-              ${prof ? `<p style="font-size: 8.5pt; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.15;">${prof}</p>` : ''}
-              ${roomSecLine ? `<p style="font-size: 8.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.15;">${roomSecLine}</p>` : ''}
+              <p style="font-weight: bold; font-size: 10pt; margin: 0; padding: 0; text-align: center; color: #ffffff; line-height: 1.15;">${escapeHtml(cleanSubj || '—')}</p>
+              ${prof ? `<p style="font-size: 8.5pt; margin: 1pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.15;">${escapeHtml(prof)}</p>` : ''}
+              ${roomSecLine ? `<p style="font-size: 8.5pt; margin: 0.5pt 0 0 0; padding: 0; text-align: center; color: #ffffff; opacity: 0.95; line-height: 1.15;">${escapeHtml(roomSecLine)}</p>` : ''}
             `;
           } else {
             const freeTextEl = td.querySelector('.free-time-activity-text');
@@ -2024,7 +2037,7 @@ export async function exportGridToWord(tableContainer, user) {
               td.style.backgroundColor = '#ffffff';
               td.setAttribute('bgcolor', '#ffffff');
               td.style.border = '1.0pt solid #000000';
-              td.innerHTML = `<p style="font-size: 9pt; margin: 0; padding: 2pt; text-align: center; color: #000000; line-height: 1.15;">${freeText}</p>`;
+              td.innerHTML = `<p style="font-size: 9pt; margin: 0; padding: 2pt; text-align: center; color: #000000; line-height: 1.15;">${escapeHtml(freeText)}</p>`;
             } else {
               // Empty cell: keep clean, with border styling for 1-hour groups
               td.style.backgroundColor = '#ffffff';

@@ -13,8 +13,10 @@ import { DAYS, TIME_SLOTS } from '../config/constants';
 import {
   getEligibleProfessors,
   applyAIRanking,
-  creditPerMeeting,
   getOccupiedSlots,
+  DEFAULT_MAX_UNITS,
+  getSubjectComponentUnits,
+  computeProfessorWorkloadUnits,
 } from './scheduleUtils';
 
 /**
@@ -58,10 +60,9 @@ export async function suggestProfessorMatches(professors, subjects, sections, sc
 
     // Professor workload from existing schedules
     const profLoad = {};
-    for (const s of (scheduled || [])) {
-      if (s.professor?.id) {
-        profLoad[s.professor.id] = (profLoad[s.professor.id] || 0) + creditPerMeeting(s.subject);
-      }
+    for (const p of (professors || [])) {
+      const pScheds = (scheduled || []).filter(s => String(s.professor?.id) === String(p.id));
+      profLoad[p.id] = computeProfessorWorkloadUnits(pScheds);
     }
 
     const sectionNameById = Object.fromEntries((sections || []).map(s => [s.id, s.name]));
@@ -74,7 +75,7 @@ export async function suggestProfessorMatches(professors, subjects, sections, sc
       const assignedSecNames = (p.assignedSections || [])
         .map(id => sectionNameById[id] || id)
         .join(', ') || 'any section';
-      const max = Number(p.maxUnits) || Number(p.maxHours) || 12;
+      const max = Number(p.maxUnits) || Number(p.maxHours) || DEFAULT_MAX_UNITS;
       const used = Math.round((profLoad[p.id] || 0) * 10) / 10;
       return `- Prof "${p.name}" [ID:${p.id}] dept:${p.department || '?'}, workload:${used}/${max} units, assigned sections: [${assignedSecNames}], specializations: [${specs.join(', ')}]`;
     }).join('\n');
@@ -193,13 +194,12 @@ export async function resolveUnscheduledClasses(unscheduledGroups, context, cons
   const { professors, rooms, activeSchedules, subjects, sections } = context;
 
   const profLoad = {};
-  for (const s of (activeSchedules || [])) {
-    if (s.professor?.id) {
-      profLoad[s.professor.id] = (profLoad[s.professor.id] || 0) + creditPerMeeting(s.subject);
-    }
+  for (const p of (professors || [])) {
+    const pScheds = (activeSchedules || []).filter(s => String(s.professor?.id) === String(p.id));
+    profLoad[p.id] = computeProfessorWorkloadUnits(pScheds);
   }
 
-  const roomOccupancy = {}; 
+  const roomOccupancy = {};
   for (const s of (activeSchedules || [])) {
     if (s.room?.id) {
       if (!roomOccupancy[s.room.id]) roomOccupancy[s.room.id] = {};
@@ -226,24 +226,25 @@ export async function resolveUnscheduledClasses(unscheduledGroups, context, cons
   const groupContexts = unscheduledGroups.map((g, idx) => {
     const { subject, section, count } = g;
     const eligibleProfs = getEligibleProfessors(professors, subject, section);
+    const neededUnits = getSubjectComponentUnits(subject, g.component);
     const relaxedProfs = eligibleProfs.filter(p => {
-      const max = (Number(p.maxUnits) || Number(p.maxHours) || 12) + 3; 
+      const max = (Number(p.maxUnits) || Number(p.maxHours) || DEFAULT_MAX_UNITS) + 3;
       const current = profLoad[p.id] || 0;
-      return current + (Number(subject.credits) || 3) <= max + 0.01;
+      return current + neededUnits <= max + 0.01;
     });
 
-    return `- Group ${idx}: Subject "${subject.code}" (${subject.id}), Section "${section?.name || 'Any'}" (${section?.id || 'none'}), Meetings Needed: ${count}, Duration: ${g.targetDuration || subject.hoursPerMeeting || 1.5}hr. Eligible Profs (with +3 unit override allowed): [${relaxedProfs.map(p => p.id).join(', ')}]`;
+    return `- Group ${idx}: Subject "${subject.code}" (${subject.id})${g.component ? ` [${g.component}]` : ''}, Section "${section?.name || 'Any'}" (${section?.id || 'none'}), Meetings Needed: ${count}, Duration: ${g.targetDuration || subject.hoursPerMeeting || 1.5}hr. Eligible Profs (with +3 unit override allowed): [${relaxedProfs.map(p => p.id).join(', ')}]`;
   }).join('\n');
 
   const profSummary = professors.map(p => {
-    const max = Number(p.maxUnits) || Number(p.maxHours) || 12;
+    const max = Number(p.maxUnits) || Number(p.maxHours) || DEFAULT_MAX_UNITS;
     const used = Math.round((profLoad[p.id] || 0) * 10) / 10;
     return `- Prof "${p.name}" [${p.id}]: Load: ${used}/${max} units. Occupied: ${JSON.stringify(profOccupancy[p.id] || {})}`;
   }).join('\n');
 
   const roomSummary = rooms.map(r => {
     const dept = r.department || 'SHARED';
-    return `- Room "${r.name}" [${r.id}]: Dept: ${dept}, Lab: ${r.hasComputers?'yes':'no'}, Occupied: ${JSON.stringify(roomOccupancy[r.id] || {})}`;
+    return `- Room "${r.name}" [${r.id}]: Dept: ${dept}, Lab: ${r.hasComputers ? 'yes' : 'no'}, Occupied: ${JSON.stringify(roomOccupancy[r.id] || {})}`;
   }).join('\n');
 
   const timeSlotsSummary = TIME_SLOTS.map((t, idx) => `- ${t.id}: ${t.label} (Index ${idx})`).join('\n');

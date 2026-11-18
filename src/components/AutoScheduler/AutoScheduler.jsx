@@ -295,13 +295,11 @@ function AutoScheduler({
           });
           setAiStatus('Could not save schedules. Please check errors below.');
         } else {
-          const writtenCount = batchResult.writtenCount ?? rawPlaced.length;
-          const savedSchedules = rawPlaced.slice(0, writtenCount);
-          const rejectedBatch = rawPlaced.slice(writtenCount).map((s, idx) => ({
-            subject: s.subject,
-            section: s.section,
-            reason: batchResult.errors?.[idx] || 'Not saved due to conflict'
-          }));
+          const savedSchedules = batchResult.savedSchedules || rawPlaced;
+          const writtenCount = batchResult.writtenCount ?? savedSchedules.length;
+          const rejectedBatch = Array.isArray(batchResult.rejectedItems)
+            ? batchResult.rejectedItems
+            : [];
 
           const finalUnscheduled = [...unscheduledResults, ...rejectedBatch];
 
@@ -540,12 +538,17 @@ function AutoScheduler({
   const resultStats = useMemo(() => {
     if (!result) return null;
     const placed = result.schedule?.length || 0;
+    const placedGroups = new Set(
+      (result.schedule || []).map(
+        s => `${s.section?.id || 'none'}_${s.subject?.id || s.subject?.code || 'x'}${s.component ? `_${s.component}` : ''}`
+      )
+    ).size;
     const unplaced = result.unscheduled?.length || 0;
-    const total = placed + unplaced;
-    const successRate = total > 0 ? Math.round((placed / total) * 100) : 0;
+    const totalGroupsCount = placedGroups + unplaced;
+    const successRate = totalGroupsCount > 0 ? Math.round((placedGroups / totalGroupsCount) * 100) : (placed > 0 ? 100 : 0);
     const uniqueRooms = new Set(result.schedule.map(s => s.room?.id).filter(Boolean)).size;
     const uniqueProfs = new Set(result.schedule.map(s => s.professor?.id).filter(Boolean)).size;
-    return { placed, unplaced, total, successRate, uniqueRooms, uniqueProfs };
+    return { placed, unplaced, total: placed + unplaced, successRate, uniqueRooms, uniqueProfs };
   }, [result]);
 
   const filteredGroupedSchedule = useMemo(() => {
@@ -696,15 +699,16 @@ function AutoScheduler({
           <span>Scheduling Rules</span>
         </div>
         <div className="autosched-constraints-grid">
-          <label className="autosched-constraint-item">
+          <label className="autosched-constraint-item" title="Conflict prevention is always enforced">
             <input
               type="checkbox"
               checked={preventDoubleBooking}
+              disabled
               onChange={(e) => setPreventDoubleBooking(e.target.checked)}
             />
             <div>
               <strong>Prevent Double Booking</strong>
-              <span>Avoid overlapping times for rooms, faculty, and sections</span>
+              <span>Avoid overlapping times for rooms, faculty, and sections (Required)</span>
             </div>
           </label>
 
@@ -1117,7 +1121,7 @@ function AutoScheduler({
                                 {item.subject.code} {item.section ? `(${item.section.name})` : ''}
                               </span>
                               <span className="schedule-card-time">
-                                {getMeetingTimeLabel(item.timeSlot, item.hours || item.subject?.hoursPerMeeting) || item.timeSlot?.label}
+                                {getMeetingTimeLabel(item.timeSlot, item.hours || item.subject?.hoursPerMeeting, scheduleMode) || item.timeSlot?.label}
                               </span>
                             </div>
                             <div className="schedule-card-body">

@@ -197,26 +197,13 @@ export function computeTeachingAssignments(schedules = []) {
     const subjKey = s.subject.id || s.subject.code || '';
     const secKey = s.section.id || s.section.name || '';
     const key = `${subjKey}-${secKey}`;
+    const hasLecLab = Boolean(s.subject.hasLecLab);
+    const fullLecHours = hasLecLab
+      ? (Number(s.subject.lectureHours) || 2)
+      : (Number(s.subject.hoursPerWeek) || Number(s.subject.units ?? s.subject.credits) || 3);
+    const fullLabHours = hasLecLab ? (Number(s.subject.labHours) || 3) : 0;
 
     if (!assignmentsMap.has(key)) {
-      const hasLecLab = Boolean(s.subject.hasLecLab);
-      const lecHours = hasLecLab
-        ? (Number(s.subject.lectureHours) || 2)
-        : (Number(s.subject.hoursPerWeek) || Number(s.subject.units ?? s.subject.credits) || 3);
-      const labHours = hasLecLab ? (Number(s.subject.labHours) || 3) : 0;
-
-      let unit = Number(s.subject.units ?? s.subject.credits) || 3;
-      if (hasLecLab) {
-        if (lecHours === 2 && labHours === 3) {
-          unit = 4.25;
-        } else if (lecHours === 3 && labHours === 6) {
-          unit = 7.5;
-        } else if (lecHours === 1 && labHours === 2) {
-          unit = 3;
-        }
-      }
-
-      const hoursDisplay = hasLecLab ? `${lecHours}/${labHours}` : `${lecHours}`;
       const rawCode = (s.subject.code || 'N/A')
         .replace(/\s*\((?:Lecture|Laboratory|Lec|Lab)\)/gi, '')
         .trim();
@@ -226,17 +213,54 @@ export function computeTeachingAssignments(schedules = []) {
         id: key,
         subjectCode: rawCode,
         subjectName: s.subject.name || s.subject.title || 'N/A',
-        unit,
-        lecHours,
-        labHours,
-        hoursPerWeek: hoursDisplay,
+        hasLecLab,
+        fullLecHours,
+        fullLabHours,
+        baseUnit: Number(s.subject.units ?? s.subject.credits) || 3,
+        components: new Set(),
+        unit: 0,
+        lecHours: 0,
+        labHours: 0,
+        hoursPerWeek: '',
         sectionName: s.section.name || 'N/A',
         studentsCount
       });
     }
+
+    const entry = assignmentsMap.get(key);
+    const comp = s.component || (hasLecLab ? 'Full' : 'Standard');
+    entry.components.add(comp);
   });
 
-  const uniqueAssignments = Array.from(assignmentsMap.values());
+  const uniqueAssignments = Array.from(assignmentsMap.values()).map(entry => {
+    let unit = entry.baseUnit;
+    let lecHours = entry.fullLecHours;
+    let labHours = entry.fullLabHours;
+
+    if (entry.hasLecLab) {
+      const hasLec = entry.components.has('Lecture') || entry.components.has('Full');
+      const hasLab = entry.components.has('Laboratory') || entry.components.has('Full');
+      lecHours = hasLec ? entry.fullLecHours : 0;
+      labHours = hasLab ? entry.fullLabHours : 0;
+      unit = lecHours + labHours;
+    }
+
+    const hoursDisplay = entry.hasLecLab && labHours > 0
+      ? `${lecHours}/${labHours}`
+      : `${lecHours || labHours}`;
+
+    return {
+      id: entry.id,
+      subjectCode: entry.subjectCode,
+      subjectName: entry.subjectName,
+      unit,
+      lecHours,
+      labHours,
+      hoursPerWeek: hoursDisplay,
+      sectionName: entry.sectionName,
+      studentsCount: entry.studentsCount
+    };
+  });
   const totalUnitsRaw = uniqueAssignments.reduce((sum, a) => sum + Number(a.unit || 0), 0);
   const totalUnits = Number.isInteger(totalUnitsRaw) ? totalUnitsRaw : Number(totalUnitsRaw.toFixed(2));
   const totalLecHours = uniqueAssignments.reduce((sum, a) => sum + Number(a.lecHours || 0), 0);

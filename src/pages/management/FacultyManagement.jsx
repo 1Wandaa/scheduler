@@ -11,7 +11,7 @@ import BatchActionBar from '../../components/common/BatchActionBar';
 import AutocompleteMultiSelect from '../../components/AutocompleteMultiSelect/AutocompleteMultiSelect';
 import { logActivity, LOG_ACTIONS } from '../../utils/activityLogger';
 
-const FacultyManagement = ({ professors, subjects = [], rooms = [], schedules = [], departments = [], onBack, user, onNavigateToHub }) => {
+const FacultyManagement = ({ professors, subjects = [], rooms = [], sections = [], schedules = [], departments = [], onBack, user, onNavigateToHub }) => {
   const { confirm } = useGlobalDialog();
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -26,11 +26,11 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], schedules = 
 
 
   const [formData, setFormData] = useState({
-    id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, preferredRooms: []
+    id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 15, preferredRooms: []
   });
 
   const handleOpenAdd = () => {
-    setFormData({ id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 12, preferredRooms: [] });
+    setFormData({ id: '', firstName: '', lastName: '', department: 'BSCS', maxUnits: 15, preferredRooms: [] });
     setEditMode(false);
     setError(null);
     setShowModal(true);
@@ -169,7 +169,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], schedules = 
     if (isConfirmed) {
       try {
         const prof = professors.find(p => String(p.id) === String(id));
-        await deleteFacultyCascade(prof, schedules);
+        await deleteFacultyCascade(prof, schedules, sections);
         setSelectedIds(prev => prev.filter(item => item !== id));
         logActivity({ user, action: LOG_ACTIONS.DELETE_FACULTY, details: `Deleted faculty: ${prof?.name || id}` });
         toast.success('Faculty deleted successfully');
@@ -225,7 +225,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], schedules = 
       const toastId = toast.loading(`Deleting ${count} faculty member${count > 1 ? 's' : ''}...`);
       try {
         const profsToDelete = professors.filter(p => selectedInView.includes(p.id));
-        await deleteFacultyBatchCascade(profsToDelete, schedules);
+        await deleteFacultyBatchCascade(profsToDelete, schedules, sections);
         logActivity({
           user,
           action: LOG_ACTIONS.BATCH_DELETE_FACULTY,
@@ -255,7 +255,7 @@ const FacultyManagement = ({ professors, subjects = [], rooms = [], schedules = 
     if (isConfirmed) {
       const toastId = toast.loading(`Deleting all ${count} faculty members...`);
       try {
-        await deleteFacultyBatchCascade(filteredProfessors, schedules);
+        await deleteFacultyBatchCascade(filteredProfessors, schedules, sections);
         logActivity({
           user,
           action: LOG_ACTIONS.BATCH_DELETE_FACULTY,

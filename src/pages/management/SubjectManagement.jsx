@@ -1013,7 +1013,7 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
                         {sec.name}
                       </div>
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        {sec.department} • {sec.yearLevel}
+                        {sec.program || sec.department || 'General'} • Year {sec.yearLevel}
                       </div>
                     </li>
                   ))

@@ -23,6 +23,9 @@ import {
   isProfessorStageLocked,
   getMeetingTimeLabel,
   getScheduleTimeRange,
+  DEFAULT_MAX_UNITS,
+  getSubjectComponentUnits,
+  computeProfessorWorkloadUnits,
 } from '../utils/scheduleUtils';
 import { resolveUnscheduledClasses } from '../utils/scheduleAI';
 
@@ -206,19 +209,14 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     }
   }
 
+  // Helper: canonical group key including Lec/Lab component
+  const getGroupKey = (g) => `${g.section?.id || 'none'}_${g.subject?.id}${g.component ? `_${g.component}` : ''}`;
+
   // Helper: compute a professor's remaining unit capacity from temp
   const getProfRemainingCapacity = (professor) => {
     const profSchedules = temp.filter((s) => String(s.professor?.id) === String(professor.id));
-    const uniqueLoad = new Map();
-    for (const s of profSchedules) {
-      const k = `${s.subject?.id || 'x'}__${s.section?.id || 'x'}`;
-      if (!uniqueLoad.has(k)) {
-        const creds = Number(s.subject?.credits);
-        uniqueLoad.set(k, isNaN(creds) || s.subject?.credits === '' ? 3 : creds);
-      }
-    }
-    const currentLoad = Array.from(uniqueLoad.values()).reduce((s, c) => s + c, 0);
-    const maxUnits = Number(professor.maxUnits) || Number(professor.maxHours) || 24;
+    const currentLoad = computeProfessorWorkloadUnits(profSchedules);
+    const maxUnits = Number(professor.maxUnits) || Number(professor.maxHours) || DEFAULT_MAX_UNITS;
     return maxUnits - currentLoad;
   };
 
@@ -266,30 +264,29 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       const passEnd = passWeights[pass] || 1;
       const passProgress = passTotal > 0 ? (groupIndex + 1) / passTotal : 1;
       const pct = Math.round((passStart + (passEnd - passStart) * passProgress) * 100);
-      onProgress({ percent: Math.min(pct, 100), placed: results.length, total: totalGroups, pass });
+      onProgress({ percent: Math.min(pct, 100), placed: placedKeys.size, total: totalGroups, pass });
     }
     // Yield to UI thread periodically
     if (processedCount % 2 === 0) await yieldToMain();
   };
 
- // Helper: check if a single slot is free for a given combo
-  // NOTE: We intentionally do NOT call validateScheduleEntry here.
-  // Lab requirements (computer/food) are already enforced by the room pool
-  // filter (getEligibleRooms → getEligibleRoomsTiered). Calling validateScheduleEntry
-  // would re-enforce lab checks without the respectLabs constraint context,
-  // causing false rejections (e.g. FT subjects blocked from all rooms).
-  // Conflict checks (room/prof/section overlap) are handled by schedulesOverlap.
+  const timetableStart = config.allowSevenAm ? 420 : 450;
+  const timetableEnd = 1080; // 6:00 PM
+
   // Helper: check if a single slot is free for a given combo
   const isSlotFree = (room, professor, subject, section, day, timeSlot, customHours, customComponent) => {
     if (isLunchSlot(timeSlot)) return false;
     const candidate = { room, professor, subject, section, day, timeSlot, hours: customHours, component: customComponent };
     const range = getScheduleTimeRange(candidate, scheduleMode);
-    if (range && range.start > 0 && range.end > 0 && overlapsLunchBreak(range.start, range.end)) return false;
+    if (range && (range.start > 0 || range.end > 0)) {
+      if (range.start < timetableStart || range.start >= timetableEnd || range.end > timetableEnd) return false;
+      if (overlapsLunchBreak(range.start, range.end)) return false;
+    }
     // Check for time conflicts with already-scheduled classes
     if (temp.some((s) => schedulesOverlap(candidate, s, scheduleMode))) return false;
     const startIdx = getTimeSlotIndex(timeSlot, scheduleMode);
     if (startIdx < 0 || slotsNeededFromIndex(startIdx, customHours || subject?.hoursPerMeeting, scheduleMode) === 0) return false;
-    if (subject?.code?.toUpperCase().startsWith('PE') && String(timeSlot.id) === '2') return false;
+    if (subject?.code?.toUpperCase().startsWith('PE') && (String(timeSlot.id) === '1' || String(timeSlot.id) === '2')) return false;
     return true;
   };
 
@@ -441,22 +438,16 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 
       const isStageLocked = isProfessorStageLocked(professor);
       const profSchedules = temp.filter((s) => String(s.professor?.id) === String(professor.id));
-      const uniqueLoad = new Map();
-      for (const s of profSchedules) {
-        const k = `${s.subject?.id || 'x'}__${s.section?.id || 'x'}`;
-        if (!uniqueLoad.has(k)) {
-          const creds = Number(s.subject?.credits);
-          uniqueLoad.set(k, isNaN(creds) || s.subject?.credits === '' ? 3 : creds);
-        }
-      }
-      const profCurrentLoad = Array.from(uniqueLoad.values()).reduce((s, c) => s + c, 0);
-      const groupKey = `${subject?.id || 'x'}__${section?.id || 'x'}`;
-      let subjectCredits = 0;
-      if (!uniqueLoad.has(groupKey)) {
-        const creds = Number(subject.credits);
-        subjectCredits = isNaN(creds) || subject.credits === '' ? 3 : creds;
-      }
-      const maxUnits = Number(professor.maxUnits) || Number(professor.maxHours) || 24;
+      const profCurrentLoad = computeProfessorWorkloadUnits(profSchedules);
+      const compKey = group.component || (subject?.hasLecLab ? 'full' : 'std');
+      const alreadyHasGroup = profSchedules.some(
+        (s) =>
+          String(s.subject?.id) === String(subject?.id) &&
+          String(s.section?.id) === String(section?.id) &&
+          (s.component || (s.subject?.hasLecLab ? 'full' : 'std')) === compKey
+      );
+      const subjectCredits = alreadyHasGroup ? 0 : getSubjectComponentUnits(subject, group.component);
+      const maxUnits = Number(professor.maxUnits) || Number(professor.maxHours) || DEFAULT_MAX_UNITS;
 
       if (profCurrentLoad + subjectCredits > maxUnits + 0.01) {
         profMaxUnitsReached = true;
@@ -562,6 +553,21 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     // Each meeting can use a DIFFERENT time slot on different days.
     if (validPlacements.length === 0 && !usePairsOnly && count >= 2) {
       for (const professor of profPool) {
+        const profSchedules = temp.filter((s) => String(s.professor?.id) === String(professor.id));
+        const profCurrentLoad = computeProfessorWorkloadUnits(profSchedules);
+        const compKey = group.component || (subject?.hasLecLab ? 'full' : 'std');
+        const alreadyHasGroup = profSchedules.some(
+          (s) =>
+            String(s.subject?.id) === String(subject?.id) &&
+            String(s.section?.id) === String(section?.id) &&
+            (s.component || (s.subject?.hasLecLab ? 'full' : 'std')) === compKey
+        );
+        const subjectCredits = alreadyHasGroup ? 0 : getSubjectComponentUnits(subject, group.component);
+        const maxUnits = Number(professor.maxUnits) || Number(professor.maxHours) || DEFAULT_MAX_UNITS;
+        if (profCurrentLoad + subjectCredits > maxUnits + 0.01) {
+          continue;
+        }
+
         const isStageLocked = isProfessorStageLocked(professor);
         const prefRoomIds = professor.preferredRooms || [];
         let sortedRoomPool = roomPool;
@@ -635,17 +641,9 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     // =========================================================================
     const evaluatedProfessors = profPool.map((p) => {
       const pScheds = temp.filter((s) => String(s.professor?.id) === String(p.id));
-      const uniqueL = new Map();
-      for (const s of pScheds) {
-        const k = `${s.subject?.id || 'x'}__${s.section?.id || 'x'}`;
-        if (!uniqueL.has(k)) {
-          const creds = Number(s.subject?.credits);
-          uniqueL.set(k, isNaN(creds) || s.subject?.credits === '' ? 3 : creds);
-        }
-      }
-      const curLoad = Array.from(uniqueL.values()).reduce((s, c) => s + c, 0);
-      const maxU = Number(p.maxUnits) || Number(p.maxHours) || 24;
-      const subCreds = Number(subject?.credits) || 3;
+      const curLoad = computeProfessorWorkloadUnits(pScheds);
+      const maxU = Number(p.maxUnits) || Number(p.maxHours) || DEFAULT_MAX_UNITS;
+      const subCreds = getSubjectComponentUnits(subject, group.component);
       const isMaxReached = curLoad + subCreds > maxU + 0.01;
 
       // Structured sample of classes this professor is currently teaching
@@ -844,7 +842,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   for (let i = 0; i < allGroups.length; i++) {
     if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
     const group = allGroups[i];
-    const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
+    const groupKey = getGroupKey(group);
     const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints, group.component);
     if (tiers.tier1.length > 0) {
       const placed = await tryPlaceGroup(group, tiers.tier1, group.count === 2);
@@ -854,12 +852,12 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   }
 
   // PASS 2 - SHARED: department + shared rooms, any days
-  const remainingAfterPass1 = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
+  const remainingAfterPass1 = allGroups.filter((g) => !placedKeys.has(getGroupKey(g)));
   console.log(`[AutoScheduler] Pass 2 (Shared): ${remainingAfterPass1.length} groups remaining`);
   for (let i = 0; i < remainingAfterPass1.length; i++) {
     if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
     const group = remainingAfterPass1[i];
-    const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
+    const groupKey = getGroupKey(group);
     const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints, group.component);
     const pool = [...tiers.tier1, ...tiers.tier2];
     if (pool.length > 0) {
@@ -870,30 +868,25 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   }
 
   // PASS 3 - FALLBACK: all rooms, any days
-  const remainingAfterPass2 = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
+  const remainingAfterPass2 = allGroups.filter((g) => !placedKeys.has(getGroupKey(g)));
   console.log(`[AutoScheduler] Pass 3 (Fallback): ${remainingAfterPass2.length} groups remaining`);
   for (let i = 0; i < remainingAfterPass2.length; i++) {
     if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
     const group = remainingAfterPass2[i];
-    const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
+    const groupKey = getGroupKey(group);
     const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints, group.component);
     const pool = [...tiers.tier1, ...tiers.tier2, ...tiers.tier3];
     const placed = await tryPlaceGroup(group, pool, false);
     if (placed?.success) {
       placedKeys.add(groupKey);
     } else {
-      // OPTIMIZATION: Do not throw/record unscheduled errors if we are just packing a specific room or professor.
-      // Failing to fit the entire school into one room/prof is expected, not an error.
-      if (!constraints?.fixedRoom && !constraints?.fixedProfessor) {
-        let reason = placed?.reason || 'No open time slot found for any available faculty and room.';
-        if (constraints?.respectLabs && group.subject?.requiredLab && fixedRoom && !fixedRoom.hasComputers) {
-          reason = `This subject needs a computer lab, but "${fixedRoom.name}" doesn't have computers.`;
-        } else if (constraints?.respectLabs && group.subject?.isFoodLab && fixedRoom && !fixedRoom.isFoodLab) {
-          reason = `This subject needs a food lab, but "${fixedRoom.name}" isn't one.`;
-        }
+      // Record unscheduled errors in full/section/faculty modes (and in room mode if no classes fit at all)
+      if (!constraints?.fixedRoom) {
+        const reason = placed?.reason || 'No open time slot found for any available faculty and room.';
         unscheduled.push({
           subject: group.subject,
           section: group.section,
+          component: group.component,
           reason,
           details: placed?.details || null
         });
@@ -907,17 +900,20 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   // placements may have gone to different professors, freeing capacity
   // for professors who were previously at-max.
   const unitBlockedRetry = allGroups.filter((g) => {
-    const gk = `${g.section?.id || 'none'}_${g.subject?.id}`;
+    const gk = getGroupKey(g);
     if (placedKeys.has(gk)) return false;
-    const failed = unscheduled.find((u) => u.subject?.id === g.subject?.id && u.section?.id === g.section?.id);
-    return failed && failed.reason && failed.reason.toLowerCase().includes('max units');
+    const failed = unscheduled.find(
+      (u) => u.subject?.id === g.subject?.id && u.section?.id === g.section?.id && (!g.component || u.component === g.component)
+    );
+    const r = (failed?.reason || '').toLowerCase();
+    return Boolean(failed && (r.includes('max units') || r.includes('full load') || r.includes('max load')));
   });
   if (unitBlockedRetry.length > 0) {
     console.log(`[AutoScheduler] Pass 3.25 (Unit-Blocked Retry): ${unitBlockedRetry.length} groups to retry`);
     for (let i = 0; i < unitBlockedRetry.length; i++) {
       if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
       const group = unitBlockedRetry[i];
-      const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
+      const groupKey = getGroupKey(group);
       if (placedKeys.has(groupKey)) continue;
       const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints, group.component);
       const pool = [...tiers.tier1, ...tiers.tier2, ...tiers.tier3];
@@ -925,7 +921,9 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       if (placed?.success) {
         placedKeys.add(groupKey);
         // Remove from unscheduled list since it's now placed
-        const uIdx = unscheduled.findIndex((u) => u.subject?.id === group.subject?.id && u.section?.id === group.section?.id);
+        const uIdx = unscheduled.findIndex(
+          (u) => u.subject?.id === group.subject?.id && u.section?.id === group.section?.id && (!group.component || u.component === group.component)
+        );
         if (uIdx !== -1) unscheduled.splice(uIdx, 1);
         console.log(`[AutoScheduler] Unit-blocked retry success: ${group.subject?.code} (${group.section?.name})`);
       }
@@ -939,7 +937,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   const maxPass35Rounds = 2;
   while (pass35Round < maxPass35Rounds) {
     pass35Round++;
-    const stillUnscheduled = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
+    const stillUnscheduled = allGroups.filter((g) => !placedKeys.has(getGroupKey(g)));
     if (stillUnscheduled.length === 0 || stillUnscheduled.length >= allGroups.length) break;
 
     let anyBumpSucceededInRound = false;
@@ -947,7 +945,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
     for (let ui = 0; ui < stillUnscheduled.length; ui++) {
       if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
       const unschedGroup = stillUnscheduled[ui];
-      const unschedKey = `${unschedGroup.section?.id || 'none'}_${unschedGroup.subject?.id}`;
+      const unschedKey = getGroupKey(unschedGroup);
       if (placedKeys.has(unschedKey)) continue; // Already resolved by a prior bump
 
       const unschedRoomPool = fixedRoom ? [fixedRoom] : getEligibleRooms(rooms, unschedGroup.subject, unschedGroup.section, constraints, unschedGroup.component).flat;
@@ -959,13 +957,14 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
       // 1. Same section classes (moving them frees Section's time to meet an available professor)
       // 2. Same professor classes (moving them frees Professor's time to teach this section)
       // 3. Same room classes (moving them frees Room space)
-      // Deduplicate by subject+section so we bump entire groups, not individual meetings
+      // Deduplicate by subject+section+component so we bump entire groups, not individual meetings
       const seenBumpKeys = new Set();
       const candidateBumps = [];
       for (const placed of results) {
         // Skip self
         if (String(placed.subject?.id) === String(unschedGroup.subject?.id) &&
-            String(placed.section?.id) === String(unschedGroup.section?.id)) {
+            String(placed.section?.id) === String(unschedGroup.section?.id) &&
+            (!unschedGroup.component || placed.component === unschedGroup.component)) {
           continue;
         }
 
@@ -980,8 +979,8 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
 
         if (!isSecMatch && !isProfMatch && !isRoomMatch) continue;
 
-        // Deduplicate: only add one candidate per subject+section group
-        const bumpGroupKey = `${placed.section?.id || 'none'}_${placed.subject?.id}${placed.component ? '_' + placed.component : ''}`;
+        // Deduplicate: only add one candidate per subject+section+component group
+        const bumpGroupKey = getGroupKey(placed);
         if (seenBumpKeys.has(bumpGroupKey)) continue;
         seenBumpKeys.add(bumpGroupKey);
 
@@ -993,7 +992,7 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
         if (isSecMatch && isProfMatch) priority = 3;
         else if (isSecMatch || isProfMatch) priority = 2;
 
-        const bumpTiers = getEligibleRooms(rooms, placed.subject, placed.section, constraints, placed.component);
+        const bumpTiers = fixedRoom ? { flat: [fixedRoom] } : getEligibleRooms(rooms, placed.subject, placed.section, constraints, placed.component);
         const eligibleRoomCount = bumpTiers.flat?.length || 0;
 
         candidateBumps.push({
@@ -1054,14 +1053,21 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
             targetDuration: bumpedOrigGroup?.targetDuration || bumpTarget.hours,
             component: bumpTarget.component || bumpedOrigGroup?.component
           };
-          const bumpedTiers = getEligibleRooms(rooms, bumpTarget.subject, bumpTarget.section, constraints, bumpTarget.component);
+          const bumpedTiers = fixedRoom
+            ? { tier1: [fixedRoom], tier2: [], tier3: [] }
+            : getEligibleRooms(rooms, bumpTarget.subject, bumpTarget.section, constraints, bumpTarget.component);
           const bumpedPool = [...bumpedTiers.tier1, ...bumpedTiers.tier2, ...bumpedTiers.tier3];
           const rePlaced = await tryPlaceGroup(bumpedGroup, bumpedPool, false);
 
           if (rePlaced?.success) {
             // Both placed! Remove from unscheduled list
             placedKeys.add(unschedKey);
-            const uIdx = unscheduled.findIndex((u) => u.subject?.id === unschedGroup.subject?.id && u.section?.id === unschedGroup.section?.id);
+            const uIdx = unscheduled.findIndex(
+              (u) =>
+                u.subject?.id === unschedGroup.subject?.id &&
+                u.section?.id === unschedGroup.section?.id &&
+                (!unschedGroup.component || u.component === unschedGroup.component)
+            );
             if (uIdx !== -1) unscheduled.splice(uIdx, 1);
             anyBumpSucceededInRound = true;
             console.log(`[AutoScheduler] Bump success: displaced ${bumpTarget.subject?.code} to make room for ${unschedGroup.subject?.code}`);
@@ -1090,20 +1096,22 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   // PASS 3.75 - POST-BUMP RETRY
   // After bumps may have rearranged classes, re-attempt unscheduled groups
   // with all rooms. Previously-full slot combos may now be free.
-  const postBumpRemaining = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
+  const postBumpRemaining = allGroups.filter((g) => !placedKeys.has(getGroupKey(g)));
   if (postBumpRemaining.length > 0) {
     console.log(`[AutoScheduler] Pass 3.75 (Post-Bump Retry): ${postBumpRemaining.length} groups to retry`);
     for (let i = 0; i < postBumpRemaining.length; i++) {
       if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
       const group = postBumpRemaining[i];
-      const groupKey = `${group.section?.id || 'none'}_${group.subject?.id}`;
+      const groupKey = getGroupKey(group);
       if (placedKeys.has(groupKey)) continue;
       const tiers = fixedRoom ? { tier1: [fixedRoom], tier2: [], tier3: [] } : getEligibleRooms(rooms, group.subject, group.section, constraints, group.component);
       const pool = [...tiers.tier1, ...tiers.tier2, ...tiers.tier3];
       const placed = await tryPlaceGroup(group, pool, false);
       if (placed?.success) {
         placedKeys.add(groupKey);
-        const uIdx = unscheduled.findIndex((u) => u.subject?.id === group.subject?.id && u.section?.id === group.section?.id);
+        const uIdx = unscheduled.findIndex(
+          (u) => u.subject?.id === group.subject?.id && u.section?.id === group.section?.id && (!group.component || u.component === group.component)
+        );
         if (uIdx !== -1) unscheduled.splice(uIdx, 1);
         console.log(`[AutoScheduler] Post-bump retry success: ${group.subject?.code} (${group.section?.name})`);
       }
@@ -1111,52 +1119,91 @@ export async function runTargetedScheduler(assignments, context, constraints, ad
   }
 
   // PASS 4 - AI CONFLICT RESOLUTION
-  const remainingAfterPass3 = allGroups.filter((g) => !placedKeys.has(`${g.section?.id || 'none'}_${g.subject?.id}`));
+  const remainingAfterPass3 = allGroups.filter((g) => !placedKeys.has(getGroupKey(g)));
   if (constraints?.aiAssisted && remainingAfterPass3.length > 0) {
     console.log(`[AutoScheduler] Pass 4 (AI Resolution): Attempting to resolve ${remainingAfterPass3.length} unscheduled groups`);
     await reportProgress(4, 0, remainingAfterPass3.length);
-    const aiResolutions = await resolveUnscheduledClasses(remainingAfterPass3, context, constraints);
+    const aiResolutions = await resolveUnscheduledClasses(
+      remainingAfterPass3,
+      { ...context, activeSchedules: temp },
+      constraints
+    );
 
     if (aiResolutions && aiResolutions.length > 0) {
       for (let i = 0; i < aiResolutions.length; i++) {
         const res = aiResolutions[i];
         if (signal?.aborted) return { results, unscheduled, error: 'Cancelled by user.' };
         const group = remainingAfterPass3[res.groupIndex];
-        if (!group) continue;
+        if (!group || placedKeys.has(getGroupKey(group))) continue;
 
         const room = rooms.find(r => String(r.id) === String(res.roomId));
         const professor = professors.find(p => String(p.id) === String(res.professorId));
-        const timeSlot = TIME_SLOTS.find(ts => String(ts.id) === String(res.timeSlotId));
+        const timeSlot = ACTIVE_TIME_SLOTS.find(ts => String(ts.id) === String(res.timeSlotId)) || TIME_SLOTS.find(ts => String(ts.id) === String(res.timeSlotId));
         const day = res.day;
 
         if (!room || !professor || !timeSlot || !day) continue;
+        if (!ACTIVE_DAYS.includes(day)) continue;
 
-        // Hard check: reject AI suggestions that are in or cross the lunch break
-        if (isLunchSlot(timeSlot)) {
-          console.warn(`[AutoScheduler] AI suggestion rejected: slot ${timeSlot.label} is during lunch break.`);
+        // Enforce specialization, room rules, lab requirements, and professor maxUnits
+        if (!professorMatchesSubject(professor, group.subject)) continue;
+        if (!isRoomAllowedFor(room, group.subject, group.section)) continue;
+        if (!isProfessorAllowedInRoom(room, professor, group.subject, group.section, rooms)) continue;
+        if (constraints?.respectLabs !== false) {
+          if (group.subject?.requiredLab && group.component !== 'Lecture' && !room.hasComputers) continue;
+          if (group.subject?.isFoodLab && group.component !== 'Lecture' && !room.isFoodLab) continue;
+        }
+        if (getProfRemainingCapacity(professor) < getSubjectComponentUnits(group.subject, group.component) - 0.01) {
           continue;
         }
 
-        const aiRange = getScheduleTimeRange({ timeSlot, hours: group.targetDuration, subject: group.subject, component: group.component }, scheduleMode);
-        if (aiRange && aiRange.start > 0 && aiRange.end > 0 && overlapsLunchBreak(aiRange.start, aiRange.end)) {
-          console.warn(`[AutoScheduler] AI suggestion rejected: slot ${timeSlot.label} spans lunch break (11:30 AM - 12:30 PM).`);
-          continue;
+        // Try to place all required meetings for this group starting from the AI suggestion
+        const neededCount = group.count || 1;
+        const candidateDays = [day];
+        if (neededCount > 1) {
+          for (const d of ACTIVE_DAYS) {
+            if (d !== day && isSlotFree(room, professor, group.subject, group.section, d, timeSlot, group.targetDuration, group.component)) {
+              candidateDays.push(d);
+              if (candidateDays.length === neededCount) break;
+            }
+          }
         }
 
-        const aiStartIdx = getTimeSlotIndex(timeSlot, scheduleMode);
-        if (aiStartIdx < 0 || slotsNeededFromIndex(aiStartIdx, group.targetDuration || group.subject?.hoursPerMeeting, scheduleMode) === 0) {
-          console.warn(`[AutoScheduler] AI suggestion rejected: slot ${timeSlot.label} does not fit ${group.targetDuration || group.subject?.hoursPerMeeting || 1.5}hr meeting (likely crosses lunch break).`);
-          continue;
+        if (candidateDays.length < neededCount) continue;
+        if (!isSlotFree(room, professor, group.subject, group.section, day, timeSlot, group.targetDuration, group.component)) continue;
+
+        const placedBatch = [];
+        let allAiOk = true;
+        for (const d of candidateDays) {
+          const sc = {
+            room,
+            professor,
+            subject: group.subject,
+            section: group.section,
+            day: d,
+            timeSlot,
+            prescriptionNote: res.prescriptionNote,
+            hours: group.targetDuration,
+            component: group.component
+          };
+          const w = await addScheduleFn(sc);
+          if (w?.ok === false) {
+            allAiOk = false;
+            break;
+          }
+          placedBatch.push(sc);
         }
 
-        const sc = { room, professor, subject: group.subject, section: group.section, day, timeSlot, prescriptionNote: res.prescriptionNote, hours: group.targetDuration, component: group.component };
-        const w = await addScheduleFn(sc);
+        if (allAiOk && placedBatch.length === neededCount) {
+          temp.push(...placedBatch);
+          results.push(...placedBatch);
+          placedKeys.add(getGroupKey(group));
 
-        if (w?.ok !== false) {
-          temp.push(sc);
-          results.push(sc);
-
-          const uIdx = unscheduled.findIndex(u => u.subject?.id === group.subject?.id && (u.section?.id === group.section?.id || (!u.section && !group.section)));
+          const uIdx = unscheduled.findIndex(
+            (u) =>
+              u.subject?.id === group.subject?.id &&
+              (u.section?.id === group.section?.id || (!u.section && !group.section)) &&
+              (!group.component || u.component === group.component)
+          );
           if (uIdx !== -1) {
             unscheduled.splice(uIdx, 1);
           }
@@ -1188,16 +1235,22 @@ export async function autoScheduleForRoom(roomId, context, constraints, addSched
   const room = rooms.find((r) => r.id === roomId);
   if (!room) return { results: [], unscheduled: [], error: `Room "${roomId}" not found.` };
 
-  const filter = (subject, section) => {
-    // Optimization: Skip subjects that definitely cannot fit in this room due to lab constraints
-    if (constraints?.respectLabs !== false) {
-      if (subject.requiredLab && !room.hasComputers) return false;
-      if (subject.isFoodLab && !room.isFoodLab) return false;
-    }
-    return isRoomAllowedFor(room, subject, section);
-  };
+  const filter = (subject, section) => isRoomAllowedFor(room, subject, section);
+  const rawAssignments = buildAssignments(subjects, sections, activeSemester, filter);
 
-  const assignments = buildAssignments(subjects, sections, activeSemester, filter);
+  const assignments = rawAssignments.filter((a) => {
+    if (constraints?.respectLabs !== false) {
+      const isLecComponent = a.component === 'Lecture';
+      if (isLecComponent) {
+        // Lecture components of Lec/Lab subjects go to standard lecture rooms unless room is non-lab
+        return !room.hasComputers && !room.isFoodLab;
+      }
+      if (a.subject?.requiredLab && !room.hasComputers) return false;
+      if (a.subject?.isFoodLab && !room.isFoodLab) return false;
+    }
+    return true;
+  });
+
   return runTargetedScheduler(assignments, context, { ...constraints, fixedRoom: room }, addScheduleFn, options);
 }
 

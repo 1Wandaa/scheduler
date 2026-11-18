@@ -75,7 +75,7 @@ const FacultyTable = ({ facultyList, subjects = [], schedules = [], departments 
             const assignedSubjectIds = p.specialization || [];
             const currentSubjects = subjects.filter(sub => assignedSubjectIds.includes(sub.id) || assignedSubjectIds.includes(sub.code) || assignedSubjectIds.includes(sub.name));
             
-            const maxUnits = p.maxUnits ?? p.maxHours ?? 12;
+            const maxUnits = p.maxUnits ?? p.maxHours ?? 15;
             const utilization = maxUnits > 0 ? (currentUnits / maxUnits) * 100 : 0;
             
             let statusColor = 'var(--success)';

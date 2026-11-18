@@ -1536,7 +1536,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
               return (
                 <tr key={rowKey}>
                   <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.code || ''}{s.component ? ` (${s.component})` : ''}</td>
-                  <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.title || s.subject?.description || ''}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>{s.subject?.name || s.subject?.title || s.subject?.description || ''}</td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{s.displayUnits ?? s.subject?.credits ?? ''}</td>
                   <td style={{ border: '1px solid #000', padding: '6px' }}>{s.professor?.name || ''}</td>
                   <td style={{ border: '1px solid #000', padding: '6px' }}>{s.roomNameList}</td>

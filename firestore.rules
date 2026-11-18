@@ -41,12 +41,20 @@ service cloud.firestore {
       // Allow reading user profiles for login and registration verification
       allow read: if true;
 
-      // Users can create their own profile (sign-up flow) — doc ID must match auth UID
-      allow create: if isAuthenticated() && userId == request.auth.uid;
+      // Users can create their own profile (sign-up flow) — doc ID must match auth UID and role must be valid
+      allow create: if isAuthenticated() && userId == request.auth.uid
+        && request.resource.data.role in ['Admin', 'Department Head', 'Faculty', 'Student', 'User'];
 
-      // Users can update their own profile, but NOT their role field
-      allow update: if isAuthenticated() && userId == request.auth.uid
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
+      // Users can update their own profile, but NOT their role field (nor hijack an existing username)
+      allow update: if (isAuthenticated() && userId == request.auth.uid
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['username'])
+            || !('username' in resource.data)
+            || resource.data.username == ''
+            || request.resource.data.username == resource.data.username))
+        || (isAuthenticated()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['password'])
+            && !('password' in request.resource.data));
 
       // Admins can create, update, and delete any user profile
       allow create, update, delete: if isAdmin();
@@ -61,7 +69,13 @@ service cloud.firestore {
     // --- PROFESSORS (Faculty) ---
     match /professors/{profId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserProfile().role == 'Faculty' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['freeTimeActivities'])
+      );
     }
 
     // --- SUBJECTS ---
@@ -72,7 +86,8 @@ service cloud.firestore {
 
     // --- SECTIONS ---
     match /sections/{sectionId} {
-      allow read: if isAuthenticated();
+      // Allow reading sections during student sign-up dropdown population
+      allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
@@ -107,15 +122,16 @@ service cloud.firestore {
 
     // --- TRASH (Recycle Bin) ---
     match /trash/{trashId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      allow read, create, update, delete: if isAdmin();
     }
 
     // --- ACTIVITY LOGS ---
     match /activityLogs/{logId} {
       allow read, delete: if isAdmin();
-      // Any authenticated user can create log entries (login/view events)
-      allow create: if isAuthenticated();
+      // Any authenticated user can create log entries (login/view events) with valid schema
+      allow create: if isAuthenticated()
+        && request.resource.data.keys().hasOnly(['username', 'userRole', 'action', 'details', 'meta', 'timestamp'])
+        && request.resource.data.action is string;
       // Logs should not be modified
       allow update: if false;
     }

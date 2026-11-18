@@ -134,6 +134,14 @@ export function detectLabRequirement(subjectData = {}, existingSubjects = []) {
         reason: `Matched known subject (${matchedSubject.code}): Requires Computer Laboratory`
       };
     }
+    if (matchedSubject.requiredLab === false && matchedSubject.isFoodLab === false) {
+      return {
+        requiredLab: false,
+        isFoodLab: false,
+        labType: 'none',
+        reason: `Matched known lecture subject (${matchedSubject.code})`
+      };
+    }
   }
 
   // ─────────────────────────────────────────────────────────────

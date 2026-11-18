@@ -38,8 +38,11 @@ const ScheduleHistory = ({ history, onBack }) => {
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Unknown Date';
-    // eslint-disable-next-line react-hooks/purity
-    const date = new Date(timestamp.toMillis ? timestamp.toMillis() : Date.now());
+    const ms = timestamp.toMillis
+      ? timestamp.toMillis()
+      : (timestamp.seconds ? timestamp.seconds * 1000 : new Date(timestamp).getTime());
+    if (isNaN(ms)) return 'Unknown Date';
+    const date = new Date(ms);
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
       day: 'numeric',
@@ -51,7 +54,7 @@ const ScheduleHistory = ({ history, onBack }) => {
   };
 
   return (
-    <div className="card" style={{  display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(100vh - 120px)' }}>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(100vh - 120px)' }}>
       <div className="mgmt-header" style={{ flexShrink: 0, paddingBottom: '16px', borderBottom: '1px solid var(--border-color)' }}>
         <div className="mgmt-header-left" style={{ flex: 1 }}>
           <button className="back-btn" onClick={onBack}>
@@ -62,9 +65,9 @@ const ScheduleHistory = ({ history, onBack }) => {
             <h3 className="card-title">Scheduling History</h3>
           </div>
         </div>
-        <button 
+        <button
           className="btn"
-          onClick={handleClearHistory} 
+          onClick={handleClearHistory}
           disabled={!history || history.length === 0}
           style={{
             background: (!history || history.length === 0) ? 'var(--bg-main)' : 'var(--danger-bg)',
@@ -100,7 +103,7 @@ const ScheduleHistory = ({ history, onBack }) => {
                   overflow: 'hidden',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}>
-                  <div 
+                  <div
                     onClick={() => toggleExpand(record.id)}
                     className="history-card-header"
                     style={{
@@ -136,10 +139,10 @@ const ScheduleHistory = ({ history, onBack }) => {
                           {formatDate(record.timestamp)}
                         </strong>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '0.85rem' }}>
-                          <span style={{ 
-                            background: 'var(--bg-main)', border: '1px solid var(--border-color)', 
-                            padding: '2px 8px', borderRadius: '6px', color: 'var(--text-muted)', 
-                            textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', fontSize: '0.75rem' 
+                          <span style={{
+                            background: 'var(--bg-main)', border: '1px solid var(--border-color)',
+                            padding: '2px 8px', borderRadius: '6px', color: 'var(--text-muted)',
+                            textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', fontSize: '0.75rem'
                           }}>
                             {record.engineMode} Mode
                           </span>
@@ -160,9 +163,9 @@ const ScheduleHistory = ({ history, onBack }) => {
                         <div style={{ fontSize: '1.3rem', fontWeight: 800, color: hasErrors ? '#ef4444' : 'var(--text-muted)', lineHeight: 1 }}>{record.errorCount}</div>
                         <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600, marginTop: '4px', letterSpacing: '0.02em' }}>Failed</div>
                       </div>
-                      <div className="history-card-chevron" style={{ 
-                        color: isExpanded ? 'var(--accent-primary)' : 'var(--text-muted)', 
-                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', 
+                      <div className="history-card-chevron" style={{
+                        color: isExpanded ? 'var(--accent-primary)' : 'var(--text-muted)',
+                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: isExpanded ? 'rgba(86, 69, 238, 0.1)' : 'transparent', borderRadius: '50%'
@@ -172,11 +175,11 @@ const ScheduleHistory = ({ history, onBack }) => {
                     </div>
                   </div>
 
-                  <div style={{ 
-                    maxHeight: isExpanded ? '1200px' : '0px', 
-                    opacity: isExpanded ? 1 : 0, 
-                    overflow: 'hidden', 
-                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)' 
+                  <div style={{
+                    maxHeight: isExpanded ? '1200px' : '0px',
+                    opacity: isExpanded ? 1 : 0,
+                    overflow: 'hidden',
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
                   }}>
                     <div style={{ padding: '20px', background: 'var(--card-bg)' }}>
                       {/* Success / Status Banner */}
@@ -251,7 +254,7 @@ const ScheduleHistory = ({ history, onBack }) => {
                               }}>
                                 <div style={{ fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-                                  {err.subject} 
+                                  {err.subject}
                                   {err.section && <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>— {err.section}</span>}
                                 </div>
                                 <div style={{ color: '#dc2626', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '6px', lineHeight: 1.4 }}>
@@ -276,7 +279,7 @@ const ScheduleHistory = ({ history, onBack }) => {
           </div>
         )}
       </div>
-      
+
       {/* Inject custom scrollbar CSS for the history list */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {

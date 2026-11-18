@@ -365,18 +365,12 @@ const Login = ({ onLogin }) => {
           }
         }
 
-        // Query username if not found by UID, OR if UID doc does not have an Admin/Staff role
-        const uidRole = (firestoreUserDoc?.data()?.role || '').toLowerCase();
-        const isUidElevated = uidRole === 'admin' || uidRole === 'department head' || uidRole === 'faculty';
-
-        if (!firestoreUserDoc || !isUidElevated) {
+        // Query username ONLY if no document was found at the authenticated user's UID
+        if (!firestoreUserDoc) {
           try {
             const usernameDoc = await findUserDocument(username, userCredential?.user?.uid);
             if (usernameDoc) {
-              const uRole = (usernameDoc.data()?.role || '').toLowerCase();
-              if (uRole === 'admin' || uRole === 'department head' || uRole === 'faculty' || !firestoreUserDoc) {
-                firestoreUserDoc = usernameDoc;
-              }
+              firestoreUserDoc = usernameDoc;
             }
           } catch (findErr) {
             console.warn('Could not find user by username:', findErr);
@@ -527,25 +521,10 @@ const Login = ({ onLogin }) => {
         }
       }
 
-      const gUidRole = (firestoreUserDoc?.data()?.role || '').toLowerCase();
-      const isGUidElevated = gUidRole === 'admin' || gUidRole === 'department head' || gUidRole === 'faculty';
-
-      if (!firestoreUserDoc || !isGUidElevated) {
-        const byUsername = await findUserDocument(cleanUsername);
-        if (byUsername) {
-          const uRole = (byUsername.data()?.role || '').toLowerCase();
-          if (uRole === 'admin' || uRole === 'department head' || uRole === 'faculty' || !firestoreUserDoc) {
-            firestoreUserDoc = byUsername;
-          }
-        }
-      }
-      if (!firestoreUserDoc || !isGUidElevated) {
-        const byEmail = await findUserDocument(googleUser.email);
-        if (byEmail) {
-          const uRole = (byEmail.data()?.role || '').toLowerCase();
-          if (uRole === 'admin' || uRole === 'department head' || uRole === 'faculty' || !firestoreUserDoc) {
-            firestoreUserDoc = byEmail;
-          }
+      if (!firestoreUserDoc && googleUser.email) {
+        const byEmail = await findUserDocument(googleUser.email, googleUser.uid);
+        if (byEmail && (!byEmail.data()?.email || byEmail.data().email.toLowerCase() === googleUser.email.toLowerCase())) {
+          firestoreUserDoc = byEmail;
         }
       }
 

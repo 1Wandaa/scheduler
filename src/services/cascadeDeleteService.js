@@ -87,10 +87,32 @@ export const deleteSubjectBatchCascade = async (subjectList, professors = [], se
     await safeBatch.delete(doc(db, 'subjects', String(subject.id)));
   }
 
+  const subjectModsMap = new Map();
+  subjectList.forEach(s => subjectModsMap.set(String(s.id), {
+    modifiedProfessors: [],
+    modifiedSections: [],
+    removedInstructors: {}
+  }));
+
+  const matchesSingleSubject = (val, sub) =>
+    String(val) === String(sub.id) ||
+    (sub.code && String(val) === String(sub.code)) ||
+    (sub.name && String(val) === String(sub.name));
+
   // 2. Remove from professors' specializations and sectionSubjectMap
   for (const prof of professors) {
     let profNeedsUpdate = false;
     const profUpdates = {};
+
+    for (const sub of subjectList) {
+      const hitSpec = (prof.specialization || []).some(s => matchesSingleSubject(s, sub));
+      const hitMap = prof.sectionSubjectMap && Object.values(prof.sectionSubjectMap).some(
+        arr => Array.isArray(arr) && arr.some(s => matchesSingleSubject(s, sub))
+      );
+      if (hitSpec || hitMap) {
+        subjectModsMap.get(String(sub.id)).modifiedProfessors.push(String(prof.id));
+      }
+    }
 
     if (prof.specialization && Array.isArray(prof.specialization)) {
       const hasMatch = prof.specialization.some(s => subjectIds.has(String(s)) || subjectCodes.has(s) || subjectNames.has(s));
@@ -127,6 +149,22 @@ export const deleteSubjectBatchCascade = async (subjectList, professors = [], se
   for (const sec of sections) {
     let secNeedsUpdate = false;
     const secUpdates = {};
+
+    for (const sub of subjectList) {
+      const hitSubs = (sec.subjects || []).some(s => matchesSingleSubject(s, sub));
+      if (hitSubs) {
+        subjectModsMap.get(String(sub.id)).modifiedSections.push(String(sec.id));
+      }
+      if (sec.subjectInstructors) {
+        for (const [subKey, profId] of Object.entries(sec.subjectInstructors)) {
+          if (matchesSingleSubject(subKey, sub)) {
+            const mods = subjectModsMap.get(String(sub.id));
+            if (!mods.removedInstructors[sec.id]) mods.removedInstructors[sec.id] = {};
+            mods.removedInstructors[sec.id][subKey] = profId;
+          }
+        }
+      }
+    }
 
     if (sec.subjects && Array.isArray(sec.subjects)) {
       const hasMatch = sec.subjects.some(s => subjectIds.has(String(s)) || subjectCodes.has(s) || subjectNames.has(s));
@@ -181,7 +219,8 @@ export const deleteSubjectBatchCascade = async (subjectList, professors = [], se
   // 5. Create trash records
   for (const subject of subjectList) {
     const cascaded = subjectCascadedMap.get(String(subject.id)) || [];
-    await createTrashRecord(safeBatch, 'subject', subject, cascaded, {});
+    const mods = subjectModsMap.get(String(subject.id)) || {};
+    await createTrashRecord(safeBatch, 'subject', subject, cascaded, mods);
   }
 
   await safeBatch.commit();
@@ -211,9 +250,17 @@ export const deleteRoomBatchCascade = async (roomList, professors = [], schedule
     await safeBatch.delete(doc(db, 'rooms', String(room.id)));
   }
 
+  const roomModsMap = new Map();
+  roomList.forEach(r => roomModsMap.set(String(r.id), { modifiedProfessors: [] }));
+
   // 2. Remove from professors' preferred rooms
   for (const prof of professors) {
     if (prof.preferredRooms && Array.isArray(prof.preferredRooms)) {
+      for (const room of roomList) {
+        if (prof.preferredRooms.some(r => String(r) === String(room.id) || (room.name && r === room.name))) {
+          roomModsMap.get(String(room.id)).modifiedProfessors.push(String(prof.id));
+        }
+      }
       const hasMatch = prof.preferredRooms.some(r => roomIds.has(String(r)) || roomNames.has(r));
       if (hasMatch) {
         const newPrefs = prof.preferredRooms.filter(r => !roomIds.has(String(r)) && !roomNames.has(r));
@@ -247,7 +294,8 @@ export const deleteRoomBatchCascade = async (roomList, professors = [], schedule
   // 4. Create trash records
   for (const room of roomList) {
     const cascaded = roomCascadedMap.get(String(room.id)) || [];
-    await createTrashRecord(safeBatch, 'room', room, cascaded, {});
+    const mods = roomModsMap.get(String(room.id)) || {};
+    await createTrashRecord(safeBatch, 'room', room, cascaded, mods);
   }
 
   await safeBatch.commit();
@@ -277,10 +325,28 @@ export const deleteSectionBatchCascade = async (sectionList, professors = [], sc
     await safeBatch.delete(doc(db, 'sections', String(sec.id)));
   }
 
+  const sectionModsMap = new Map();
+  sectionList.forEach(s => sectionModsMap.set(String(s.id), {
+    modifiedProfessors: [],
+    removedSectionSubjectMap: {}
+  }));
+
   // 2. Remove from professors' assigned sections and sectionSubjectMap
   for (const prof of professors) {
     let profNeedsUpdate = false;
     const profUpdates = {};
+
+    for (const sec of sectionList) {
+      const hitSec = (prof.assignedSections || []).some(s => String(s) === String(sec.id) || (sec.name && s === sec.name));
+      const hitMap = prof.sectionSubjectMap && (prof.sectionSubjectMap[sec.id] || (sec.name && prof.sectionSubjectMap[sec.name]));
+      if (hitSec || hitMap) {
+        const mods = sectionModsMap.get(String(sec.id));
+        mods.modifiedProfessors.push(String(prof.id));
+        if (hitMap) {
+          mods.removedSectionSubjectMap[prof.id] = hitMap;
+        }
+      }
+    }
 
     if (prof.assignedSections && Array.isArray(prof.assignedSections)) {
       const hasMatch = prof.assignedSections.some(s => sectionIds.has(String(s)) || sectionNames.has(s));
@@ -341,7 +407,8 @@ export const deleteSectionBatchCascade = async (sectionList, professors = [], sc
   // 4. Create trash records
   for (const sec of sectionList) {
     const cascaded = sectionCascadedMap.get(String(sec.id)) || [];
-    await createTrashRecord(safeBatch, 'section', sec, cascaded, {});
+    const mods = sectionModsMap.get(String(sec.id)) || {};
+    await createTrashRecord(safeBatch, 'section', sec, cascaded, mods);
   }
 
   await safeBatch.commit();
@@ -349,18 +416,45 @@ export const deleteSectionBatchCascade = async (sectionList, professors = [], sc
 
 /**
  * Safely deletes a faculty member and cleans up all related data:
+ * - Removes faculty from section.subjectInstructors
  * - Deletes any schedules that reference this faculty member.
  */
-export const deleteFacultyCascade = async (faculty, schedules = []) => {
-  return deleteFacultyBatchCascade([faculty], schedules);
+export const deleteFacultyCascade = async (faculty, schedules = [], sections = []) => {
+  return deleteFacultyBatchCascade([faculty], schedules, sections);
 };
 
 /**
  * Safely batch deletes multiple faculty members with cascade cleanup.
  */
-export const deleteFacultyBatchCascade = async (facultyList, schedules = []) => {
+export const deleteFacultyBatchCascade = async (facultyList, schedules = [], sections = []) => {
   if (!facultyList || facultyList.length === 0) return;
   const safeBatch = new SafeBatch(db);
+
+  const facultyIds = new Set(facultyList.map(f => String(f.id)));
+  const facultyModsMap = new Map();
+  facultyList.forEach(f => facultyModsMap.set(String(f.id), { removedSectionInstructors: {} }));
+
+  // Clean up section.subjectInstructors referencing deleted faculty
+  for (const sec of (sections || [])) {
+    if (sec.subjectInstructors && typeof sec.subjectInstructors === 'object') {
+      let changed = false;
+      const nextInstructors = { ...sec.subjectInstructors };
+      for (const [subKey, profId] of Object.entries(sec.subjectInstructors)) {
+        if (facultyIds.has(String(profId))) {
+          const mods = facultyModsMap.get(String(profId));
+          if (mods) {
+            if (!mods.removedSectionInstructors[sec.id]) mods.removedSectionInstructors[sec.id] = [];
+            mods.removedSectionInstructors[sec.id].push(subKey);
+          }
+          delete nextInstructors[subKey];
+          changed = true;
+        }
+      }
+      if (changed) {
+        await safeBatch.update(doc(db, 'sections', String(sec.id)), { subjectInstructors: nextInstructors });
+      }
+    }
+  }
 
   for (const faculty of facultyList) {
     const fId = String(faculty.id);
@@ -378,7 +472,8 @@ export const deleteFacultyBatchCascade = async (facultyList, schedules = []) => 
     }
 
     // 3. Create trash record
-    await createTrashRecord(safeBatch, 'faculty', faculty, cascadedSchedules, {});
+    const mods = facultyModsMap.get(fId) || {};
+    await createTrashRecord(safeBatch, 'faculty', faculty, cascadedSchedules, mods);
   }
 
   await safeBatch.commit();

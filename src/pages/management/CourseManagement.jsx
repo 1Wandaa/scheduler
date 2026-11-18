@@ -133,9 +133,13 @@ const CourseManagement = ({ courses, departments, onBack, user }) => {
 
     if (isConfirmed) {
       try {
-        await deleteDoc(doc(db, 'courses', id.toString()));
-        setSelectedIds(prev => prev.filter(item => item !== id));
         const course = courses.find(c => String(c.id) === String(id));
+        if (course) {
+          await deleteCourseBatch([course]);
+        } else {
+          await deleteDoc(doc(db, 'courses', id.toString()));
+        }
+        setSelectedIds(prev => prev.filter(item => item !== id));
         logActivity({ user, action: LOG_ACTIONS.DELETE_COURSE, details: `Deleted course: ${course?.code || id}` });
         toast.success('Course deleted successfully');
       } catch (err) {

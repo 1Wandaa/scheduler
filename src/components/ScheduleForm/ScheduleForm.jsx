@@ -118,9 +118,10 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
           if (newData.section) {
             const sec = sections ? sections.find(s => s.id === newData.section) : null;
             if (sec && prof) {
-              if (prof.assignedSections && prof.assignedSections.length > 0) {
-                const isAssigned = prof.assignedSections.some(s => entitiesMatch(s, sec));
-                if (!isAssigned) {
+              if (newData.subject) {
+                const sub = subjects.find(s => s.id === newData.subject);
+                const elig = sub ? getEligibleProfessors(professors, sub, sec) : [];
+                if (!elig.some(p => String(p.id) === String(prof.id))) {
                   newData.section = '';
                 }
               }
@@ -153,12 +154,11 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
           // If professor was selected, verify eligibility for this section
           if (newData.professor) {
             const prof = professors.find(p => p.id === newData.professor);
-            if (sec && prof) {
-              if (prof.assignedSections && prof.assignedSections.length > 0) {
-                const isAssigned = prof.assignedSections.some(s => entitiesMatch(s, sec));
-                if (!isAssigned) {
-                  newData.professor = '';
-                }
+            if (sec && prof && newData.subject) {
+              const sub = subjects.find(s => s.id === newData.subject);
+              const elig = sub ? getEligibleProfessors(professors, sub, sec) : [];
+              if (!elig.some(p => String(p.id) === String(prof.id))) {
+                newData.professor = '';
               }
             }
           }
@@ -221,13 +221,14 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     }
 
     if (selectedProfessor) {
-      if (selectedProfessor.assignedSections && selectedProfessor.assignedSections.length > 0) {
-        const isAssigned = selectedProfessor.assignedSections.some(s => entitiesMatch(s, sec));
-        if (!isAssigned) return false;
-      } else if (!selectedSubject) {
+      if (selectedSubject) {
+        const elig = getEligibleProfessors(professors, selectedSubject, sec);
+        if (!elig.some(p => String(p.id) === String(selectedProfessor.id))) return false;
+      } else {
         const profSubjects = activeSemesterSubjects.filter(sub => professorMatchesSubject(selectedProfessor, sub));
         const takesAnyProfSubject = profSubjects.some(sub =>
-          secSubjects.some(s => entitiesMatch(s, sub))
+          secSubjects.some(s => entitiesMatch(s, sub)) &&
+          getEligibleProfessors(professors, sub, sec).some(p => String(p.id) === String(selectedProfessor.id))
         );
         if (!takesAnyProfSubject) return false;
       }
@@ -243,15 +244,10 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       ? professors.filter(p => {
         const secSubjects = selectedSection.subjects || [];
         const profSubjects = activeSemesterSubjects.filter(sub => professorMatchesSubject(p, sub));
-        const matchesSecSubject = profSubjects.some(sub =>
-          secSubjects.some(s => entitiesMatch(s, sub))
+        return profSubjects.some(sub =>
+          secSubjects.some(s => entitiesMatch(s, sub)) &&
+          getEligibleProfessors(professors, sub, selectedSection).some(ep => String(ep.id) === String(p.id))
         );
-        if (!matchesSecSubject) return false;
-
-        if (p.assignedSections && p.assignedSections.length > 0) {
-          return p.assignedSections.some(s => entitiesMatch(s, selectedSection));
-        }
-        return true;
       })
       : professors;
 
@@ -527,7 +523,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
           hours: currentRenderHours,
           component: formData.component
         };
-        const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
+        const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode });
         if (conf.professor) return true;
       }
       return false;
@@ -547,7 +543,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
           hours: currentRenderHours,
           component: formData.component
         };
-        const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
+        const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode });
         if (conf.room) return true;
       }
       return false;
@@ -562,7 +558,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       const timeSlot = resolveTimeSlotForDay(dayStr);
       if (!timeSlot) return false;
       const candidate = { ...candidateBase, day: dayStr, timeSlot, hours: currentRenderHours, component: formData.component };
-      const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
+      const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode });
       return !!(conf.room || conf.professor || conf.section);
     }
 
@@ -571,7 +567,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       const timeSlot = resolveTimeSlotForDay(d);
       if (!timeSlot) continue;
       const candidate = { ...candidateBase, day: d, timeSlot, hours: currentRenderHours, component: formData.component };
-      const conflicts = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
+      const conflicts = findScheduleConflicts(candidate, activeSchedules, { scheduleMode });
       if (conflicts.room || conflicts.professor || conflicts.section) {
         return true;
       }
@@ -607,7 +603,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
         hours: currentRenderHours,
         component: formData.component
       };
-      const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode: 'standard' });
+      const conf = findScheduleConflicts(candidate, activeSchedules, { scheduleMode });
       if (conf.room) return `Room Booked (${d.slice(0, 3)})`;
       if (conf.professor) return `Prof. Busy (${d.slice(0, 3)})`;
       if (conf.section) return `Section Busy (${d.slice(0, 3)})`;

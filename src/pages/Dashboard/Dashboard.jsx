@@ -784,7 +784,7 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
                             </span>
                           </td>
                           <td data-label="Max Units" style={{ textAlign: 'center', fontWeight: 600 }}>
-                            {p.maxUnits || p.maxHours || 12}
+                            {p.maxUnits || p.maxHours || 15}
                           </td>
                         </tr>
                       ))}
@@ -906,7 +906,7 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
                 {!isMobile && (
                   <ScheduleForm rooms={rooms} professors={professors} subjects={subjects} sections={sections} onSchedule={handleAddSchedule} onLogHistory={handleLogHistory} validator={validator} activeSemester={activeSemester} activeSchedules={enrichedSchedules} />
                 )}
-                <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onNavigateTab={setActiveTab} onAutoSchedule={handleAddSchedule} onAutoScheduleBatch={handleAddSchedulesBatch} onLogHistory={handleLogHistory} onBack={() => setActiveTab('dashboard')} />
+                <AutoScheduler validator={validator} subjects={subjects} sections={sections} professors={professors} rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onNavigateTab={setActiveTab} onLogHistory={handleLogHistory} onBack={() => setActiveTab('dashboard')} />
               </div>
             </div>
           )}

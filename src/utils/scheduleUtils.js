@@ -96,6 +96,7 @@ export function getMeetingTimeLabel(startTimeSlot, hoursPerMeeting, scheduleMode
   if (startIdx < 0) return startTimeSlot.label || '';
 
   const rowCount = slotsNeededFromIndex(startIdx, hoursPerMeeting, scheduleMode);
+  if (rowCount <= 0) return startTimeSlot.label || '';
   const endIdx = startIdx + rowCount - 1;
   const startLabel = (startTimeSlot.label || '').split(' - ')[0]?.trim();
   const endSlot = slots[endIdx];
@@ -386,13 +387,25 @@ export function isStandardOneAndHalfHourClass(schedule) {
   if (/^NSTP\b/i.test(code) || /ROTC|CWTS|LTS/i.test(name)) return false;
   if (code === 'FT 115' || code === 'FT 115L') return false;
 
-  // Explicit 1.0-hour lecture meetings
-  if (comp === 'Lecture' && (Number(schedule.hours) === 1 || (sub.hasLecLab && Number(sub.lectureHours) === 2))) {
+  // Split Lec/Lab courses derive per-meeting duration strictly from lectureHours/2 or labHours/2
+  if (sub.hasLecLab) {
+    if (comp === 'Lecture') {
+      const lecPerMeeting = (Number(sub.lectureHours) || 2) / 2;
+      return lecPerMeeting === 1.5;
+    }
+    if (comp === 'Laboratory') {
+      const labPerMeeting = (Number(sub.labHours) || 3) / 2;
+      return labPerMeeting === 1.5;
+    }
+  }
+
+  // Respect explicit non-1.5h schedule duration when set (e.g. 0.5h, 1.0h, 2.5h, 3.0h)
+  if (Number(schedule.hours) > 0 && Number(schedule.hours) !== 1.5 && !schedule.timeSlot?.customLabel) {
     return false;
   }
 
   // 1. Explicit 1.5 hour indicators
-  if (Number(schedule.hours) === 1.5 || Number(sub.hoursPerMeeting) === 1.5) return true;
+  if (Number(schedule.hours) === 1.5 || (!sub.hasLecLab && Number(sub.hoursPerMeeting) === 1.5)) return true;
 
   // 2. Specific known elective / major codes (CS ELECT, FREE ELECTIVE, ELECTIVE, CS 123)
   if (/^(CS\s*ELECT|FREE\s*ELECT|ELECTIVE|ELECT|CS\s*123)\b/i.test(code)) return true;
@@ -593,9 +606,9 @@ export function getEligibleProfessors(professors, subject, section) {
 
   // 1. Highest Priority: Specific instructor assigned for this subject in this section
   if (section?.subjectInstructors) {
-    const assignedProfId = section.subjectInstructors[subCode] || section.subjectInstructors[subject.id];
+    const assignedProfId = section.subjectInstructors[subject.id] || section.subjectInstructors[subCode];
     if (assignedProfId) {
-      const explicitProf = professors.find(p => p.id === assignedProfId);
+      const explicitProf = professors.find(p => String(p.id) === String(assignedProfId));
       if (explicitProf) return [explicitProf];
     }
   }
@@ -806,13 +819,11 @@ export function getEligibleRoomsTiered(rooms, subject, section) {
   }
 
   let pool = rooms;
-  // Lab filter first
-  if (subject?.requiredLab) {
-    const labs = rooms.filter(r => r.hasComputers);
-    if (labs.length > 0) pool = labs;
-  } else if (subject?.isFoodLab) {
-    const foodLabs = rooms.filter(r => r.isFoodLab);
-    if (foodLabs.length > 0) pool = foodLabs;
+  // Lab filter first — strictly require matching lab facilities when specified
+  if (subject?.isFoodLab) {
+    pool = rooms.filter(r => r.isFoodLab);
+  } else if (subject?.requiredLab) {
+    pool = rooms.filter(r => r.hasComputers);
   }
 
   const tier1 = []; // Department-owned rooms matching this section
@@ -1041,27 +1052,67 @@ export function findAlternativeSlots(candidate, activeSchedules, rooms, eligible
   return alternatives.slice(0, 2);
 }
 
+export const DEFAULT_MAX_UNITS = 15;
+
+/**
+ * Canonical unit calculation for a subject or Lec/Lab component.
+ * Uses lectureHours + labHours for Lec/Lab subjects (e.g., 2 + 3 = 5 units).
+ */
+export function getSubjectComponentUnits(subject, component) {
+  if (!subject) return 3;
+  if (subject.hasLecLab) {
+    const lec = Number(subject.lectureHours) || 2;
+    const lab = Number(subject.labHours) || 3;
+    if (component === 'Lecture') return lec;
+    if (component === 'Laboratory') return lab;
+    return lec + lab;
+  }
+  const creds = Number(subject.credits ?? subject.units);
+  return isNaN(creds) || subject.credits === '' || subject.credits === null || subject.credits === undefined ? 3 : creds;
+}
+
+/**
+ * Compute total teaching load units for a professor's schedules,
+ * deduplicating by subject + section + component.
+ */
+export function computeProfessorWorkloadUnits(profSchedules = []) {
+  const uniqueMap = new Map();
+  for (const s of (profSchedules || [])) {
+    if (!s?.subject) continue;
+    const subKey = s.subject.id || s.subject.code || 'x';
+    const secKey = s.section?.id || s.section?.name || 'none';
+    const compKey = s.component || (s.subject.hasLecLab ? 'full' : 'std');
+    const key = `${subKey}__${secKey}__${compKey}`;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, getSubjectComponentUnits(s.subject, s.component));
+    }
+  }
+  return Array.from(uniqueMap.values()).reduce((sum, u) => sum + u, 0);
+}
+
 /**
  * Compute real-time professor workloads.
  */
 export function getProfessorWorkloadMap(professors, activeSchedules = []) {
   const loadMap = {};
+  const byProf = {};
   for (const p of (professors || [])) {
-    const max = Number(p.maxUnits) || Number(p.maxHours) || 15;
+    const max = Number(p.maxUnits) || Number(p.maxHours) || DEFAULT_MAX_UNITS;
     loadMap[p.id] = { usedUnits: 0, maxUnits: max, loadRatio: 0, count: 0 };
+    byProf[p.id] = [];
   }
 
   for (const s of (activeSchedules || [])) {
-    if (s.professor?.id && loadMap[s.professor.id]) {
-      const units = creditPerMeeting(s.subject);
-      loadMap[s.professor.id].usedUnits += units;
-      loadMap[s.professor.id].count += 1;
+    const pid = s.professor?.id;
+    if (pid && loadMap[pid]) {
+      byProf[pid].push(s);
+      loadMap[pid].count += 1;
     }
   }
 
   for (const profId in loadMap) {
     const item = loadMap[profId];
-    item.usedUnits = Math.round(item.usedUnits * 10) / 10;
+    item.usedUnits = Math.round(computeProfessorWorkloadUnits(byProf[profId]) * 100) / 100;
     item.loadRatio = item.maxUnits > 0 ? item.usedUnits / item.maxUnits : 1;
     item.isNearCapacity = item.usedUnits >= item.maxUnits;
   }

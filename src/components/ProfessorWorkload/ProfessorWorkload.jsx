@@ -112,7 +112,7 @@ function ProfessorWorkload({
           }
         });
       }
-      const cap = Math.max(1, Number(professor.maxUnits ?? professor.maxHours ?? 12));
+      const cap = Math.max(1, Number(professor.maxUnits ?? professor.maxHours ?? 15));
       const utilization = cap > 0 ? (units / cap) * 100 : 0;
 
       let statusColor = '#10b981'; // Green

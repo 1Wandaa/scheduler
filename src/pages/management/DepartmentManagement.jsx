@@ -114,9 +114,13 @@ const DepartmentManagement = ({ departments, onBack, user }) => {
 
     if (isConfirmed) {
       try {
-        await deleteDoc(doc(db, 'departments', id.toString()));
-        setSelectedIds(prev => prev.filter(item => item !== id));
         const dept = departments.find(d => String(d.id) === String(id));
+        if (dept) {
+          await deleteDepartmentBatch([dept]);
+        } else {
+          await deleteDoc(doc(db, 'departments', id.toString()));
+        }
+        setSelectedIds(prev => prev.filter(item => item !== id));
         logActivity({ user, action: LOG_ACTIONS.DELETE_DEPARTMENT, details: `Deleted department: ${dept?.name || id}` });
         toast.success('Department deleted successfully');
       } catch (err) {

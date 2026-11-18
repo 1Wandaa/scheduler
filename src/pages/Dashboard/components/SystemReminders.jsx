@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Icon, NAV_ICONS } from './Icon';
+import { computeProfessorWorkloadUnits, DEFAULT_MAX_UNITS } from '../../../utils/scheduleUtils';
 
 const SystemReminders = ({
   subjects = [],
@@ -54,17 +55,8 @@ const SystemReminders = ({
     // 3. Check for overloaded faculty
     const overloadedCount = professors.filter(p => {
       const profScheds = schedules.filter(s => s.professor?.id && String(s.professor.id) === String(p.id));
-      const counted = new Set();
-      let units = 0;
-      profScheds.forEach(s => {
-        if (!s.subject || !s.section) return;
-        const key = `${s.subject.id}-${s.section.id}`;
-        if (!counted.has(key)) {
-          counted.add(key);
-          units += Number(s.subject.credits || s.subject.units || 3);
-        }
-      });
-      const cap = Number(p.maxUnits || p.maxHours || 12);
+      const units = computeProfessorWorkloadUnits(profScheds);
+      const cap = Number(p.maxUnits || p.maxHours || DEFAULT_MAX_UNITS);
       return units > cap;
     }).length;
 

@@ -46,8 +46,19 @@ export function validateScheduleEntry(
   if (!day) errors.push('Day is required.');
   if (!timeSlot?.id) errors.push('Time slot is required.');
 
-  // Specialization check
-  if (professor && subject && !professorMatchesSubject(professor, subject)) {
+  // Specialization / explicit section assignment check
+  const isExplicitlyAssigned = Boolean(
+    section && professor?.id && (
+      (section.subjectInstructors && (
+        String(section.subjectInstructors[subject?.id]) === String(professor.id) ||
+        (subject?.code && String(section.subjectInstructors[subject.code]) === String(professor.id))
+      )) ||
+      (professor.sectionSubjectMap && section.id && (professor.sectionSubjectMap[section.id] || []).some(
+        s => String(s) === String(subject?.id) || String(s) === String(subject?.code)
+      ))
+    )
+  );
+  if (professor && subject && !professorMatchesSubject(professor, subject) && !isExplicitlyAssigned) {
     errors.push(`Faculty "${professor.name}" is not authorized to teach "${subject.code}".`);
   }
 
@@ -68,9 +79,9 @@ export function validateScheduleEntry(
     if (!isRoomAllowedFor(room, subject, section)) {
       const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
       const sectionDept = getSectionDepartment(section);
-      const isSpeechLab = roomName.includes('SPEECH');
-      const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
-      const isRoom204 = roomName === 'ROOM204' || roomName === '204';
+      const isSpeechLab = room.baelOnly || roomName.includes('SPEECH');
+      const isBscsExclusive = room.bscsExclusive || roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+      const isRoom204 = room.restrictedAccess || roomName === 'ROOM204' || roomName === '204';
 
       if (isSpeechLab && sectionDept !== 'BAEL') {
         errors.push(`Room "${room.name}" is reserved exclusively for BAEL sections.`);
@@ -78,10 +89,14 @@ export function validateScheduleEntry(
         const code = (subject.code || '').toUpperCase();
         if (code.startsWith('GE') || code.startsWith('PE') || code.startsWith('NSTP')) {
           errors.push(`Room "${room.name}" can only be used for BAEL major subjects (no GE, PE, or NSTP).`);
+        } else {
+          errors.push(`Room "${room.name}" is not allowed for subject "${subject.code}".`);
         }
       } else if (isBscsExclusive) {
         if (!subject?.requiredLab) {
           errors.push(`Room "${room.name}" is reserved for BSCS students and faculty only (unless taking a Lab subject).`);
+        } else {
+          errors.push(`Room "${room.name}" is not permitted for section "${section?.name || ''}".`);
         }
       } else if (isRoom204) {
         if (sectionDept === 'BSOA' && !subject?.requiredLab) {
@@ -89,20 +104,27 @@ export function validateScheduleEntry(
         } else {
           errors.push(`Room "${room.name}" is reserved for BSCS (and BSOA Labs only).`);
         }
+      } else {
+        errors.push(`Room "${room.name}" is restricted and cannot be used for "${subject.code}" (${section?.name || 'this section'}).`);
       }
     }
 
     // Room eligibility (professor-level)
     if (professor?.id && !isProfessorAllowedInRoom(room, professor, subject, section, rooms)) {
       const roomName = (room.name || '').toUpperCase().replace(/\s+/g, '');
-      const isSpeechLab = roomName.includes('SPEECH');
-      const isBscsExclusive = roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+      const isSpeechLab = room.baelOnly || roomName.includes('SPEECH');
+      const isBscsExclusive = room.bscsExclusive || roomName === 'NB04' || roomName === 'NB05' || roomName === 'NB06' || roomName === 'ROOM203' || roomName === '203';
+      const isStageRoom = room.isStage || (room.name || '').toLowerCase().includes('stage');
       if (isSpeechLab) {
-        errors.push(`Room "${room.name}" can only be used by BAEL faculty.`);
-      } else if (isBscsExclusive) {
-        if (!subject?.requiredLab) {
-          errors.push(`Room "${room.name}" cannot be used by non-BSCS faculty (${professor.name}) for non-lab subjects.`);
-        }
+        errors.push(`Room "${room.name}" can only be used by BAEL faculty for BAEL major subjects.`);
+      } else if (isBscsExclusive && !subject?.requiredLab) {
+        errors.push(`Room "${room.name}" cannot be used by non-BSCS faculty (${professor.name}) for non-lab subjects.`);
+      } else if (professor.stageLocked && !isStageRoom) {
+        errors.push(`Faculty "${professor.name}" is assigned exclusively to the Stage room.`);
+      } else if (!professor.stageLocked && isStageRoom) {
+        errors.push(`Room "${room.name}" is reserved for Stage-designated faculty.`);
+      } else {
+        errors.push(`Faculty "${professor.name}" is not permitted to use room "${room.name}" for "${subject.code}".`);
       }
     }
   }
@@ -148,10 +170,10 @@ export function validateScheduleEntry(
       errors.push(`Time slot does not fit the ${hours || subject?.hoursPerMeeting || 1.5}hr meeting duration.`);
       return { valid: false, errors, warnings };
     }
+  }
 
-    if (subject?.code?.toUpperCase().startsWith('PE') && String(timeSlot?.id) === '2') {
-      errors.push('Physical Education (PE) subjects cannot be scheduled in the first period (7:30 AM).');
-    }
+  if (subject?.code?.toUpperCase().startsWith('PE') && (String(timeSlot?.id) === '1' || String(timeSlot?.id) === '2')) {
+    errors.push('Physical Education (PE) subjects cannot be scheduled in the first period (7:00 AM / 7:30 AM).');
   }
 
   // Conflict detection
@@ -255,7 +277,7 @@ export async function updateSchedule(scheduleId, newDay, newTimeSlotOrId, schedu
     newTimeSlot = TIME_SLOTS.find((ts) => String(ts.id) === String(newTimeSlotOrId));
   }
 
-  const existing = schedules.find((s) => String(s.id) === String(scheduleId));
+  const existing = activeSchedules.find((s) => String(s.id) === String(scheduleId)) || schedules.find((s) => String(s.id) === String(scheduleId));
   if (!existing) return { ok: false, errors: ['Schedule not found.'] };
 
   const check = validateScheduleEntry(
@@ -318,6 +340,7 @@ export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, ac
 
   const respectLabs = options?.respectLabs !== false;
   const validSchedules = [];
+  const rejectedItems = [];
   const errors = [];
 
   // Validate each schedule against both existing schedules AND already-accepted batch entries
@@ -342,13 +365,20 @@ export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, ac
     if (check.valid) {
       validSchedules.push(s);
     } else {
-      console.warn(`[addSchedulesBatch] Rejected ${s.subject?.code} (${s.component || 'standard'}) on ${s.day} at ${s.timeSlot?.label}: ${check.errors.join(', ')}`, { hours: s.hours, hoursPerMeeting: s.subject?.hoursPerMeeting, timeSlotId: s.timeSlot?.id });
-      errors.push(`Failed to validate ${s.subject?.code}: ${check.errors.join(', ')}`);
+      const reasonStr = check.errors.join(', ');
+      console.warn(`[addSchedulesBatch] Rejected ${s.subject?.code} (${s.component || 'standard'}) on ${s.day} at ${s.timeSlot?.label}: ${reasonStr}`, { hours: s.hours, hoursPerMeeting: s.subject?.hoursPerMeeting, timeSlotId: s.timeSlot?.id });
+      errors.push(`Failed to validate ${s.subject?.code}: ${reasonStr}`);
+      rejectedItems.push({
+        subject: s.subject,
+        section: s.section,
+        component: s.component,
+        reason: reasonStr || 'Not saved due to conflict'
+      });
     }
   }
 
   if (validSchedules.length === 0) {
-    return { ok: false, errors: errors.length > 0 ? errors : ['No valid schedules to add.'] };
+    return { ok: false, errors: errors.length > 0 ? errors : ['No valid schedules to add.'], savedSchedules: [], rejectedItems };
   }
 
   try {
@@ -371,9 +401,15 @@ export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, ac
       }
       await batch.commit();
     }
-    return { ok: true, errors: errors.length > 0 ? errors : null, writtenCount: validSchedules.length };
+    return {
+      ok: true,
+      errors: errors.length > 0 ? errors : null,
+      writtenCount: validSchedules.length,
+      savedSchedules: validSchedules,
+      rejectedItems
+    };
   } catch (e) {
-    return { ok: false, errors: [e.message] };
+    return { ok: false, errors: [e.message], savedSchedules: [], rejectedItems };
   }
 }
 

@@ -105,52 +105,52 @@ async function resolveUserProfile(firebaseUser, storedUsername, cachedRole, cach
   const cleanEmailPrefix = emailPrefix.replace(/^@+/, '').toLowerCase().trim();
   const cleanStored = cleanStoredUsername(storedUsername);
 
-  // Determine whether this account was previously known as an Admin / Staff
+  // Determine whether this account was previously known as an Admin / Staff (for offline fallback only)
   const wasAdmin =
     isAdminRole(cachedRole) ||
-    isAdminRole(cachedUser?.role) ||
-    cleanStored === 'admin';
+    isAdminRole(cachedUser?.role);
 
   const wasStaff =
     isStaffRole(cachedRole) ||
     isStaffRole(cachedUser?.role);
 
   const candidateDocs = [];
+  let serverUidDoc = null;
 
-  // 1. Check Firestore local cache first (instant, works offline)
-  try {
-    const cachedSnap = await getDocFromCache(doc(db, 'users', firebaseUser.uid));
-    if (cachedSnap && cachedSnap.exists()) {
-      candidateDocs.push(cachedSnap);
-    }
-  } catch {
-    // Expected when no local IndexedDB cache entry exists yet
-  }
-
-  // 2. Fetch direct UID document from Firestore network with timeout protection
+  // 1. Fetch direct UID document from Firestore network with timeout protection
   try {
     const uidSnap = await Promise.race([
       getDoc(doc(db, 'users', firebaseUser.uid)).catch(() => null),
       new Promise((resolve) => setTimeout(() => resolve('timeout'), 4000)),
     ]);
 
-    if (uidSnap && uidSnap !== 'timeout' && uidSnap.exists() && !candidateDocs.some((d) => d.id === uidSnap.id)) {
+    if (uidSnap && uidSnap !== 'timeout' && uidSnap.exists()) {
+      serverUidDoc = uidSnap;
       candidateDocs.push(uidSnap);
     }
   } catch (err) {
     console.warn('[useAuthUser] Direct UID doc fetch error:', err);
   }
 
-  // 3. Check if UID doc was found and already satisfies role requirements
+  // 2. Check Firestore local cache if network UID doc wasn't resolved
+  if (!serverUidDoc) {
+    try {
+      const cachedSnap = await getDocFromCache(doc(db, 'users', firebaseUser.uid));
+      if (cachedSnap && cachedSnap.exists() && !candidateDocs.some((d) => d.id === cachedSnap.id)) {
+        candidateDocs.push(cachedSnap);
+      }
+    } catch {
+      // Expected when no local IndexedDB cache entry exists yet
+    }
+  }
+
+  // 3. Check if UID doc was found and already has a defined role
   const hasValidUidDoc = candidateDocs.some((d) => {
     if (d.id !== firebaseUser.uid && d.data()?.id !== firebaseUser.uid) return false;
-    const role = d.data()?.role;
-    if (wasAdmin) return isAdminRole(role);
-    if (wasStaff) return isStaffRole(role);
-    return Boolean(role);
+    return Boolean(d.data()?.role);
   });
 
-  // 4. Fallback search by username variations ONLY if UID doc is missing or wasAdmin is unsatisfied
+  // 4. Fallback search by username variations ONLY if UID doc is missing
   if (!hasValidUidDoc) {
     const searchTargets = Array.from(
       new Set([
@@ -191,39 +191,24 @@ async function resolveUserProfile(firebaseUser, storedUsername, cachedRole, cach
     return null;
   }
 
-  let chosenDoc = null;
+  // Always prioritize the authenticated user's own UID document over username matches
+  let chosenDoc = candidateDocs.find((d) => d.id === firebaseUser.uid || d.data()?.id === firebaseUser.uid);
 
-  // 1. If account is known as Admin, prioritize candidate doc with Admin role
-  if (wasAdmin) {
+  if (!chosenDoc && wasAdmin) {
     chosenDoc = candidateDocs.find((d) => isAdminRole(d.data()?.role));
   }
 
-  // 2. Prioritize any Staff/Admin doc if duplicates exist
-  if (!chosenDoc) {
+  if (!chosenDoc && wasStaff) {
     chosenDoc = candidateDocs.find((d) => isStaffRole(d.data()?.role));
   }
 
-  // 3. Prioritize UID match
-  if (!chosenDoc) {
-    chosenDoc = candidateDocs.find((d) => d.id === firebaseUser.uid || d.data()?.id === firebaseUser.uid);
-  }
-
-  // 4. Default to first candidate
   if (!chosenDoc) {
     chosenDoc = candidateDocs[0];
   }
 
   const userData = chosenDoc.data() || {};
-  let finalRole = userData.role;
-
-  // CRITICAL SAFEGUARD:
-  // An account that was logged in as Admin must NEVER be downgraded
-  // to a regular 'User' due to partial doc data or temporary timeout!
-  if (wasAdmin && (!finalRole || finalRole.toLowerCase() === 'user')) {
-    finalRole = cachedRole || cachedUser?.role || 'Admin';
-  } else if (!finalRole) {
-    finalRole = cachedRole || cachedUser?.role || (wasStaff ? 'Faculty' : 'User');
-  }
+  // Trust Firestore role when present; only fall back to cachedRole if the document lacks a role field
+  const finalRole = userData.role || cachedRole || cachedUser?.role || (wasAdmin ? 'Admin' : wasStaff ? 'Faculty' : 'User');
 
   return {
     ...userData,
@@ -375,12 +360,7 @@ export function useAuthUser() {
           setUser(cached);
         } else {
           // No cached profile existed (brand new device or cleared cache).
-          // Check if stored username or role indicates Admin.
-          const isProbablyAdmin =
-            isAdminRole(cachedRole) ||
-            cleanStoredUsername(storedUsername) === 'admin';
-
-          const fallbackRole = isProbablyAdmin ? 'Admin' : (cachedRole || 'User');
+          const fallbackRole = cachedRole || 'User';
           const fallbackProfile = {
             id: firebaseUser.uid,
             name: firebaseUser.displayName || storedUsername || emailPrefix,
@@ -403,16 +383,12 @@ export function useAuthUser() {
           return;
         }
 
-        // If an unexpected error or network drop occurs, NEVER downgrade an admin account!
+        // If an unexpected error or network drop occurs, retain existing session if available
         const currentCached = getCachedUser() || activeUserRef.current;
         if (currentCached) {
           setUser(currentCached);
         } else {
-          const isProbablyAdmin =
-            isAdminRole(cachedRole) ||
-            cleanStoredUsername(storedUsername) === 'admin';
-
-          const fallbackRole = isProbablyAdmin ? 'Admin' : (cachedRole || 'User');
+          const fallbackRole = cachedRole || 'User';
           const fallbackProfile = {
             id: firebaseUser.uid,
             name: firebaseUser.displayName || storedUsername || emailPrefix,
