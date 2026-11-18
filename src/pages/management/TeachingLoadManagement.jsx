@@ -192,14 +192,20 @@ const TeachingLoadManagement = ({
   const [nestedEditing, setNestedEditing] = useState(null); // { type: 'subject'|'faculty'|'section', id: string, form: obj }
   const [isSavingNested, setIsSavingNested] = useState(false);
 
+  const compareAlpha = useCallback(
+    (a, b) => String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' }),
+    []
+  );
+
   const availableDepts = useMemo(() => {
-    return departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
-  }, [departments]);
+    const list = departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
+    return [...list].sort(compareAlpha);
+  }, [departments, compareAlpha]);
 
   const availablePrograms = useMemo(() => {
-    if (courses.length > 0) return courses.map(c => c.code || c.name);
-    return availableDepts;
-  }, [courses, availableDepts]);
+    const list = courses.length > 0 ? courses.map(c => c.code || c.name) : availableDepts;
+    return [...list].sort(compareAlpha);
+  }, [courses, availableDepts, compareAlpha]);
 
   const normToken = useCallback((val) => String(val ?? '').trim().toLowerCase(), []);
 
@@ -246,6 +252,52 @@ const TeachingLoadManagement = ({
     });
     return map;
   }, [localSections]);
+
+  const getProfLabel = useCallback((p) => p?.name || `${p?.lastName || ''}, ${p?.firstName || ''}`, []);
+
+  const sortedSubjects = useMemo(
+    () => [...subjects].sort((a, b) => compareAlpha(a.code || a.name || a.id, b.code || b.name || b.id)),
+    [subjects, compareAlpha]
+  );
+
+  const sortedSections = useMemo(
+    () => [...localSections].sort((a, b) => compareAlpha(a.name || a.id, b.name || b.id)),
+    [localSections, compareAlpha]
+  );
+
+  const sortedProfessors = useMemo(
+    () => [...localProfessors].sort((a, b) => compareAlpha(getProfLabel(a), getProfLabel(b))),
+    [localProfessors, compareAlpha, getProfLabel]
+  );
+
+  const sortedRooms = useMemo(
+    () => [...rooms].sort((a, b) => compareAlpha(a.name || a.id, b.name || b.id)),
+    [rooms, compareAlpha]
+  );
+
+  const sortSubjectRefs = useCallback((refs = []) => {
+    return [...refs].sort((a, b) => {
+      const subA = getSubject(a);
+      const subB = getSubject(b);
+      return compareAlpha(subA?.code || subA?.name || a, subB?.code || subB?.name || b);
+    });
+  }, [getSubject, compareAlpha]);
+
+  const sortSectionRefs = useCallback((refs = []) => {
+    return [...refs].sort((a, b) => {
+      const secA = sectionMap.get(normToken(a));
+      const secB = sectionMap.get(normToken(b));
+      return compareAlpha(secA?.name || a, secB?.name || b);
+    });
+  }, [sectionMap, normToken, compareAlpha]);
+
+  const sortFacultyRefs = useCallback((refs = []) => {
+    return [...refs].sort((a, b) => {
+      const profA = profMap.get(String(a));
+      const profB = profMap.get(String(b));
+      return compareAlpha(profA ? getProfLabel(profA) : a, profB ? getProfLabel(profB) : b);
+    });
+  }, [profMap, getProfLabel, compareAlpha]);
 
   const getSubjectMatchTokens = useCallback((item, { includeName = false } = {}) => {
     const tokens = new Set();
@@ -457,21 +509,15 @@ const TeachingLoadManagement = ({
         }
       });
     });
-    specProfs.sort((a, b) => {
-      const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
-      const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
-      return nameA.localeCompare(nameB);
-    });
-    const otherProfs = localProfessors.filter(p => !seen.has(p.id)).sort((a, b) => {
-      const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
-      const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
-      return nameA.localeCompare(nameB);
-    });
+    specProfs.sort((a, b) => compareAlpha(getProfLabel(a), getProfLabel(b)));
+    const otherProfs = localProfessors
+      .filter(p => !seen.has(p.id))
+      .sort((a, b) => compareAlpha(getProfLabel(a), getProfLabel(b)));
     const result = { specProfs, otherProfs };
     keys.forEach(k => subjectProfOptionsCache.current.set(String(k).toLowerCase(), result));
     subjectProfOptionsCache.current.set(cacheKey, result);
     return result;
-  }, [getSubject, profsBySubjectKey, localProfessors]);
+  }, [getSubject, profsBySubjectKey, localProfessors, compareAlpha, getProfLabel]);
 
   // Pre-indexed set of enrolled and specialized subject keys for instant O(1) attention filtering
   const enrolledSubjectCodesSet = useMemo(() => {
@@ -521,8 +567,8 @@ const TeachingLoadManagement = ({
         }
       });
     });
-    return result;
-  }, [sectionsBySubjectKey]);
+    return result.sort((a, b) => compareAlpha(a.name || a.id, b.name || b.id));
+  }, [sectionsBySubjectKey, compareAlpha]);
 
   // Fast memoized cache for assigned professors: `${sec.id}_${subRef}` -> prof
   const assignedProfCache = useRef(new Map());
@@ -2161,8 +2207,8 @@ const TeachingLoadManagement = ({
       }
 
       return true;
-    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [localSections, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, getAssignedProf, getSubject]);
+    }).sort((a, b) => compareAlpha(a.name || a.id, b.name || b.id));
+  }, [localSections, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, getAssignedProf, getSubject, compareAlpha]);
 
   const filteredFaculty = useMemo(() => {
     return localProfessors.filter(prof => {
@@ -2193,12 +2239,8 @@ const TeachingLoadManagement = ({
       }
 
       return true;
-    }).sort((a, b) => {
-      const nameA = a.name || `${a.lastName || ''}, ${a.firstName || ''}`;
-      const nameB = b.name || `${b.lastName || ''}, ${b.firstName || ''}`;
-      return nameA.localeCompare(nameB);
-    });
-  }, [localProfessors, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, getSubject, sectionMap, getAssignedProf]);
+    }).sort((a, b) => compareAlpha(getProfLabel(a), getProfLabel(b)));
+  }, [localProfessors, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, getSubject, sectionMap, getAssignedProf, compareAlpha, getProfLabel]);
 
   const filteredSubjects = useMemo(() => {
     return subjects.filter(sub => {
@@ -2229,8 +2271,8 @@ const TeachingLoadManagement = ({
       }
 
       return true;
-    }).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-  }, [subjects, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, enrolledSubjectCodesSet, specializedSubjectCodesSet, activeSemester]);
+    }).sort((a, b) => compareAlpha(a.code || a.name, b.code || b.name));
+  }, [subjects, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, enrolledSubjectCodesSet, specializedSubjectCodesSet, activeSemester, compareAlpha]);
 
   // Progressive windowing: start with 12 items for instant (<16ms) initial render
   const [visibleLimit, setVisibleLimit] = useState(12);
@@ -2786,8 +2828,8 @@ const TeachingLoadManagement = ({
         <div className="hub-form-field">
           <label className="hub-form-label">Preferred Rooms (Scheduling AI Guide)</label>
           <AutocompleteMultiSelect
-            allOptions={rooms}
-            options={rooms}
+            allOptions={sortedRooms}
+            options={sortedRooms}
             selectedIds={form.preferredRooms || []}
             onToggle={(item) => {
               setNestedEditing(prev => ({
@@ -3130,7 +3172,7 @@ const TeachingLoadManagement = ({
             <div className="hub-dept-filters">
               <span className="hub-filter-caption">Department:</span>
               <div className="hub-dept-pills">
-                {['All', ...(departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)].map(dept => {
+                {['All', ...availableDepts].map(dept => {
                   const deptColor = departments.find(d => d.id === dept)?.color || getDeptColor(dept);
                   const isActive = departmentFilter === dept;
                   return (
@@ -3197,7 +3239,7 @@ const TeachingLoadManagement = ({
               </div>
             ) : (
               displayedSections.map(sec => {
-                const enrolled = sec.subjects || [];
+                const enrolled = sortSubjectRefs(sec.subjects || []);
                 const missingCount = enrolled.filter(subRef => !getAssignedProf(sec, subRef)).length;
 
                 return (
@@ -3414,8 +3456,8 @@ const TeachingLoadManagement = ({
               </div>
             ) : (
               displayedFaculty.map(prof => {
-                const assignedSecs = prof.assignedSections || [];
-                const specSubjects = prof.specialization || [];
+                const assignedSecs = sortSectionRefs(prof.assignedSections || []);
+                const specSubjects = sortSubjectRefs(prof.specialization || []);
 
                 return (
                   <div key={prof.id} className="hub-entity-card">
@@ -3492,10 +3534,10 @@ const TeachingLoadManagement = ({
                           ) : (
                             assignedSecs.map(secId => {
                               const sec = sectionMap.get(String(secId).toLowerCase()) || { id: secId, name: secId };
-                              const actuallyTaughtSubjects = (sec.subjects || []).filter(subRef => {
+                              const actuallyTaughtSubjects = sortSubjectRefs((sec.subjects || []).filter(subRef => {
                                 const assigned = getAssignedProf(sec, subRef);
                                 return assigned && assigned.id === prof.id;
-                              });
+                              }));
 
                               return (
                                 <div key={sec.id} style={{
@@ -3603,7 +3645,7 @@ const TeachingLoadManagement = ({
               displayedSubjects.map(sub => {
                 const enrolledSecs = getSectionsForSubject(sub);
                 const { specProfs: qualifiedProfs } = getSubjectProfessors(sub);
-                const subDepts = (sub.departments || (sub.department ? [sub.department] : []));
+                const subDepts = [...(sub.departments || (sub.department ? [sub.department] : []))].sort(compareAlpha);
 
                 return (
                   <div key={sub.id} className="hub-entity-card">
@@ -3846,8 +3888,8 @@ const TeachingLoadManagement = ({
                   <div className="hub-form-field">
                     <label className="hub-form-label">Enrolled Subjects</label>
                     <AutocompleteMultiSelect
-                      allOptions={subjects}
-                      options={subjects}
+                      allOptions={sortedSubjects}
+                      options={sortedSubjects}
                       selectedIds={stagedAssignedSubjects}
                       onToggle={(item) => {
                         const tokens = getSubjectMatchTokens(item);
@@ -3878,7 +3920,7 @@ const TeachingLoadManagement = ({
                   {stagedAssignedSubjects.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
                       <label className="hub-form-label">Assigned Instructor per Subject</label>
-                      {stagedAssignedSubjects.map(subRef => {
+                      {sortSubjectRefs(stagedAssignedSubjects).map(subRef => {
                         const sub = getSubject(subRef) || { id: subRef, code: subRef, name: subRef };
                         const subKey = sub.id || sub.code;
                         const curProfId = stagedFacultyMap[subKey] ||
@@ -4079,8 +4121,8 @@ const TeachingLoadManagement = ({
                   <div className="hub-form-field">
                     <label className="hub-form-label">Preferred Rooms (Scheduling Guide)</label>
                     <AutocompleteMultiSelect
-                      allOptions={rooms}
-                      options={rooms}
+                      allOptions={sortedRooms}
+                      options={sortedRooms}
                       selectedIds={stagedEntityForm.preferredRooms || []}
                       onToggle={(item) => {
                         setStagedEntityForm(prev => ({
@@ -4129,8 +4171,8 @@ const TeachingLoadManagement = ({
                   <div className="hub-form-field">
                     <label className="hub-form-label">Specialization Subjects (Qualified to Teach)</label>
                     <AutocompleteMultiSelect
-                      allOptions={subjects}
-                      options={subjects}
+                      allOptions={sortedSubjects}
+                      options={sortedSubjects}
                       selectedIds={stagedAssignedSubjects}
                       onToggle={(item) => {
                         const tokens = getSubjectMatchTokens(item);
@@ -4161,7 +4203,7 @@ const TeachingLoadManagement = ({
                   {stagedAssignedSubjects.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                       <label className="hub-form-label" style={{ fontSize: '0.74rem' }}>Specialized Subjects Settings & Lab Config</label>
-                      {stagedAssignedSubjects.map(subRef => {
+                      {sortSubjectRefs(stagedAssignedSubjects).map(subRef => {
                         const sub = getSubject(subRef) || { id: subRef, code: subRef, name: subRef };
                         const subKey = sub.id || sub.code;
                         const isEditingSub = nestedEditing?.type === 'subject' && (String(nestedEditing?.id) === String(subKey) || String(nestedEditing?.id) === String(sub.id));
@@ -4216,8 +4258,8 @@ const TeachingLoadManagement = ({
                   <div className="hub-form-field">
                     <label className="hub-form-label">Assigned Sections</label>
                     <AutocompleteMultiSelect
-                      allOptions={localSections}
-                      options={localSections}
+                      allOptions={sortedSections}
+                      options={sortedSections}
                       selectedIds={stagedAssignedSections}
                       onToggle={(item) => {
                         const tokens = getSectionMatchTokens(item);
@@ -4247,7 +4289,7 @@ const TeachingLoadManagement = ({
                   {stagedAssignedSections.length > 0 && stagedAssignedSubjects.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
                       <label className="hub-form-label">Choose Specific Subject(s) Taught per Section</label>
-                      {stagedAssignedSections.map(secId => {
+                      {sortSectionRefs(stagedAssignedSections).map(secId => {
                         const sec = sectionMap.get(normToken(secId)) || { id: secId, name: secId };
                         const chosenSubs = stagedFacultyMap[sec.id] || (sec.name && stagedFacultyMap[sec.name]) || [];
 
@@ -4266,7 +4308,7 @@ const TeachingLoadManagement = ({
                             </div>
                             {renderNestedSectionEditor(sec.id)}
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                              {stagedAssignedSubjects.map(subRef => {
+                              {sortSubjectRefs(stagedAssignedSubjects).map(subRef => {
                                 const sub = getSubject(subRef) || { id: subRef, code: subRef };
                                 const subKey = sub.id || sub.code;
                                 const subToks = getSubjectMatchTokens(subRef);
@@ -4593,8 +4635,8 @@ const TeachingLoadManagement = ({
                   <div className="hub-form-field">
                     <label className="hub-form-label">Enrolled Sections (Offering this Subject)</label>
                     <AutocompleteMultiSelect
-                      allOptions={localSections}
-                      options={localSections}
+                      allOptions={sortedSections}
+                      options={sortedSections}
                       selectedIds={stagedAssignedSections}
                       onToggle={(item) => {
                         setStagedAssignedSections(prev =>
@@ -4618,7 +4660,7 @@ const TeachingLoadManagement = ({
                   {stagedAssignedSections.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                       <label className="hub-form-label" style={{ fontSize: '0.74rem' }}>Enrolled Sections List & Quick Config</label>
-                      {stagedAssignedSections.map(secId => {
+                      {sortSectionRefs(stagedAssignedSections).map(secId => {
                         const sec = sectionMap.get(normToken(secId)) || { id: secId, name: secId };
                         const isEditingSec = nestedEditing?.type === 'section' && String(nestedEditing?.id) === String(sec.id);
 
@@ -4648,8 +4690,8 @@ const TeachingLoadManagement = ({
                   <div className="hub-form-field">
                     <label className="hub-form-label">Specialized Faculty (Eligible Instructors)</label>
                     <AutocompleteMultiSelect
-                      allOptions={localProfessors}
-                      options={localProfessors}
+                      allOptions={sortedProfessors}
+                      options={sortedProfessors}
                       selectedIds={stagedFacultyMap.assignedProfessors || []}
                       onToggle={(item) => {
                         setStagedFacultyMap(prev => ({
@@ -4688,7 +4730,7 @@ const TeachingLoadManagement = ({
                   {(stagedFacultyMap.assignedProfessors || []).length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                       <label className="hub-form-label" style={{ fontSize: '0.74rem' }}>Specialized Faculty List & Quick Config</label>
-                      {(stagedFacultyMap.assignedProfessors || []).map(profId => {
+                      {sortFacultyRefs(stagedFacultyMap.assignedProfessors || []).map(profId => {
                         const prof = localProfessors.find(p => p.id === profId) || { id: profId, name: profId };
                         const isEditingProf = nestedEditing?.type === 'faculty' && String(nestedEditing?.id) === String(prof.id);
 
