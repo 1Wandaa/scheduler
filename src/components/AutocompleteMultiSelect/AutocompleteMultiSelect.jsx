@@ -45,27 +45,34 @@ const AutocompleteMultiSelect = ({
   }, []);
 
   const baseOptionsForSelection = allOptions || options;
-  const selectedOptions = baseOptionsForSelection.filter(opt => {
+  const isOptionSelected = (opt) => {
+    if (!opt) return false;
     return selectedIds.some(sid => {
-      if (String(sid).toLowerCase() === String(opt.id).toLowerCase()) return true;
+      if (sid === null || sid === undefined || sid === '') return false;
+      const s = String(sid).trim().toLowerCase();
+      if (opt.id !== undefined && opt.id !== null && s === String(opt.id).trim().toLowerCase()) return true;
       if (matchIdOnly) return false;
       return (
-        (opt.code && String(sid).toLowerCase() === String(opt.code).toLowerCase()) || 
-        (opt.name && String(sid).toLowerCase() === String(opt.name).toLowerCase())
+        (opt.code !== undefined && opt.code !== null && s === String(opt.code).trim().toLowerCase()) ||
+        (opt.name !== undefined && opt.name !== null && s === String(opt.name).trim().toLowerCase())
       );
     });
-  });
+  };
+
+  const selectedOptions = baseOptionsForSelection.filter(isOptionSelected);
 
   // Track tokens matched by available options
   const matchedTokens = new Set();
   selectedOptions.forEach(opt => {
-    if (opt.id) matchedTokens.add(String(opt.id).toLowerCase());
-    if (opt.code) matchedTokens.add(String(opt.code).toLowerCase());
-    if (opt.name) matchedTokens.add(String(opt.name).toLowerCase());
+    if (opt.id !== undefined && opt.id !== null) matchedTokens.add(String(opt.id).trim().toLowerCase());
+    if (!matchIdOnly) {
+      if (opt.code) matchedTokens.add(String(opt.code).trim().toLowerCase());
+      if (opt.name) matchedTokens.add(String(opt.name).trim().toLowerCase());
+    }
   });
 
   // Any ID in selectedIds that doesn't correspond to any known option object
-  const unmatchedIds = selectedIds.filter(id => !matchedTokens.has(String(id).toLowerCase()));
+  const unmatchedIds = selectedIds.filter(id => !matchedTokens.has(String(id ?? '').trim().toLowerCase()));
 
   // Internal filtering for options based on actualQuery
   const displayedOptions = options.filter(opt => {
@@ -82,22 +89,9 @@ const AutocompleteMultiSelect = ({
     return idMatch || codeMatch || nameMatch;
   });
 
-  const availableOptionsToSelect = displayedOptions.filter(opt => {
-    const isSelected = selectedIds.some(sid => 
-      String(sid).toLowerCase() === String(opt.id).toLowerCase() || 
-      String(sid).toLowerCase() === String(opt.code).toLowerCase() || 
-      String(sid).toLowerCase() === String(opt.name).toLowerCase()
-    );
-    return !isSelected && !opt.disabled;
-  });
+  const availableOptionsToSelect = displayedOptions.filter(opt => !isOptionSelected(opt) && !opt.disabled);
 
-  const visibleSelectedOptions = displayedOptions.filter(opt => {
-    return selectedIds.some(sid => 
-      String(sid).toLowerCase() === String(opt.id).toLowerCase() || 
-      String(sid).toLowerCase() === String(opt.code).toLowerCase() || 
-      String(sid).toLowerCase() === String(opt.name).toLowerCase()
-    );
-  });
+  const visibleSelectedOptions = displayedOptions.filter(isOptionSelected);
 
   const handleInputFocus = () => {
     setIsOpen(true);
@@ -327,7 +321,7 @@ const AutocompleteMultiSelect = ({
           ) : (
             <div className="autocomplete-options-list" ref={optionsListRef}>
               {displayedOptions.map((opt, idx) => {
-                const isSelected = selectedIds.includes(opt.id) || selectedIds.includes(opt.name) || selectedIds.includes(opt.code);
+                const isSelected = isOptionSelected(opt);
                 const isDisabled = !!opt.disabled;
                 const isItemActive = idx === activeIndex;
 

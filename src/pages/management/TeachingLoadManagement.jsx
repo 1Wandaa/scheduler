@@ -201,6 +201,8 @@ const TeachingLoadManagement = ({
     return availableDepts;
   }, [courses, availableDepts]);
 
+  const normToken = useCallback((val) => String(val ?? '').trim().toLowerCase(), []);
+
   // --- High-Performance Pre-Indexed Lookups (O(1)) ---
   const subjectLookup = useMemo(() => {
     const mapById = new Map();
@@ -208,9 +210,9 @@ const TeachingLoadManagement = ({
     const mapByName = new Map();
     
     subjects.forEach(s => {
-      if (s.id) mapById.set(String(s.id).toLowerCase(), s);
-      if (s.code && !mapByCode.has(String(s.code).toLowerCase())) mapByCode.set(String(s.code).toLowerCase(), s);
-      if (s.name && !mapByName.has(String(s.name).toLowerCase())) mapByName.set(String(s.name).toLowerCase(), s);
+      if (s.id) mapById.set(String(s.id).trim().toLowerCase(), s);
+      if (s.code && !mapByCode.has(String(s.code).trim().toLowerCase())) mapByCode.set(String(s.code).trim().toLowerCase(), s);
+      if (s.name && !mapByName.has(String(s.name).trim().toLowerCase())) mapByName.set(String(s.name).trim().toLowerCase(), s);
     });
     
     return { mapById, mapByCode, mapByName };
@@ -220,7 +222,7 @@ const TeachingLoadManagement = ({
     if (!subRef) return null;
     if (typeof subRef === 'object' && subRef !== null) return subRef;
     
-    const key = String(subRef).toLowerCase();
+    const key = String(subRef).trim().toLowerCase();
     return subjectLookup.mapById.get(key) || 
            subjectLookup.mapByCode.get(key) || 
            subjectLookup.mapByName.get(key) || 
@@ -239,11 +241,147 @@ const TeachingLoadManagement = ({
   const sectionMap = useMemo(() => {
     const map = new Map();
     localSections.forEach(s => {
-      if (s.id) map.set(String(s.id).toLowerCase(), s);
-      if (s.name) map.set(String(s.name).toLowerCase(), s);
+      if (s.id) map.set(String(s.id).trim().toLowerCase(), s);
+      if (s.name) map.set(String(s.name).trim().toLowerCase(), s);
     });
     return map;
   }, [localSections]);
+
+  const getSubjectMatchTokens = useCallback((item, { includeName = false } = {}) => {
+    const tokens = new Set();
+    const rawId = typeof item === 'object' && item !== null ? item.id : item;
+    const resolved = getSubject(item) || (typeof item === 'object' && item !== null ? item : null);
+    [rawId, resolved?.id, resolved?.code].forEach(v => {
+      const t = normToken(v);
+      if (t) tokens.add(t);
+    });
+    if (includeName && resolved?.name) {
+      const t = normToken(resolved.name);
+      if (t) tokens.add(t);
+    }
+    return tokens;
+  }, [getSubject, normToken]);
+
+  const getSectionMatchTokens = useCallback((item) => {
+    const tokens = new Set();
+    const raw = typeof item === 'object' && item !== null ? (item.id ?? item.name) : item;
+    const rawTok = normToken(raw);
+    if (rawTok) tokens.add(rawTok);
+    const matched = typeof item === 'object' && item !== null
+      ? item
+      : sectionMap.get(rawTok);
+    if (matched) {
+      if (matched.id !== undefined && matched.id !== null) tokens.add(normToken(matched.id));
+      if (matched.name) tokens.add(normToken(matched.name));
+    }
+    return tokens;
+  }, [sectionMap, normToken]);
+
+  const getRoomMatchTokens = useCallback((item) => {
+    const tokens = new Set();
+    const raw = typeof item === 'object' && item !== null ? (item.id ?? item.name) : item;
+    const rawTok = normToken(raw);
+    if (rawTok) tokens.add(rawTok);
+    const matched = typeof item === 'object' && item !== null
+      ? item
+      : rooms.find(r => normToken(r.id) === rawTok || (r.name && normToken(r.name) === rawTok));
+    if (matched) {
+      if (matched.id !== undefined && matched.id !== null) tokens.add(normToken(matched.id));
+      if (matched.name) tokens.add(normToken(matched.name));
+    }
+    return tokens;
+  }, [rooms, normToken]);
+
+  const getFacultyMatchTokens = useCallback((item) => {
+    const tokens = new Set();
+    const raw = typeof item === 'object' && item !== null ? (item.id ?? item.name) : item;
+    const rawTok = normToken(raw);
+    if (rawTok) tokens.add(rawTok);
+    const matched = typeof item === 'object' && item !== null
+      ? item
+      : localProfessors.find(p => normToken(p.id) === rawTok || (p.name && normToken(p.name) === rawTok));
+    if (matched) {
+      if (matched.id !== undefined && matched.id !== null) tokens.add(normToken(matched.id));
+      if (matched.name) tokens.add(normToken(matched.name));
+    }
+    return tokens;
+  }, [localProfessors, normToken]);
+
+  const toggleMultiList = useCallback((prev, item, getTokensFn, getCanonicalIdFn) => {
+    const list = prev || [];
+    const tokens = getTokensFn(item);
+    if (list.some(x => tokens.has(normToken(x)))) {
+      return list.filter(x => !tokens.has(normToken(x)));
+    }
+    const id = getCanonicalIdFn(item);
+    return id ? [...list, id] : list;
+  }, [normToken]);
+
+  const batchSelectMultiList = useCallback((prev, items, getTokensFn, getCanonicalIdFn) => {
+    const list = [...(prev || [])];
+    const existingTokens = new Set(list.map(normToken));
+    items.forEach(item => {
+      const tokens = getTokensFn(item);
+      if (!Array.from(tokens).some(t => existingTokens.has(t))) {
+        const id = getCanonicalIdFn(item);
+        if (id) {
+          list.push(id);
+          tokens.forEach(t => existingTokens.add(t));
+        }
+      }
+    });
+    return list;
+  }, [normToken]);
+
+  const batchDeselectMultiList = useCallback((prev, items, getTokensFn) => {
+    const tokensToRemove = new Set();
+    items.forEach(item => {
+      getTokensFn(item).forEach(t => tokensToRemove.add(t));
+    });
+    return (prev || []).filter(x => !tokensToRemove.has(normToken(x)));
+  }, [normToken]);
+
+  const pruneSectionInstructorKeys = useCallback((prevMap, itemsToRemove) => {
+    const tokensToDelete = new Set();
+    itemsToRemove.forEach(item => {
+      getSubjectMatchTokens(item).forEach(t => tokensToDelete.add(t));
+    });
+    const next = { ...(prevMap || {}) };
+    Object.keys(next).forEach(k => {
+      if (tokensToDelete.has(normToken(k))) {
+        delete next[k];
+      }
+    });
+    return next;
+  }, [getSubjectMatchTokens, normToken]);
+
+  const pruneFacultyMapSections = useCallback((prevMap, sectionsToRemove) => {
+    const tokensToDelete = new Set();
+    sectionsToRemove.forEach(secItem => {
+      getSectionMatchTokens(secItem).forEach(t => tokensToDelete.add(t));
+    });
+    const next = { ...(prevMap || {}) };
+    Object.keys(next).forEach(k => {
+      if (tokensToDelete.has(normToken(k))) {
+        delete next[k];
+      }
+    });
+    return next;
+  }, [getSectionMatchTokens, normToken]);
+
+  const pruneFacultyMapSubjects = useCallback((prevMap, subjectsToRemove) => {
+    const tokensToDelete = new Set();
+    subjectsToRemove.forEach(subItem => {
+      getSubjectMatchTokens(subItem).forEach(t => tokensToDelete.add(t));
+    });
+    const next = {};
+    Object.entries(prevMap || {}).forEach(([secId, subList]) => {
+      next[secId] = Array.isArray(subList)
+        ? subList.filter(s => !tokensToDelete.has(normToken(s)))
+        : subList;
+    });
+    return next;
+  }, [getSubjectMatchTokens, normToken]);
 
   const profsBySectionMap = useMemo(() => {
     const map = new Map();
@@ -411,13 +549,25 @@ const TeachingLoadManagement = ({
 
     let result = null;
 
+    const subMatchTokens = new Set(
+      [subKeyFound, subId, subRef, subCode, subName].map(normToken).filter(Boolean)
+    );
+
     // 1. Direct match on section.subjectInstructors (most authoritative)
     if (sec.subjectInstructors) {
-      const pId = sec.subjectInstructors[subKeyFound] ||
-                  sec.subjectInstructors[subId] ||
-                  sec.subjectInstructors[subRef] ||
-                  (subCode && sec.subjectInstructors[subCode]) ||
-                  (subName && sec.subjectInstructors[subName]);
+      let pId = sec.subjectInstructors[subKeyFound] ||
+                sec.subjectInstructors[subId] ||
+                sec.subjectInstructors[subRef] ||
+                (subCode && sec.subjectInstructors[subCode]) ||
+                (subName && sec.subjectInstructors[subName]);
+      if (!pId) {
+        for (const [k, v] of Object.entries(sec.subjectInstructors)) {
+          if (v && subMatchTokens.has(normToken(k))) {
+            pId = v;
+            break;
+          }
+        }
+      }
       if (pId) {
         const found = profMap.get(String(pId));
         if (found) result = found;
@@ -429,27 +579,22 @@ const TeachingLoadManagement = ({
       const sectionProfs = getSectionProfs(sec);
       const profByMap = sectionProfs.find(p => {
         const mappedSubs = (p.sectionSubjectMap && (p.sectionSubjectMap[sec.id] || (sec.name && p.sectionSubjectMap[sec.name]))) || [];
-        return mappedSubs.some(s =>
-          String(s) === String(subKeyFound) ||
-          String(s) === String(subId) ||
-          String(s) === String(subRef) ||
-          (subCode && String(s) === String(subCode)) ||
-          (subName && String(s) === String(subName))
-        );
+        return mappedSubs.some(s => subMatchTokens.has(normToken(s)));
       });
       if (profByMap) result = profByMap;
     }
 
     // 3. Fallback: only if exactly 1 professor assigned to this section specializes in this subject
+    //    AND does not already have an explicit per-subject map configured for this section
     if (!result) {
       const sectionProfs = getSectionProfs(sec);
       const candidateProfs = sectionProfs.filter(p => {
-        return (p.specialization || []).some(sp =>
-          String(sp) === String(subId) ||
-          String(sp) === String(subKeyFound) ||
-          (subCode && String(sp) === String(subCode)) ||
-          (subName && String(sp) === String(subName))
+        const hasExplicitMap = p.sectionSubjectMap && (
+          Object.prototype.hasOwnProperty.call(p.sectionSubjectMap, sec.id) ||
+          (sec.name && Object.prototype.hasOwnProperty.call(p.sectionSubjectMap, sec.name))
         );
+        if (hasExplicitMap) return false;
+        return (p.specialization || []).some(sp => subMatchTokens.has(normToken(sp)));
       });
 
       if (candidateProfs.length === 1) {
@@ -469,7 +614,7 @@ const TeachingLoadManagement = ({
     }
 
     return result;
-  }, [getSubject, profMap, getSectionProfs, assignedProfCache]);
+  }, [getSubject, profMap, getSectionProfs, assignedProfCache, normToken]);
 
   // --- KPI Stats Calculation ---
   const stats = useMemo(() => {
@@ -653,14 +798,52 @@ const TeachingLoadManagement = ({
   // Inline removal of an enrolled or orphan subject from a section (Optimistic)
   const handleRemoveSubjectFromSectionInline = async (section, subRef) => {
     const sub = getSubject(subRef) || { id: subRef, code: subRef };
-    const keys = [subRef, sub.id, sub.code, sub.name].filter(Boolean);
+    const tokens = getSubjectMatchTokens(subRef, { includeName: true });
+    const secToks = getSectionMatchTokens(section);
 
     const prevSections = localSections;
     const prevProfessors = localProfessors;
 
-    const nextSubjects = (section.subjects || []).filter(s => !keys.includes(String(s)));
+    const nextSubjects = (section.subjects || []).filter(s => !tokens.has(normToken(s)));
     const nextSubjectInstructors = { ...(section.subjectInstructors || {}) };
-    keys.forEach(k => delete nextSubjectInstructors[k]);
+    Object.keys(nextSubjectInstructors).forEach(k => {
+      if (tokens.has(normToken(k))) delete nextSubjectInstructors[k];
+    });
+
+    const profPatches = new Map();
+    localProfessors.forEach(prof => {
+      const curMap = { ...(prof.sectionSubjectMap || {}) };
+      const matchingMapKeys = Object.keys(curMap).filter(k => secToks.has(normToken(k)));
+      let changed = false;
+      let remainingCount = 0;
+
+      matchingMapKeys.forEach(mapKey => {
+        const list = Array.isArray(curMap[mapKey]) ? curMap[mapKey] : [];
+        if (list.some(s => tokens.has(normToken(s)))) {
+          const nextList = list.filter(s => !tokens.has(normToken(s)));
+          changed = true;
+          if (nextList.length === 0) {
+            delete curMap[mapKey];
+          } else {
+            curMap[mapKey] = nextList;
+            remainingCount += nextList.length;
+          }
+        } else {
+          remainingCount += list.length;
+        }
+      });
+
+      if (changed) {
+        let nextSecs = prof.assignedSections || [];
+        if (remainingCount === 0) {
+          nextSecs = nextSecs.filter(s => !secToks.has(normToken(s)));
+        }
+        profPatches.set(String(prof.id), {
+          sectionSubjectMap: curMap,
+          assignedSections: nextSecs
+        });
+      }
+    });
 
     // Optimistic local update
     setLocalSections(prev => prev.map(s => String(s.id) === String(section.id) ? {
@@ -668,6 +851,10 @@ const TeachingLoadManagement = ({
       subjects: nextSubjects,
       subjectInstructors: nextSubjectInstructors
     } : s));
+
+    if (profPatches.size > 0) {
+      setLocalProfessors(prev => prev.map(p => profPatches.has(String(p.id)) ? { ...p, ...profPatches.get(String(p.id)) } : p));
+    }
 
     assignedProfCache.current.clear();
     toast.success(`Removed ${sub.code || subRef} from section ${section.name}!`);
@@ -677,6 +864,9 @@ const TeachingLoadManagement = ({
       batch.update(doc(db, 'sections', String(section.id)), {
         subjects: nextSubjects,
         subjectInstructors: nextSubjectInstructors
+      });
+      profPatches.forEach((patch, pId) => {
+        batch.update(doc(db, 'professors', pId), patch);
       });
 
       await batch.commit();
@@ -957,7 +1147,7 @@ const TeachingLoadManagement = ({
     if (type === 'section') {
       const subInstructorMap = { ...(item.subjectInstructors || {}) };
       (item.subjects || []).forEach(subRef => {
-        const sub = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef)) || { id: subRef, code: subRef };
+        const sub = getSubject(subRef) || { id: subRef, code: subRef };
         const subCode = sub.id || sub.code;
         if (!subInstructorMap[subCode] && !subInstructorMap[subRef]) {
           const assignedProf = getAssignedProf(item, subRef);
@@ -971,10 +1161,11 @@ const TeachingLoadManagement = ({
       const uniqueSubs = [];
       const seenSubs = new Set();
       (item.subjects || []).forEach(ref => {
-        const subObj = subjects.find(s => String(s.id) === String(ref) || String(s.code) === String(ref) || String(s.name) === String(ref));
+        const subObj = getSubject(ref);
         const key = subObj ? String(subObj.id) : String(ref);
-        if (!seenSubs.has(key)) {
-          seenSubs.add(key);
+        const tok = normToken(key);
+        if (tok && !seenSubs.has(tok)) {
+          seenSubs.add(tok);
           uniqueSubs.push(key);
         }
       });
@@ -989,56 +1180,94 @@ const TeachingLoadManagement = ({
       setStagedFacultyMap(subInstructorMap);
 
     } else if (type === 'faculty') {
+      const resolveSec = (ref) => sectionMap.get(normToken(ref));
+
       const rawSecSubjectMap = { ...(item.sectionSubjectMap || {}) };
       const secSubjectMap = {};
-      Object.entries(rawSecSubjectMap).forEach(([secId, subList]) => {
-        const normalizedSubs = [];
-        const seen = new Set();
+      Object.entries(rawSecSubjectMap).forEach(([secRef, subList]) => {
+        const secObj = resolveSec(secRef);
+        const canonicalSecId = secObj ? String(secObj.id) : String(secRef);
+        const existing = secSubjectMap[canonicalSecId] || [];
+        const seen = new Set(existing.map(normToken));
+        const normalizedSubs = [...existing];
         (Array.isArray(subList) ? subList : []).forEach(ref => {
-          const subObj = subjects.find(s => String(s.id) === String(ref) || String(s.code) === String(ref) || String(s.name) === String(ref));
+          const subObj = getSubject(ref);
           const key = subObj ? String(subObj.id) : String(ref);
-          if (!seen.has(key)) {
-            seen.add(key);
+          const tok = normToken(key);
+          if (tok && !seen.has(tok)) {
+            seen.add(tok);
             normalizedSubs.push(key);
           }
         });
-        secSubjectMap[secId] = normalizedSubs;
-      });
-      const assignedSecs = item.assignedSections || [];
-      assignedSecs.forEach(secId => {
-        const sec = localSections.find(s => String(s.id) === String(secId) || String(s.name) === String(secId));
-        if (sec && (!secSubjectMap[sec.id] || secSubjectMap[sec.id].length === 0)) {
-          const matching = (sec.subjects || [])
-            .filter(subRef => {
-              const assigned = getAssignedProf(sec, subRef);
-              return assigned && assigned.id === item.id;
-            })
-            .map(subRef => {
-              const subObj = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
-              return subObj ? String(subObj.id) : String(subRef);
-            });
-          secSubjectMap[sec.id] = matching;
-        }
+        secSubjectMap[canonicalSecId] = normalizedSubs;
       });
 
       const uniqueSecs = [];
       const seenSecs = new Set();
-      assignedSecs.forEach(ref => {
-        const secObj = localSections.find(s => String(s.id) === String(ref) || String(s.name) === String(ref));
-        const key = secObj ? String(secObj.id) : String(ref);
-        if (!seenSecs.has(key)) {
-          seenSecs.add(key);
+      const addUniqueSec = (secRef) => {
+        const secObj = resolveSec(secRef);
+        const key = secObj ? String(secObj.id) : String(secRef);
+        const tok = normToken(key);
+        if (tok && !seenSecs.has(tok)) {
+          seenSecs.add(tok);
           uniqueSecs.push(key);
+        }
+      };
+
+      (item.assignedSections || []).forEach(addUniqueSec);
+      localSections.forEach(sec => {
+        if (sec.subjectInstructors && Object.values(sec.subjectInstructors).some(pId => String(pId) === String(item.id))) {
+          addUniqueSec(sec.id);
+        }
+      });
+
+      uniqueSecs.forEach(secId => {
+        const sec = resolveSec(secId);
+        if (!sec) return;
+        const hasExplicitEntry = Object.prototype.hasOwnProperty.call(secSubjectMap, sec.id);
+        if (!hasExplicitEntry) {
+          const matching = (sec.subjects || [])
+            .filter(subRef => {
+              const assigned = getAssignedProf(sec, subRef);
+              return assigned && String(assigned.id) === String(item.id);
+            })
+            .map(subRef => {
+              const subObj = getSubject(subRef);
+              return subObj ? String(subObj.id) : String(subRef);
+            });
+          secSubjectMap[sec.id] = Array.from(new Set(matching));
+        } else if (sec.subjectInstructors) {
+          const existing = secSubjectMap[sec.id] || [];
+          const seen = new Set(existing.map(normToken));
+          const merged = [...existing];
+          (sec.subjects || []).forEach(subRef => {
+            const subObj = getSubject(subRef);
+            const keysToCheck = [subObj?.id, subObj?.code, subObj?.name, subRef].filter(Boolean);
+            const assignedHere = keysToCheck.some(k => String(sec.subjectInstructors[k]) === String(item.id)) ||
+              Object.entries(sec.subjectInstructors).some(([k, pId]) =>
+                String(pId) === String(item.id) &&
+                keysToCheck.some(ck => normToken(ck) === normToken(k))
+              );
+            if (assignedHere) {
+              const canonical = subObj ? String(subObj.id) : String(subRef);
+              if (!seen.has(normToken(canonical))) {
+                seen.add(normToken(canonical));
+                merged.push(canonical);
+              }
+            }
+          });
+          secSubjectMap[sec.id] = merged;
         }
       });
 
       const uniqueSpecs = [];
       const seenSpecs = new Set();
       (item.specialization || []).forEach(ref => {
-        const subObj = subjects.find(s => String(s.id) === String(ref) || String(s.code) === String(ref) || String(s.name) === String(ref));
+        const subObj = getSubject(ref);
         const key = subObj ? String(subObj.id) : String(ref);
-        if (!seenSpecs.has(key)) {
-          seenSpecs.add(key);
+        const tok = normToken(key);
+        if (tok && !seenSpecs.has(tok)) {
+          seenSpecs.add(tok);
           uniqueSpecs.push(key);
         }
       });
@@ -1112,11 +1341,12 @@ const TeachingLoadManagement = ({
         labHours: item.labHours !== undefined ? Number(item.labHours) : 3,
       });
 
+      const subTokens = getSubjectMatchTokens(item, { includeName: true });
       const enrolled = localSections.filter(s =>
-        (s.subjects || []).some(sub => String(sub) === String(item.id) || String(sub) === String(item.code) || String(sub) === String(item.name))
+        (s.subjects || []).some(sub => subTokens.has(normToken(sub)))
       ).map(s => s.id);
       const specialized = localProfessors.filter(p =>
-        (p.specialization || []).some(sub => String(sub) === String(item.id) || String(sub) === String(item.code) || String(sub) === String(item.name))
+        (p.specialization || []).some(sub => subTokens.has(normToken(sub)))
       ).map(p => p.id);
       setStagedAssignedSections(enrolled);
       setStagedFacultyMap({ assignedProfessors: specialized });
@@ -1266,7 +1496,7 @@ const TeachingLoadManagement = ({
       const targetId = String(form.id || nestedEditing.id);
 
       if (type === 'subject') {
-        const code = (form.code || '').trim().toUpperCase();
+        const code = (form.code || '').trim();
         const name = (form.name || '').trim();
         if (!code || !name) {
           toast.error("Subject code and name are required.");
@@ -1413,16 +1643,8 @@ const TeachingLoadManagement = ({
           return;
         }
 
-        // 1. Update section's document
-        batch.update(doc(db, 'sections', String(item.id)), {
-          name,
-          program,
-          yearLevel: Number(stagedEntityForm.yearLevel) || 1,
-          subjects: stagedAssignedSubjects,
-          subjectInstructors: stagedFacultyMap
-        });
-
-        // 2. Map professors: profId -> list of subjects taught in this section (deduplicated & canonical)
+        // 1. Build cleaned subjectInstructors strictly for currently enrolled subjects & map professors
+        const cleanedSubjectInstructors = {};
         const profToSubjects = {};
         stagedAssignedSubjects.forEach(subRef => {
           const subObj = getSubject(subRef);
@@ -1430,9 +1652,13 @@ const TeachingLoadManagement = ({
           const pId = stagedFacultyMap[subKey] ||
                       stagedFacultyMap[subRef] ||
                       (subObj?.id && stagedFacultyMap[subObj.id]) ||
-                      (subObj?.code && stagedFacultyMap[subObj.code]);
+                      (subObj?.code && stagedFacultyMap[subObj.code]) ||
+                      (subObj?.name && stagedFacultyMap[subObj.name]);
           if (pId) {
             const canonical = subObj?.id || subObj?.code || subRef;
+            [subKey, subRef, subObj?.id, subObj?.code].filter(Boolean).forEach(k => {
+              cleanedSubjectInstructors[k] = pId;
+            });
             if (!profToSubjects[pId]) profToSubjects[pId] = [];
             if (!profToSubjects[pId].includes(canonical)) {
               profToSubjects[pId].push(canonical);
@@ -1440,12 +1666,23 @@ const TeachingLoadManagement = ({
           }
         });
 
-        // 3. Update professors who are assigned
+        batch.update(doc(db, 'sections', String(item.id)), {
+          name,
+          program,
+          yearLevel: Number(stagedEntityForm.yearLevel) || 1,
+          subjects: stagedAssignedSubjects,
+          subjectInstructors: cleanedSubjectInstructors
+        });
+
+        // 2. Update professors who are assigned or removed from this section
+        const secRemovalTokens = new Set([item.id, item.name, name].map(normToken).filter(Boolean));
+        const profUpdatesMap = new Map();
+
         Object.entries(profToSubjects).forEach(([pId, subRefs]) => {
           const prof = localProfessors.find(p => String(p.id) === String(pId));
           if (prof) {
             const curSecs = prof.assignedSections || [];
-            const newSecs = curSecs.some(id => String(id) === String(item.id) || (name && String(id) === String(name)) || (item.name && String(id) === String(item.name)))
+            const newSecs = curSecs.some(id => secRemovalTokens.has(normToken(id)))
               ? curSecs
               : [...curSecs, item.id];
 
@@ -1453,36 +1690,43 @@ const TeachingLoadManagement = ({
             subRefs.forEach(subRef => {
               const subObj = getSubject(subRef);
               const codeOrId = subObj?.id || subObj?.code || subRef;
-              if (!curSpecs.some(sp => String(sp) === String(codeOrId)) && (!subObj || !curSpecs.some(sp => String(sp) === String(subObj.id)))) {
+              const tokens = getSubjectMatchTokens(subRef);
+              if (!curSpecs.some(sp => tokens.has(normToken(sp)))) {
                 curSpecs.push(codeOrId);
               }
             });
 
             const curMap = { ...(prof.sectionSubjectMap || {}) };
+            if (item.name && item.name !== item.id) delete curMap[item.name];
+            if (name && name !== item.id) delete curMap[name];
             curMap[item.id] = subRefs;
 
-            batch.update(doc(db, 'professors', String(prof.id)), {
+            const patch = {
               assignedSections: newSecs,
               specialization: curSpecs,
               sectionSubjectMap: curMap
-            });
+            };
+            profUpdatesMap.set(String(prof.id), patch);
+            batch.update(doc(db, 'professors', String(prof.id)), patch);
           }
         });
 
-        // 4. Remove section from professors no longer teaching here
+        // 3. Remove section from professors no longer teaching here
         localProfessors.forEach(prof => {
-          const hadSec = (prof.assignedSections || []).some(id => String(id) === String(item.id) || (item.name && String(id) === String(item.name)));
-          if (hadSec && !profToSubjects[prof.id]) {
-            const newSecs = (prof.assignedSections || []).filter(s => String(s) !== String(item.id) && String(s) !== String(item.name) && String(s) !== String(name));
-            const newMap = { ...(prof.sectionSubjectMap || {}) };
-            delete newMap[item.id];
-            delete newMap[item.name];
-            delete newMap[name];
+          if (profUpdatesMap.has(String(prof.id))) return;
+          const hadInAssigned = (prof.assignedSections || []).some(id => secRemovalTokens.has(normToken(id)));
+          const curMap = { ...(prof.sectionSubjectMap || {}) };
+          const mapKeysToDelete = Object.keys(curMap).filter(k => secRemovalTokens.has(normToken(k)));
+          if (hadInAssigned || mapKeysToDelete.length > 0) {
+            const newSecs = (prof.assignedSections || []).filter(s => !secRemovalTokens.has(normToken(s)));
+            mapKeysToDelete.forEach(k => delete curMap[k]);
 
-            batch.update(doc(db, 'professors', String(prof.id)), {
+            const patch = {
               assignedSections: newSecs,
-              sectionSubjectMap: newMap
-            });
+              sectionSubjectMap: curMap
+            };
+            profUpdatesMap.set(String(prof.id), patch);
+            batch.update(doc(db, 'professors', String(prof.id)), patch);
           }
         });
 
@@ -1493,38 +1737,13 @@ const TeachingLoadManagement = ({
           program,
           yearLevel: Number(stagedEntityForm.yearLevel) || 1,
           subjects: stagedAssignedSubjects,
-          subjectInstructors: stagedFacultyMap
+          subjectInstructors: cleanedSubjectInstructors
         };
 
         setLocalSections(prev => prev.map(s => String(s.id) === String(item.id) ? updatedSection : s));
-        setLocalProfessors(prev => prev.map(p => {
-          if (profToSubjects[p.id]) {
-            const curSecs = p.assignedSections || [];
-            const newSecs = curSecs.some(id => String(id) === String(item.id) || (name && String(id) === String(name)))
-              ? curSecs
-              : [...curSecs, item.id];
-            let curSpecs = [...(p.specialization || [])];
-            profToSubjects[p.id].forEach(subRef => {
-              const subObj = getSubject(subRef);
-              const codeOrId = subObj?.id || subObj?.code || subRef;
-              if (!curSpecs.some(sp => String(sp) === String(codeOrId)) && (!subObj || !curSpecs.some(sp => String(sp) === String(subObj.id) || String(sp) === String(subObj.code)))) {
-                curSpecs.push(codeOrId);
-              }
-            });
-            const curMap = { ...(p.sectionSubjectMap || {}), [item.id]: profToSubjects[p.id] };
-            return { ...p, assignedSections: newSecs, specialization: curSpecs, sectionSubjectMap: curMap };
-          }
-          const hadSec = (p.assignedSections || []).some(id => String(id) === String(item.id) || (item.name && String(id) === String(item.name)));
-          if (hadSec && !profToSubjects[p.id]) {
-            const newSecs = (p.assignedSections || []).filter(s => String(s) !== String(item.id) && String(s) !== String(name));
-            const newMap = { ...(p.sectionSubjectMap || {}) };
-            delete newMap[item.id];
-            delete newMap[item.name];
-            delete newMap[name];
-            return { ...p, assignedSections: newSecs, sectionSubjectMap: newMap };
-          }
-          return p;
-        }));
+        if (profUpdatesMap.size > 0) {
+          setLocalProfessors(prev => prev.map(p => profUpdatesMap.has(String(p.id)) ? { ...p, ...profUpdatesMap.get(String(p.id)) } : p));
+        }
 
         assignedProfCache.current.clear();
         subjectProfOptionsCache.current.clear();
@@ -1555,6 +1774,35 @@ const TeachingLoadManagement = ({
           return;
         }
 
+        const stagedSpecTokens = new Set();
+        stagedAssignedSubjects.forEach(subRef => {
+          getSubjectMatchTokens(subRef).forEach(t => stagedSpecTokens.add(t));
+        });
+
+        // Normalize & prune sectionSubjectMap strictly to assigned sections and current specializations
+        const cleanedSectionSubjectMap = {};
+        stagedAssignedSections.forEach(secRef => {
+          const sec = sectionMap.get(normToken(secRef));
+          const canonicalSecId = sec ? String(sec.id) : String(secRef);
+          const rawSubs = stagedFacultyMap[canonicalSecId] ||
+                          stagedFacultyMap[secRef] ||
+                          (sec?.name && stagedFacultyMap[sec.name]) ||
+                          [];
+          const deduped = [];
+          const seen = new Set();
+          (Array.isArray(rawSubs) ? rawSubs : []).forEach(subRef => {
+            const subObj = getSubject(subRef);
+            const canonicalSub = subObj ? String(subObj.id) : String(subRef);
+            const subToks = getSubjectMatchTokens(subRef);
+            const isInSpec = Array.from(subToks).some(t => stagedSpecTokens.has(t));
+            if (isInSpec && !seen.has(normToken(canonicalSub))) {
+              seen.add(normToken(canonicalSub));
+              deduped.push(canonicalSub);
+            }
+          });
+          cleanedSectionSubjectMap[canonicalSecId] = deduped;
+        });
+
         // 1. Update professor doc
         batch.update(doc(db, 'professors', String(item.id)), {
           firstName: fName,
@@ -1565,69 +1813,60 @@ const TeachingLoadManagement = ({
           preferredRooms: stagedEntityForm.preferredRooms || [],
           specialization: stagedAssignedSubjects,
           assignedSections: stagedAssignedSections,
-          sectionSubjectMap: stagedFacultyMap
+          sectionSubjectMap: cleanedSectionSubjectMap
         });
 
         // 2. Synchronize sections to reflect this professor's specific subject assignments
         const updatedSecsList = [];
         localSections.forEach(sec => {
-          const isNowAssignedSection = stagedAssignedSections.some(id => String(id) === String(sec.id) || String(id) === String(sec.name));
-          const wasAssignedSection = (item.assignedSections || []).some(id => String(id) === String(sec.id) || String(id) === String(sec.name));
-          
+          const secToks = getSectionMatchTokens(sec);
+          const isNowAssignedSection = stagedAssignedSections.some(id => secToks.has(normToken(id)));
+
           let updatedSubjs = [...(sec.subjects || [])];
           const updatedSubjectInstructors = { ...(sec.subjectInstructors || {}) };
           let secChanged = false;
 
           if (isNowAssignedSection) {
-            const chosenSubs = stagedFacultyMap[sec.id] || [];
-            
+            const chosenSubs = cleanedSectionSubjectMap[sec.id] || [];
+            const chosenTokens = new Set();
+
             chosenSubs.forEach(subRef => {
               const subObj = getSubject(subRef);
               const val = subObj?.id || subObj?.code || subRef;
-              
-              if (!updatedSubjs.some(existing => String(existing) === String(val) || (subObj && (String(existing) === String(subObj.id) || String(existing) === String(subObj.code))))) {
+              const subToks = getSubjectMatchTokens(subRef);
+              subToks.forEach(t => chosenTokens.add(t));
+
+              if (!updatedSubjs.some(existing => subToks.has(normToken(existing)))) {
                 updatedSubjs.push(val);
                 secChanged = true;
               }
-              if (updatedSubjectInstructors[val] !== item.id) {
-                updatedSubjectInstructors[val] = item.id;
-                secChanged = true;
-              }
-              if (subObj && subObj.id && updatedSubjectInstructors[subObj.id] !== item.id) {
-                updatedSubjectInstructors[subObj.id] = item.id;
-                secChanged = true;
-              }
+              [val, subObj?.id, subObj?.code].filter(Boolean).forEach(k => {
+                if (String(updatedSubjectInstructors[k]) !== String(item.id)) {
+                  updatedSubjectInstructors[k] = item.id;
+                  secChanged = true;
+                }
+              });
             });
 
-            const oldChosenSubs = item.sectionSubjectMap?.[sec.id] || [];
-            oldChosenSubs.forEach(oldSubRef => {
-              const subObj = getSubject(oldSubRef);
-              const val = subObj?.code || subObj?.id || oldSubRef;
-              
-              const isStillChosen = chosenSubs.some(c => String(c) === String(oldSubRef) || String(c) === String(val) || (subObj && (String(c) === String(subObj.id) || String(c) === String(subObj.code))));
-              if (!isStillChosen) {
-                if (updatedSubjectInstructors[val] === item.id) {
-                  delete updatedSubjectInstructors[val];
-                  secChanged = true;
-                }
-                if (subObj && subObj.id && updatedSubjectInstructors[subObj.id] === item.id) {
-                  delete updatedSubjectInstructors[subObj.id];
+            // Remove ANY key on section.subjectInstructors pointing to this prof for unchecked subjects
+            Object.entries(updatedSubjectInstructors).forEach(([k, pId]) => {
+              if (String(pId) === String(item.id)) {
+                const kSub = getSubject(k);
+                const kTokens = kSub
+                  ? [kSub.id, kSub.code, k].filter(Boolean).map(normToken)
+                  : [normToken(k)];
+                const stillChosen = kTokens.some(t => chosenTokens.has(t));
+                if (!stillChosen) {
+                  delete updatedSubjectInstructors[k];
                   secChanged = true;
                 }
               }
             });
-            
-          } else if (wasAssignedSection) {
-            const oldChosenSubs = item.sectionSubjectMap?.[sec.id] || [];
-            oldChosenSubs.forEach(oldSubRef => {
-              const subObj = getSubject(oldSubRef);
-              const val = subObj?.code || subObj?.id || oldSubRef;
-              if (updatedSubjectInstructors[val] === item.id) {
-                delete updatedSubjectInstructors[val];
-                secChanged = true;
-              }
-              if (subObj && subObj.id && updatedSubjectInstructors[subObj.id] === item.id) {
-                delete updatedSubjectInstructors[subObj.id];
+          } else {
+            // Section is not assigned to this professor: clear all subjectInstructors pointing to item.id
+            Object.entries(updatedSubjectInstructors).forEach(([k, pId]) => {
+              if (String(pId) === String(item.id)) {
+                delete updatedSubjectInstructors[k];
                 secChanged = true;
               }
             });
@@ -1653,12 +1892,12 @@ const TeachingLoadManagement = ({
           preferredRooms: stagedEntityForm.preferredRooms || [],
           specialization: stagedAssignedSubjects,
           assignedSections: stagedAssignedSections,
-          sectionSubjectMap: stagedFacultyMap
+          sectionSubjectMap: cleanedSectionSubjectMap
         } : p));
 
         if (updatedSecsList.length > 0) {
-          const secMapUpdates = new Map(updatedSecsList.map(s => [s.id, s]));
-          setLocalSections(prev => prev.map(s => secMapUpdates.has(s.id) ? { ...s, ...secMapUpdates.get(s.id) } : s));
+          const secMapUpdates = new Map(updatedSecsList.map(s => [String(s.id), s]));
+          setLocalSections(prev => prev.map(s => secMapUpdates.has(String(s.id)) ? { ...s, ...secMapUpdates.get(String(s.id)) } : s));
         }
 
         assignedProfCache.current.clear();
@@ -1675,7 +1914,12 @@ const TeachingLoadManagement = ({
         await batch.commit();
 
       } else if (type === 'subject') {
-        const code = (stagedEntityForm.code || '').trim().toUpperCase();
+        if (!item.id) {
+          setModalError("Subject record not found in database.");
+          setIsSaving(false);
+          return;
+        }
+        const code = (stagedEntityForm.code || '').trim();
         const name = (stagedEntityForm.name || '').trim();
         if (!code || !name) {
           setModalError("Subject code and name are required.");
@@ -1687,15 +1931,9 @@ const TeachingLoadManagement = ({
           setIsSaving(false);
           return;
         }
-        const isCodeDuplicate = subjects.some(s => String(s.id) !== String(item.id) && s.code?.trim().toUpperCase() === code);
+        const isCodeDuplicate = subjects.some(s => String(s.id) !== String(item.id) && (s.code || '').trim().toUpperCase() === code.toUpperCase());
         if (isCodeDuplicate) {
           setModalError(`A subject with the code "${code}" already exists.`);
-          setIsSaving(false);
-          return;
-        }
-        const isNameDuplicate = subjects.some(s => String(s.id) !== String(item.id) && s.name?.trim().toLowerCase() === name.toLowerCase());
-        if (isNameDuplicate) {
-          setModalError(`A subject named "${name}" already exists.`);
           setIsSaving(false);
           return;
         }
@@ -1719,75 +1957,154 @@ const TeachingLoadManagement = ({
         // 1. Update the subject document in Firestore!
         batch.update(doc(db, 'subjects', String(item.id)), subjectDocPayload);
 
-        // 2. Sync sections
+        // 2. Sync sections & accumulate professor updates (single batch update per professor)
         const oldCode = item.code || item.id;
+        const subjectTokens = new Set(
+          [item.id, oldCode, code, item.name, name].map(normToken).filter(Boolean)
+        );
+        const stagedSecTokens = new Set(stagedAssignedSections.map(normToken).filter(Boolean));
+        const updatedSectionsMap = new Map();
+        const profPatchMap = new Map();
+
+        const getOrInitProfPatch = (prof) => {
+          const pKey = String(prof.id);
+          if (!profPatchMap.has(pKey)) {
+            profPatchMap.set(pKey, {
+              assignedSections: [...(prof.assignedSections || [])],
+              sectionSubjectMap: { ...(prof.sectionSubjectMap || {}) },
+              specialization: [...(prof.specialization || [])],
+              changed: false
+            });
+          }
+          return profPatchMap.get(pKey);
+        };
+
         localSections.forEach(sec => {
-          const wasEnrolled = (sec.subjects || []).some(s => String(s) === String(item.id) || String(s) === String(oldCode) || String(s) === String(code));
-          const isNowEnrolled = stagedAssignedSections.some(id => String(id) === String(sec.id) || String(id) === String(sec.name));
+          const secToks = getSectionMatchTokens(sec);
+          const wasEnrolled = (sec.subjects || []).some(s => subjectTokens.has(normToken(s)));
+          const isNowEnrolled = Array.from(secToks).some(t => stagedSecTokens.has(t));
 
           if (!wasEnrolled && isNowEnrolled) {
-            batch.update(doc(db, 'sections', String(sec.id)), { subjects: [...(sec.subjects || []), code] });
+            const canonicalSub = item.id || code;
+            const updated = [...(sec.subjects || []), canonicalSub];
+            batch.update(doc(db, 'sections', String(sec.id)), { subjects: updated });
+            updatedSectionsMap.set(String(sec.id), { subjects: updated });
           } else if (wasEnrolled && !isNowEnrolled) {
-            const updated = (sec.subjects || []).filter(s => String(s) !== String(item.id) && String(s) !== String(oldCode) && String(s) !== String(code));
+            const updated = (sec.subjects || []).filter(s => !subjectTokens.has(normToken(s)));
             const updatedInst = { ...(sec.subjectInstructors || {}) };
-            delete updatedInst[oldCode];
-            delete updatedInst[code];
-            delete updatedInst[item.id];
-            
+            Object.keys(updatedInst).forEach(k => {
+              if (subjectTokens.has(normToken(k))) {
+                delete updatedInst[k];
+              }
+            });
+
             batch.update(doc(db, 'sections', String(sec.id)), {
               subjects: updated,
               subjectInstructors: updatedInst
             });
+            updatedSectionsMap.set(String(sec.id), {
+              subjects: updated,
+              subjectInstructors: updatedInst
+            });
 
-            // Clean professor map
+            // Clean professor map across all keys matching this section
             localProfessors.forEach(prof => {
-              const curMap = { ...(prof.sectionSubjectMap || {}) };
-              const secSubs = curMap[sec.id] || [];
-              if (secSubs.some(s => String(s) === String(item.id) || String(s) === String(oldCode) || String(s) === String(code))) {
-                const newSecSubs = secSubs.filter(s => String(s) !== String(item.id) && String(s) !== String(oldCode) && String(s) !== String(code));
-                let newSecs = [...(prof.assignedSections || [])];
-                if (newSecSubs.length === 0) {
-                  delete curMap[sec.id];
-                  newSecs = newSecs.filter(s => String(s) !== String(sec.id) && String(s) !== String(sec.name));
+              const patch = getOrInitProfPatch(prof);
+              const matchingMapKeys = Object.keys(patch.sectionSubjectMap).filter(k => secToks.has(normToken(k)));
+              let removedFromThisSec = false;
+              let remainingInThisSec = 0;
+
+              matchingMapKeys.forEach(mapKey => {
+                const secSubs = Array.isArray(patch.sectionSubjectMap[mapKey]) ? patch.sectionSubjectMap[mapKey] : [];
+                if (secSubs.some(s => subjectTokens.has(normToken(s)))) {
+                  const newSecSubs = secSubs.filter(s => !subjectTokens.has(normToken(s)));
+                  removedFromThisSec = true;
+                  patch.changed = true;
+                  if (newSecSubs.length === 0) {
+                    delete patch.sectionSubjectMap[mapKey];
+                  } else {
+                    patch.sectionSubjectMap[mapKey] = newSecSubs;
+                    remainingInThisSec += newSecSubs.length;
+                  }
                 } else {
-                  curMap[sec.id] = newSecSubs;
+                  remainingInThisSec += secSubs.length;
                 }
-                batch.update(doc(db, 'professors', String(prof.id)), {
-                  sectionSubjectMap: curMap,
-                  assignedSections: newSecs
-                });
+              });
+
+              if (removedFromThisSec && remainingInThisSec === 0) {
+                patch.assignedSections = patch.assignedSections.filter(s => !secToks.has(normToken(s)));
               }
             });
           } else if (wasEnrolled && isNowEnrolled && oldCode !== code) {
-            const updated = (sec.subjects || []).map(s => (String(s) === String(oldCode) || String(s) === String(item.id)) ? code : s);
-            const updatedInst = { ...(sec.subjectInstructors || {}) };
-            if (updatedInst[oldCode]) {
-              updatedInst[code] = updatedInst[oldCode];
-              delete updatedInst[oldCode];
-            }
-            batch.update(doc(db, 'sections', String(sec.id)), {
-              subjects: updated,
-              subjectInstructors: updatedInst
+            let secChanged = false;
+            const updated = (sec.subjects || []).map(s => {
+              if (normToken(s) === normToken(oldCode)) {
+                secChanged = true;
+                return code;
+              }
+              return s;
             });
+            const updatedInst = { ...(sec.subjectInstructors || {}) };
+            Object.keys(updatedInst).forEach(k => {
+              if (normToken(k) === normToken(oldCode)) {
+                updatedInst[code] = updatedInst[k];
+                if (k !== code) delete updatedInst[k];
+                secChanged = true;
+              }
+            });
+            if (secChanged) {
+              batch.update(doc(db, 'sections', String(sec.id)), {
+                subjects: updated,
+                subjectInstructors: updatedInst
+              });
+              updatedSectionsMap.set(String(sec.id), {
+                subjects: updated,
+                subjectInstructors: updatedInst
+              });
+            }
           }
         });
 
-        // 3. Sync professors' specializations
-        const profIds = stagedFacultyMap.assignedProfessors || [];
+        // 3. Sync professors' specializations into the same profPatchMap
+        const profIdsSet = new Set((stagedFacultyMap.assignedProfessors || []).map(String));
         localProfessors.forEach(prof => {
-          const wasAssigned = (prof.specialization || []).some(s => String(s) === String(item.id) || String(s) === String(oldCode) || String(s) === String(code));
-          const isNowAssigned = profIds.some(id => String(id) === String(prof.id));
+          const patch = getOrInitProfPatch(prof);
+          const wasAssigned = patch.specialization.some(s => subjectTokens.has(normToken(s)));
+          const isNowAssigned = profIdsSet.has(String(prof.id));
 
           if (!wasAssigned && isNowAssigned) {
-            batch.update(doc(db, 'professors', String(prof.id)), { specialization: [...(prof.specialization || []), code] });
+            patch.specialization = [...patch.specialization, item.id || code];
+            patch.changed = true;
           } else if (wasAssigned && !isNowAssigned) {
-            const updated = (prof.specialization || []).filter(s => String(s) !== String(item.id) && String(s) !== String(oldCode) && String(s) !== String(code));
-            batch.update(doc(db, 'professors', String(prof.id)), { specialization: updated });
+            patch.specialization = patch.specialization.filter(s => !subjectTokens.has(normToken(s)));
+            patch.changed = true;
           } else if (wasAssigned && isNowAssigned && oldCode !== code) {
-            const updated = (prof.specialization || []).map(s => (String(s) === String(oldCode) || String(s) === String(item.id)) ? code : s);
-            batch.update(doc(db, 'professors', String(prof.id)), { specialization: updated });
+            patch.specialization = patch.specialization.map(s => normToken(s) === normToken(oldCode) ? code : s);
+            patch.changed = true;
           }
         });
+
+        // Commit accumulated professor updates (one update per professor)
+        const optimisticProfPatches = new Map();
+        profPatchMap.forEach((patch, pId) => {
+          if (patch.changed) {
+            const payload = {
+              assignedSections: patch.assignedSections,
+              sectionSubjectMap: patch.sectionSubjectMap,
+              specialization: patch.specialization
+            };
+            batch.update(doc(db, 'professors', pId), payload);
+            optimisticProfPatches.set(pId, payload);
+          }
+        });
+
+        // OPTIMISTIC LOCAL STATE UPDATE (0ms delay)
+        if (updatedSectionsMap.size > 0) {
+          setLocalSections(prev => prev.map(s => updatedSectionsMap.has(String(s.id)) ? { ...s, ...updatedSectionsMap.get(String(s.id)) } : s));
+        }
+        if (optimisticProfPatches.size > 0) {
+          setLocalProfessors(prev => prev.map(p => optimisticProfPatches.has(String(p.id)) ? { ...p, ...optimisticProfPatches.get(String(p.id)) } : p));
+        }
 
         assignedProfCache.current.clear();
         subjectProfOptionsCache.current.clear();
@@ -2242,21 +2559,21 @@ const TeachingLoadManagement = ({
         </div>
 
         {/* Lec & Lab Split Toggle */}
-        <label
-          className={`hub-checkbox-card ${form.hasLecLab ? 'active' : ''}`}
-          onClick={() => setNestedEditing(prev => ({
-            ...prev,
-            form: {
-              ...prev.form,
-              hasLecLab: !prev.form.hasLecLab,
-              requiredLab: !prev.form.hasLecLab ? (prev.form.requiredLab || !prev.form.isFoodLab) : prev.form.requiredLab
-            }
-          }))}
-        >
+        <label className={`hub-checkbox-card ${form.hasLecLab ? 'active' : ''}`}>
           <input
             type="checkbox"
             checked={Boolean(form.hasLecLab)}
-            onChange={() => {}}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setNestedEditing(prev => ({
+                ...prev,
+                form: {
+                  ...prev.form,
+                  hasLecLab: checked,
+                  requiredLab: checked ? (prev.form.requiredLab || !prev.form.isFoodLab) : prev.form.requiredLab
+                }
+              }));
+            }}
             style={{ marginTop: '3px' }}
           />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -2322,21 +2639,21 @@ const TeachingLoadManagement = ({
 
         {/* Lab Room Type Requirements */}
         <div className="hub-form-grid-2">
-          <label
-            className={`hub-checkbox-card ${form.requiredLab ? 'active' : ''}`}
-            onClick={() => setNestedEditing(prev => ({
-              ...prev,
-              form: {
-                ...prev.form,
-                requiredLab: !prev.form.requiredLab,
-                isFoodLab: !prev.form.requiredLab ? false : prev.form.isFoodLab
-              }
-            }))}
-          >
+          <label className={`hub-checkbox-card ${form.requiredLab ? 'active' : ''}`}>
             <input
               type="checkbox"
               checked={Boolean(form.requiredLab)}
-              onChange={() => {}}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setNestedEditing(prev => ({
+                  ...prev,
+                  form: {
+                    ...prev.form,
+                    requiredLab: checked,
+                    isFoodLab: checked ? false : prev.form.isFoodLab
+                  }
+                }));
+              }}
               style={{ marginTop: '3px' }}
             />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -2348,21 +2665,21 @@ const TeachingLoadManagement = ({
             </div>
           </label>
 
-          <label
-            className={`hub-checkbox-card ${form.isFoodLab ? 'active' : ''}`}
-            onClick={() => setNestedEditing(prev => ({
-              ...prev,
-              form: {
-                ...prev.form,
-                isFoodLab: !prev.form.isFoodLab,
-                requiredLab: !prev.form.isFoodLab ? false : prev.form.requiredLab
-              }
-            }))}
-          >
+          <label className={`hub-checkbox-card ${form.isFoodLab ? 'active' : ''}`}>
             <input
               type="checkbox"
               checked={Boolean(form.isFoodLab)}
-              onChange={() => {}}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setNestedEditing(prev => ({
+                  ...prev,
+                  form: {
+                    ...prev.form,
+                    isFoodLab: checked,
+                    requiredLab: checked ? false : prev.form.requiredLab
+                  }
+                }));
+              }}
               style={{ marginTop: '3px' }}
             />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -2473,12 +2790,41 @@ const TeachingLoadManagement = ({
             options={rooms}
             selectedIds={form.preferredRooms || []}
             onToggle={(item) => {
-              const id = typeof item === 'object' && item !== null ? (item.id || item.name) : item;
-              setNestedEditing(prev => {
-                const cur = prev.form.preferredRooms || [];
-                const updated = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
-                return { ...prev, form: { ...prev.form, preferredRooms: updated } };
-              });
+              setNestedEditing(prev => ({
+                ...prev,
+                form: {
+                  ...prev.form,
+                  preferredRooms: toggleMultiList(
+                    prev.form.preferredRooms,
+                    item,
+                    getRoomMatchTokens,
+                    (r) => (typeof r === 'object' && r !== null ? (r.id || r.name) : r)
+                  )
+                }
+              }));
+            }}
+            onBatchSelect={(items) => {
+              setNestedEditing(prev => ({
+                ...prev,
+                form: {
+                  ...prev.form,
+                  preferredRooms: batchSelectMultiList(
+                    prev.form.preferredRooms,
+                    items,
+                    getRoomMatchTokens,
+                    (r) => (typeof r === 'object' && r !== null ? (r.id || r.name) : r)
+                  )
+                }
+              }));
+            }}
+            onBatchDeselect={(items) => {
+              setNestedEditing(prev => ({
+                ...prev,
+                form: {
+                  ...prev.form,
+                  preferredRooms: batchDeselectMultiList(prev.form.preferredRooms, items, getRoomMatchTokens)
+                }
+              }));
             }}
             renderChip={renderRoomChip}
             renderOption={renderRoomOption}
@@ -3504,32 +3850,23 @@ const TeachingLoadManagement = ({
                       options={subjects}
                       selectedIds={stagedAssignedSubjects}
                       onToggle={(item) => {
-                        const id = typeof item === 'object' && item !== null ? item.id : item;
-                        const code = typeof item === 'object' && item !== null ? item.code : null;
-                        const name = typeof item === 'object' && item !== null ? item.name : null;
-                        setStagedAssignedSubjects(prev => {
-                          const isSelected = prev.some(x => String(x) === String(id) || (code && String(x) === String(code)) || (name && String(x) === String(name)));
-                          if (isSelected) return prev.filter(x => String(x) !== String(id) && String(x) !== String(code) && String(x) !== String(name));
-                          return [...prev, id];
-                        });
+                        const tokens = getSubjectMatchTokens(item);
+                        const isCurrentlySelected = stagedAssignedSubjects.some(x => tokens.has(normToken(x)));
+                        setStagedAssignedSubjects(prev =>
+                          toggleMultiList(prev, item, getSubjectMatchTokens, (it) => (typeof it === 'object' && it !== null ? it.id : it))
+                        );
+                        if (isCurrentlySelected) {
+                          setStagedFacultyMap(prev => pruneSectionInstructorKeys(prev, [item]));
+                        }
                       }}
                       onBatchSelect={(items) => {
-                        const idsToAdd = items.map(item => typeof item === 'object' && item !== null ? item.id : item);
-                        setStagedAssignedSubjects(prev => {
-                          const existing = new Set(prev.map(String));
-                          const next = [...prev];
-                          for (const id of idsToAdd) {
-                            if (!existing.has(String(id))) {
-                              next.push(id);
-                              existing.add(String(id));
-                            }
-                          }
-                          return next;
-                        });
+                        setStagedAssignedSubjects(prev =>
+                          batchSelectMultiList(prev, items, getSubjectMatchTokens, (it) => (typeof it === 'object' && it !== null ? it.id : it))
+                        );
                       }}
                       onBatchDeselect={(items) => {
-                        const idsToRemove = new Set(items.map(item => typeof item === 'object' && item !== null ? item.id : item).map(String));
-                        setStagedAssignedSubjects(prev => prev.filter(x => !idsToRemove.has(String(x))));
+                        setStagedAssignedSubjects(prev => batchDeselectMultiList(prev, items, getSubjectMatchTokens));
+                        setStagedFacultyMap(prev => pruneSectionInstructorKeys(prev, items));
                       }}
                       renderChip={renderSubjectChip}
                       renderOption={renderSubjectOption}
@@ -3542,9 +3879,13 @@ const TeachingLoadManagement = ({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
                       <label className="hub-form-label">Assigned Instructor per Subject</label>
                       {stagedAssignedSubjects.map(subRef => {
-                        const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef, name: subRef };
+                        const sub = getSubject(subRef) || { id: subRef, code: subRef, name: subRef };
                         const subKey = sub.id || sub.code;
-                        const curProfId = stagedFacultyMap[subKey] || stagedFacultyMap[subRef] || '';
+                        const curProfId = stagedFacultyMap[subKey] ||
+                                          stagedFacultyMap[subRef] ||
+                                          (sub.code && stagedFacultyMap[sub.code]) ||
+                                          (sub.name && stagedFacultyMap[sub.name]) ||
+                                          '';
 
                         const isEditingThisSub = nestedEditing?.type === 'subject' && (String(nestedEditing?.id) === String(subKey) || String(nestedEditing?.id) === String(sub.id));
                         const isEditingThisProf = nestedEditing?.type === 'faculty' && String(nestedEditing?.id) === String(curProfId);
@@ -3653,13 +3994,9 @@ const TeachingLoadManagement = ({
                                     type="button"
                                     className="hub-micro-action-btn delete-btn"
                                     onClick={() => {
-                                      setStagedAssignedSubjects(prev => prev.filter(x => String(x) !== String(subRef) && String(x) !== String(subKey)));
-                                      setStagedFacultyMap(prev => {
-                                        const next = { ...prev };
-                                        delete next[subKey];
-                                        delete next[subRef];
-                                        return next;
-                                      });
+                                      const tokensToRemove = getSubjectMatchTokens(subRef);
+                                      setStagedAssignedSubjects(prev => prev.filter(x => !tokensToRemove.has(normToken(x))));
+                                      setStagedFacultyMap(prev => pruneSectionInstructorKeys(prev, [subRef]));
                                     }}
                                     title="Remove this subject from section"
                                   >
@@ -3746,12 +4083,32 @@ const TeachingLoadManagement = ({
                       options={rooms}
                       selectedIds={stagedEntityForm.preferredRooms || []}
                       onToggle={(item) => {
-                        const id = typeof item === 'object' && item !== null ? (item.id || item.name) : item;
-                        setStagedEntityForm(prev => {
-                          const cur = prev.preferredRooms || [];
-                          const updated = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
-                          return { ...prev, preferredRooms: updated };
-                        });
+                        setStagedEntityForm(prev => ({
+                          ...prev,
+                          preferredRooms: toggleMultiList(
+                            prev.preferredRooms,
+                            item,
+                            getRoomMatchTokens,
+                            (r) => (typeof r === 'object' && r !== null ? (r.id || r.name) : r)
+                          )
+                        }));
+                      }}
+                      onBatchSelect={(items) => {
+                        setStagedEntityForm(prev => ({
+                          ...prev,
+                          preferredRooms: batchSelectMultiList(
+                            prev.preferredRooms,
+                            items,
+                            getRoomMatchTokens,
+                            (r) => (typeof r === 'object' && r !== null ? (r.id || r.name) : r)
+                          )
+                        }));
+                      }}
+                      onBatchDeselect={(items) => {
+                        setStagedEntityForm(prev => ({
+                          ...prev,
+                          preferredRooms: batchDeselectMultiList(prev.preferredRooms, items, getRoomMatchTokens)
+                        }));
                       }}
                       renderChip={renderRoomChip}
                       renderOption={renderRoomOption}
@@ -3776,12 +4133,23 @@ const TeachingLoadManagement = ({
                       options={subjects}
                       selectedIds={stagedAssignedSubjects}
                       onToggle={(item) => {
-                        const id = typeof item === 'object' && item !== null ? item.id : item;
-                        setStagedAssignedSubjects(prev => {
-                          const isSelected = prev.some(x => String(x) === String(id) || (item.code && String(x) === String(item.code)) || (item.name && String(x) === String(item.name)));
-                          if (isSelected) return prev.filter(x => String(x) !== String(id) && String(x) !== String(item.code) && String(x) !== String(item.name));
-                          return [...prev, id];
-                        });
+                        const tokens = getSubjectMatchTokens(item);
+                        const isCurrentlySelected = stagedAssignedSubjects.some(x => tokens.has(normToken(x)));
+                        setStagedAssignedSubjects(prev =>
+                          toggleMultiList(prev, item, getSubjectMatchTokens, (it) => (typeof it === 'object' && it !== null ? it.id : it))
+                        );
+                        if (isCurrentlySelected) {
+                          setStagedFacultyMap(prev => pruneFacultyMapSubjects(prev, [item]));
+                        }
+                      }}
+                      onBatchSelect={(items) => {
+                        setStagedAssignedSubjects(prev =>
+                          batchSelectMultiList(prev, items, getSubjectMatchTokens, (it) => (typeof it === 'object' && it !== null ? it.id : it))
+                        );
+                      }}
+                      onBatchDeselect={(items) => {
+                        setStagedAssignedSubjects(prev => batchDeselectMultiList(prev, items, getSubjectMatchTokens));
+                        setStagedFacultyMap(prev => pruneFacultyMapSubjects(prev, items));
                       }}
                       renderChip={renderSubjectChip}
                       renderOption={renderSubjectOption}
@@ -3794,7 +4162,7 @@ const TeachingLoadManagement = ({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                       <label className="hub-form-label" style={{ fontSize: '0.74rem' }}>Specialized Subjects Settings & Lab Config</label>
                       {stagedAssignedSubjects.map(subRef => {
-                        const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef, name: subRef };
+                        const sub = getSubject(subRef) || { id: subRef, code: subRef, name: subRef };
                         const subKey = sub.id || sub.code;
                         const isEditingSub = nestedEditing?.type === 'subject' && (String(nestedEditing?.id) === String(subKey) || String(nestedEditing?.id) === String(sub.id));
 
@@ -3852,10 +4220,23 @@ const TeachingLoadManagement = ({
                       options={localSections}
                       selectedIds={stagedAssignedSections}
                       onToggle={(item) => {
-                        const id = typeof item === 'object' && item !== null ? item.id : item;
+                        const tokens = getSectionMatchTokens(item);
+                        const isCurrentlySelected = stagedAssignedSections.some(x => tokens.has(normToken(x)));
                         setStagedAssignedSections(prev =>
-                          prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                          toggleMultiList(prev, item, getSectionMatchTokens, (s) => (typeof s === 'object' && s !== null ? s.id : s))
                         );
+                        if (isCurrentlySelected) {
+                          setStagedFacultyMap(prev => pruneFacultyMapSections(prev, [item]));
+                        }
+                      }}
+                      onBatchSelect={(items) => {
+                        setStagedAssignedSections(prev =>
+                          batchSelectMultiList(prev, items, getSectionMatchTokens, (s) => (typeof s === 'object' && s !== null ? s.id : s))
+                        );
+                      }}
+                      onBatchDeselect={(items) => {
+                        setStagedAssignedSections(prev => batchDeselectMultiList(prev, items, getSectionMatchTokens));
+                        setStagedFacultyMap(prev => pruneFacultyMapSections(prev, items));
                       }}
                       renderChip={renderSectionChip}
                       renderOption={renderSectionOption}
@@ -3867,8 +4248,8 @@ const TeachingLoadManagement = ({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
                       <label className="hub-form-label">Choose Specific Subject(s) Taught per Section</label>
                       {stagedAssignedSections.map(secId => {
-                        const sec = localSections.find(s => s.id === secId || s.name === secId) || { id: secId, name: secId };
-                        const chosenSubs = stagedFacultyMap[sec.id] || [];
+                        const sec = sectionMap.get(normToken(secId)) || { id: secId, name: secId };
+                        const chosenSubs = stagedFacultyMap[sec.id] || (sec.name && stagedFacultyMap[sec.name]) || [];
 
                         return (
                           <div key={sec.id} style={{ padding: '10px 14px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -3886,13 +4267,12 @@ const TeachingLoadManagement = ({
                             {renderNestedSectionEditor(sec.id)}
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                               {stagedAssignedSubjects.map(subRef => {
-                                const sub = subjects.find(s => s.id === subRef || s.code === subRef || s.name === subRef) || { id: subRef, code: subRef };
+                                const sub = getSubject(subRef) || { id: subRef, code: subRef };
                                 const subKey = sub.id || sub.code;
-                                const matchesSub = (s) =>
-                                  String(s) === String(subKey) ||
-                                  String(s) === String(sub.id) ||
-                                  (sub.code && String(s) === String(sub.code));
+                                const subToks = getSubjectMatchTokens(subRef);
+                                const matchesSub = (s) => subToks.has(normToken(s));
                                 const isChecked = chosenSubs.some(matchesSub);
+                                const isEnrolledInSec = (sec.subjects || []).some(s => subToks.has(normToken(s)));
 
                                 return (
                                   <button
@@ -3916,11 +4296,16 @@ const TeachingLoadManagement = ({
                                       fontSize: '0.75rem',
                                       fontWeight: '600',
                                       cursor: 'pointer',
-                                      border: isChecked ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                                      border: isChecked
+                                        ? '1px solid var(--accent-primary)'
+                                        : isEnrolledInSec
+                                        ? '1px solid var(--border-color)'
+                                        : '1px dashed var(--border-color)',
                                       background: isChecked ? 'rgba(86, 69, 238, 0.12)' : 'var(--bg-main)',
-                                      color: isChecked ? 'var(--accent-primary)' : 'var(--text-muted)'
+                                      color: isChecked ? 'var(--accent-primary)' : 'var(--text-muted)',
+                                      opacity: isChecked || isEnrolledInSec ? 1 : 0.78
                                     }}
-                                    title={sub.name ? `${sub.code ? `${sub.code}: ` : ''}${sub.name}` : sub.code}
+                                    title={`${sub.name ? `${sub.code ? `${sub.code}: ` : ''}${sub.name}` : sub.code}${isEnrolledInSec ? ` (Enrolled in ${sec.name})` : ` (Not yet enrolled in ${sec.name} — checking will enroll)`}`}
                                   >
                                     {isChecked ? <Check size={12} /> : <Plus size={11} />}
                                     <span style={{ fontWeight: '700' }}>{sub.code}</span>
@@ -4060,21 +4445,19 @@ const TeachingLoadManagement = ({
                   )}
 
                   {/* Lec & Lab Split Toggle */}
-                  <label
-                    className={`hub-checkbox-card ${stagedEntityForm.hasLecLab ? 'active' : ''}`}
-                    onClick={() => {
-                      setUserLabModified(true);
-                      setStagedEntityForm(prev => ({
-                        ...prev,
-                        hasLecLab: !prev.hasLecLab,
-                        requiredLab: !prev.hasLecLab ? (prev.requiredLab || !prev.isFoodLab) : prev.requiredLab
-                      }));
-                    }}
-                  >
+                  <label className={`hub-checkbox-card ${stagedEntityForm.hasLecLab ? 'active' : ''}`}>
                     <input
                       type="checkbox"
                       checked={Boolean(stagedEntityForm.hasLecLab)}
-                      onChange={() => {}}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setUserLabModified(true);
+                        setStagedEntityForm(prev => ({
+                          ...prev,
+                          hasLecLab: checked,
+                          requiredLab: checked ? (prev.requiredLab || !prev.isFoodLab) : prev.requiredLab
+                        }));
+                      }}
                       style={{ marginTop: '3px' }}
                     />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -4143,21 +4526,19 @@ const TeachingLoadManagement = ({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
                     <label className="hub-form-label">Laboratory Room Allocation Guide (Used by AI Scheduler)</label>
                     <div className="hub-form-grid-2">
-                      <label
-                        className={`hub-checkbox-card ${stagedEntityForm.requiredLab ? 'active' : ''}`}
-                        onClick={() => {
-                          setUserLabModified(true);
-                          setStagedEntityForm(prev => ({
-                            ...prev,
-                            requiredLab: !prev.requiredLab,
-                            isFoodLab: !prev.requiredLab ? false : prev.isFoodLab
-                          }));
-                        }}
-                      >
+                      <label className={`hub-checkbox-card ${stagedEntityForm.requiredLab ? 'active' : ''}`}>
                         <input
                           type="checkbox"
                           checked={Boolean(stagedEntityForm.requiredLab)}
-                          onChange={() => {}}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setUserLabModified(true);
+                            setStagedEntityForm(prev => ({
+                              ...prev,
+                              requiredLab: checked,
+                              isFoodLab: checked ? false : prev.isFoodLab
+                            }));
+                          }}
                           style={{ marginTop: '3px' }}
                         />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -4171,21 +4552,19 @@ const TeachingLoadManagement = ({
                         </div>
                       </label>
 
-                      <label
-                        className={`hub-checkbox-card ${stagedEntityForm.isFoodLab ? 'active' : ''}`}
-                        onClick={() => {
-                          setUserLabModified(true);
-                          setStagedEntityForm(prev => ({
-                            ...prev,
-                            isFoodLab: !prev.isFoodLab,
-                            requiredLab: !prev.isFoodLab ? false : prev.requiredLab
-                          }));
-                        }}
-                      >
+                      <label className={`hub-checkbox-card ${stagedEntityForm.isFoodLab ? 'active' : ''}`}>
                         <input
                           type="checkbox"
                           checked={Boolean(stagedEntityForm.isFoodLab)}
-                          onChange={() => {}}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setUserLabModified(true);
+                            setStagedEntityForm(prev => ({
+                              ...prev,
+                              isFoodLab: checked,
+                              requiredLab: checked ? false : prev.requiredLab
+                            }));
+                          }}
                           style={{ marginTop: '3px' }}
                         />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -4218,10 +4597,17 @@ const TeachingLoadManagement = ({
                       options={localSections}
                       selectedIds={stagedAssignedSections}
                       onToggle={(item) => {
-                        const id = typeof item === 'object' && item !== null ? item.id : item;
                         setStagedAssignedSections(prev =>
-                          prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                          toggleMultiList(prev, item, getSectionMatchTokens, (s) => (typeof s === 'object' && s !== null ? s.id : s))
                         );
+                      }}
+                      onBatchSelect={(items) => {
+                        setStagedAssignedSections(prev =>
+                          batchSelectMultiList(prev, items, getSectionMatchTokens, (s) => (typeof s === 'object' && s !== null ? s.id : s))
+                        );
+                      }}
+                      onBatchDeselect={(items) => {
+                        setStagedAssignedSections(prev => batchDeselectMultiList(prev, items, getSectionMatchTokens));
                       }}
                       renderChip={renderSectionChip}
                       renderOption={renderSectionOption}
@@ -4233,7 +4619,7 @@ const TeachingLoadManagement = ({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                       <label className="hub-form-label" style={{ fontSize: '0.74rem' }}>Enrolled Sections List & Quick Config</label>
                       {stagedAssignedSections.map(secId => {
-                        const sec = localSections.find(s => s.id === secId || s.name === secId) || { id: secId, name: secId };
+                        const sec = sectionMap.get(normToken(secId)) || { id: secId, name: secId };
                         const isEditingSec = nestedEditing?.type === 'section' && String(nestedEditing?.id) === String(sec.id);
 
                         return (
@@ -4266,12 +4652,32 @@ const TeachingLoadManagement = ({
                       options={localProfessors}
                       selectedIds={stagedFacultyMap.assignedProfessors || []}
                       onToggle={(item) => {
-                        const profId = typeof item === 'object' && item !== null ? item.id : item;
-                        setStagedFacultyMap(prev => {
-                          const cur = prev.assignedProfessors || [];
-                          const updated = cur.includes(profId) ? cur.filter(id => id !== profId) : [...cur, profId];
-                          return { ...prev, assignedProfessors: updated };
-                        });
+                        setStagedFacultyMap(prev => ({
+                          ...prev,
+                          assignedProfessors: toggleMultiList(
+                            prev.assignedProfessors,
+                            item,
+                            getFacultyMatchTokens,
+                            (p) => (typeof p === 'object' && p !== null ? p.id : p)
+                          )
+                        }));
+                      }}
+                      onBatchSelect={(items) => {
+                        setStagedFacultyMap(prev => ({
+                          ...prev,
+                          assignedProfessors: batchSelectMultiList(
+                            prev.assignedProfessors,
+                            items,
+                            getFacultyMatchTokens,
+                            (p) => (typeof p === 'object' && p !== null ? p.id : p)
+                          )
+                        }));
+                      }}
+                      onBatchDeselect={(items) => {
+                        setStagedFacultyMap(prev => ({
+                          ...prev,
+                          assignedProfessors: batchDeselectMultiList(prev.assignedProfessors, items, getFacultyMatchTokens)
+                        }));
                       }}
                       renderChip={renderFacultyChip}
                       renderOption={renderFacultyOption}
