@@ -19,6 +19,108 @@ import { toast } from 'sonner';
 import { logActivity, LOG_ACTIONS } from '../../../utils/activityLogger';
 import { exportIsoToWord, exportRoomUtilizationToWord, exportFacultyWorkloadToWord } from '../../../utils/scheduleExportUtils';
 
+/**
+ * Shared CSS builder for ISO schedule tables (used by Save Image and Print Document)
+ * so 30m, 1h, 1.5h, and multi-block cells render with exact proportional heights.
+ */
+function buildIsoScheduleTableCss({
+    unit30Px,
+    lunchPx,
+    headerPx,
+    tableFontPt,
+    timePt,
+    thPt,
+    subjPt,
+    detailPt,
+    dur60SubjPt,
+    dur60DetailPt,
+    compactSubjPt,
+    compactDetailPt,
+    important = false
+}) {
+    const imp = important ? ' !important' : '';
+    const h60 = unit30Px * 2;
+    const h90 = unit30Px * 3;
+    return `
+        .iso-schedule-table {
+            width: 100%${imp};
+            border-collapse: collapse${imp};
+            font-size: ${tableFontPt}pt${imp};
+            font-family: "Times New Roman", Times, serif${imp};
+            color: #000${imp};
+            table-layout: fixed${imp};
+            border: 1px solid #000${imp};
+            margin: 0 0 6px 0${imp};
+            ${important ? 'page-break-inside: avoid !important; break-inside: avoid !important;' : ''}
+        }
+        .iso-schedule-table tr.iso-slot-row { height: ${unit30Px}px${imp}; }
+        .iso-schedule-table tr.iso-row-30 { height: ${unit30Px}px${imp}; }
+        .iso-schedule-table tr.iso-row-60 { height: ${h60}px${imp}; }
+        .iso-schedule-table tr.iso-row-90 { height: ${h90}px${imp}; }
+        .iso-schedule-table tr.lunch-row { height: ${lunchPx}px${imp}; max-height: ${lunchPx}px${imp}; }
+        .iso-schedule-table th, .iso-schedule-table td {
+            border: 1px solid #000${imp};
+            padding: 0${imp};
+            text-align: center${imp};
+            vertical-align: middle${imp};
+            height: auto${imp};
+            overflow: hidden${imp};
+            box-sizing: border-box${imp};
+        }
+        .iso-schedule-table td.iso-dur-30 { height: ${unit30Px}px${imp}; }
+        .iso-schedule-table td.iso-dur-60 { height: ${h60}px${imp}; }
+        .iso-schedule-table td.iso-dur-90 { height: ${h90}px${imp}; }
+        .iso-schedule-table td.iso-dur-long { height: auto${imp}; }
+        .iso-schedule-table td.lunch-break-cell {
+            height: ${lunchPx}px${imp};
+            max-height: ${lunchPx}px${imp};
+            font-weight: bold${imp};
+            font-size: ${thPt}pt${imp};
+            letter-spacing: 2px${imp};
+            text-align: center${imp};
+            vertical-align: middle${imp};
+            background-color: transparent${imp};
+        }
+        .iso-schedule-table th {
+            background-color: transparent !important;
+            padding: 4px 2px${imp};
+            height: ${headerPx}px${imp};
+            font-size: ${thPt}pt${imp};
+            font-weight: bold${imp};
+        }
+        .iso-schedule-table .time-cell {
+            white-space: nowrap${imp};
+            font-weight: bold${imp};
+            font-size: ${timePt}pt${imp};
+            padding: 2px 4px${imp};
+        }
+        .iso-schedule-table td.scheduled-cell { border: 1px solid #000 !important; }
+        .iso-schedule-table .schedule-cell { padding: 0${imp}; overflow: hidden${imp}; }
+        .iso-schedule-table .iso-empty-spacer { font-size: 1px${imp}; line-height: 1px${imp}; height: 1px${imp}; overflow: hidden${imp}; }
+        .cell-wrapper { display: flex${imp}; flex-direction: column${imp}; align-items: center${imp}; justify-content: center${imp}; width: 100%${imp}; height: 100%${imp}; box-sizing: border-box${imp}; }
+        .cell-wrapper.cell-multi { flex-direction: row${imp}; align-items: stretch${imp}; justify-content: stretch${imp}; }
+        .cell-free-activity { font-size: 8.5pt${imp}; text-align: center${imp}; padding: 2px 4px${imp}; line-height: 1.15${imp}; width: 100%${imp}; box-sizing: border-box${imp}; }
+        td.iso-dur-60 .cell-free-activity { font-size: 8pt${imp}; padding: 1px 3px${imp}; line-height: 1.1${imp}; }
+        td.iso-dur-30 .cell-free-activity { font-size: 6.8pt${imp}; padding: 0 2px${imp}; line-height: 1.05${imp}; }
+        .cell-content { display: flex${imp}; flex-direction: column${imp}; justify-content: center${imp}; padding: 2px 4px${imp}; height: 100%${imp}; overflow: hidden${imp}; box-sizing: border-box${imp}; line-height: 1.2${imp}; flex: 1${imp}; min-width: 0${imp}; width: 100%${imp}; }
+        .cell-content.compact { padding: 1px 3px${imp}; line-height: 1.08${imp}; }
+        .cell-subject { font-weight: bold${imp}; font-size: ${subjPt}pt${imp}; line-height: 1.2${imp}; white-space: nowrap${imp}; overflow: hidden${imp}; text-overflow: ellipsis${imp}; width: 100%${imp}; text-align: center${imp}; }
+        .cell-content.compact .cell-subject { font-size: ${compactSubjPt}pt${imp}; line-height: 1.05${imp}; }
+        td.iso-dur-60 .cell-content.compact .cell-subject { font-size: ${dur60SubjPt}pt${imp}; line-height: 1.08${imp}; }
+        .cell-section, .cell-professor { font-size: ${detailPt}pt${imp}; line-height: 1.2${imp}; white-space: nowrap${imp}; overflow: hidden${imp}; text-overflow: ellipsis${imp}; width: 100%${imp}; text-align: left${imp}; padding-left: 6px${imp}; box-sizing: border-box${imp}; margin-top: 1px${imp}; }
+        .cell-section { font-weight: bold${imp}; }
+        .cell-room { font-size: ${detailPt}pt${imp}; line-height: 1.2${imp}; white-space: nowrap${imp}; overflow: hidden${imp}; text-overflow: ellipsis${imp}; width: 100%${imp}; text-align: left${imp}; padding-left: 6px${imp}; box-sizing: border-box${imp}; margin-top: 1px${imp}; }
+        .cell-content.compact .cell-section, .cell-content.compact .cell-professor, .cell-content.compact .cell-room { font-size: ${compactDetailPt}pt${imp}; line-height: 1.05${imp}; padding-left: 3px${imp}; margin-top: 0${imp}; }
+        td.iso-dur-60 .cell-content.compact .cell-section, td.iso-dur-60 .cell-content.compact .cell-professor, td.iso-dur-60 .cell-content.compact .cell-room { font-size: ${dur60DetailPt}pt${imp}; line-height: 1.08${imp}; padding-left: 5px${imp}; margin-top: 0${imp}; }
+        td.iso-dur-30 .cell-content { padding: 0 2px${imp}; line-height: 1.0${imp}; flex-direction: row${imp}; flex-wrap: wrap${imp}; align-items: center${imp}; justify-content: center${imp}; gap: 0 4px${imp}; }
+        td.iso-dur-30 .cell-content .cell-subject { font-size: 7pt${imp}; line-height: 1.0${imp}; width: 100%${imp}; }
+        td.iso-dur-30 .cell-content .cell-section, td.iso-dur-30 .cell-content .cell-professor, td.iso-dur-30 .cell-content .cell-room { font-size: 6pt${imp}; line-height: 1.0${imp}; width: auto${imp}; max-width: 48%${imp}; padding-left: 0${imp}; margin-top: 0${imp}; text-align: center${imp}; }
+        .cell-wrapper.cell-multi .cell-content { padding: 1px 2px${imp}; }
+        .cell-wrapper.cell-multi .cell-subject { font-size: ${compactSubjPt}pt${imp}; line-height: 1.05${imp}; }
+        .cell-wrapper.cell-multi .cell-section, .cell-wrapper.cell-multi .cell-professor, .cell-wrapper.cell-multi .cell-room { font-size: ${compactDetailPt}pt${imp}; line-height: 1.05${imp}; padding-left: 3px${imp}; }
+    `;
+}
+
 const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user }) => {
     const [isExportOpen, setIsExportOpen] = useState(false);
 
@@ -145,26 +247,21 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     .iso-header-table .center { text-align: center; }
                                     .meta-info { display: flex; justify-content: space-between; align-items: center; font-size: 9.5pt; font-weight: bold; margin-bottom: 6px; text-transform: uppercase; font-family: "Times New Roman", Times, serif; color: #000; }
                                     .meta-value { font-weight: bold; text-decoration: underline; }
-                                    .iso-schedule-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; font-family: "Times New Roman", Times, serif; color: #000; table-layout: fixed; border: 1px solid #000; margin-bottom: 8px; }
-                                    .iso-schedule-table tr { height: 44px; max-height: 44px; }
-                                    .iso-schedule-table tr.lunch-row { height: 26px; max-height: 26px; }
-                                    .iso-schedule-table th, .iso-schedule-table td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; height: 44px; max-height: 44px; overflow: hidden; box-sizing: border-box; }
-                                    .iso-schedule-table td.lunch-break-cell { height: 26px; max-height: 26px; font-weight: bold; font-size: 9.5pt; letter-spacing: 2px; text-align: center; vertical-align: middle; background-color: transparent; }
-                                    .iso-schedule-table th { background-color: transparent !important; padding: 4px 2px; height: 26px; font-size: 9pt; font-weight: bold; }
-                                    .iso-schedule-table .time-cell { white-space: nowrap; font-weight: bold; font-size: 8.5pt; padding: 2px 4px; }
-                                    .iso-schedule-table td.scheduled-cell { border: 1px solid #000 !important; }
-                                    .iso-schedule-table .schedule-cell { padding: 0; overflow: hidden; height: 44px; max-height: 44px; }
-                                    .cell-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box; }
-                                    .cell-wrapper.cell-multi { flex-direction: row; align-items: stretch; justify-content: stretch; }
-                                    .cell-content { display: flex; flex-direction: column; justify-content: center; padding: 2px 4px; height: 100%; max-height: 44px; overflow: hidden; box-sizing: border-box; line-height: 1.2; flex: 1; min-width: 0; width: 100%; }
-                                    .cell-content.compact { padding: 1px 2px; line-height: 1.05; }
-                                    .cell-subject { font-weight: bold; font-size: 9pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
-                                    .cell-content.compact .cell-subject { font-size: 7.5pt; line-height: 1.05; }
-                                    .cell-section, .cell-professor { font-size: 8pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: left; padding-left: 6px; box-sizing: border-box; margin-top: 1px; }
-                                    .cell-section { font-weight: bold; }
-                                    .cell-content.compact .cell-section, .cell-content.compact .cell-professor { font-size: 6.5pt; line-height: 1.05; padding-left: 3px; margin-top: 0; }
-                                    .cell-room { font-size: 8pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: left; padding-left: 6px; box-sizing: border-box; margin-top: 1px; }
-                                    .cell-content.compact .cell-room { font-size: 6.5pt; line-height: 1.05; padding-left: 3px; margin-top: 0; }
+                                    ${buildIsoScheduleTableCss({
+                                        unit30Px: 20,
+                                        lunchPx: 26,
+                                        headerPx: 26,
+                                        tableFontPt: 8.5,
+                                        timePt: 8.5,
+                                        thPt: 9,
+                                        subjPt: 9,
+                                        detailPt: 8,
+                                        dur60SubjPt: 8.5,
+                                        dur60DetailPt: 7.5,
+                                        compactSubjPt: 7.5,
+                                        compactDetailPt: 6.5,
+                                        important: false
+                                    })}
                                     .signatures-section { display: flex; justify-content: space-between; margin-top: 10px; padding: 0 20px; font-size: 9pt; font-family: "Times New Roman", Times, serif; color: #000; }
                                     .signature-block { text-align: left; min-width: 250px; }
                                     .signature-block.right-aligned { text-align: left; min-width: 280px; padding-right: 40px; }
@@ -630,152 +727,21 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                             font-weight: bold !important; 
                                             text-decoration: underline !important; 
                                         }
-                                        .iso-schedule-table { 
-                                            width: 100% !important; 
-                                            border-collapse: collapse !important; 
-                                            font-size: 9pt !important; 
-                                            font-family: "Times New Roman", Times, serif !important;
-                                            table-layout: fixed !important; 
-                                            margin: 0 0 6px 0 !important; 
-                                            border: 1px solid #000 !important; 
-                                            page-break-inside: avoid !important;
-                                            break-inside: avoid !important;
-                                        }
-                                        .iso-schedule-table tr { 
-                                            height: 55px !important; 
-                                            max-height: 55px !important; 
-                                        }
-                                        .iso-schedule-table tr.lunch-row { 
-                                            height: 28px !important; 
-                                            max-height: 28px !important; 
-                                        }
-                                        .iso-schedule-table th, .iso-schedule-table td { 
-                                            border: 1px solid #000 !important; 
-                                            padding: 0 !important; 
-                                            text-align: center !important; 
-                                            vertical-align: middle !important; 
-                                            height: 55px !important; 
-                                            max-height: 55px !important; 
-                                            overflow: hidden !important; 
-                                            box-sizing: border-box !important; 
-                                        }
-                                        .iso-schedule-table td.lunch-break-cell { 
-                                            height: 28px !important; 
-                                            max-height: 28px !important; 
-                                            font-weight: bold !important; 
-                                            font-size: 10pt !important; 
-                                            letter-spacing: 2px !important; 
-                                            text-align: center !important; 
-                                            vertical-align: middle !important; 
-                                            background-color: transparent !important; 
-                                        }
-                                        .iso-schedule-table th { 
-                                            background-color: transparent !important; 
-                                            padding: 4px 2px !important; 
-                                            font-size: 9.5pt !important; 
-                                            font-weight: bold !important;
-                                            height: 28px !important; 
-                                        }
-                                        .iso-schedule-table .time-cell { 
-                                            white-space: nowrap !important; 
-                                            font-weight: bold !important; 
-                                            font-size: 9.5pt !important; 
-                                            padding: 2px 4px !important; 
-                                        }
-                                        .iso-schedule-table td.scheduled-cell { 
-                                            border: 1px solid #000 !important; 
-                                        }
-                                        .iso-schedule-table .schedule-cell { 
-                                            padding: 0 !important; 
-                                            overflow: hidden !important; 
-                                            height: 55px !important; 
-                                            max-height: 55px !important; 
-                                        }
-                                        .cell-wrapper { 
-                                            display: flex !important; 
-                                            flex-direction: column !important; 
-                                            align-items: center !important; 
-                                            justify-content: center !important; 
-                                            width: 100% !important; 
-                                            height: 100% !important; 
-                                            box-sizing: border-box !important; 
-                                        }
-                                        .cell-wrapper.cell-multi { 
-                                            flex-direction: row !important; 
-                                            align-items: stretch !important; 
-                                            justify-content: stretch !important; 
-                                        }
-                                        .cell-content { 
-                                            display: flex !important; 
-                                            flex-direction: column !important; 
-                                            justify-content: center !important; 
-                                            padding: 2px 4px !important; 
-                                            height: 100% !important; 
-                                            max-height: 55px !important; 
-                                            overflow: hidden !important; 
-                                            box-sizing: border-box !important; 
-                                            line-height: 1.2 !important; 
-                                            flex: 1 !important; 
-                                            min-width: 0 !important; 
-                                            width: 100% !important; 
-                                        }
-                                        .cell-content.compact { 
-                                            padding: 1px 2px !important; 
-                                            line-height: 1.1 !important; 
-                                        }
-                                        .cell-subject { 
-                                            font-weight: bold !important; 
-                                            font-size: 9.5pt !important; 
-                                            line-height: 1.2 !important; 
-                                            white-space: nowrap !important; 
-                                            overflow: hidden !important; 
-                                            text-overflow: ellipsis !important; 
-                                            width: 100% !important; 
-                                            text-align: center !important; 
-                                        }
-                                        .cell-content.compact .cell-subject { 
-                                            font-size: 8pt !important; 
-                                            line-height: 1.1 !important; 
-                                        }
-                                        .cell-section, .cell-professor { 
-                                            font-size: 8.5pt !important; 
-                                            line-height: 1.2 !important; 
-                                            white-space: nowrap !important; 
-                                            overflow: hidden !important; 
-                                            text-overflow: ellipsis !important; 
-                                            width: 100% !important; 
-                                            text-align: left !important; 
-                                            padding-left: 6px !important; 
-                                            box-sizing: border-box !important; 
-                                            margin-top: 1px !important; 
-                                        }
-                                        .cell-section { 
-                                            font-weight: bold !important; 
-                                        }
-                                        .cell-content.compact .cell-section, .cell-content.compact .cell-professor { 
-                                            font-size: 7pt !important; 
-                                            line-height: 1.1 !important; 
-                                            padding-left: 3px !important; 
-                                            margin-top: 0 !important; 
-                                        }
-                                        .cell-room { 
-                                            font-size: 8.5pt !important; 
-                                            line-height: 1.2 !important; 
-                                            white-space: nowrap !important; 
-                                            overflow: hidden !important; 
-                                            text-overflow: ellipsis !important; 
-                                            width: 100% !important; 
-                                            text-align: left !important; 
-                                            padding-left: 6px !important; 
-                                            box-sizing: border-box !important; 
-                                            margin-top: 1px !important; 
-                                        }
-                                        .cell-content.compact .cell-room { 
-                                            font-size: 7pt !important; 
-                                            line-height: 1.1 !important; 
-                                            padding-left: 3px !important; 
-                                            margin-top: 0 !important; 
-                                        }
+                                        ${buildIsoScheduleTableCss({
+                                            unit30Px: 21,
+                                            lunchPx: 26,
+                                            headerPx: 28,
+                                            tableFontPt: 9,
+                                            timePt: 9.5,
+                                            thPt: 9.5,
+                                            subjPt: 9.5,
+                                            detailPt: 8.5,
+                                            dur60SubjPt: 8.5,
+                                            dur60DetailPt: 7.5,
+                                            compactSubjPt: 7.5,
+                                            compactDetailPt: 6.5,
+                                            important: true
+                                        })}
                                         .signatures-section { 
                                             display: flex !important; 
                                             justify-content: space-between !important; 

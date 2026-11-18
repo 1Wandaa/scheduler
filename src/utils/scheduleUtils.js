@@ -425,7 +425,20 @@ export function isStandardOneAndHalfHourClass(schedule) {
   if (/^NSTP\b/i.test(code) || /ROTC|CWTS|LTS/i.test(name)) return false;
   if (code === 'FT 115' || code === 'FT 115L') return false;
 
-  // Split Lec/Lab courses derive per-meeting duration strictly from lectureHours/2 or labHours/2
+  // Explicit non-1.5h schedule duration (e.g. 0.5h, 1.0h, 2.0h, 3.0h) or non-1.5h customLabel range overrides subject defaults
+  if (Number(schedule.hours) > 0 && Number(schedule.hours) !== 1.5) {
+    return false;
+  }
+
+  let parsedCustom = null;
+  if (typeof schedule.timeSlot?.customLabel === 'string' && schedule.timeSlot.customLabel.includes('-')) {
+    parsedCustom = parseCustomTimeRange(schedule.timeSlot.customLabel, Number(schedule.hours) || 1.5);
+    if (parsedCustom?.valid && parsedCustom.durationHours > 0 && Math.abs(parsedCustom.durationHours - 1.5) > 0.01) {
+      return false;
+    }
+  }
+
+  // Split Lec/Lab courses derive per-meeting duration from lectureHours/2 or labHours/2 unless explicitly overridden above
   if (sub.hasLecLab) {
     if (comp === 'Lecture') {
       const lecPerMeeting = (Number(sub.lectureHours) || 2) / 2;
@@ -437,8 +450,12 @@ export function isStandardOneAndHalfHourClass(schedule) {
     }
   }
 
-  // Respect explicit non-1.5h schedule duration when set (e.g. 0.5h, 1.0h, 2.5h, 3.0h)
-  if (Number(schedule.hours) > 0 && Number(schedule.hours) !== 1.5 && !schedule.timeSlot?.customLabel) {
+  if (parsedCustom?.valid && Math.abs(parsedCustom.durationHours - 1.5) <= 0.01) {
+    return true;
+  }
+
+  // Respect explicit non-1.5h subject hoursPerMeeting when schedule.hours is unset
+  if (!sub.hasLecLab && !Number(schedule.hours) && Number(sub.hoursPerMeeting) > 0 && Number(sub.hoursPerMeeting) !== 1.5) {
     return false;
   }
 
@@ -473,8 +490,8 @@ export function getScheduleTimeRange(schedule, scheduleMode) {
   const effectiveHours = isOneAndHalf
     ? 1.5
     : (Number(schedule.hours) || (schedule.subject?.hasLecLab
-        ? (schedule.component === 'Lecture' ? ((Number(schedule.subject.lectureHours) || 2) / 2) : ((Number(schedule.subject.labHours) || 3) / 2))
-        : (Number(schedule.subject?.hoursPerMeeting) || 1.5)));
+      ? (schedule.component === 'Lecture' ? ((Number(schedule.subject.lectureHours) || 2) / 2) : ((Number(schedule.subject.labHours) || 3) / 2))
+      : (Number(schedule.subject?.hoursPerMeeting) || 1.5)));
 
   const clampRange = (start, end) => {
     if (start === null || end === null || start >= end) return { start: 0, end: 0 };
@@ -579,8 +596,8 @@ export function schedulesOverlap(a, b, scheduleMode) {
   if (!sharesDay) return false;
 
   const entityOverlap = entitiesMatch(a.room, b.room) ||
-                        entitiesMatch(a.professor, b.professor) ||
-                        entitiesMatch(a.section, b.section);
+    entitiesMatch(a.professor, b.professor) ||
+    entitiesMatch(a.section, b.section);
 
   if (!entityOverlap) return false;
 
@@ -1288,9 +1305,9 @@ export function getSmartScheduleRecommendations({
       candSections = unscheduledSections.length > 0
         ? unscheduledSections
         : (sections || []).filter(sec => {
-            const secSubs = sec.subjects || [];
-            return secSubs.some(id => String(id) === String(subject.id)) || (subject.code && secSubs.some(id => String(id) === String(subject.code))) || (subject.name && secSubs.some(id => String(id) === String(subject.name)));
-          });
+          const secSubs = sec.subjects || [];
+          return secSubs.some(id => String(id) === String(subject.id)) || (subject.code && secSubs.some(id => String(id) === String(subject.code))) || (subject.name && secSubs.some(id => String(id) === String(subject.name)));
+        });
     }
     if (candSections.length === 0) continue;
 

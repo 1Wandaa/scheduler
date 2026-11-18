@@ -7,7 +7,6 @@
 
 import { toast } from 'sonner';
 import { logActivity, LOG_ACTIONS } from './activityLogger';
-import { getMeetingTimeLabel, parseTimeToMinutes } from './scheduleUtils';
 import {
   FW_ISO_TIME_BLOCKS,
   getFacultyFreeTimeActivities,
@@ -675,15 +674,55 @@ export async function exportIsoToWord(user) {
 
     const tbodyRows = cloneTable.querySelectorAll('tbody tr');
     const totalRows = tbodyRows.length || 8;
-    const isIso8Block = totalRows <= 10;
-    // Set 48pt for class rows to give ample room for 4-line items (Code, Component, Prof, Room)
+    const hasSubSlotRows = !!cloneTable.querySelector('tbody tr.iso-slot-row');
+    const isIso8Block = !hasSubSlotRows && totalRows <= 10;
+    const unit30Pt = 17; // 30m = 17pt, 60m = 34pt, 90m = 51pt (fits 1 landscape page comfortably)
     const regularRowHeight = isIso8Block ? 48 : Math.max(16, Math.floor(370 / totalRows));
-    const lunchRowHeight = isIso8Block ? 20 : 18;
+    const lunchRowHeight = (hasSubSlotRows || isIso8Block) ? 20 : 18;
+
+    const cleanSubjectLabel = (rawSubj) => rawSubj
+      .replace(/\s*[-–—]?\s*\((?:Lecture|Laboratory|Lec|Lab)\)/gi, '')
+      .replace(/\s*[-–—]\s*(?:Lecture|Laboratory|Lec|Lab)\b/gi, '')
+      .trim();
+
+    const renderSingleIsoWordCell = (td, { cleanSubjCode, detailLabel, rawRoom, tdDur }) => {
+      td.setAttribute('align', 'left');
+      td.setAttribute('valign', 'middle');
+      td.style.verticalAlign = 'middle';
+
+      if (tdDur <= 30) {
+        const subLine = [detailLabel, rawRoom].filter(Boolean).join(' · ');
+        td.style.padding = '0.5pt 2pt';
+        td.innerHTML = `
+          <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 7pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.0;">${escapeHtml(cleanSubjCode)}</p>
+          ${subLine ? `<p align="center" style="font-family: 'Times New Roman', Times, serif; font-size: 6.5pt; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 0.5pt 0 0 0; text-align: center; color: #000000; line-height: 1.0;">${escapeHtml(subLine)}</p>` : ''}
+        `;
+      } else if (tdDur <= 60) {
+        td.style.padding = '1pt 2pt';
+        td.innerHTML = `
+          <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 9pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.05;">${escapeHtml(cleanSubjCode)}</p>
+          ${detailLabel ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 8pt; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 0.5pt 0 0 5pt; mso-para-margin-left: 5pt; text-align: left; color: #000000; line-height: 1.05;">${escapeHtml(detailLabel)}</p>` : ''}
+          ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 8pt; margin: 0.5pt 0 0 5pt; mso-para-margin-left: 5pt; text-align: left; color: #000000; line-height: 1.05;">${escapeHtml(rawRoom)}</p>` : ''}
+        `;
+      } else {
+        td.style.padding = '2pt 3pt';
+        td.innerHTML = `
+          <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 10pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.15;">${escapeHtml(cleanSubjCode)}</p>
+          ${detailLabel ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${escapeHtml(detailLabel)}</p>` : ''}
+          ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${escapeHtml(rawRoom)}</p>` : ''}
+        `;
+      }
+    };
 
     // Transform cell contents to crisp, fixed-width Word cells matching reference typography
     tbodyRows.forEach(tr => {
       const isLunchRow = tr.classList.contains('lunch-row') || !!tr.querySelector('.lunch-break-cell');
-      const currentRowHeight = isLunchRow ? lunchRowHeight : regularRowHeight;
+      const rowDur = hasSubSlotRows && !isLunchRow
+        ? (parseInt(tr.getAttribute('data-duration') || '30', 10) || 30)
+        : 90;
+      const currentRowHeight = isLunchRow
+        ? lunchRowHeight
+        : (hasSubSlotRows ? Math.round((rowDur / 30) * unit30Pt) : regularRowHeight);
       tr.style.height = `${currentRowHeight}pt`;
       tr.style.msoHeightRule = 'at-least';
 
@@ -692,9 +731,17 @@ export async function exportIsoToWord(user) {
 
       const tds = tr.querySelectorAll('td');
       tds.forEach((td) => {
+        const tdDur = hasSubSlotRows
+          ? (parseInt(td.getAttribute('data-duration') || String(rowDur), 10) || rowDur)
+          : 90;
+        const tdHeightPt = hasSubSlotRows ? Math.round((tdDur / 30) * unit30Pt) : regularRowHeight;
+
         if (td.classList.contains('time-cell')) {
           td.setAttribute('width', `${timeWidth}`);
           td.style.width = `${timeWidth}pt`;
+          if (hasSubSlotRows && !isLunchRow) {
+            td.style.height = `${tdHeightPt}pt`;
+          }
           td.style.fontFamily = '"Times New Roman", Times, serif';
           td.style.fontSize = '10.5pt';
           td.style.fontWeight = 'bold';
@@ -705,6 +752,7 @@ export async function exportIsoToWord(user) {
         } else if (td.classList.contains('lunch-break-cell')) {
           td.setAttribute('width', `${dayWidth * dayCount}`);
           td.style.width = `${dayWidth * dayCount}pt`;
+          td.style.height = `${lunchRowHeight}pt`;
           td.style.fontFamily = '"Times New Roman", Times, serif';
           td.style.fontSize = '11pt';
           td.style.fontWeight = 'bold';
@@ -717,10 +765,13 @@ export async function exportIsoToWord(user) {
         } else {
           td.setAttribute('width', `${dayWidth}`);
           td.style.width = `${dayWidth}pt`;
+          if (hasSubSlotRows) {
+            td.style.height = `${tdHeightPt}pt`;
+          }
           td.style.fontFamily = '"Times New Roman", Times, serif';
 
           const isScheduled = td.classList.contains('scheduled-cell');
-          if (isScheduled) {
+          if (hasSubSlotRows || isScheduled) {
             td.style.border = '1.0pt solid #000000';
           } else {
             if (isHourRow) {
@@ -737,22 +788,21 @@ export async function exportIsoToWord(user) {
           if (contentBlocks.length > 0) {
             if (isMultiClass) {
               const subWidth = Math.floor(100 / contentBlocks.length);
+              const multiSubjPt = tdDur <= 60 ? '7.5pt' : '8.5pt';
+              const multiDetailPt = tdDur <= 60 ? '6.5pt' : '7.5pt';
               const subCells = contentBlocks.map((blk, bIdx) => {
                 const rawSubj = blk.querySelector('.cell-subject')?.textContent.trim() || '';
                 const rawProf = blk.querySelector('.cell-professor')?.textContent.trim() || '';
                 const rawSec = blk.querySelector('.cell-section')?.textContent.trim() || '';
                 const rawRoom = blk.querySelector('.cell-room')?.textContent.trim() || '';
                 const detailLabel = rawSec || rawProf;
-                const cleanSubjCode = rawSubj
-                  .replace(/\s*[-–—]?\s*\((?:Lecture|Laboratory|Lec|Lab)\)/gi, '')
-                  .replace(/\s*[-–—]\s*(?:Lecture|Laboratory|Lec|Lab)\b/gi, '')
-                  .trim();
+                const cleanSubjCode = cleanSubjectLabel(rawSubj);
 
                 return `
                   <td width="${subWidth}%" align="left" valign="middle" style="width: ${subWidth}%; font-family: 'Times New Roman', Times, serif; border: none; ${bIdx > 0 ? 'border-left: 1.0pt solid #000000;' : ''} padding: 1pt 2pt;">
-                    <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 8.5pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.05;">${escapeHtml(cleanSubjCode)}</p>
-                    ${detailLabel ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 1pt 0 0 3pt; mso-para-margin-left: 3pt; text-align: left; color: #000000; line-height: 1.05;">${escapeHtml(detailLabel)}</p>` : ''}
-                    ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 7.5pt; margin: 1pt 0 0 3pt; mso-para-margin-left: 3pt; text-align: left; color: #000000; line-height: 1.05;">${escapeHtml(rawRoom)}</p>` : ''}
+                    <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: ${multiSubjPt}; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.05;">${escapeHtml(cleanSubjCode)}</p>
+                    ${detailLabel ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: ${multiDetailPt}; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 1pt 0 0 3pt; mso-para-margin-left: 3pt; text-align: left; color: #000000; line-height: 1.05;">${escapeHtml(detailLabel)}</p>` : ''}
+                    ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: ${multiDetailPt}; margin: 1pt 0 0 3pt; mso-para-margin-left: 3pt; text-align: left; color: #000000; line-height: 1.05;">${escapeHtml(rawRoom)}</p>` : ''}
                   </td>
                 `;
               }).join('');
@@ -768,21 +818,12 @@ export async function exportIsoToWord(user) {
               const rawProf = blk.querySelector('.cell-professor')?.textContent.trim() || '';
               const rawSec = blk.querySelector('.cell-section')?.textContent.trim() || '';
               const rawRoom = blk.querySelector('.cell-room')?.textContent.trim() || '';
-              const detailLabel = rawSec || rawProf;
-              const cleanSubjCode = rawSubj
-                .replace(/\s*[-–—]?\s*\((?:Lecture|Laboratory|Lec|Lab)\)/gi, '')
-                .replace(/\s*[-–—]\s*(?:Lecture|Laboratory|Lec|Lab)\b/gi, '')
-                .trim();
-
-              td.setAttribute('align', 'left');
-              td.setAttribute('valign', 'middle');
-              td.style.verticalAlign = 'middle';
-              td.style.padding = '2pt 3pt';
-              td.innerHTML = `
-                <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 10pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.15;">${escapeHtml(cleanSubjCode)}</p>
-                ${detailLabel ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${escapeHtml(detailLabel)}</p>` : ''}
-                ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${escapeHtml(rawRoom)}</p>` : ''}
-              `;
+              renderSingleIsoWordCell(td, {
+                cleanSubjCode: cleanSubjectLabel(rawSubj),
+                detailLabel: rawSec || rawProf,
+                rawRoom,
+                tdDur
+              });
             }
           } else {
             // Fallback for direct elements
@@ -793,20 +834,12 @@ export async function exportIsoToWord(user) {
             const detailLabel = rawSec || rawProf;
 
             if (rawSubj || rawProf || rawRoom) {
-              const cleanSubjCode = rawSubj
-                .replace(/\s*[-–—]?\s*\((?:Lecture|Laboratory|Lec|Lab)\)/gi, '')
-                .replace(/\s*[-–—]\s*(?:Lecture|Laboratory|Lec|Lab)\b/gi, '')
-                .trim();
-
-              td.setAttribute('align', 'left');
-              td.setAttribute('valign', 'middle');
-              td.style.verticalAlign = 'middle';
-              td.style.padding = '2pt 3pt';
-              td.innerHTML = `
-                <p align="center" style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-size: 10pt; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.15;">${escapeHtml(cleanSubjCode)}</p>
-                ${detailLabel ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; ${isFacultyMode ? 'font-weight: bold;' : ''} margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${escapeHtml(detailLabel)}</p>` : ''}
-                ${rawRoom ? `<p align="left" style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; margin: 1.5pt 0 0 6pt; mso-para-margin-left: 6pt; text-align: left; color: #000000; line-height: 1.15;">${escapeHtml(rawRoom)}</p>` : ''}
-              `;
+              renderSingleIsoWordCell(td, {
+                cleanSubjCode: cleanSubjectLabel(rawSubj),
+                detailLabel,
+                rawRoom,
+                tdDur
+              });
             } else {
               const freeAct = td.querySelector('.cell-free-activity')?.textContent.trim() || '';
               td.setAttribute('align', 'center');
@@ -814,9 +847,15 @@ export async function exportIsoToWord(user) {
               td.style.verticalAlign = 'middle';
               if (freeAct) {
                 td.style.border = '1.0pt solid #000000';
-                td.innerHTML = `<p align="center" style="font-family: 'Times New Roman', Times, serif; font-size: 9.5pt; margin: 0; padding: 2pt; text-align: center; color: #000000; line-height: 1.15;">${escapeHtml(freeAct)}</p>`;
+                const freePt = tdDur <= 30 ? '7pt' : (tdDur <= 60 ? '8.5pt' : '9.5pt');
+                const freePad = tdDur <= 30 ? '0.5pt 2pt' : (tdDur <= 60 ? '1pt 2pt' : '2pt');
+                td.style.padding = freePad;
+                td.innerHTML = `<p align="center" style="font-family: 'Times New Roman', Times, serif; font-size: ${freePt}; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.1;">${escapeHtml(freeAct)}</p>`;
               } else {
-                td.innerHTML = '&nbsp;';
+                td.style.padding = '0';
+                td.style.fontSize = '1pt';
+                td.style.lineHeight = '1pt';
+                td.innerHTML = '<p style="font-size: 1pt; line-height: 1pt; margin: 0; padding: 0; mso-line-height-rule: exactly;">&nbsp;</p>';
               }
             }
           }
@@ -827,7 +866,7 @@ export async function exportIsoToWord(user) {
     cloneTable.setAttribute('border', '1');
     cloneTable.setAttribute('bordercolor', '#000000');
     cloneTable.setAttribute('cellspacing', '0');
-    cloneTable.setAttribute('cellpadding', '1');
+    cloneTable.setAttribute('cellpadding', hasSubSlotRows ? '0' : '1');
     cloneTable.className = 'iso-schedule-table';
     cloneTable.style.width = '730pt';
     cloneTable.style.borderCollapse = 'collapse';
