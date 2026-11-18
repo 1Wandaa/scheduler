@@ -496,7 +496,7 @@ function AutoScheduler({
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }))
             .map(r => ({
               value: r.id,
-              label: r.name + (r.type && r.type !== 'Lecture' ? ` [${r.type}]` : '')
+              label: r.name + (r.type && r.type !== 'Lecture' ? ` (${r.type})` : '')
             }))
         }));
     }
