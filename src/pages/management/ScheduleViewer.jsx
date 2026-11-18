@@ -17,7 +17,11 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     const [viewType, setViewType] = useState(location.state?.viewTarget?.viewType || 'department');
     const [selectedId, setSelectedId] = useState(location.state?.viewTarget?.selectedId || user?.department || '');
     const [deptSectionId, setDeptSectionId] = useState(location.state?.viewTarget?.deptSectionId || '');
-    const [selectedYearLevel, setSelectedYearLevel] = useState(user?.yearLevel ? String(user.yearLevel) : '');
+    const [selectedYearLevel, setSelectedYearLevel] = useState(
+        location.state?.viewTarget
+            ? (location.state.viewTarget.selectedYearLevel ? String(location.state.viewTarget.selectedYearLevel) : '')
+            : (user?.yearLevel ? String(user.yearLevel) : '')
+    );
     const [previewImage, setPreviewImage] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isDeleteMode, setIsDeleteMode] = useState(false);
@@ -25,9 +29,28 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     const [freeTimeActivities, setFreeTimeActivities] = useState({});
 
     const hasAppliedInitialTargetRef = React.useRef(!!location.state?.viewTarget);
-    const initialUserAppliedRef = React.useRef(false);
+    const initialUserAppliedRef = React.useRef(!!location.state?.viewTarget);
     const prevSelectedIdRef = React.useRef(selectedId);
     const prevViewTypeRef = React.useRef(viewType);
+
+    useEffect(() => {
+        const vt = location.state?.viewTarget;
+        if (!vt) return;
+        hasAppliedInitialTargetRef.current = true;
+        initialUserAppliedRef.current = true;
+        if (vt.viewType) setViewType(vt.viewType);
+        if (vt.selectedId !== undefined) {
+            prevSelectedIdRef.current = vt.selectedId;
+            setSelectedId(vt.selectedId);
+        }
+        setSelectedYearLevel(vt.selectedYearLevel ? String(vt.selectedYearLevel) : '');
+        if (vt.deptSectionId !== undefined) {
+            setDeptSectionId(vt.deptSectionId);
+        }
+        if (vt.openFreeTime !== undefined) {
+            setIsFreeTimeMode(Boolean(vt.openFreeTime));
+        }
+    }, [location.state?.viewTarget]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -120,22 +143,32 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         }
     }, [selectedId, viewType]);
 
-    // Update section filter based on department and year level, prioritizing the user's registered section
+    // Update section filter based on department and year level, prioritizing an already-selected valid section or the user's registered section
     useEffect(() => {
+        if (sections.length === 0) return;
         if (viewType === 'department' && selectedId) {
-            let matching = sections.filter(sec => sec.name.toUpperCase().startsWith(String(selectedId).toUpperCase()));
+            const targetDept = String(selectedId).trim().toUpperCase();
+            let matching = sections.filter(sec => {
+                const secDept = (sec.program || sec.department || '').trim().toUpperCase();
+                const secName = (sec.name || '').trim().toUpperCase();
+                return secDept === targetDept || secName.startsWith(targetDept);
+            });
             if (selectedYearLevel) {
                 matching = matching.filter(sec => String(sec.yearLevel) === String(selectedYearLevel));
             }
+            matching.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
+
             if (matching.length > 0) {
+                if (deptSectionId && matching.some(sec => String(sec.id) === String(deptSectionId))) {
+                    return;
+                }
+
                 // If user has a specific section and it's in the matching list, select it
                 const userSecMatch = user?.section
-                    ? matching.find(sec => sec.id === user.section || (sec.name && sec.name.trim().toUpperCase() === user.section.trim().toUpperCase()))
+                    ? matching.find(sec => String(sec.id) === String(user.section) || (sec.name && sec.name.trim().toUpperCase() === user.section.trim().toUpperCase()))
                     : null;
 
-                const nextId = userSecMatch 
-                    ? userSecMatch.id 
-                    : (deptSectionId && matching.some(sec => sec.id === deptSectionId) ? deptSectionId : matching[0].id);
+                const nextId = userSecMatch ? userSecMatch.id : matching[0].id;
 
                 if (nextId !== deptSectionId) {
                     const timer = setTimeout(() => setDeptSectionId(nextId), 0);

@@ -128,9 +128,83 @@ function AutoScheduler({
     return [];
   }, [engineMode, targetId, schedules]);
 
-  const handleNavigateView = (tab) => {
+  const resolveSectionViewTarget = (secOrId) => {
+    if (!secOrId) return null;
+    const sec = typeof secOrId === 'object'
+      ? (sections?.find(s => String(s.id) === String(secOrId.id)) || secOrId)
+      : sections?.find(s => String(s.id) === String(secOrId) || (s.name && s.name.trim().toLowerCase() === String(secOrId).trim().toLowerCase()));
+    if (!sec) return null;
+
+    const rawProg = (sec.department || sec.program || '').trim();
+    const upperProg = rawProg.toUpperCase();
+    const namePrefix = (sec.name || '').trim().split(/\s+/)[0]?.toUpperCase();
+    let deptCode = '';
+    if (['BSCS', 'BAEL', 'BSOA', 'BSFT'].includes(upperProg)) {
+      deptCode = upperProg;
+    } else if (['BSCS', 'BAEL', 'BSOA', 'BSFT'].includes(namePrefix)) {
+      deptCode = namePrefix;
+    } else if (upperProg.includes('ENGLISH') || upperProg.includes('BAEL')) {
+      deptCode = 'BAEL';
+    } else if (upperProg.includes('COMPUTER') || upperProg.includes('BSCS')) {
+      deptCode = 'BSCS';
+    } else if (upperProg.includes('OFFICE') || upperProg.includes('BSOA')) {
+      deptCode = 'BSOA';
+    } else if (upperProg.includes('FOOD') || upperProg.includes('BSFT')) {
+      deptCode = 'BSFT';
+    } else {
+      deptCode = namePrefix || upperProg;
+    }
+
+    return {
+      viewType: 'department',
+      selectedId: deptCode,
+      deptSectionId: String(sec.id),
+      selectedYearLevel: ''
+    };
+  };
+
+  const buildViewTarget = (mode = engineMode, target = targetId, scheduledItems = result?.schedule) => {
+    if (mode === 'section' && target) {
+      return resolveSectionViewTarget(target);
+    }
+    if (mode === 'faculty' && target) {
+      return {
+        viewType: 'faculty',
+        selectedId: String(target)
+      };
+    }
+    if (mode === 'room' && target) {
+      return {
+        viewType: 'room',
+        selectedId: String(target)
+      };
+    }
+    if (Array.isArray(scheduledItems) && scheduledItems.length > 0) {
+      const q = resultFilter.trim().toLowerCase();
+      if (q) {
+        const matched = scheduledItems.find(curr =>
+          (curr.section?.name || '').toLowerCase().includes(q) ||
+          (curr.subject?.code || '').toLowerCase().includes(q) ||
+          (curr.subject?.name || '').toLowerCase().includes(q) ||
+          (curr.professor?.name || '').toLowerCase().includes(q) ||
+          (curr.room?.name || '').toLowerCase().includes(q)
+        );
+        if (matched?.section) {
+          return resolveSectionViewTarget(matched.section);
+        }
+      }
+      if (scheduledItems[0]?.section) {
+        return resolveSectionViewTarget(scheduledItems[0].section);
+      }
+    }
+    return null;
+  };
+
+  const handleNavigateView = (tab, state = null) => {
     if (onNavigateTab) {
-      onNavigateTab(tab);
+      onNavigateTab(tab, state);
+    } else if (state) {
+      navigate(`/dashboard/${tab}`, { state });
     } else {
       navigate(`/dashboard/${tab}`);
       window.dispatchEvent(new CustomEvent('change-tab', { detail: tab }));
@@ -308,15 +382,16 @@ function AutoScheduler({
             unscheduled: finalUnscheduled,
             prescriptions: [],
             error: r.error || null,
-            mode: activeEngineMode
+            mode: activeEngineMode,
+            targetId: activeTargetId
           });
 
+          const viewTarget = buildViewTarget(activeEngineMode, activeTargetId, savedSchedules);
           toast.success(`Saved ${writtenCount} schedule${writtenCount > 1 ? 's' : ''}!`, {
             action: {
               label: 'View Timetable',
               onClick: () => {
-                navigate('/dashboard/view-schedules');
-                window.dispatchEvent(new CustomEvent('change-tab', { detail: 'view-schedules' }));
+                handleNavigateView('view-schedules', viewTarget ? { viewTarget } : null);
               }
             }
           });
@@ -961,7 +1036,10 @@ function AutoScheduler({
               <button
                 type="button"
                 className="autosched-action-btn"
-                onClick={() => handleNavigateView('view-schedules')}
+                onClick={() => {
+                  const viewTarget = buildViewTarget(result?.mode || engineMode, result?.targetId ?? targetId, result?.schedule);
+                  handleNavigateView('view-schedules', viewTarget ? { viewTarget } : null);
+                }}
               >
                 <Calendar size={15} />
                 <span>View Timetable</span>

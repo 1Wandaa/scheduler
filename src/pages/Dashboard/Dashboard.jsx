@@ -113,12 +113,12 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
     }
   }, [pathParts, user, isFaculty, isAdmin, navigate]);
 
-  const setActiveTab = (tab) => {
-    if (tab === activeTab) return;
+  const setActiveTab = (tab, state) => {
+    if (tab === activeTab && !state) return;
     if (tab === 'dashboard') {
-      navigate('/dashboard');
+      navigate('/dashboard', state ? { state } : undefined);
     } else {
-      navigate(`/dashboard/${tab}`);
+      navigate(`/dashboard/${tab}`, state ? { state } : undefined);
     }
   };
 
