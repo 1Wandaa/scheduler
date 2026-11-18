@@ -134,6 +134,44 @@ export function professorMatchesSubject(professor, subject) {
 }
 
 /**
+ * Check whether a professor is explicitly assigned to teach a subject in a section
+ * via `section.subjectInstructors` or `professor.sectionSubjectMap`.
+ */
+export function professorIsAssignedToSubjectSection(professor, subject, section) {
+  if (!professor?.id || !subject || !section) return false;
+  const profId = String(professor.id).trim();
+  const subId = String(subject.id || '').trim().toLowerCase();
+  const subCode = String(subject.code || '').trim().toLowerCase();
+  const subName = String(subject.name || '').trim().toLowerCase();
+
+  const matchesSubKey = (rawKey) => {
+    const k = String(rawKey || '').trim().toLowerCase();
+    if (!k) return false;
+    if ((subId && k === subId) || (subCode && k === subCode)) return true;
+    return Boolean(!subId && !subCode && subName && k === subName) || Boolean(subName && k === subName);
+  };
+
+  if (section.subjectInstructors && typeof section.subjectInstructors === 'object') {
+    const matchedKey = Object.keys(section.subjectInstructors).find(matchesSubKey);
+    if (matchedKey && String(section.subjectInstructors[matchedKey] || '').trim() === profId) {
+      return true;
+    }
+  }
+
+  if (professor.sectionSubjectMap && typeof professor.sectionSubjectMap === 'object') {
+    const secKey = Object.keys(professor.sectionSubjectMap).find(k => entitiesMatch(k, section));
+    if (secKey) {
+      const mappedSubs = professor.sectionSubjectMap[secKey];
+      if (Array.isArray(mappedSubs) && mappedSubs.some(matchesSubKey)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
  * Get the index of a time slot in the active slots array.
  * @param {Object} timeSlot
  * @param {'standard'|'fourDay'} [scheduleMode]
@@ -1185,6 +1223,9 @@ export function getSmartScheduleRecommendations({
   } else if (formData.professor) {
     const prof = professors.find(p => p.id === formData.professor);
     candidateSubjects = activeSemesterSubjects.filter(s => prof && professorMatchesSubject(prof, s));
+    if (candidateSubjects.length === 0 && prof) {
+      candidateSubjects = activeSemesterSubjects;
+    }
   } else if (formData.section) {
     const sec = sections.find(s => s.id === formData.section);
     if (sec) {
@@ -1258,7 +1299,7 @@ export function getSmartScheduleRecommendations({
       let candProfs = [];
       if (formData.professor) {
         const foundProf = professors.find(p => p.id === formData.professor);
-        if (foundProf && professorMatchesSubject(foundProf, subject)) candProfs = [foundProf];
+        if (foundProf) candProfs = [foundProf];
       } else {
         candProfs = getEligibleProfessors(professors, subject, section);
       }

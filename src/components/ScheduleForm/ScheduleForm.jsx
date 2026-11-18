@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TIME_SLOTS, DAYS, FOUR_DAY_DAYS, isLunchSlot, overlapsLunchBreak } from '../../config/constants';
 import {
-  getEligibleProfessors,
   professorMatchesSubject,
+  professorIsAssignedToSubjectSection,
   slotsNeededFromIndex,
   getMeetingTimeLabel,
   findScheduleConflicts,
@@ -69,13 +69,6 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
           newData.room = '';
         } else {
           const sub = subjects.find(s => s.id === value);
-          // If professor was selected, verify they can teach the newly selected subject
-          if (newData.professor) {
-            const prof = professors.find(p => p.id === newData.professor);
-            if (prof && sub && !professorMatchesSubject(prof, sub)) {
-              newData.professor = '';
-            }
-          }
           // If section was selected, verify it is enrolled in the newly selected subject
           if (newData.section) {
             const sec = sections ? sections.find(s => s.id === newData.section) : null;
@@ -87,7 +80,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               }
             }
           }
-          // If room was selected, verify it is allowed for the newly selected subject
+          // If room was selected, verify it is allowed for the newly selected subject and active professor/section
           if (newData.room && sub) {
             const r = rooms.find(room => room.id === newData.room);
             const sec = sections ? sections.find(s => s.id === newData.section) : null;
@@ -107,32 +100,12 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
       } else if (name === 'professor') {
         if (value) {
           const prof = professors.find(p => p.id === value);
-          // If subject was selected, verify it matches the newly selected professor
-          if (newData.subject) {
-            const sub = subjects.find(s => s.id === newData.subject);
-            if (prof && sub && !professorMatchesSubject(prof, sub)) {
-              newData.subject = '';
-            }
-          }
-          // If section was selected, verify it is eligible for the newly selected professor
-          if (newData.section) {
-            const sec = sections ? sections.find(s => s.id === newData.section) : null;
-            if (sec && prof) {
-              if (newData.subject) {
-                const sub = subjects.find(s => s.id === newData.subject);
-                const elig = sub ? getEligibleProfessors(professors, sub, sec) : [];
-                if (!elig.some(p => String(p.id) === String(prof.id))) {
-                  newData.section = '';
-                }
-              }
-            }
-          }
           // If room was selected, verify professor is allowed in this room
           if (newData.room && prof) {
             const r = rooms.find(room => room.id === newData.room);
             const sub = subjects.find(s => s.id === newData.subject);
             const sec = sections ? sections.find(s => s.id === newData.section) : null;
-            if (r && sub && !isProfessorAllowedInRoom(r, prof, sub, sec, rooms)) {
+            if (r && !isProfessorAllowedInRoom(r, prof, sub, sec, rooms)) {
               newData.room = '';
             }
           }
@@ -151,22 +124,12 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               }
             }
           }
-          // If professor was selected, verify eligibility for this section
-          if (newData.professor) {
-            const prof = professors.find(p => p.id === newData.professor);
-            if (sec && prof && newData.subject) {
-              const sub = subjects.find(s => s.id === newData.subject);
-              const elig = sub ? getEligibleProfessors(professors, sub, sec) : [];
-              if (!elig.some(p => String(p.id) === String(prof.id))) {
-                newData.professor = '';
-              }
-            }
-          }
-          // If room was selected, verify room is allowed for this section
+          // If room was selected, verify room is allowed for this section and selected professor
           if (newData.room && sec) {
             const r = rooms.find(room => room.id === newData.room);
             const sub = subjects.find(s => s.id === newData.subject);
-            if (r && sub && !isRoomAllowedFor(r, sub, sec)) {
+            const prof = professors.find(p => p.id === newData.professor);
+            if (r && ((!isRoomAllowedFor(r, sub, sec)) || (prof && !isProfessorAllowedInRoom(r, prof, sub, sec, rooms)))) {
               newData.room = '';
             }
           }
@@ -198,11 +161,8 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
   // Active semester subjects base
   const activeSemesterSubjects = subjects.filter(s => !activeSemester || !s.semester || s.semester === 'Both' || s.semester === activeSemester);
 
-  // Eligible Subjects: filtered by active semester, selected professor's subjects, and selected section's subjects
+  // Eligible Subjects: filtered by active semester and selected section's enrolled subjects
   const eligibleSubjects = activeSemesterSubjects.filter(sub => {
-    if (selectedProfessor && !professorMatchesSubject(selectedProfessor, sub)) {
-      return false;
-    }
     if (selectedSection) {
       const secSubjects = selectedSection.subjects || [];
       const isEnrolled = secSubjects.some(s => entitiesMatch(s, sub));
@@ -211,45 +171,37 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     return true;
   });
 
-  // Eligible Sections: filtered by selected subject and selected professor
+  // Eligible Sections: filtered by selected subject enrollment
   const eligibleSections = sections ? sections.filter(sec => {
-    const secSubjects = sec.subjects || [];
-
     if (selectedSubject) {
-      const isEnrolled = secSubjects.some(s => entitiesMatch(s, selectedSubject));
-      if (!isEnrolled) return false;
+      const secSubjects = sec.subjects || [];
+      return secSubjects.some(s => entitiesMatch(s, selectedSubject));
     }
-
-    if (selectedProfessor) {
-      if (selectedSubject) {
-        const elig = getEligibleProfessors(professors, selectedSubject, sec);
-        if (!elig.some(p => String(p.id) === String(selectedProfessor.id))) return false;
-      } else {
-        const profSubjects = activeSemesterSubjects.filter(sub => professorMatchesSubject(selectedProfessor, sub));
-        const takesAnyProfSubject = profSubjects.some(sub =>
-          secSubjects.some(s => entitiesMatch(s, sub)) &&
-          getEligibleProfessors(professors, sub, sec).some(p => String(p.id) === String(selectedProfessor.id))
-        );
-        if (!takesAnyProfSubject) return false;
-      }
-    }
-
     return true;
   }) : [];
 
-  // Eligible Professors: filtered by selected subject and selected section
-  const eligibleProfessors = selectedSubject
-    ? getEligibleProfessors(professors, selectedSubject, selectedSection)
-    : selectedSection
-      ? professors.filter(p => {
-        const secSubjects = selectedSection.subjects || [];
-        const profSubjects = activeSemesterSubjects.filter(sub => professorMatchesSubject(p, sub));
-        return profSubjects.some(sub =>
-          secSubjects.some(s => entitiesMatch(s, sub)) &&
-          getEligibleProfessors(professors, sub, selectedSection).some(ep => String(ep.id) === String(p.id))
-        );
-      })
-      : professors;
+  const getProfDisplayName = (prof) => prof?.name || `${prof?.lastName || ''}, ${prof?.firstName || ''}`.trim();
+
+  const isProfAssignedToSection = (prof, sec) => {
+    if (!prof || !sec) return false;
+    const profId = String(prof.id || '').trim();
+    const hasAssigned = (prof.assignedSections || []).some(secRef => entitiesMatch(secRef, sec));
+    const hasMapped = Boolean(
+      prof.sectionSubjectMap && Object.keys(prof.sectionSubjectMap).some(k => entitiesMatch(k, sec))
+    );
+    const hasInstructor = Boolean(
+      sec.subjectInstructors && Object.values(sec.subjectInstructors).some(pid => String(pid || '').trim() === profId)
+    );
+    return hasAssigned || hasMapped || hasInstructor;
+  };
+
+  // Recommended professors for the selected subject (specialized or explicitly assigned)
+  const recommendedSubjectProfessors = selectedSubject
+    ? (professors || []).filter(p =>
+        professorMatchesSubject(p, selectedSubject) ||
+        (selectedSection && professorIsAssignedToSubjectSection(p, selectedSubject, selectedSection))
+      )
+    : [];
 
   const currentRenderHours = selectedSubject?.hasLecLab 
     ? (formData.component === 'Lecture' ? ((Number(selectedSubject.lectureHours) || 2) / 2) : ((Number(selectedSubject.labHours) || 3) / 2)) 
@@ -861,15 +813,14 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   const others = [];
 
                   sorted.forEach(sub => {
-                    const isEnrolled = enrolledIds.includes(sub.id) ||
-                      (sub.code && enrolledIds.includes(sub.code)) ||
-                      (sub.name && enrolledIds.includes(sub.name));
+                    const isEnrolled = enrolledIds.some(s => entitiesMatch(s, sub));
+                    const isProfSpec = selectedProfessor && professorMatchesSubject(selectedProfessor, sub);
                     
                     if (isEnrolled) {
                       enrolled.push({
                         value: sub.id,
                         label: `${sub.code} - ${sub.name}`,
-                        badge: 'Enrolled',
+                        badge: isProfSpec ? 'Specialized' : 'Enrolled',
                         badgeColor: '#059669'
                       });
                     } else {
@@ -897,14 +848,11 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                 }
 
                 if (selectedProfessor) {
-                  const specs = selectedProfessor.specialization || [];
                   const specialized = [];
                   const others = [];
 
                   sorted.forEach(sub => {
-                    const isSpec = specs.includes(sub.id) ||
-                      (sub.code && specs.includes(sub.code)) ||
-                      (sub.name && specs.includes(sub.name));
+                    const isSpec = professorMatchesSubject(selectedProfessor, sub);
                     
                     if (isSpec) {
                       specialized.push({
@@ -977,7 +925,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               placeholder="Select a section..."
               required
               options={(() => {
-                const sorted = eligibleSections ? [...eligibleSections].sort((a, b) => (a.name || '').localeCompare(b.name || '')) : [];
+                const sorted = eligibleSections ? [...eligibleSections].sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })) : [];
 
                 if (selectedSubject) {
                   const matching = [];
@@ -985,9 +933,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
                   sorted.forEach(sec => {
                     const secSubjects = sec.subjects || [];
-                    const isEnrolled = secSubjects.includes(selectedSubject.id) ||
-                      (selectedSubject.code && secSubjects.includes(selectedSubject.code)) ||
-                      (selectedSubject.name && secSubjects.includes(selectedSubject.name));
+                    const isEnrolled = secSubjects.some(s => entitiesMatch(s, selectedSubject));
                     
                     if (isEnrolled) {
                       matching.push({
@@ -1025,8 +971,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   const others = [];
 
                   sorted.forEach(sec => {
-                    const isAssigned = (selectedProfessor.assignedSections || []).includes(sec.id) ||
-                      (sec.name && (selectedProfessor.assignedSections || []).includes(sec.name));
+                    const isAssigned = isProfAssignedToSection(selectedProfessor, sec);
                     
                     if (isAssigned) {
                       assigned.push({
@@ -1078,47 +1023,59 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
               placeholder="Select a professor..."
               required
               options={(() => {
-                const sorted = [...eligibleProfessors].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                const sorted = [...(professors || [])].sort((a, b) =>
+                  getProfDisplayName(a).localeCompare(getProfDisplayName(b), undefined, { numeric: true, sensitivity: 'base' })
+                );
+
+                const formatProfOption = (professor, badge = null, badgeColor = null) => ({
+                  value: professor.id,
+                  label: `${getProfDisplayName(professor)}${professor.department ? ` (${professor.department})` : ''}`,
+                  badge,
+                  badgeColor
+                });
 
                 if (selectedSubject) {
-                  const specialized = [];
+                  const assignedRecommended = [];
+                  const specRecommended = [];
                   const others = [];
 
                   sorted.forEach(professor => {
                     const isConflict = checkConflict({ professor });
                     const isSpec = professorMatchesSubject(professor, selectedSubject);
+                    const isAssigned = selectedSection
+                      ? professorIsAssignedToSubjectSection(professor, selectedSubject, selectedSection)
+                      : false;
 
-                    if (isSpec) {
-                      specialized.push({
-                        value: professor.id,
-                        label: `${professor.name}${professor.department ? ` (${professor.department})` : ''}`,
-                        badge: isConflict ? '(Occupied)' : 'Specialized',
-                        badgeColor: isConflict ? '#ef4444' : '#059669'
-                      });
+                    if (isSpec || isAssigned) {
+                      const badge = isConflict ? '(Occupied)' : (isSpec ? 'Specialized' : 'Recommended');
+                      const badgeColor = isConflict ? '#ef4444' : '#059669';
+                      const option = formatProfOption(professor, badge, badgeColor);
+                      if (isAssigned) assignedRecommended.push(option);
+                      else specRecommended.push(option);
                     } else {
-                      others.push({
-                        value: professor.id,
-                        label: `${professor.name}${professor.department ? ` (${professor.department})` : ''}`,
-                        badge: isConflict ? '(Occupied)' : null,
-                        badgeColor: isConflict ? '#ef4444' : null
-                      });
+                      others.push(formatProfOption(
+                        professor,
+                        isConflict ? '(Occupied)' : null,
+                        isConflict ? '#ef4444' : null
+                      ));
                     }
                   });
 
+                  const recommended = [...assignedRecommended, ...specRecommended];
                   const groups = [];
-                  if (specialized.length > 0) {
+                  if (recommended.length > 0) {
                     groups.push({
-                      label: `Recommended for ${selectedSubject.code}`,
-                      options: specialized
+                      label: `Recommended for ${selectedSubject.code || selectedSubject.name}`,
+                      options: recommended
                     });
                   }
                   if (others.length > 0) {
                     groups.push({
-                      label: 'Other Faculty',
+                      label: recommended.length > 0 ? 'Other Faculty' : 'All Faculty',
                       options: others
                     });
                   }
-                  return groups.length > 0 ? groups : sorted.map(p => ({ value: p.id, label: p.name }));
+                  return groups.length > 0 ? groups : sorted.map(p => formatProfOption(p));
                 }
 
                 if (selectedSection) {
@@ -1127,24 +1084,23 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
 
                   sorted.forEach(professor => {
                     const isConflict = checkConflict({ professor });
-                    const isAdviser = selectedSection.adviser === professor.id || selectedSection.adviser === professor.name;
-                    const isAssigned = (professor.assignedSections || []).includes(selectedSection.id) ||
-                      (selectedSection.name && (professor.assignedSections || []).includes(selectedSection.name));
-                    
+                    const profId = String(professor.id || '').trim();
+                    const isAdviser = (selectedSection.adviser && String(selectedSection.adviser).trim() === profId) ||
+                      (getProfDisplayName(professor) && entitiesMatch(selectedSection.adviser, getProfDisplayName(professor)));
+                    const isAssigned = isProfAssignedToSection(professor, selectedSection);
+
                     if (isAdviser || isAssigned) {
-                      sectionFaculty.push({
-                        value: professor.id,
-                        label: `${professor.name}${professor.department ? ` (${professor.department})` : ''}`,
-                        badge: isConflict ? '(Occupied)' : isAdviser ? 'Adviser' : 'Assigned',
-                        badgeColor: isConflict ? '#ef4444' : '#059669'
-                      });
+                      sectionFaculty.push(formatProfOption(
+                        professor,
+                        isConflict ? '(Occupied)' : (isAdviser ? 'Adviser' : 'Recommended'),
+                        isConflict ? '#ef4444' : '#059669'
+                      ));
                     } else {
-                      others.push({
-                        value: professor.id,
-                        label: `${professor.name}${professor.department ? ` (${professor.department})` : ''}`,
-                        badge: isConflict ? '(Occupied)' : null,
-                        badgeColor: isConflict ? '#ef4444' : null
-                      });
+                      others.push(formatProfOption(
+                        professor,
+                        isConflict ? '(Occupied)' : null,
+                        isConflict ? '#ef4444' : null
+                      ));
                     }
                   });
 
@@ -1157,21 +1113,20 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
                   }
                   if (others.length > 0) {
                     groups.push({
-                      label: 'Other Faculty',
+                      label: sectionFaculty.length > 0 ? 'Other Faculty' : 'All Faculty',
                       options: others
                     });
                   }
-                  return groups.length > 0 ? groups : sorted.map(p => ({ value: p.id, label: p.name }));
+                  return groups.length > 0 ? groups : sorted.map(p => formatProfOption(p));
                 }
 
                 return sorted.map(professor => {
                   const isConflict = checkConflict({ professor });
-                  return {
-                    value: professor.id,
-                    label: `${professor.name}${professor.department ? ` (${professor.department})` : ''}`,
-                    badge: isConflict ? '(Occupied)' : null,
-                    badgeColor: isConflict ? '#ef4444' : null
-                  };
+                  return formatProfOption(
+                    professor,
+                    isConflict ? '(Occupied)' : null,
+                    isConflict ? '#ef4444' : null
+                  );
                 });
               })()}
             />
@@ -1586,9 +1541,15 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
         </div>
       )}
 
-      {selectedSubject && eligibleProfessors.length === 0 && (
+      {selectedSubject && (professors || []).length === 0 && (
         <div className="info-box danger">
-          No faculty is authorized for this subject{selectedSection ? ` in section ${selectedSection.name}` : ''}. Assign a specialization in Faculty Management.
+          No faculty members found. Add faculty in Faculty Management.
+        </div>
+      )}
+
+      {selectedSubject && (professors || []).length > 0 && recommendedSubjectProfessors.length === 0 && (
+        <div className="info-box">
+          No faculty currently specializes in this subject{selectedSection ? ` for section ${selectedSection.name}` : ''}. All faculty members remain available in the Professor dropdown for flexible assignment.
         </div>
       )}
 

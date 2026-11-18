@@ -10,6 +10,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, writeBatch, que
 import { TIME_SLOTS, getScheduleConfig, isLunchSlot, overlapsLunchBreak } from '../config/constants';
 import {
   professorMatchesSubject,
+  professorIsAssignedToSubjectSection,
   findScheduleConflicts,
   slotsNeededFromIndex,
   getSectionDepartment,
@@ -32,7 +33,7 @@ import { generateConflictResolutions } from './conflictResolutionService';
  * @returns {{ valid: boolean, errors: string[], warnings: string[] }}
  */
 export function validateScheduleEntry(
-  { room, professor, subject, section, day, timeSlot, excludeScheduleId = null, scheduleMode, hours, component, respectLabs = true },
+  { room, professor, subject, section, day, timeSlot, excludeScheduleId = null, scheduleMode, hours, component, respectLabs = true, allowNonSpecialized = false },
   activeSchedules,
   rooms
 ) {
@@ -48,19 +49,13 @@ export function validateScheduleEntry(
   if (!timeSlot?.id) errors.push('Time slot is required.');
 
   // Specialization / explicit section assignment check
-  const isExplicitlyAssigned = Boolean(
-    section && professor?.id && (
-      (section.subjectInstructors && (
-        String(section.subjectInstructors[subject?.id]) === String(professor.id) ||
-        (subject?.code && String(section.subjectInstructors[subject.code]) === String(professor.id))
-      )) ||
-      (professor.sectionSubjectMap && section.id && (professor.sectionSubjectMap[section.id] || []).some(
-        s => String(s) === String(subject?.id) || String(s) === String(subject?.code)
-      ))
-    )
-  );
+  const isExplicitlyAssigned = professorIsAssignedToSubjectSection(professor, subject, section);
   if (professor && subject && !professorMatchesSubject(professor, subject) && !isExplicitlyAssigned) {
-    errors.push(`Faculty "${professor.name}" is not authorized to teach "${subject.code}".`);
+    if (allowNonSpecialized) {
+      warnings.push(`Faculty "${professor.name}" does not list "${subject.code}" as a specialization (scheduled as manual override).`);
+    } else {
+      errors.push(`Faculty "${professor.name}" is not authorized to teach "${subject.code}".`);
+    }
   }
 
   // Section enrollment check
@@ -250,6 +245,7 @@ export async function addSchedule(newSchedule, activeSchedules, rooms, activeSem
       scheduleMode,
       hours: newSchedule?.hours,
       component: newSchedule?.component,
+      allowNonSpecialized: true,
     },
     activeSchedules,
     rooms
@@ -293,6 +289,7 @@ export async function updateSchedule(scheduleId, newDay, newTimeSlotOrId, schedu
       excludeScheduleId: scheduleId,
       hours: existing.hours,
       component: existing.component,
+      allowNonSpecialized: true,
     },
     activeSchedules,
     rooms
@@ -359,7 +356,8 @@ export async function addSchedulesBatch(newSchedules, activeSchedules, rooms, ac
         scheduleMode, 
         hours: s.hours, 
         component: s.component,
-        respectLabs 
+        respectLabs,
+        allowNonSpecialized: options?.allowNonSpecialized === true
       },
       [...activeSchedules, ...validSchedules],
       rooms

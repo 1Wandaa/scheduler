@@ -323,7 +323,7 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
 
   const validator = {
     validateAssignment: (room, professor, subject, section, day, timeSlot, scheduleMode = 'standard', hours, component) =>
-      validateScheduleEntry({ room, professor, subject, section, day, timeSlot, scheduleMode, hours, component }, enrichedSchedules, rooms),
+      validateScheduleEntry({ room, professor, subject, section, day, timeSlot, scheduleMode, hours, component, allowNonSpecialized: true }, enrichedSchedules, rooms),
     addSchedule: (room, professor, subject, section, day, timeSlot, hours, component) => ({
       schedule: { room, professor, subject, section, day, timeSlot, semester: activeSemester, schoolYear: activeSchoolYear, hours, component }
     }),
