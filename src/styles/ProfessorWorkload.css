@@ -480,7 +480,9 @@
   }
 
   .pw-controls {
-    top: -16px;
+    position: static;
+    top: auto;
+    z-index: auto;
     padding: 12px;
     flex-direction: column;
     align-items: stretch;

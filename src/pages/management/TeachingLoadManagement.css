@@ -1492,7 +1492,9 @@
 
 @media (max-width: 768px) {
   .hub-main-header {
-    top: -16px;
+    position: static;
+    top: auto;
+    z-index: auto;
     padding: 14px 14px;
     gap: 10px;
   }
