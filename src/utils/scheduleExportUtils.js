@@ -1016,6 +1016,7 @@ export async function exportRoomUtilizationToWord(user) {
           const rowSpan = parseInt(td.getAttribute('rowspan') || '1', 10);
           const isTime = td.classList.contains('time-cell') || td.classList.contains('time-col') || cIdx === 0;
           const isScheduled = td.classList.contains('scheduled-cell') || td.classList.contains('cell-scheduled');
+          const bgColor = isScheduled ? (td.getAttribute('data-bg-color') || td.style.backgroundColor || '#109EEF') : '#ffffff';
 
           const classesList = [];
           if (isScheduled) {
@@ -1065,6 +1066,7 @@ export async function exportRoomUtilizationToWord(user) {
               gridMatrix[targetRow][cIdx] = {
                 isTime,
                 isScheduled,
+                bgColor,
                 timeLabel,
                 classesList,
                 spanOffset: s,
@@ -1177,8 +1179,9 @@ export async function exportRoomUtilizationToWord(user) {
               `;
             }
 
+            const cellBg = cellData.bgColor || '#109EEF';
             cellsHtml.push(`
-              <td rowspan="${span}" width="${w}" bgcolor="#00b0f0" style="width: ${w}pt; height: ${totalCellHeight}pt; mso-height-rule: at-least; border: 1.0pt solid #000000; mso-border-alt: solid #000000 1.0pt; background-color: #00b0f0; text-align: center; vertical-align: middle; padding: 0.5pt 1pt; overflow: visible; font-family: Arial, Helvetica, sans-serif;">
+              <td rowspan="${span}" width="${w}" bgcolor="${cellBg}" style="width: ${w}pt; height: ${totalCellHeight}pt; mso-height-rule: at-least; border: 1.0pt solid #000000; mso-border-alt: solid #000000 1.0pt; background-color: ${cellBg}; text-align: center; vertical-align: middle; padding: 0.5pt 1pt; overflow: visible; font-family: Arial, Helvetica, sans-serif;">
                 ${contentHtml}
               </td>
             `);

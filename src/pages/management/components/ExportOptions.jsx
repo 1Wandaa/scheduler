@@ -338,7 +338,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 }
                                 .room-util-timetable td.scheduled-cell,
                                 .room-util-timetable td.cell-scheduled {
-                                    background-color: #00b0f0 !important;
+                                    background-color: var(--cell-bg, #109EEF) !important;
                                     border: 1px solid #000 !important;
                                     color: #000;
                                     -webkit-print-color-adjust: exact;
@@ -1016,7 +1016,7 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                 }
                                 .room-util-timetable td.scheduled-cell,
                                 .room-util-timetable td.cell-scheduled { 
-                                    background-color: #00b0f0 !important; 
+                                    background-color: var(--cell-bg, #109EEF) !important; 
                                     border: 1px solid #000 !important; 
                                     color: #000 !important; 
                                     font-weight: bold !important;

@@ -18,11 +18,83 @@ function formatProfessorName(name) {
     return `${initial}. ${surname}`;
 }
 
+// Department color palette matching ScheduleTable & constants
+const DEPT_COLORS = {
+    BSCS: '#109EEF',
+    BAEL: '#EAB308',
+    BSOA: '#8B5CF6',
+    BSFT: '#16A34A',
+};
+const DEFAULT_DEPT_COLOR = '#109EEF';
+
+function resolveDeptCodeFromText(text, departments = []) {
+    if (!text) return null;
+    const upper = String(text).toUpperCase().trim();
+    if (!upper) return null;
+
+    if (Array.isArray(departments) && departments.length > 0) {
+        for (const d of departments) {
+            const dId = (d.id || d.code || '').toUpperCase().trim();
+            if (dId && (upper === dId || upper.includes(dId))) {
+                return dId;
+            }
+        }
+    }
+
+    if (upper.includes('BSCS') || upper.includes('COMPUTER SCIENCE')) return 'BSCS';
+    if (upper.includes('BAEL') || upper.includes('ENGLISH LANGUAGE')) return 'BAEL';
+    if (upper.includes('BSOA') || upper.includes('OFFICE ADMINISTRATION')) return 'BSOA';
+    if (upper.includes('BSFT') || upper.includes('FOOD TECHNOLOGY')) return 'BSFT';
+    return null;
+}
+
+function getDeptBgColor(deptCode, departments = []) {
+    if (!deptCode) return DEFAULT_DEPT_COLOR;
+    const upper = String(deptCode).toUpperCase().trim();
+    if (Array.isArray(departments) && departments.length > 0) {
+        const found = departments.find(d => (d.id || d.code || '').toUpperCase().trim() === upper);
+        if (found?.color) return found.color;
+    }
+    return DEPT_COLORS[upper] || DEFAULT_DEPT_COLOR;
+}
+
+function computeScheduleDeptColor(schedule, departments = []) {
+    if (!schedule) return DEFAULT_DEPT_COLOR;
+
+    const sec = schedule.section;
+    if (sec) {
+        const fromSecName = resolveDeptCodeFromText(typeof sec === 'string' ? sec : sec.name, departments);
+        if (fromSecName) return getDeptBgColor(fromSecName, departments);
+
+        const fromSecProg = resolveDeptCodeFromText(sec.program || sec.department, departments);
+        if (fromSecProg) return getDeptBgColor(fromSecProg, departments);
+    }
+
+    const subj = schedule.subject;
+    if (subj) {
+        const subDepts = Array.isArray(subj.departments)
+            ? subj.departments
+            : (subj.department ? [subj.department] : []);
+        for (const d of subDepts) {
+            const code = resolveDeptCodeFromText(d, departments);
+            if (code) return getDeptBgColor(code, departments);
+        }
+    }
+
+    if (schedule.professor?.department) {
+        const fromProf = resolveDeptCodeFromText(schedule.professor.department, departments);
+        if (fromProf) return getDeptBgColor(fromProf, departments);
+    }
+
+    return DEFAULT_DEPT_COLOR;
+}
+
 const PrintableRoomUtilization = ({ 
     scheduleItems = [], 
     roomName = '', 
     semesterInfo = '', 
     scheduleMode = 'standard',
+    departments = [],
     targetDepartment = '',
     programName = ''
 }) => {
@@ -30,55 +102,60 @@ const PrintableRoomUtilization = ({
     const activeTimeSlots = config.timeSlots || (scheduleMode === 'fourDay' ? FOUR_DAY_TIME_SLOTS : TIME_SLOTS);
     const displayDays = DAYS;
 
-    // Chair info resolution matching ScheduleTable and PrintableSchedule
-    const chairInfo = useMemo(() => {
-        return getProgramChairInfo({
-            department: targetDepartment,
-            programName,
-            scheduleItems
-        });
-    }, [targetDepartment, programName, scheduleItems]);
-
-    // Full department title resolution matching ScheduleTable
-    const fullDepartmentName = useMemo(() => {
+    // Determine majority department among scheduled classes in this room
+    const majorityDept = useMemo(() => {
         const deptCounts = {};
         for (const s of scheduleItems) {
             let code = null;
-            if (s.section?.name) {
-                const name = s.section.name.toUpperCase();
-                if (name.includes('BSCS')) code = 'BSCS';
-                else if (name.includes('BAEL')) code = 'BAEL';
-                else if (name.includes('BSOA')) code = 'BSOA';
-                else if (name.includes('BSFT')) code = 'BSFT';
+            if (s.section) {
+                code = resolveDeptCodeFromText(s.section.name, departments) ||
+                    resolveDeptCodeFromText(s.section.program || s.section.department, departments);
             }
             if (!code && s.subject) {
                 const subDepts = Array.isArray(s.subject.departments) ? s.subject.departments : (s.subject.department ? [s.subject.department] : []);
-                if (subDepts.includes('BSCS')) code = 'BSCS';
-                else if (subDepts.includes('BAEL')) code = 'BAEL';
-                else if (subDepts.includes('BSOA')) code = 'BSOA';
-                else if (subDepts.includes('BSFT')) code = 'BSFT';
+                for (const d of subDepts) {
+                    const matched = resolveDeptCodeFromText(d, departments);
+                    if (matched) {
+                        code = matched;
+                        break;
+                    }
+                }
             }
             if (code) {
                 deptCounts[code] = (deptCounts[code] || 0) + 1;
             }
         }
 
-        let majorityDept = null;
+        let topDept = null;
         let maxCount = 0;
         for (const [d, count] of Object.entries(deptCounts)) {
             if (count > maxCount) {
                 maxCount = count;
-                majorityDept = d;
+                topDept = d;
             }
         }
+        return topDept;
+    }, [scheduleItems, departments]);
 
-        if (majorityDept === 'BSCS') return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
-        if (majorityDept === 'BAEL') return 'BACHELOR OF ARTS IN ENGLISH LANGUAGE DEPARTMENT';
-        if (majorityDept === 'BSOA') return 'BACHELOR OF SCIENCE IN OFFICE ADMINISTRATION DEPARTMENT';
-        if (majorityDept === 'BSFT') return 'BACHELOR OF SCIENCE IN FOOD TECHNOLOGY DEPARTMENT';
+    // Chair info resolution matching ScheduleTable and PrintableSchedule
+    const chairInfo = useMemo(() => {
+        return getProgramChairInfo({
+            department: targetDepartment || majorityDept,
+            programName,
+            scheduleItems
+        });
+    }, [targetDepartment, majorityDept, programName, scheduleItems]);
+
+    // Full department title resolution matching ScheduleTable
+    const fullDepartmentName = useMemo(() => {
+        const activeDept = (targetDepartment || majorityDept || '').toUpperCase();
+        if (activeDept === 'BSCS') return 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
+        if (activeDept === 'BAEL') return 'BACHELOR OF ARTS IN ENGLISH LANGUAGE DEPARTMENT';
+        if (activeDept === 'BSOA') return 'BACHELOR OF SCIENCE IN OFFICE ADMINISTRATION DEPARTMENT';
+        if (activeDept === 'BSFT') return 'BACHELOR OF SCIENCE IN FOOD TECHNOLOGY DEPARTMENT';
 
         return chairInfo?.programName ? `${chairInfo.programName.toUpperCase()} DEPARTMENT` : 'BACHELOR OF SCIENCE IN COMPUTER SCIENCE DEPARTMENT';
-    }, [scheduleItems, chairInfo]);
+    }, [targetDepartment, majorityDept, chairInfo]);
 
     // Summary unique subjects map matching ScheduleTable
     const { uniqueSubjectsList, totalUnits } = useMemo(() => {
@@ -495,7 +572,7 @@ const PrintableRoomUtilization = ({
                     }
                     .room-util-timetable td.scheduled-cell,
                     .room-util-timetable td.cell-scheduled {
-                        background-color: #00b0f0 !important;
+                        background-color: var(--cell-bg, #109EEF) !important;
                         border: 1px solid #000 !important;
                         color: #000 !important;
                         font-weight: bold !important;
@@ -672,18 +749,21 @@ const PrintableRoomUtilization = ({
                                         const cellSchedules = scheduleGridMap.get(cellKey) || [];
                                         const rowSpan = cellSpanMap.get(cellKey) || 1;
                                         const isScheduled = cellSchedules.length > 0;
+                                        const primaryBgColor = isScheduled ? computeScheduleDeptColor(cellSchedules[0], departments) : 'transparent';
 
                                         return (
                                             <td 
                                                 key={cellKey} 
                                                 rowSpan={rowSpan} 
                                                 className={isScheduled ? 'scheduled-cell cell-scheduled' : ''} 
+                                                data-bg-color={isScheduled ? primaryBgColor : undefined}
                                                 style={{ 
                                                     padding: '1px 2px', 
                                                     textAlign: 'center', 
                                                     verticalAlign: 'middle',
                                                     height: `${printSlotHeight}px`,
-                                                    backgroundColor: isScheduled ? '#00b0f0' : 'transparent',
+                                                    backgroundColor: primaryBgColor,
+                                                    '--cell-bg': primaryBgColor,
                                                     WebkitPrintColorAdjust: 'exact',
                                                     printColorAdjust: 'exact',
                                                     fontWeight: isScheduled ? 'bold' : 'normal',
@@ -691,6 +771,7 @@ const PrintableRoomUtilization = ({
                                                 }}
                                             >
                                                 {cellSchedules.map((cls, idx) => {
+                                                    const clsBgColor = computeScheduleDeptColor(cls, departments);
                                                     const profFormatted = formatProfessorName(cls.professor?.name);
                                                     const rawSubj = cls.subject?.code || cls.subjectCode || '—';
                                                     let displaySubj = rawSubj;
@@ -714,6 +795,7 @@ const PrintableRoomUtilization = ({
                                                         <div 
                                                             key={cls.id || idx} 
                                                             className="cell-content"
+                                                            data-bg-color={clsBgColor}
                                                             style={{ 
                                                                 display: 'flex', 
                                                                 flexDirection: 'column', 
@@ -723,6 +805,7 @@ const PrintableRoomUtilization = ({
                                                                 padding: '1px 2px',
                                                                 marginTop: idx > 0 ? '1px' : '0',
                                                                 borderTop: idx > 0 ? '1px solid #000' : 'none',
+                                                                backgroundColor: cellSchedules.length > 1 ? clsBgColor : 'transparent',
                                                                 color: '#000',
                                                                 boxSizing: 'border-box',
                                                                 overflow: 'hidden'
