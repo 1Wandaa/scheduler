@@ -1369,12 +1369,18 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
     let professor = null;
     let schedules = [];
     let semesterInfo = '';
+    let activeSemesterOpt = '';
+    let activeSchoolYearOpt = '';
+    let providedFreeTime = null;
     let user = null;
 
     if (optionsOrUser && optionsOrUser.professor) {
       professor = optionsOrUser.professor;
       schedules = optionsOrUser.schedules || [];
       semesterInfo = optionsOrUser.semesterInfo || '';
+      activeSemesterOpt = optionsOrUser.activeSemester || optionsOrUser.semester || '';
+      activeSchoolYearOpt = optionsOrUser.activeSchoolYear || optionsOrUser.schoolYear || '';
+      providedFreeTime = optionsOrUser.freeTimeActivities || null;
       user = optionsOrUser.user || null;
     } else {
       user = optionsOrUser;
@@ -1422,7 +1428,11 @@ export async function exportFacultyWorkloadToWord(optionsOrUser = {}) {
     // 2. Process 8-Block Class Schedule with Free-Time Activities
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     const dayColWidths = { Monday: 94, Tuesday: 94, Wednesday: 94, Thursday: 94, Friday: 94 };
-    const freeTimeActivities = getFacultyFreeTimeActivities(professor, profName);
+    const freeTimeActivities = providedFreeTime || getFacultyFreeTimeActivities(professor, profName, {
+      semester: activeSemesterOpt,
+      schoolYear: activeSchoolYearOpt,
+      semesterInfo
+    });
     const scheduleGrid = buildFacultyWorkloadScheduleGrid(schedules, freeTimeActivities, 'standard');
     const assignRows = Math.max(1, uniqueAssignments.length);
     const schedBlockRowHeightPt = assignRows <= 4 ? 38 : (assignRows <= 6 ? 34 : (assignRows <= 8 ? 30 : 25));

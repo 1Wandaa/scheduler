@@ -87,19 +87,13 @@ function computeDeptColor(schedule, departments = []) {
 }
 
 function FreeTimeCellEditor({ day, freeSeg, activePresetBrush, onUpdateFreeTimeSegment }) {
-  const [draft, setDraft] = useState(freeSeg?.text || '');
-  const isFocusedRef = useRef(false);
-
-  useEffect(() => {
-    if (!isFocusedRef.current) {
-      setDraft(freeSeg?.text || '');
-    }
-  }, [freeSeg?.text]);
+  const [draft, setDraft] = useState(null);
+  const displayValue = draft !== null ? draft : (freeSeg?.text || '');
 
   const handleApplyPreset = (e) => {
     if (activePresetBrush && onUpdateFreeTimeSegment) {
       e.stopPropagation();
-      setDraft(activePresetBrush);
+      setDraft(null);
       onUpdateFreeTimeSegment(day, freeSeg.slotIds, activePresetBrush);
     }
   };
@@ -122,13 +116,13 @@ function FreeTimeCellEditor({ day, freeSeg, activePresetBrush, onUpdateFreeTimeS
         <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#2563eb', background: '#dbeafe', padding: '1px 5px', borderRadius: '4px', lineHeight: 1.2 }}>
           {freeSeg.timeLabel}
         </span>
-        {draft && onUpdateFreeTimeSegment && (
+        {displayValue && onUpdateFreeTimeSegment && (
           <button
             type="button"
             onMouseDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              setDraft('');
+              setDraft(null);
               onUpdateFreeTimeSegment(day, freeSeg.slotIds, '');
             }}
             title="Clear activity text"
@@ -151,12 +145,9 @@ function FreeTimeCellEditor({ day, freeSeg, activePresetBrush, onUpdateFreeTimeS
       <input
         type="text"
         list="faculty-free-time-presets"
-        value={draft}
-        onFocus={() => {
-          isFocusedRef.current = true;
-        }}
+        value={displayValue}
         onBlur={() => {
-          isFocusedRef.current = false;
+          setDraft(null);
         }}
         onChange={(e) => {
           const val = e.target.value;
@@ -177,10 +168,10 @@ function FreeTimeCellEditor({ day, freeSeg, activePresetBrush, onUpdateFreeTimeS
           width: '100%',
           padding: '4px 6px',
           fontSize: '0.75rem',
-          fontWeight: draft ? 600 : 400,
+          fontWeight: displayValue ? 600 : 400,
           color: '#0f172a',
-          backgroundColor: draft ? '#eff6ff' : '#ffffff',
-          border: `1.5px solid ${draft ? '#3b82f6' : '#94a3b8'}`,
+          backgroundColor: displayValue ? '#eff6ff' : '#ffffff',
+          border: `1.5px solid ${displayValue ? '#3b82f6' : '#94a3b8'}`,
           borderRadius: '6px',
           outline: 'none',
           textAlign: 'center',
@@ -1581,6 +1572,7 @@ const ScheduleTable = React.memo(function ScheduleTable({
                   >
                     {cellSchedules.length === 0 && freeSeg && isFreeTimeMode && (
                       <FreeTimeCellEditor
+                        key={`${title || ''}-${semesterInfo || ''}-${day}-${(freeSeg.slotIds || []).join('_')}`}
                         day={day}
                         freeSeg={freeSeg}
                         activePresetBrush={activePresetBrush}

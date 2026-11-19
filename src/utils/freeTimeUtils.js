@@ -76,28 +76,124 @@ function normalizeProfKey(name) {
   return String(name).trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
 }
 
+function normalizeTermSegment(value) {
+  if (!value) return '';
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
 /**
- * Retrieve free-time activities map for a professor.
+ * Parses a combined semesterInfo label (e.g. "1st Semester, School Year 2026-2027")
+ * into { semester, schoolYear }.
+ */
+export function parseSemesterInfoToTerm(semesterInfo = '') {
+  if (!semesterInfo || typeof semesterInfo !== 'string') {
+    return { semester: '', schoolYear: '' };
+  }
+  const trimmed = semesterInfo.trim();
+  if (!trimmed) return { semester: '', schoolYear: '' };
+
+  const match = trimmed.match(/^(.+?)(?:,?\s*(?:school\s*year|s\.?y\.?)\s+|\s+)(\d{4}\s*-\s*\d{4})$/i);
+  if (match) {
+    let sem = match[1].replace(/,\s*$/, '').trim();
+    if (/^first\s+semester$/i.test(sem) || /^1st\s+sem\.?$/i.test(sem)) sem = '1st Semester';
+    else if (/^second\s+semester$/i.test(sem) || /^2nd\s+sem\.?$/i.test(sem)) sem = '2nd Semester';
+    const sy = match[2].replace(/\s+/g, '');
+    return { semester: sem, schoolYear: sy };
+  }
+
+  return { semester: trimmed, schoolYear: '' };
+}
+
+/**
+ * Builds a canonical, Firestore-safe and localStorage-safe term key
+ * scoped to both semester and school year.
+ */
+export function getFreeTimeTermKey(semesterOrOptions = '', schoolYear = '') {
+  let sem = '';
+  let sy = '';
+
+  if (semesterOrOptions && typeof semesterOrOptions === 'object') {
+    sem = semesterOrOptions.semester || semesterOrOptions.activeSemester || '';
+    sy = semesterOrOptions.schoolYear || semesterOrOptions.activeSchoolYear || '';
+    if (!sem && !sy && semesterOrOptions.semesterInfo) {
+      const parsed = parseSemesterInfoToTerm(semesterOrOptions.semesterInfo);
+      sem = parsed.semester;
+      sy = parsed.schoolYear;
+    }
+  } else {
+    sem = semesterOrOptions || '';
+    sy = schoolYear || '';
+    if (sem && !sy) {
+      const parsed = parseSemesterInfoToTerm(sem);
+      if (parsed.schoolYear) {
+        sem = parsed.semester;
+        sy = parsed.schoolYear;
+      }
+    }
+  }
+
+  const normSem = normalizeTermSegment(sem);
+  const normSy = normalizeTermSegment(sy);
+  if (!normSem && !normSy) return '';
+  if (normSem && normSy) return `${normSem}__${normSy}`;
+  return normSem ? `sem_${normSem}` : `sy_${normSy}`;
+}
+
+function sanitizeActivityMap(rawMap) {
+  const cleaned = {};
+  if (!rawMap || typeof rawMap !== 'object' || Array.isArray(rawMap)) return cleaned;
+  Object.entries(rawMap).forEach(([k, v]) => {
+    if (k === 'byTerm') return;
+    if (typeof v === 'string' && v.trim() !== '') {
+      cleaned[k] = v;
+    }
+  });
+  return cleaned;
+}
+
+/**
+ * Retrieve free-time activities map for a professor scoped to a specific semester & school year.
  * Prioritizes local storage cache (instant & authoritative on the client) with Firestore fallback.
  * Keys are `${Day}-${slotId}` (e.g., "Monday-1", "Tuesday-16").
  */
-export function getFacultyFreeTimeActivities(professorOrId, fallbackName = '') {
+export function getFacultyFreeTimeActivities(professorOrId, fallbackName = '', termOptions = null) {
   if (!professorOrId && !fallbackName) return {};
   const isObj = typeof professorOrId === 'object' && professorOrId !== null;
   const profId = isObj ? String(professorOrId.id || '') : String(professorOrId || '');
   const profName = isObj ? (professorOrId.name || fallbackName) : fallbackName;
+  const termKey = getFreeTimeTermKey(termOptions);
 
-  const fromFirestore = (isObj && professorOrId.freeTimeActivities && typeof professorOrId.freeTimeActivities === 'object')
+  const rawFirestore = (isObj && professorOrId.freeTimeActivities && typeof professorOrId.freeTimeActivities === 'object')
     ? professorOrId.freeTimeActivities
-    : {};
+    : null;
+
+  let fromFirestore = {};
+  if (rawFirestore) {
+    if (termKey) {
+      const termData = rawFirestore.byTerm && typeof rawFirestore.byTerm === 'object'
+        ? rawFirestore.byTerm[termKey]
+        : null;
+      fromFirestore = sanitizeActivityMap(termData);
+    } else {
+      fromFirestore = sanitizeActivityMap(rawFirestore);
+    }
+  }
+
+  const idStorageKey = termKey
+    ? `${LOCAL_STORAGE_PREFIX}term_${termKey}_${profId}`
+    : `${LOCAL_STORAGE_PREFIX}${profId}`;
 
   if (profId) {
     try {
-      const raw = localStorage.getItem(`${LOCAL_STORAGE_PREFIX}${profId}`);
+      const raw = localStorage.getItem(idStorageKey);
       if (raw !== null) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
-          return parsed;
+          return sanitizeActivityMap(parsed);
         }
       }
     } catch {
@@ -106,13 +202,17 @@ export function getFacultyFreeTimeActivities(professorOrId, fallbackName = '') {
   }
 
   const nameKey = normalizeProfKey(profName);
+  const nameStorageKey = termKey
+    ? `${LOCAL_STORAGE_PREFIX}term_${termKey}_name_${nameKey}`
+    : `${LOCAL_STORAGE_PREFIX}name_${nameKey}`;
+
   if (nameKey) {
     try {
-      const rawByName = localStorage.getItem(`${LOCAL_STORAGE_PREFIX}name_${nameKey}`);
+      const rawByName = localStorage.getItem(nameStorageKey);
       if (rawByName !== null) {
         const parsed = JSON.parse(rawByName);
         if (parsed && typeof parsed === 'object') {
-          return parsed;
+          return sanitizeActivityMap(parsed);
         }
       }
     } catch {
@@ -120,36 +220,39 @@ export function getFacultyFreeTimeActivities(professorOrId, fallbackName = '') {
     }
   }
 
-  return { ...fromFirestore };
+  return fromFirestore;
 }
 
 /**
- * Persist free-time activities for a professor to both localStorage (immediate) and Firestore (debounced).
+ * Persist free-time activities for a professor scoped to a specific semester & school year
+ * to both localStorage (immediate) and Firestore (debounced).
  */
-export function saveFacultyFreeTimeActivities(professorId, freeTimeActivities, professorName = '') {
+export function saveFacultyFreeTimeActivities(professorId, freeTimeActivities, professorName = '', termOptions = null) {
   if (!professorId && !professorName) return;
   const profIdStr = professorId ? String(professorId) : '';
   const nameKey = normalizeProfKey(professorName);
+  const termKey = getFreeTimeTermKey(termOptions);
 
-  // Clean empty strings
-  const cleaned = {};
-  Object.entries(freeTimeActivities || {}).forEach(([k, v]) => {
-    const strVal = typeof v === 'string' ? v : '';
-    if (strVal.trim() !== '') {
-      cleaned[k] = strVal;
-    }
-  });
+  // Clean empty strings and non-string entries
+  const cleaned = sanitizeActivityMap(freeTimeActivities);
+
+  const idStorageKey = termKey
+    ? `${LOCAL_STORAGE_PREFIX}term_${termKey}_${profIdStr}`
+    : `${LOCAL_STORAGE_PREFIX}${profIdStr}`;
+  const nameStorageKey = termKey
+    ? `${LOCAL_STORAGE_PREFIX}term_${termKey}_name_${nameKey}`
+    : `${LOCAL_STORAGE_PREFIX}name_${nameKey}`;
 
   try {
     if (profIdStr) {
-      localStorage.setItem(`${LOCAL_STORAGE_PREFIX}${profIdStr}`, JSON.stringify(cleaned));
+      localStorage.setItem(idStorageKey, JSON.stringify(cleaned));
     }
     if (nameKey) {
-      localStorage.setItem(`${LOCAL_STORAGE_PREFIX}name_${nameKey}`, JSON.stringify(cleaned));
+      localStorage.setItem(nameStorageKey, JSON.stringify(cleaned));
     }
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('smartsched_free_time_updated', {
-        detail: { professorId: profIdStr, professorName, freeTimeActivities: cleaned }
+        detail: { professorId: profIdStr, professorName, termKey, freeTimeActivities: cleaned }
       }));
     }, 0);
   } catch (e) {
@@ -157,19 +260,24 @@ export function saveFacultyFreeTimeActivities(professorId, freeTimeActivities, p
   }
 
   if (profIdStr) {
-    if (firestoreSaveTimers.has(profIdStr)) {
-      clearTimeout(firestoreSaveTimers.get(profIdStr));
+    const timerKey = `${profIdStr}::${termKey || 'default'}`;
+    if (firestoreSaveTimers.has(timerKey)) {
+      clearTimeout(firestoreSaveTimers.get(timerKey));
     }
     const timer = setTimeout(async () => {
-      firestoreSaveTimers.delete(profIdStr);
+      firestoreSaveTimers.delete(timerKey);
       try {
         const profRef = doc(db, 'professors', profIdStr);
-        await updateDoc(profRef, { freeTimeActivities: cleaned });
+        if (termKey) {
+          await updateDoc(profRef, { [`freeTimeActivities.byTerm.${termKey}`]: cleaned });
+        } else {
+          await updateDoc(profRef, { freeTimeActivities: cleaned });
+        }
       } catch (err) {
         console.warn('[freeTimeUtils] Firestore update skipped or failed (saved locally):', err?.message || err);
       }
     }, 400);
-    firestoreSaveTimers.set(profIdStr, timer);
+    firestoreSaveTimers.set(timerKey, timer);
   }
 }
 

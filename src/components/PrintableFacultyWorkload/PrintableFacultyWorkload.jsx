@@ -25,10 +25,10 @@ const formatCleanSubjectCode = (cls) => {
         .trim();
 };
 
-const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) => {
+const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo, activeSemester = '', activeSchoolYear = '' }) => {
     const LOGO_SRC = '/capsu-logo.jpg';
     const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
-    const activeSemester = semesterInfo || '1st Semester, School Year 2026-2027';
+    const semesterLabel = semesterInfo || '1st Semester, School Year 2026-2027';
     const profName = professor?.name || '';
     const profRank = professor?.rank || '';
     const profDesignation = professor?.designation || '';
@@ -42,8 +42,12 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
 
     const freeTimeActivities = useMemo(() => {
         void freeTimeVersion;
-        return getFacultyFreeTimeActivities(professor, profName);
-    }, [professor, profName, freeTimeVersion]);
+        return getFacultyFreeTimeActivities(professor, profName, {
+            semester: activeSemester,
+            schoolYear: activeSchoolYear,
+            semesterInfo
+        });
+    }, [professor, profName, activeSemester, activeSchoolYear, semesterInfo, freeTimeVersion]);
 
     const {
         uniqueAssignments,
@@ -148,7 +152,7 @@ const PrintableFacultyWorkload = ({ professor, schedules = [], semesterInfo }) =
             </table>
 
             <div className="fw-semester-info">
-                <u>{activeSemester}</u>
+                <u>{semesterLabel}</u>
             </div>
 
             <div className="fw-faculty-name">

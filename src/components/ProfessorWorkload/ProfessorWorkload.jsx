@@ -41,10 +41,7 @@ function ProfessorWorkload({
   }, []);
 
   const handlePrint = (prof) => {
-    setPrintingProf({
-      ...prof,
-      freeTimeActivities: getFacultyFreeTimeActivities(prof)
-    });
+    setPrintingProf(prof);
     setTimeout(() => {
       document.title = ""; // Strips "SMARTSCHED" from browser print header
       document.body.classList.add('printing-faculty-workload');
@@ -53,13 +50,18 @@ function ProfessorWorkload({
   };
 
   const handleExportWord = async (prof) => {
+    const termOptions = {
+      semester: activeSemester,
+      schoolYear: activeSchoolYear,
+      semesterInfo: derivedSemesterInfo
+    };
     await exportFacultyWorkloadToWord({
-      professor: {
-        ...prof,
-        freeTimeActivities: getFacultyFreeTimeActivities(prof)
-      },
+      professor: prof,
       schedules: prof.profSchedules || schedules.filter(s => matchesProfessor(s, prof)),
       semesterInfo: derivedSemesterInfo,
+      activeSemester,
+      activeSchoolYear,
+      freeTimeActivities: getFacultyFreeTimeActivities(prof, prof.name || '', termOptions),
       user
     });
   };
@@ -369,6 +371,8 @@ function ProfessorWorkload({
           schedules={printingProf.profSchedules}
           departments={departments}
           semesterInfo={derivedSemesterInfo}
+          activeSemester={activeSemester}
+          activeSchoolYear={activeSchoolYear}
         />
       )}
     </div>

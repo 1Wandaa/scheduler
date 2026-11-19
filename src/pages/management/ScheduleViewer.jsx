@@ -8,7 +8,7 @@ import ExportOptions from './components/ExportOptions';
 import PreviewModal from './components/PreviewModal';
 import { useGlobalDialog } from '../../context/GlobalDialogContext';
 import CustomSelect from '../../components/CustomSelect/CustomSelect';
-import { getFacultyFreeTimeActivities, saveFacultyFreeTimeActivities } from '../../utils/freeTimeUtils';
+import { getFacultyFreeTimeActivities, saveFacultyFreeTimeActivities, getFreeTimeTermKey } from '../../utils/freeTimeUtils';
 
 function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin, isFaculty = false, onUpdateSchedule, onRemoveSchedule, onRemoveSchedulesBatch, activeSemester = '', activeSchoolYear = '', departments = [], isPublished = true, onBack }) {
     const { confirm } = useGlobalDialog();
@@ -26,7 +26,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
     const [isGenerating, setIsGenerating] = useState(false);
     const [isDeleteMode, setIsDeleteMode] = useState(false);
     const [isFreeTimeMode, setIsFreeTimeMode] = useState(Boolean(location.state?.viewTarget?.openFreeTime));
-    const [freeTimeActivities, setFreeTimeActivities] = useState({});
+    const [freeTimeState, setFreeTimeState] = useState({ key: '', data: {} });
 
     const hasAppliedInitialTargetRef = React.useRef(!!location.state?.viewTarget);
     const initialUserAppliedRef = React.useRef(!!location.state?.viewTarget);
@@ -38,18 +38,23 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         if (!vt) return;
         hasAppliedInitialTargetRef.current = true;
         initialUserAppliedRef.current = true;
-        if (vt.viewType) setViewType(vt.viewType);
-        if (vt.selectedId !== undefined) {
-            prevSelectedIdRef.current = vt.selectedId;
-            setSelectedId(vt.selectedId);
-        }
-        setSelectedYearLevel(vt.selectedYearLevel ? String(vt.selectedYearLevel) : '');
-        if (vt.deptSectionId !== undefined) {
-            setDeptSectionId(vt.deptSectionId);
-        }
-        if (vt.openFreeTime !== undefined) {
-            setIsFreeTimeMode(Boolean(vt.openFreeTime));
-        }
+        const timer = setTimeout(() => {
+            if (vt.viewType) setViewType(vt.viewType);
+            if (vt.selectedId !== undefined) {
+                prevSelectedIdRef.current = vt.selectedId;
+                setSelectedId(vt.selectedId);
+            }
+            setSelectedYearLevel(vt.selectedYearLevel ? String(vt.selectedYearLevel) : '');
+            if (vt.deptSectionId !== undefined) {
+                setDeptSectionId(vt.deptSectionId);
+            }
+            if (vt.openFreeTime !== undefined) {
+                setIsFreeTimeMode(Boolean(vt.openFreeTime));
+            } else if (vt.viewType && vt.viewType !== 'faculty') {
+                setIsFreeTimeMode(false);
+            }
+        }, 0);
+        return () => clearTimeout(timer);
     }, [location.state?.viewTarget]);
 
     useEffect(() => {
@@ -126,6 +131,9 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         const handleViewChange = (e) => {
             if (e.detail && ['department', 'faculty', 'room', 'section'].includes(e.detail)) {
                 setViewType(e.detail);
+                if (e.detail !== 'faculty') {
+                    setIsFreeTimeMode(false);
+                }
             }
         };
         window.addEventListener('change-viewer-type', handleViewChange);
@@ -270,33 +278,46 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         return null;
     }, [viewType, deptSectionId, selectedId, sections, rooms, professors]);
 
-    const freeTimeRef = React.useRef(freeTimeActivities);
-    freeTimeRef.current = freeTimeActivities;
+    const activeTerm = React.useMemo(
+        () => ({ semester: activeSemester, schoolYear: activeSchoolYear }),
+        [activeSemester, activeSchoolYear]
+    );
+    const activeTermKey = React.useMemo(
+        () => getFreeTimeTermKey(activeSemester, activeSchoolYear),
+        [activeSemester, activeSchoolYear]
+    );
 
     const activeFacultyId = viewType === 'faculty' ? String(activeEntity?.id || selectedId || '') : '';
+    const freeTimeContextKey = viewType === 'faculty' && activeFacultyId
+        ? `${activeFacultyId}::${activeTermKey}`
+        : '';
 
+    const freeTimeActivities = React.useMemo(() => {
+        if (!freeTimeContextKey) return {};
+        if (freeTimeState.key === freeTimeContextKey) {
+            return freeTimeState.data;
+        }
+        return getFacultyFreeTimeActivities(
+            activeEntity || activeFacultyId,
+            activeEntity?.name || '',
+            activeTerm
+        );
+    }, [freeTimeContextKey, freeTimeState, activeEntity, activeFacultyId, activeTerm]);
+
+    const freeTimeRef = React.useRef({ key: '', data: {} });
     useEffect(() => {
-        if (viewType !== 'faculty') {
-            setIsFreeTimeMode(false);
-            setFreeTimeActivities({});
-            return;
-        }
-        if (activeFacultyId) {
-            const loaded = getFacultyFreeTimeActivities(activeEntity || activeFacultyId, activeEntity?.name || '');
-            freeTimeRef.current = loaded;
-            setFreeTimeActivities(loaded);
-        } else {
-            freeTimeRef.current = {};
-            setFreeTimeActivities({});
-        }
-        // Only reload when viewType or the selected faculty ID changes
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [viewType, activeFacultyId]);
+        freeTimeRef.current = { key: freeTimeContextKey, data: freeTimeActivities };
+    }, [freeTimeContextKey, freeTimeActivities]);
+
+    const effectiveFreeTimeMode = viewType === 'faculty' && isFreeTimeMode;
 
     const handleUpdateFreeTimeSegment = React.useCallback((day, slotIds, text) => {
         const targetProfId = activeEntity?.id || selectedId;
-        if (viewType !== 'faculty' || !targetProfId) return;
-        const next = { ...freeTimeRef.current };
+        if (viewType !== 'faculty' || !targetProfId || !freeTimeContextKey) return;
+        const current = freeTimeRef.current.key === freeTimeContextKey
+            ? freeTimeRef.current.data
+            : freeTimeActivities;
+        const next = { ...current };
         (slotIds || []).forEach(sid => {
             const key = `${day}-${sid}`;
             if (typeof text === 'string' && text.trim() !== '') {
@@ -305,27 +326,31 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 delete next[key];
             }
         });
-        freeTimeRef.current = next;
-        setFreeTimeActivities(next);
-        saveFacultyFreeTimeActivities(targetProfId, next, activeEntity?.name || '');
-    }, [viewType, activeEntity, selectedId]);
+        freeTimeRef.current = { key: freeTimeContextKey, data: next };
+        setFreeTimeState({ key: freeTimeContextKey, data: next });
+        saveFacultyFreeTimeActivities(targetProfId, next, activeEntity?.name || '', activeTerm);
+    }, [viewType, activeEntity, selectedId, freeTimeContextKey, freeTimeActivities, activeTerm]);
 
     const handleClearAllFreeTime = React.useCallback(async () => {
         const targetProfId = activeEntity?.id || selectedId;
-        if (viewType !== 'faculty' || !targetProfId) return;
+        const targetProfName = activeEntity?.name || '';
+        const targetContextKey = freeTimeContextKey;
+        const targetTerm = activeTerm;
+        const termLabel = [activeSemester, activeSchoolYear].filter(Boolean).join(' ');
+        if (viewType !== 'faculty' || !targetProfId || !targetContextKey) return;
         const isConfirmed = await confirm({
             title: 'Clear Free Time Activities',
-            text: `Are you sure you want to clear all free-time activity text for ${activeEntity?.name || 'this faculty'}?`,
+            text: `Are you sure you want to clear all free-time activity text for ${targetProfName || 'this faculty'}${termLabel ? ` (${termLabel})` : ''}?`,
             icon: 'warning',
             isDestructive: true,
             confirmButtonText: 'Clear All'
         });
         if (isConfirmed) {
-            freeTimeRef.current = {};
-            setFreeTimeActivities({});
-            saveFacultyFreeTimeActivities(targetProfId, {}, activeEntity?.name || '');
+            freeTimeRef.current = { key: targetContextKey, data: {} };
+            setFreeTimeState({ key: targetContextKey, data: {} });
+            saveFacultyFreeTimeActivities(targetProfId, {}, targetProfName, targetTerm);
         }
-    }, [viewType, activeEntity, selectedId, confirm]);
+    }, [viewType, activeEntity, selectedId, freeTimeContextKey, activeTerm, activeSemester, activeSchoolYear, confirm]);
 
     const targetOptions = React.useMemo(() => {
         if (viewType === 'department') {
@@ -455,7 +480,13 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                         <select
                             className="form-select"
                             value={viewType}
-                            onChange={(e) => setViewType(e.target.value)}
+                            onChange={(e) => {
+                                const nextView = e.target.value;
+                                setViewType(nextView);
+                                if (nextView !== 'faculty') {
+                                    setIsFreeTimeMode(false);
+                                }
+                            }}
                             style={{ width: '100%' }}
                         >
                             <option value="department">Department</option>
@@ -522,9 +553,9 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                                     gap: '6px',
                                     cursor: 'pointer',
                                     fontWeight: 600,
-                                    borderColor: isFreeTimeMode ? '#2563eb' : 'var(--border-color)',
-                                    backgroundColor: isFreeTimeMode ? '#2563eb' : '#f8fafc',
-                                    color: isFreeTimeMode ? '#ffffff' : 'var(--text-main)',
+                                    borderColor: effectiveFreeTimeMode ? '#2563eb' : 'var(--border-color)',
+                                    backgroundColor: effectiveFreeTimeMode ? '#2563eb' : '#f8fafc',
+                                    color: effectiveFreeTimeMode ? '#ffffff' : 'var(--text-main)',
                                     backgroundImage: 'none',
                                     paddingRight: '12px'
                                 }}
@@ -534,7 +565,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
-                                {isFreeTimeMode ? 'Done Free Time Text' : 'Edit Free Time Text'}
+                                {effectiveFreeTimeMode ? 'Done Free Time Text' : 'Edit Free Time Text'}
                             </button>
                         </div>
                     )}
@@ -568,7 +599,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     onToggleDeleteMode={() => setIsDeleteMode(!isDeleteMode)}
                     viewType={viewType}
                     freeTimeActivities={freeTimeActivities}
-                    isFreeTimeMode={isFreeTimeMode}
+                    isFreeTimeMode={effectiveFreeTimeMode}
                     onToggleFreeTimeMode={() => setIsFreeTimeMode(prev => !prev)}
                     onUpdateFreeTimeSegment={handleUpdateFreeTimeSegment}
                     onClearAllFreeTime={handleClearAllFreeTime}
