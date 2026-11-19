@@ -1141,7 +1141,14 @@ return (
               </div>
             </div>
           )}
-          {isAdmin && activeTab === 'history' && <ScheduleHistory history={scheduleHistory} onBack={() => setActiveTab('dashboard')} />}
+          {isAdmin && activeTab === 'history' && (
+            <ScheduleHistory
+              history={scheduleHistory}
+              subjects={subjects}
+              schedules={enrichedSchedules}
+              onBack={() => setActiveTab('dashboard')}
+            />
+          )}
           {isAdmin && activeTab === 'rooms' && <RoomManagement rooms={rooms} professors={professors} schedules={displaySchedules} departments={departments} user={user} onBack={() => setActiveTab('dashboard')} />}
           {(isAdmin || isFaculty) && activeTab === 'availability' && <RoomAvailability rooms={rooms} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab(isAdmin ? 'dashboard' : 'view-schedules')} />}
           {(isAdmin || isFaculty) && activeTab === 'faculty-availability' && <FacultyAvailability professors={professors} schedules={displaySchedules} activeSemester={activeSemester} activeSchoolYear={activeSchoolYear} onBack={() => setActiveTab(isAdmin ? 'dashboard' : 'view-schedules')} />}

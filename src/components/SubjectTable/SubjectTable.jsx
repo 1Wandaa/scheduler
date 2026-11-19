@@ -116,23 +116,110 @@ const SubjectTable = ({ subjectList = [], title, titleColor = 'var(--accent-prim
                 <td style={{ fontWeight: '500', textAlign: 'center' }} data-label="Units">{s.credits || 3}</td>
                 <td style={{ fontWeight: '500', color: 'var(--text-muted)' }} data-label="Meeting Time">
                   {s.hasLecLab ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.8rem', gap: '2px' }}>
-                      <span>Lec: {s.lectureHours || 0} hrs</span>
-                      <span>Lab: {s.labHours || 0} hrs</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.78rem', gap: '3px', alignItems: 'flex-start' }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '2px 7px',
+                        borderRadius: '6px',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        background: 'rgba(147, 51, 234, 0.1)',
+                        color: '#7e22ce',
+                        border: '1px solid rgba(147, 51, 234, 0.25)'
+                      }}>
+                        Lec &amp; Lab
+                      </span>
+                      <span>Lec: {s.lectureHours || 2}h · Lab: {s.labHours || 3}h</span>
+                    </div>
+                  ) : (s.requiredLab || s.isFoodLab) ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.78rem', gap: '3px', alignItems: 'flex-start' }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '2px 7px',
+                        borderRadius: '6px',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        background: 'rgba(13, 148, 136, 0.12)',
+                        color: '#0f766e',
+                        border: '1px solid rgba(13, 148, 136, 0.28)'
+                      }}>
+                        Lab Only
+                      </span>
+                      <span>{s.hoursPerMeeting || 1.5} hrs/meeting</span>
                     </div>
                   ) : (
-                    <span>{s.hoursPerMeeting || 1.5} hrs</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.78rem', gap: '3px', alignItems: 'flex-start' }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '2px 7px',
+                        borderRadius: '6px',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        background: 'rgba(37, 99, 235, 0.08)',
+                        color: '#1d4ed8',
+                        border: '1px solid rgba(37, 99, 235, 0.22)'
+                      }}>
+                        Single Lec
+                      </span>
+                      <span>{s.hoursPerMeeting || 1.5} hrs/meeting</span>
+                    </div>
                   )}
                 </td>
                 <td data-label="Lab Required">
-                  <span style={{
-                    background: s.requiredLab ? 'var(--danger-bg)' : s.isFoodLab ? '#fff3cd' : 'var(--success-bg)',
-                    color: s.requiredLab ? 'var(--danger)' : s.isFoodLab ? '#856404' : 'var(--success)',
-                    padding: '3px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600',
-                    border: s.isFoodLab ? '1px solid #ffeeba' : 'none'
-                  }}>
-                    {s.requiredLab ? 'Computer' : s.isFoodLab ? 'Food' : 'No'}
-                  </span>
+                  {s.requiredLab ? (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: 'rgba(16, 185, 129, 0.14)',
+                      color: '#047857',
+                      padding: '3px 9px',
+                      borderRadius: '12px',
+                      fontSize: '0.75rem',
+                      fontWeight: '700',
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+                      Computer Lab
+                    </span>
+                  ) : s.isFoodLab ? (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: 'rgba(217, 119, 6, 0.14)',
+                      color: '#b45309',
+                      padding: '3px 9px',
+                      borderRadius: '12px',
+                      fontSize: '0.75rem',
+                      fontWeight: '700',
+                      border: '1px solid rgba(217, 119, 6, 0.35)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></svg>
+                      Food Lab
+                    </span>
+                  ) : (
+                    <span style={{
+                      background: 'var(--bg-main)',
+                      color: 'var(--text-muted)',
+                      padding: '3px 9px',
+                      borderRadius: '12px',
+                      fontSize: '0.74rem',
+                      fontWeight: '600',
+                      border: '1px solid var(--border-color)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      Standard
+                    </span>
+                  )}
                 </td>
                 <td className="table-actions" style={{ whiteSpace: 'nowrap' }} data-label="Actions">
                   <div className="subject-actions-wrapper">

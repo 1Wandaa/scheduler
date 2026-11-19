@@ -200,13 +200,133 @@
   box-shadow: 0 2px 6px rgba(86, 69, 238, 0.3);
 }
 
-.quick-checkbox-row {
+.quick-session-mode-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.quick-session-mode-card {
   display: flex;
-  gap: 20px;
-  padding: 12px 14px;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-color, #cbd5e1);
+  background: var(--bg-main, #f8fafc);
+  color: var(--text-main, #1e293b);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.quick-session-mode-card:hover {
+  border-color: var(--accent-primary, #5645ee);
+}
+
+.quick-session-mode-card.active-single {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: #3b82f6;
+}
+
+.quick-session-mode-card.active-leclab {
+  background: rgba(147, 51, 234, 0.08);
+  border-color: #9333ea;
+}
+
+.quick-session-mode-card.active-single-lab {
+  background: rgba(13, 148, 136, 0.08);
+  border-color: #0d9488;
+}
+
+.quick-session-mode-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+}
+
+.quick-session-mode-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted, #64748b);
+}
+
+.quick-badge-single {
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(37, 99, 235, 0.14);
+  color: #1d4ed8;
+}
+
+.quick-badge-leclab {
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(147, 51, 234, 0.14);
+  color: #7e22ce;
+}
+
+.quick-badge-single-lab {
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(13, 148, 136, 0.16);
+  color: #0f766e;
+}
+
+.quick-badge-complab {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(16, 185, 129, 0.16);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.quick-badge-foodlab {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(217, 119, 6, 0.16);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.quick-checkbox-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
   background: var(--bg-main, #f8fafc);
   border-radius: 8px;
   border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.quick-lab-option {
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  background: var(--card-bg, #ffffff);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.quick-lab-option.active-comp {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: #10b981;
+}
+
+.quick-lab-option.active-food {
+  background: rgba(217, 119, 6, 0.08);
+  border-color: #f59e0b;
 }
 
 .quick-checkbox-label {

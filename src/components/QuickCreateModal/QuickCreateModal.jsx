@@ -520,55 +520,137 @@ const QuickCreateModal = ({
                 </div>
               )}
 
+              {(() => {
+                const quickMode = subjectData.hasLecLab
+                  ? 'lec_lab'
+                  : (subjectData.requiredLab || subjectData.isFoodLab ? 'single_lab' : 'single_lec');
+                const resolveQuickLabFlags = (prev) => {
+                  if (prev.isFoodLab) return { requiredLab: false, isFoodLab: true };
+                  if (prev.requiredLab) return { requiredLab: true, isFoodLab: false };
+                  const depts = Array.isArray(prev.departments) ? prev.departments.map(d => String(d).toUpperCase()) : [];
+                  const det = detectLabRequirement(prev, subjects);
+                  if (det?.isFoodLab || depts.includes('BSFT')) {
+                    return { requiredLab: false, isFoodLab: true };
+                  }
+                  return { requiredLab: true, isFoodLab: false };
+                };
+                return (
+                  <div className="quick-form-group">
+                    <label className="quick-form-label">Course Mode</label>
+                    <div className="quick-session-mode-grid-3">
+                      <button
+                        type="button"
+                        className={`quick-session-mode-card ${quickMode === 'single_lec' ? 'active-single' : ''}`}
+                        onClick={() => {
+                          setUserLabModified(true);
+                          setAutoDetectedReason(null);
+                          setSubjectData(prev => ({ ...prev, hasLecLab: false, requiredLab: false, isFoodLab: false }));
+                        }}
+                        aria-pressed={quickMode === 'single_lec'}
+                      >
+                        <div className="quick-session-mode-header">
+                          <strong>Single Lec</strong>
+                          {quickMode === 'single_lec' && (
+                            <span className="quick-badge-single">Pure</span>
+                          )}
+                        </div>
+                        <span className="quick-session-mode-sub">Pure lecture only</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`quick-session-mode-card ${quickMode === 'lec_lab' ? 'active-leclab' : ''}`}
+                        onClick={() => {
+                          setUserLabModified(true);
+                          setAutoDetectedReason(null);
+                          setSubjectData(prev => ({ ...prev, hasLecLab: true, ...resolveQuickLabFlags(prev) }));
+                        }}
+                        aria-pressed={quickMode === 'lec_lab'}
+                      >
+                        <div className="quick-session-mode-header">
+                          <strong>Lec &amp; Lab</strong>
+                          {quickMode === 'lec_lab' && (
+                            <span className="quick-badge-leclab">2 Sessions</span>
+                          )}
+                        </div>
+                        <span className="quick-session-mode-sub">Lecture + Lab room</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`quick-session-mode-card ${quickMode === 'single_lab' ? 'active-single-lab' : ''}`}
+                        onClick={() => {
+                          setUserLabModified(true);
+                          setAutoDetectedReason(null);
+                          setSubjectData(prev => ({ ...prev, hasLecLab: false, ...resolveQuickLabFlags(prev) }));
+                        }}
+                        aria-pressed={quickMode === 'single_lab'}
+                      >
+                        <div className="quick-session-mode-header">
+                          <strong>Lab Only</strong>
+                          {quickMode === 'single_lab' && (
+                            <span className="quick-badge-single-lab">Single Lab</span>
+                          )}
+                        </div>
+                        <span className="quick-session-mode-sub">Single laboratory only</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="quick-checkbox-row">
-                <label className="quick-checkbox-label" style={{ gridColumn: '1 / -1' }}>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(subjectData.hasLecLab)}
-                    onChange={e => {
-                      const checked = e.target.checked;
-                      setSubjectData(prev => ({
-                        ...prev,
-                        hasLecLab: checked,
-                        requiredLab: checked ? (prev.requiredLab || !prev.isFoodLab) : prev.requiredLab
-                      }));
-                    }}
-                  />
-                  <span>Requires Lecture and Laboratory separately</span>
+                <label className={`quick-checkbox-label quick-lab-option ${subjectData.requiredLab ? 'active-comp' : ''}`}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(subjectData.requiredLab)}
+                      onChange={e => {
+                        const checked = e.target.checked;
+                        setUserLabModified(true);
+                        setAutoDetectedReason(null);
+                        setSubjectData(prev => {
+                          const nextIsFood = checked ? false : Boolean(prev.isFoodLab);
+                          return {
+                            ...prev,
+                            requiredLab: checked,
+                            isFoodLab: nextIsFood,
+                            hasLecLab: (!checked && !nextIsFood) ? false : prev.hasLecLab
+                          };
+                        });
+                      }}
+                    />
+                    <span>Requires Computer Lab</span>
+                  </span>
+                  {subjectData.requiredLab && (
+                    <span className="quick-badge-complab">Laboratory</span>
+                  )}
                 </label>
-                <label className="quick-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(subjectData.requiredLab)}
-                    onChange={e => {
-                      const checked = e.target.checked;
-                      setUserLabModified(true);
-                      setAutoDetectedReason(null);
-                      setSubjectData(prev => ({
-                        ...prev,
-                        requiredLab: checked,
-                        isFoodLab: checked ? false : prev.isFoodLab
-                      }));
-                    }}
-                  />
-                  <span>Requires Computer Lab</span>
-                </label>
-                <label className="quick-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(subjectData.isFoodLab)}
-                    onChange={e => {
-                      const checked = e.target.checked;
-                      setUserLabModified(true);
-                      setAutoDetectedReason(null);
-                      setSubjectData(prev => ({
-                        ...prev,
-                        isFoodLab: checked,
-                        requiredLab: checked ? false : prev.requiredLab
-                      }));
-                    }}
-                  />
-                  <span>Requires Food Lab</span>
+                <label className={`quick-checkbox-label quick-lab-option ${subjectData.isFoodLab ? 'active-food' : ''}`}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(subjectData.isFoodLab)}
+                      onChange={e => {
+                        const checked = e.target.checked;
+                        setUserLabModified(true);
+                        setAutoDetectedReason(null);
+                        setSubjectData(prev => {
+                          const nextReqLab = checked ? false : Boolean(prev.requiredLab);
+                          return {
+                            ...prev,
+                            isFoodLab: checked,
+                            requiredLab: nextReqLab,
+                            hasLecLab: (!checked && !nextReqLab) ? false : prev.hasLecLab
+                          };
+                        });
+                      }}
+                    />
+                    <span>Requires Food Lab</span>
+                  </span>
+                  {subjectData.isFoodLab && (
+                    <span className="quick-badge-foodlab">Laboratory</span>
+                  )}
                 </label>
               </div>
 

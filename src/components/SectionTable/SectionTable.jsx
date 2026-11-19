@@ -15,9 +15,16 @@ const SectionTable = ({ sectionList = [], title, titleColor = 'var(--accent-prim
 
   if (!sectionList || sectionList.length === 0) return null;
 
+  const getSubjectObj = (subId) => subjects.find(sub => sub.id === subId || sub.code === subId);
+
   const getSubjectName = (subId) => {
-    const s = subjects.find(sub => sub.id === subId || sub.code === subId);
-    return s ? `${s.code} - ${s.name}` : subId;
+    const s = getSubjectObj(subId);
+    if (!s) return subId;
+    const tags = [];
+    if (s.hasLecLab) tags.push('Lec & Lab');
+    if (s.requiredLab) tags.push('Comp Lab');
+    if (s.isFoodLab) tags.push('Food Lab');
+    return `${s.code} - ${s.name}${tags.length > 0 ? ` [${tags.join(', ')}]` : ''}`;
   };
 
   return (
@@ -125,14 +132,54 @@ const SectionTable = ({ sectionList = [], title, titleColor = 'var(--accent-prim
                       Year {sec.yearLevel}
                     </span>
                   </td>
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '240px', textAlign: 'center', verticalAlign: 'middle' }} data-label="Subjects">
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '280px', textAlign: 'center', verticalAlign: 'middle' }} data-label="Subjects">
                     {(sec.subjects || []).length === 0 ? (
                       <span style={{ fontStyle: 'italic' }}>None</span>
                     ) : (
-                      <span title={(sec.subjects || []).map(getSubjectName).join(', ')}>
-                        {(sec.subjects || []).slice(0, 3).map(getSubjectName).join('; ')}
-                        {(sec.subjects || []).length > 3 ? ` +${(sec.subjects || []).length - 3}` : ''}
-                      </span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'center' }} title={(sec.subjects || []).map(getSubjectName).join(', ')}>
+                        {(sec.subjects || []).slice(0, 3).map((subRef) => {
+                          const s = getSubjectObj(subRef);
+                          return (
+                            <span
+                              key={subRef}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '2px 7px',
+                                borderRadius: '6px',
+                                fontSize: '0.73rem',
+                                fontWeight: 600,
+                                background: 'var(--bg-main)',
+                                border: '1px solid var(--border-color)',
+                                color: 'var(--text-main)'
+                              }}
+                            >
+                              <span>{s ? s.code : subRef}</span>
+                              {s?.hasLecLab && (
+                                <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '0 4px', borderRadius: '4px', background: 'rgba(147, 51, 234, 0.12)', color: '#7e22ce' }}>
+                                  L+L
+                                </span>
+                              )}
+                              {s?.requiredLab && (
+                                <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '0 4px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.14)', color: '#047857' }}>
+                                  Lab
+                                </span>
+                              )}
+                              {s?.isFoodLab && (
+                                <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '0 4px', borderRadius: '4px', background: 'rgba(217, 119, 6, 0.14)', color: '#b45309' }}>
+                                  Food Lab
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })}
+                        {(sec.subjects || []).length > 3 && (
+                          <span style={{ fontSize: '0.73rem', fontWeight: 600, color: 'var(--text-muted)', alignSelf: 'center' }}>
+                            +{(sec.subjects || []).length - 3}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '200px', textAlign: 'center', verticalAlign: 'middle' }} data-label="Handled By">

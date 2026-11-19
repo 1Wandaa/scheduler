@@ -360,6 +360,13 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
     if (allValid) {
       let hasAddError = false;
       const successfullyAdded = [];
+      const histSubjectCode = (subject?.code || '').trim();
+      const histSubjectName = (subject?.name || subject?.title || '').trim();
+      const histComponent = subject?.hasLecLab ? (formData.component || '') : '';
+      const histSubjectBase = histSubjectCode && histSubjectName && histSubjectCode.toLowerCase() !== histSubjectName.toLowerCase()
+        ? `${histSubjectCode} — ${histSubjectName}`
+        : (histSubjectCode || histSubjectName || 'Subject');
+      const histSubjectLabel = histComponent ? `${histSubjectBase} (${histComponent})` : histSubjectBase;
 
       for (const sess of resolvedSessions) {
         const validationSubject = subject ? { 
@@ -383,7 +390,10 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
           allErrors.push(`Failed to save for ${sess.day}: ${addResult.errors?.join(', ') || 'Unknown error'}`);
         } else {
           successfullyAdded.push({
-            subject: `${subject?.code || ''} ${subject?.name ? `— ${subject.name}` : ''}`.trim() + (subject?.hasLecLab ? ` (${formData.component})` : ''),
+            subject: histSubjectLabel,
+            subjectCode: histSubjectCode,
+            subjectName: histSubjectName,
+            component: histComponent,
             section: section?.name || '',
             professor: professor?.name || '',
             room: room?.name || '',
@@ -401,9 +411,13 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             totalAttempted: daysToSchedule.length,
             successCount: successfullyAdded.length,
             errorCount: allErrors.length,
+            semester: activeSemester || '',
             createdSchedules: successfullyAdded,
             errors: allErrors.map((e) => ({
-              subject: subject?.code || subject?.name || 'Subject',
+              subject: histSubjectLabel,
+              subjectCode: histSubjectCode,
+              subjectName: histSubjectName,
+              component: histComponent,
               section: section?.name || 'Section',
               reason: e
             }))
@@ -423,6 +437,7 @@ function ScheduleForm({ rooms, professors, subjects, sections, onSchedule, valid
             totalAttempted: daysToSchedule.length,
             successCount: successfullyAdded.length,
             errorCount: 0,
+            semester: activeSemester || '',
             createdSchedules: successfullyAdded,
             errors: []
           });

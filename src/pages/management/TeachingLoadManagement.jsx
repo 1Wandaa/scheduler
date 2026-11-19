@@ -168,6 +168,16 @@ const TeachingLoadManagement = ({
   // Local optimistic state for instant zero-latency UI responses
   const [localSections, setLocalSections] = useState(sections);
   const [localProfessors, setLocalProfessors] = useState(professors);
+  const [subjectOverrides, setSubjectOverrides] = useState({});
+  const subjectOverrideSeqRef = useRef(new Map());
+
+  const localSubjects = useMemo(() => {
+    if (Object.keys(subjectOverrides).length === 0) return subjects;
+    return subjects.map(s => {
+      const patch = subjectOverrides[String(s.id)];
+      return patch ? { ...s, ...patch } : s;
+    });
+  }, [subjects, subjectOverrides]);
 
   useEffect(() => {
     setLocalSections(sections);
@@ -215,14 +225,14 @@ const TeachingLoadManagement = ({
     const mapByCode = new Map();
     const mapByName = new Map();
     
-    subjects.forEach(s => {
+    localSubjects.forEach(s => {
       if (s.id) mapById.set(String(s.id).trim().toLowerCase(), s);
       if (s.code && !mapByCode.has(String(s.code).trim().toLowerCase())) mapByCode.set(String(s.code).trim().toLowerCase(), s);
       if (s.name && !mapByName.has(String(s.name).trim().toLowerCase())) mapByName.set(String(s.name).trim().toLowerCase(), s);
     });
     
     return { mapById, mapByCode, mapByName };
-  }, [subjects]);
+  }, [localSubjects]);
 
   const getSubject = useCallback((subRef) => {
     if (!subRef) return null;
@@ -256,8 +266,8 @@ const TeachingLoadManagement = ({
   const getProfLabel = useCallback((p) => p?.name || `${p?.lastName || ''}, ${p?.firstName || ''}`, []);
 
   const sortedSubjects = useMemo(
-    () => [...subjects].sort((a, b) => compareAlpha(a.code || a.name || a.id, b.code || b.name || b.id)),
-    [subjects, compareAlpha]
+    () => [...localSubjects].sort((a, b) => compareAlpha(a.code || a.name || a.id, b.code || b.name || b.id)),
+    [localSubjects, compareAlpha]
   );
 
   const sortedSections = useMemo(
@@ -687,7 +697,7 @@ const TeachingLoadManagement = ({
       }
     });
 
-    const totalLecLabSubjects = subjects.filter(s => s.hasLecLab).length;
+    const totalLecLabSubjects = localSubjects.filter(s => s.hasLecLab).length;
     let totalLecLabEnrolled = 0;
     localSections.forEach(sec => {
       (sec.subjects || []).forEach(subRef => {
@@ -699,14 +709,14 @@ const TeachingLoadManagement = ({
     return {
       totalSections: localSections.length,
       totalProfessors: localProfessors.length,
-      totalSubjects: subjects.length,
+      totalSubjects: localSubjects.length,
       totalLecLabSubjects,
       totalLecLabEnrolled,
       totalEnrolledLinks,
       totalAssignedLinks,
       sectionsNeedingTeachers
     };
-  }, [localSections, localProfessors, subjects, getAssignedProf, getSubject]);
+  }, [localSections, localProfessors, localSubjects, getAssignedProf, getSubject]);
 
   // --- Inline Instructor Change for a Section Subject (Optimistic Instant Response) ---
   const handleAssignInstructorInline = async (section, subRef, newProfId) => {
@@ -1401,7 +1411,7 @@ const TeachingLoadManagement = ({
 
   // --- Nested Cross-Entity Editing Handlers ---
   const handleToggleNestedSubject = (subRef) => {
-    const sub = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef)) || { id: subRef, code: subRef, name: subRef };
+    const sub = localSubjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef)) || { id: subRef, code: subRef, name: subRef };
     const subKey = sub.id || sub.code || subRef;
 
     if (nestedEditing && nestedEditing.type === 'subject' && nestedEditing.id === subKey) {
@@ -1495,41 +1505,140 @@ const TeachingLoadManagement = ({
     });
   };
 
-  // Instant quick toggle for lab requirements on a subject
+  // Resolves a subject into one of 3 mutually-exclusive modes:
+  // 'single_lec' (pure lecture), 'lec_lab' (lecture + lab split), or 'single_lab' (laboratory only)
+  const getSubjectSessionMode = useCallback((sub) => {
+    if (!sub) return 'single_lec';
+    if (sub.hasLecLab) return 'lec_lab';
+    if (sub.requiredLab || sub.isFoodLab) return 'single_lab';
+    return 'single_lec';
+  }, []);
+
+  // Determines the appropriate laboratory room flags when entering Lec & Lab or Lab Only mode
+  const getDefaultLabRoomFlags = useCallback((sub) => {
+    if (sub?.isFoodLab) return { requiredLab: false, isFoodLab: true };
+    if (sub?.requiredLab) return { requiredLab: true, isFoodLab: false };
+    const depts = Array.isArray(sub?.departments) && sub.departments.length > 0
+      ? sub.departments
+      : (sub?.department ? [sub.department] : []);
+    const normDepts = depts.map(d => String(d || '').toUpperCase());
+    const detection = detectLabRequirement(sub || {}, localSubjects);
+    if (detection?.isFoodLab || normDepts.includes('BSFT')) {
+      return { requiredLab: false, isFoodLab: true };
+    }
+    return { requiredLab: true, isFoodLab: false };
+  }, [localSubjects]);
+
+  // Instant quick toggle for the 3 course modes (Single Lec / Lec & Lab / Lab Only) and lab room types
   const handleQuickToggleSubjectLab = async (subRef, mode) => {
-    const sub = subjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
+    const sub = localSubjects.find(s => String(s.id) === String(subRef) || String(s.code) === String(subRef) || String(s.name) === String(subRef));
     if (!sub || !sub.id) {
       toast.error("Subject record not found in database.");
       return;
     }
 
-    try {
-      let updatePayload = {};
-      if (mode === 'leclab') {
-        const nextVal = !sub.hasLecLab;
-        updatePayload = {
-          hasLecLab: nextVal,
-          requiredLab: nextVal ? (sub.requiredLab || !sub.isFoodLab) : sub.requiredLab
-        };
-      } else if (mode === 'complab') {
-        const nextVal = !sub.requiredLab;
-        updatePayload = {
-          requiredLab: nextVal,
-          isFoodLab: nextVal ? false : sub.isFoodLab
-        };
-      } else if (mode === 'foodlab') {
-        const nextVal = !sub.isFoodLab;
-        updatePayload = {
-          isFoodLab: nextVal,
-          requiredLab: nextVal ? false : sub.requiredLab
+    const subIdStr = String(sub.id);
+    const currentMode = getSubjectSessionMode(sub);
+    let updatePayload = null;
+    let statusMessage = '';
+
+    if (mode === 'single_lec') {
+      if (currentMode === 'single_lec') return;
+      updatePayload = {
+        hasLecLab: false,
+        requiredLab: false,
+        isFoodLab: false
+      };
+      statusMessage = `${sub.code} set to Pure Single Lecture`;
+    } else if (mode === 'lec_lab') {
+      const labFlags = getDefaultLabRoomFlags(sub);
+      if (sub.hasLecLab && Boolean(sub.requiredLab) === labFlags.requiredLab && Boolean(sub.isFoodLab) === labFlags.isFoodLab) {
+        return;
+      }
+      updatePayload = {
+        hasLecLab: true,
+        ...labFlags
+      };
+      statusMessage = `${sub.code} set to Lecture & Lab (${labFlags.isFoodLab ? 'Food Lab' : 'Comp Lab'})`;
+    } else if (mode === 'single_lab') {
+      const labFlags = getDefaultLabRoomFlags(sub);
+      if (!sub.hasLecLab && Boolean(sub.requiredLab) === labFlags.requiredLab && Boolean(sub.isFoodLab) === labFlags.isFoodLab) {
+        return;
+      }
+      updatePayload = {
+        hasLecLab: false,
+        ...labFlags
+      };
+      statusMessage = `${sub.code} set to Lab Only (${labFlags.isFoodLab ? 'Food Lab' : 'Comp Lab'})`;
+    } else if (mode === 'complab') {
+      if (sub.hasLecLab) {
+        if (sub.requiredLab && !sub.isFoodLab) {
+          toast.info(`${sub.code} is in Lec & Lab mode. Switch to Single Lec for pure lecture without lab.`);
+          return;
+        }
+        updatePayload = { hasLecLab: true, requiredLab: true, isFoodLab: false };
+        statusMessage = `${sub.code} Lab Room set to Computer Lab`;
+      } else if (sub.requiredLab) {
+        updatePayload = { hasLecLab: false, requiredLab: false, isFoodLab: false };
+        statusMessage = `${sub.code} switched to Pure Single Lecture`;
+      } else {
+        updatePayload = { hasLecLab: false, requiredLab: true, isFoodLab: false };
+        statusMessage = `${sub.code} set to Lab Only (Computer Lab)`;
+      }
+    } else if (mode === 'foodlab') {
+      if (sub.hasLecLab) {
+        if (sub.isFoodLab && !sub.requiredLab) {
+          toast.info(`${sub.code} is in Lec & Lab mode. Switch to Single Lec for pure lecture without lab.`);
+          return;
+        }
+        updatePayload = { hasLecLab: true, requiredLab: false, isFoodLab: true };
+        statusMessage = `${sub.code} Lab Room set to Food Lab`;
+      } else if (sub.isFoodLab) {
+        updatePayload = { hasLecLab: false, requiredLab: false, isFoodLab: false };
+        statusMessage = `${sub.code} switched to Pure Single Lecture`;
+      } else {
+        updatePayload = { hasLecLab: false, requiredLab: false, isFoodLab: true };
+        statusMessage = `${sub.code} set to Lab Only (Food Lab)`;
+      }
+    }
+
+    if (!updatePayload) return;
+
+    const nextSeq = (subjectOverrideSeqRef.current.get(subIdStr) || 0) + 1;
+    subjectOverrideSeqRef.current.set(subIdStr, nextSeq);
+
+    // Apply optimistic override immediately for zero-latency indicator feedback
+    setSubjectOverrides(prev => ({
+      ...prev,
+      [subIdStr]: { ...(prev[subIdStr] || {}), ...updatePayload }
+    }));
+
+    // Keep open nested subject editor in sync if currently editing this subject
+    setNestedEditing(prev => {
+      if (prev && prev.type === 'subject' && (String(prev.id) === subIdStr || String(prev.form?.id) === subIdStr)) {
+        return {
+          ...prev,
+          form: { ...prev.form, ...updatePayload }
         };
       }
+      return prev;
+    });
 
-      await updateDoc(doc(db, 'subjects', String(sub.id)), updatePayload);
-      toast.success(`Updated ${sub.code} lab settings!`);
+    try {
+      await updateDoc(doc(db, 'subjects', subIdStr), updatePayload);
+      toast.success(statusMessage);
     } catch (err) {
       console.error("Error quick toggling subject lab:", err);
       toast.error("Failed to update subject lab settings: " + err.message);
+    } finally {
+      if (subjectOverrideSeqRef.current.get(subIdStr) === nextSeq) {
+        setSubjectOverrides(prev => {
+          if (!(subIdStr in prev)) return prev;
+          const next = { ...prev };
+          delete next[subIdStr];
+          return next;
+        });
+      }
     }
   };
 
@@ -2243,7 +2352,7 @@ const TeachingLoadManagement = ({
   }, [localProfessors, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, getSubject, sectionMap, getAssignedProf, compareAlpha, getProfLabel]);
 
   const filteredSubjects = useMemo(() => {
-    return subjects.filter(sub => {
+    return localSubjects.filter(sub => {
       // Filter by active semester if applicable
       if (activeSemester && sub.semester && sub.semester !== 'Both' && sub.semester !== activeSemester) {
         return false;
@@ -2272,7 +2381,7 @@ const TeachingLoadManagement = ({
 
       return true;
     }).sort((a, b) => compareAlpha(a.code || a.name, b.code || b.name));
-  }, [subjects, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, enrolledSubjectCodesSet, specializedSubjectCodesSet, activeSemester, compareAlpha]);
+  }, [localSubjects, departmentFilter, searchQuery, onlyNeedsAttention, onlyLecLab, enrolledSubjectCodesSet, specializedSubjectCodesSet, activeSemester, compareAlpha]);
 
   // Progressive windowing: start with 12 items for instant (<16ms) initial render
   const [visibleLimit, setVisibleLimit] = useState(12);
@@ -2319,6 +2428,117 @@ const TeachingLoadManagement = ({
   const displayedFaculty = useMemo(() => filteredFaculty.slice(0, visibleLimit), [filteredFaculty, visibleLimit]);
   const displayedSubjects = useMemo(() => filteredSubjects.slice(0, visibleLimit), [filteredSubjects, visibleLimit]);
 
+  // Shared Lecture/Lab status indicator badges for consistent display across all hub cards & modals
+  const renderSubjectStatusBadges = (sub, { showSingleLec = true } = {}) => {
+    if (!sub) return null;
+    const mode = getSubjectSessionMode(sub);
+    return (
+      <>
+        {mode === 'lec_lab' ? (
+          <span className="hub-tag-leclab" title="Lecture & Laboratory split (separate lecture and lab sessions)">
+            <FlaskConical size={10} />
+            Lec &amp; Lab
+          </span>
+        ) : mode === 'single_lab' ? (
+          <span className="hub-tag-single-lab" title="Laboratory Only (single laboratory session)">
+            <FlaskConical size={10} />
+            Lab Only
+          </span>
+        ) : showSingleLec ? (
+          <span className="hub-tag-single-lec" title="Pure Single Lecture (standard classroom)">
+            <BookOpen size={10} />
+            Single Lec
+          </span>
+        ) : null}
+        {sub.requiredLab && (
+          <span className="hub-tag-complab" title="Laboratory: Requires Computer Laboratory">
+            <Monitor size={10} />
+            Comp Lab
+          </span>
+        )}
+        {sub.isFoodLab && (
+          <span className="hub-tag-foodlab" title="Laboratory: Requires Food Laboratory">
+            <Utensils size={10} />
+            Food Lab
+          </span>
+        )}
+      </>
+    );
+  };
+
+  // Shared quick-toggle bar with 3 separated mode buttons (Single Lec | Lec & Lab | Lab Only)
+  // plus laboratory room type selectors (Comp Lab | Food Lab)
+  const renderSubjectQuickToggles = (sub, subRef) => {
+    const mode = getSubjectSessionMode(sub);
+    return (
+      <div className="hub-quick-toggles-bar" style={{ marginTop: '4px' }}>
+        <div className="hub-segmented-toggle-group" role="group" aria-label="Course mode">
+          <button
+            type="button"
+            className={`hub-inline-toggle-btn hub-seg-btn ${mode === 'single_lec' ? 'active-single' : ''}`}
+            onClick={() => handleQuickToggleSubjectLab(subRef, 'single_lec')}
+            aria-pressed={mode === 'single_lec'}
+            title="Pure Lecture (standard classroom, no laboratory)"
+          >
+            {mode === 'single_lec' ? <Check size={10} strokeWidth={2.8} /> : <BookOpen size={10} />}
+            <span>Single Lec</span>
+          </button>
+          <button
+            type="button"
+            className={`hub-inline-toggle-btn hub-seg-btn ${mode === 'lec_lab' ? 'active-leclab' : ''}`}
+            onClick={() => handleQuickToggleSubjectLab(subRef, 'lec_lab')}
+            aria-pressed={mode === 'lec_lab'}
+            title="Lecture & Laboratory split (automatically checks laboratory room type)"
+          >
+            {mode === 'lec_lab' ? <Check size={10} strokeWidth={2.8} /> : <Layers size={10} />}
+            <span>Lec &amp; Lab</span>
+          </button>
+          <button
+            type="button"
+            className={`hub-inline-toggle-btn hub-seg-btn ${mode === 'single_lab' ? 'active-single-lab' : ''}`}
+            onClick={() => handleQuickToggleSubjectLab(subRef, 'single_lab')}
+            aria-pressed={mode === 'single_lab'}
+            title="Laboratory Only (single laboratory session)"
+          >
+            {mode === 'single_lab' ? <Check size={10} strokeWidth={2.8} /> : <FlaskConical size={10} />}
+            <span>Lab Only</span>
+          </button>
+        </div>
+
+        <span className="hub-toggle-group-divider" aria-hidden="true" />
+
+        <div className="hub-lab-toggle-group" role="group" aria-label="Laboratory room type">
+          <button
+            type="button"
+            className={`hub-inline-toggle-btn ${sub.requiredLab ? 'active-comp' : ''}`}
+            onClick={() => handleQuickToggleSubjectLab(subRef, 'complab')}
+            aria-pressed={Boolean(sub.requiredLab)}
+            title={sub.requiredLab ? 'Computer Laboratory selected' : 'Assign Computer Laboratory'}
+          >
+            {sub.requiredLab ? <Check size={10} strokeWidth={2.8} /> : <Monitor size={10} />}
+            <span>Comp Lab</span>
+          </button>
+          <button
+            type="button"
+            className={`hub-inline-toggle-btn ${sub.isFoodLab ? 'active-food' : ''}`}
+            onClick={() => handleQuickToggleSubjectLab(subRef, 'foodlab')}
+            aria-pressed={Boolean(sub.isFoodLab)}
+            title={sub.isFoodLab ? 'Food Laboratory selected' : 'Assign Food Laboratory'}
+          >
+            {sub.isFoodLab ? <Check size={10} strokeWidth={2.8} /> : <Utensils size={10} />}
+            <span>Food Lab</span>
+          </button>
+        </div>
+
+        {sub.hasLecLab && (
+          <span className="hub-leclab-note">
+            (Lec: {sub.lectureHours || 2}h | Lab: {sub.labHours || 3}h)
+          </span>
+        )}
+      </div>
+    );
+  };
+
   // Render chip helper for AutocompleteMultiSelect in modal
   const renderSubjectChip = (sub, onRemove) => {
     const codeVal = sub.code || sub.courseCode || sub.subjectCode;
@@ -2334,6 +2554,18 @@ const TeachingLoadManagement = ({
         {sub.hasLecLab && (
           <span className="hub-tag-leclab-micro">
             Lec+Lab
+          </span>
+        )}
+        {sub.requiredLab && (
+          <span className="hub-tag-complab-micro" title="Requires Computer Laboratory">
+            <Monitor size={9} />
+            Comp Lab
+          </span>
+        )}
+        {sub.isFoodLab && (
+          <span className="hub-tag-foodlab-micro" title="Requires Food Laboratory">
+            <Utensils size={9} />
+            Food Lab
           </span>
         )}
         <button
@@ -2366,12 +2598,7 @@ const TeachingLoadManagement = ({
             {codeVal || nameVal || sub.id}
           </span>
         )}
-        {sub.hasLecLab && (
-          <span className="hub-tag-leclab" style={{ flexShrink: 0 }}>
-            <FlaskConical size={10} />
-            Lec & Lab
-          </span>
-        )}
+        {renderSubjectStatusBadges(sub, { showSingleLec: false })}
         {sub.credits && (
           <span className="hub-badge-credits">
             {sub.credits}u
@@ -2600,37 +2827,85 @@ const TeachingLoadManagement = ({
           </div>
         </div>
 
-        {/* Lec & Lab Split Toggle */}
-        <label className={`hub-checkbox-card ${form.hasLecLab ? 'active' : ''}`}>
-          <input
-            type="checkbox"
-            checked={Boolean(form.hasLecLab)}
-            onChange={(e) => {
-              const checked = e.target.checked;
-              setNestedEditing(prev => ({
-                ...prev,
-                form: {
-                  ...prev.form,
-                  hasLecLab: checked,
-                  requiredLab: checked ? (prev.form.requiredLab || !prev.form.isFoodLab) : prev.form.requiredLab
-                }
-              }));
-            }}
-            style={{ marginTop: '3px' }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <strong style={{ fontSize: '0.84rem' }}>Lecture & Laboratory Split Course</strong>
-              <span className="hub-tag-leclab">
-                <FlaskConical size={10} />
-                Splits into 2 Class Sessions
-              </span>
+        {/* Separated 3-Mode Selector: Single Lecture | Lecture & Lab | Lab Only */}
+        {(() => {
+          const nestedMode = getSubjectSessionMode(form);
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label className="hub-form-label">Course Mode</label>
+              <div className="hub-session-mode-grid-3">
+                <button
+                  type="button"
+                  className={`hub-session-mode-card ${nestedMode === 'single_lec' ? 'active-single' : ''}`}
+                  onClick={() => setNestedEditing(prev => ({
+                    ...prev,
+                    form: { ...prev.form, hasLecLab: false, requiredLab: false, isFoodLab: false }
+                  }))}
+                  aria-pressed={nestedMode === 'single_lec'}
+                >
+                  <div style={{ marginTop: '2px', color: nestedMode === 'single_lec' ? '#1d4ed8' : 'var(--text-muted)' }}>
+                    {nestedMode === 'single_lec' ? <CheckCircle2 size={15} /> : <BookOpen size={15} />}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: '0.82rem', color: 'var(--text-main)' }}>Single Lec</strong>
+                      {nestedMode === 'single_lec' && <span className="hub-tag-single-lec">Pure</span>}
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      Pure lecture in standard classroom.
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`hub-session-mode-card ${nestedMode === 'lec_lab' ? 'active-leclab' : ''}`}
+                  onClick={() => setNestedEditing(prev => ({
+                    ...prev,
+                    form: { ...prev.form, hasLecLab: true, ...getDefaultLabRoomFlags(prev.form) }
+                  }))}
+                  aria-pressed={nestedMode === 'lec_lab'}
+                >
+                  <div style={{ marginTop: '2px', color: nestedMode === 'lec_lab' ? '#7e22ce' : 'var(--text-muted)' }}>
+                    {nestedMode === 'lec_lab' ? <CheckCircle2 size={15} /> : <Layers size={15} />}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: '0.82rem', color: 'var(--text-main)' }}>Lec &amp; Lab</strong>
+                      {nestedMode === 'lec_lab' && <span className="hub-tag-leclab">2 Sessions</span>}
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      Separate lecture + laboratory slots.
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`hub-session-mode-card ${nestedMode === 'single_lab' ? 'active-single-lab' : ''}`}
+                  onClick={() => setNestedEditing(prev => ({
+                    ...prev,
+                    form: { ...prev.form, hasLecLab: false, ...getDefaultLabRoomFlags(prev.form) }
+                  }))}
+                  aria-pressed={nestedMode === 'single_lab'}
+                >
+                  <div style={{ marginTop: '2px', color: nestedMode === 'single_lab' ? '#0f766e' : 'var(--text-muted)' }}>
+                    {nestedMode === 'single_lab' ? <CheckCircle2 size={15} /> : <FlaskConical size={15} />}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: '0.82rem', color: 'var(--text-main)' }}>Lab Only</strong>
+                      {nestedMode === 'single_lab' && <span className="hub-tag-single-lab">Single Lab</span>}
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                      Single laboratory session only.
+                    </span>
+                  </div>
+                </button>
+              </div>
             </div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              Directly guides scheduling AI to book separate classroom lecture and laboratory slots.
-            </span>
-          </div>
-        </label>
+          );
+        })()}
 
         {form.hasLecLab ? (
           <div className="hub-form-grid-3">
@@ -2673,7 +2948,7 @@ const TeachingLoadManagement = ({
             <div className="hub-form-field">
               <label className="hub-form-label">Classroom Mode</label>
               <div className="hub-single-session-box">
-                Single classroom session schedule
+                {form.requiredLab ? 'Single Lab (Computer Lab)' : form.isFoodLab ? 'Single Lab (Food Lab)' : 'Pure Lecture (Standard Classroom)'}
               </div>
             </div>
           </div>
@@ -2681,53 +2956,73 @@ const TeachingLoadManagement = ({
 
         {/* Lab Room Type Requirements */}
         <div className="hub-form-grid-2">
-          <label className={`hub-checkbox-card ${form.requiredLab ? 'active' : ''}`}>
+          <label className={`hub-checkbox-card ${form.requiredLab ? 'active active-comp' : ''}`}>
             <input
               type="checkbox"
               checked={Boolean(form.requiredLab)}
               onChange={(e) => {
                 const checked = e.target.checked;
-                setNestedEditing(prev => ({
-                  ...prev,
-                  form: {
-                    ...prev.form,
-                    requiredLab: checked,
-                    isFoodLab: checked ? false : prev.form.isFoodLab
-                  }
-                }));
+                setNestedEditing(prev => {
+                  const nextIsFood = checked ? false : Boolean(prev.form.isFoodLab);
+                  return {
+                    ...prev,
+                    form: {
+                      ...prev.form,
+                      requiredLab: checked,
+                      isFoodLab: nextIsFood,
+                      hasLecLab: (!checked && !nextIsFood) ? false : prev.form.hasLecLab
+                    }
+                  };
+                });
               }}
               style={{ marginTop: '3px' }}
             />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                 <Monitor size={14} color="#059669" />
                 <strong style={{ fontSize: '0.82rem' }}>Requires Computer Lab</strong>
+                {form.requiredLab && (
+                  <span className="hub-tag-complab" style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
+                    <Check size={9} strokeWidth={3} />
+                    Laboratory
+                  </span>
+                )}
               </div>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Assigned to rooms with PC workstations</span>
             </div>
           </label>
 
-          <label className={`hub-checkbox-card ${form.isFoodLab ? 'active' : ''}`}>
+          <label className={`hub-checkbox-card ${form.isFoodLab ? 'active active-food' : ''}`}>
             <input
               type="checkbox"
               checked={Boolean(form.isFoodLab)}
               onChange={(e) => {
                 const checked = e.target.checked;
-                setNestedEditing(prev => ({
-                  ...prev,
-                  form: {
-                    ...prev.form,
-                    isFoodLab: checked,
-                    requiredLab: checked ? false : prev.form.requiredLab
-                  }
-                }));
+                setNestedEditing(prev => {
+                  const nextReqLab = checked ? false : Boolean(prev.form.requiredLab);
+                  return {
+                    ...prev,
+                    form: {
+                      ...prev.form,
+                      isFoodLab: checked,
+                      requiredLab: nextReqLab,
+                      hasLecLab: (!checked && !nextReqLab) ? false : prev.form.hasLecLab
+                    }
+                  };
+                });
               }}
               style={{ marginTop: '3px' }}
             />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                 <Utensils size={14} color="#d97706" />
                 <strong style={{ fontSize: '0.82rem' }}>Requires Food Lab</strong>
+                {form.isFoodLab && (
+                  <span className="hub-tag-foodlab" style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
+                    <Check size={9} strokeWidth={3} />
+                    Laboratory
+                  </span>
+                )}
               </div>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Assigned to culinary kitchen facilities</span>
             </div>
@@ -3323,12 +3618,7 @@ const TeachingLoadManagement = ({
                                     {isOrphan && <AlertTriangle size={12} style={{ flexShrink: 0 }} />}
                                     {sub.code}
                                   </span>
-                                  {sub.hasLecLab && (
-                                    <span className="hub-tag-leclab" title="Requires separate Lecture and Laboratory sessions">
-                                      <FlaskConical size={10} />
-                                      Lec & Lab
-                                    </span>
-                                  )}
+                                  {!isOrphan && renderSubjectStatusBadges(sub)}
                                   {sub.credits && (
                                     <span className="hub-badge-credits">{sub.credits}u</span>
                                   )}
@@ -3514,8 +3804,20 @@ const TeachingLoadManagement = ({
                                 >
                                   <span>{sub.code}</span>
                                   {sub.hasLecLab && (
-                                    <span style={{ fontSize: '0.6rem', background: 'rgba(147, 51, 234, 0.12)', color: '#7e22ce', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>
+                                    <span className="hub-tag-leclab-micro">
                                       Lec+Lab
+                                    </span>
+                                  )}
+                                  {sub.requiredLab && (
+                                    <span className="hub-tag-complab-micro" title="Requires Computer Laboratory">
+                                      <Monitor size={9} />
+                                      Comp Lab
+                                    </span>
+                                  )}
+                                  {sub.isFoodLab && (
+                                    <span className="hub-tag-foodlab-micro" title="Requires Food Laboratory">
+                                      <Utensils size={9} />
+                                      Food Lab
                                     </span>
                                   )}
                                 </span>
@@ -3576,7 +3878,19 @@ const TeachingLoadManagement = ({
                                           >
                                             <span>{mSub?.code || mRef}</span>
                                             {mSub?.hasLecLab && (
-                                              <span style={{ fontSize: '0.6rem', color: '#047857', opacity: 0.85 }}>(L+L)</span>
+                                              <span style={{ fontSize: '0.6rem', color: '#7e22ce', fontWeight: 700 }}>(L+L)</span>
+                                            )}
+                                            {mSub?.requiredLab && (
+                                              <span title="Requires Computer Laboratory" style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.6rem', color: '#047857', background: 'rgba(16, 185, 129, 0.16)', padding: '0 4px', borderRadius: '3px' }}>
+                                                <Monitor size={8} />
+                                                Lab
+                                              </span>
+                                            )}
+                                            {mSub?.isFoodLab && (
+                                              <span title="Requires Food Laboratory" style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.6rem', color: '#b45309', background: 'rgba(217, 119, 6, 0.16)', padding: '0 4px', borderRadius: '3px' }}>
+                                                <Utensils size={8} />
+                                                Food Lab
+                                              </span>
                                             )}
                                           </span>
                                         );
@@ -3655,12 +3969,7 @@ const TeachingLoadManagement = ({
                         <span className="hub-entity-badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669' }}>
                           {sub.credits} Units • {sub.category}
                         </span>
-                        {sub.hasLecLab && (
-                          <span className="hub-tag-leclab">
-                            <FlaskConical size={10} />
-                            Lec & Lab
-                          </span>
-                        )}
+                        {renderSubjectStatusBadges(sub)}
                         {subDepts.length > 0 && (
                           <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', padding: '2px 7px', borderRadius: '4px', background: 'var(--bg-main)', border: '1px solid var(--border-color)' }}>
                             {subDepts.join(', ')}
@@ -3938,12 +4247,7 @@ const TeachingLoadManagement = ({
                               <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                   <span className="hub-subject-code">{sub.code}</span>
-                                  {sub.hasLecLab && (
-                                    <span className="hub-tag-leclab">
-                                      <FlaskConical size={10} />
-                                      Lec & Lab
-                                    </span>
-                                  )}
+                                  {renderSubjectStatusBadges(sub)}
                                   {sub.credits && (
                                     <span className="hub-badge-credits">
                                       {sub.credits}u
@@ -3954,41 +4258,8 @@ const TeachingLoadManagement = ({
                                   {sub.name}
                                 </span>
 
-                                {/* Quick Lab & Room Toggles right in the section field! */}
-                                <div className="hub-quick-toggles-bar" style={{ marginTop: '4px' }}>
-                                  <button
-                                    type="button"
-                                    className={`hub-inline-toggle-btn ${sub.hasLecLab ? 'active-leclab' : ''}`}
-                                    onClick={() => handleQuickToggleSubjectLab(subRef, 'leclab')}
-                                    title="Click to toggle Lecture & Laboratory split"
-                                  >
-                                    <FlaskConical size={10} />
-                                    {sub.hasLecLab ? 'Lec & Lab' : 'Single Session'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={`hub-inline-toggle-btn ${sub.requiredLab ? 'active-comp' : ''}`}
-                                    onClick={() => handleQuickToggleSubjectLab(subRef, 'complab')}
-                                    title="Click to toggle Computer Lab requirement"
-                                  >
-                                    <Monitor size={10} />
-                                    Comp Lab
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={`hub-inline-toggle-btn ${sub.isFoodLab ? 'active-food' : ''}`}
-                                    onClick={() => handleQuickToggleSubjectLab(subRef, 'foodlab')}
-                                    title="Click to toggle Food Lab requirement"
-                                  >
-                                    <Utensils size={10} />
-                                    Food Lab
-                                  </button>
-                                  {sub.hasLecLab && (
-                                    <span className="hub-leclab-note">
-                                      (Lec: {sub.lectureHours || 2}h | Lab: {sub.labHours || 3}h)
-                                    </span>
-                                  )}
-                                </div>
+                                {/* Quick Session Mode & Lab Toggles right in the section field! */}
+                                {renderSubjectQuickToggles(sub, subRef)}
                               </div>
 
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -4210,34 +4481,16 @@ const TeachingLoadManagement = ({
 
                         return (
                           <div key={subKey} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <div className="hub-mapping-row" style={{ padding: '6px 12px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
-                                <span style={{ fontWeight: '700', fontSize: '0.84rem', color: 'var(--accent-dark)' }}>{sub.code}</span>
-                                <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{sub.name}</span>
-                                <button
-                                  type="button"
-                                  className={`hub-inline-toggle-btn ${sub.hasLecLab ? 'active-leclab' : ''}`}
-                                  onClick={() => handleQuickToggleSubjectLab(subRef, 'leclab')}
-                                  title="Toggle Lecture & Lab split"
-                                >
-                                  <FlaskConical size={10} /> {sub.hasLecLab ? 'Lec & Lab' : 'Single Lec'}
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`hub-inline-toggle-btn ${sub.requiredLab ? 'active-comp' : ''}`}
-                                  onClick={() => handleQuickToggleSubjectLab(subRef, 'complab')}
-                                  title="Toggle Computer Lab requirement"
-                                >
-                                  <Monitor size={10} /> Comp Lab
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`hub-inline-toggle-btn ${sub.isFoodLab ? 'active-food' : ''}`}
-                                  onClick={() => handleQuickToggleSubjectLab(subRef, 'foodlab')}
-                                  title="Toggle Food Lab requirement"
-                                >
-                                  <Utensils size={10} /> Food Lab
-                                </button>
+                            <div className="hub-mapping-row" style={{ padding: '8px 12px', alignItems: 'flex-start' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  <span style={{ fontWeight: '700', fontSize: '0.84rem', color: 'var(--accent-dark)' }}>{sub.code}</span>
+                                  {sub.name && sub.name !== sub.code && (
+                                    <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '220px' }} title={sub.name}>{sub.name}</span>
+                                  )}
+                                  {renderSubjectStatusBadges(sub)}
+                                </div>
+                                {renderSubjectQuickToggles(sub, subRef)}
                               </div>
                               <button
                                 type="button"
@@ -4486,35 +4739,111 @@ const TeachingLoadManagement = ({
                     </div>
                   )}
 
-                  {/* Lec & Lab Split Toggle */}
-                  <label className={`hub-checkbox-card ${stagedEntityForm.hasLecLab ? 'active' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={Boolean(stagedEntityForm.hasLecLab)}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setUserLabModified(true);
-                        setStagedEntityForm(prev => ({
-                          ...prev,
-                          hasLecLab: checked,
-                          requiredLab: checked ? (prev.requiredLab || !prev.isFoodLab) : prev.requiredLab
-                        }));
-                      }}
-                      style={{ marginTop: '3px' }}
-                    />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <strong style={{ fontSize: '0.86rem', color: 'var(--text-main)' }}>Lecture & Laboratory Split Course</strong>
-                        <span className="hub-tag-leclab" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>
-                          <FlaskConical size={10} />
-                          Splits into 2 Class Sessions
-                        </span>
+                  {/* Separated 3-Mode Selector: Single Lec | Lec & Lab | Lab Only */}
+                  {(() => {
+                    const modalMode = getSubjectSessionMode(stagedEntityForm);
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label className="hub-form-label">Course Mode</label>
+                        <div className="hub-session-mode-grid-3">
+                          <button
+                            type="button"
+                            className={`hub-session-mode-card ${modalMode === 'single_lec' ? 'active-single' : ''}`}
+                            onClick={() => {
+                              setUserLabModified(true);
+                              setAutoDetectedReason(null);
+                              setStagedEntityForm(prev => ({
+                                ...prev,
+                                hasLecLab: false,
+                                requiredLab: false,
+                                isFoodLab: false
+                              }));
+                            }}
+                            aria-pressed={modalMode === 'single_lec'}
+                          >
+                            <div style={{ marginTop: '2px', color: modalMode === 'single_lec' ? '#1d4ed8' : 'var(--text-muted)' }}>
+                              {modalMode === 'single_lec' ? <CheckCircle2 size={16} /> : <BookOpen size={16} />}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <strong style={{ fontSize: '0.84rem', color: 'var(--text-main)' }}>Single Lec</strong>
+                                {modalMode === 'single_lec' && (
+                                  <span className="hub-tag-single-lec" style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
+                                    Pure
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                Pure lecture in standard classroom (no lab).
+                              </span>
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={`hub-session-mode-card ${modalMode === 'lec_lab' ? 'active-leclab' : ''}`}
+                            onClick={() => {
+                              setUserLabModified(true);
+                              setStagedEntityForm(prev => ({
+                                ...prev,
+                                hasLecLab: true,
+                                ...getDefaultLabRoomFlags(prev)
+                              }));
+                            }}
+                            aria-pressed={modalMode === 'lec_lab'}
+                          >
+                            <div style={{ marginTop: '2px', color: modalMode === 'lec_lab' ? '#7e22ce' : 'var(--text-muted)' }}>
+                              {modalMode === 'lec_lab' ? <CheckCircle2 size={16} /> : <Layers size={16} />}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <strong style={{ fontSize: '0.84rem', color: 'var(--text-main)' }}>Lec &amp; Lab</strong>
+                                {modalMode === 'lec_lab' && (
+                                  <span className="hub-tag-leclab" style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
+                                    2 Sessions
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                Separate lecture &amp; lab slots (auto-checks lab).
+                              </span>
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={`hub-session-mode-card ${modalMode === 'single_lab' ? 'active-single-lab' : ''}`}
+                            onClick={() => {
+                              setUserLabModified(true);
+                              setStagedEntityForm(prev => ({
+                                ...prev,
+                                hasLecLab: false,
+                                ...getDefaultLabRoomFlags(prev)
+                              }));
+                            }}
+                            aria-pressed={modalMode === 'single_lab'}
+                          >
+                            <div style={{ marginTop: '2px', color: modalMode === 'single_lab' ? '#0f766e' : 'var(--text-muted)' }}>
+                              {modalMode === 'single_lab' ? <CheckCircle2 size={16} /> : <FlaskConical size={16} />}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <strong style={{ fontSize: '0.84rem', color: 'var(--text-main)' }}>Lab Only</strong>
+                                {modalMode === 'single_lab' && (
+                                  <span className="hub-tag-single-lab" style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
+                                    Single Lab
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                Single laboratory session only.
+                              </span>
+                            </div>
+                          </button>
+                        </div>
                       </div>
-                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                        Generates separate lecture (standard classroom) and laboratory meeting slots for the scheduler algorithm.
-                      </span>
-                    </div>
-                  </label>
+                    );
+                  })()}
 
                   {/* Hours Breakdown */}
                   {stagedEntityForm.hasLecLab ? (
@@ -4558,7 +4887,7 @@ const TeachingLoadManagement = ({
                       <div className="hub-form-field">
                         <label className="hub-form-label">Classroom Mode</label>
                         <div className="hub-single-session-box">
-                          Single classroom session schedule
+                          {stagedEntityForm.requiredLab ? 'Single Lab (Computer Lab)' : stagedEntityForm.isFoodLab ? 'Single Lab (Food Lab)' : 'Pure Lecture (Standard Classroom)'}
                         </div>
                       </div>
                     </div>
@@ -4568,25 +4897,35 @@ const TeachingLoadManagement = ({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
                     <label className="hub-form-label">Laboratory Room Allocation Guide (Used by AI Scheduler)</label>
                     <div className="hub-form-grid-2">
-                      <label className={`hub-checkbox-card ${stagedEntityForm.requiredLab ? 'active' : ''}`}>
+                      <label className={`hub-checkbox-card ${stagedEntityForm.requiredLab ? 'active active-comp' : ''}`}>
                         <input
                           type="checkbox"
                           checked={Boolean(stagedEntityForm.requiredLab)}
                           onChange={(e) => {
                             const checked = e.target.checked;
                             setUserLabModified(true);
-                            setStagedEntityForm(prev => ({
-                              ...prev,
-                              requiredLab: checked,
-                              isFoodLab: checked ? false : prev.isFoodLab
-                            }));
+                            setStagedEntityForm(prev => {
+                              const nextIsFood = checked ? false : Boolean(prev.isFoodLab);
+                              return {
+                                ...prev,
+                                requiredLab: checked,
+                                isFoodLab: nextIsFood,
+                                hasLecLab: (!checked && !nextIsFood) ? false : prev.hasLecLab
+                              };
+                            });
                           }}
                           style={{ marginTop: '3px' }}
                         />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                             <Monitor size={14} color="#059669" />
                             <strong style={{ fontSize: '0.84rem', color: 'var(--text-main)' }}>Requires Computer Lab</strong>
+                            {stagedEntityForm.requiredLab && (
+                              <span className="hub-tag-complab" style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
+                                <Check size={9} strokeWidth={3} />
+                                Laboratory
+                              </span>
+                            )}
                           </div>
                           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                             Must be scheduled in a room with PC workstations and network setup.
@@ -4594,25 +4933,35 @@ const TeachingLoadManagement = ({
                         </div>
                       </label>
 
-                      <label className={`hub-checkbox-card ${stagedEntityForm.isFoodLab ? 'active' : ''}`}>
+                      <label className={`hub-checkbox-card ${stagedEntityForm.isFoodLab ? 'active active-food' : ''}`}>
                         <input
                           type="checkbox"
                           checked={Boolean(stagedEntityForm.isFoodLab)}
                           onChange={(e) => {
                             const checked = e.target.checked;
                             setUserLabModified(true);
-                            setStagedEntityForm(prev => ({
-                              ...prev,
-                              isFoodLab: checked,
-                              requiredLab: checked ? false : prev.requiredLab
-                            }));
+                            setStagedEntityForm(prev => {
+                              const nextReqLab = checked ? false : Boolean(prev.requiredLab);
+                              return {
+                                ...prev,
+                                isFoodLab: checked,
+                                requiredLab: nextReqLab,
+                                hasLecLab: (!checked && !nextReqLab) ? false : prev.hasLecLab
+                              };
+                            });
                           }}
                           style={{ marginTop: '3px' }}
                         />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                             <Utensils size={14} color="#d97706" />
                             <strong style={{ fontSize: '0.84rem', color: 'var(--text-main)' }}>Requires Food Laboratory</strong>
+                            {stagedEntityForm.isFoodLab && (
+                              <span className="hub-tag-foodlab" style={{ fontSize: '0.66rem', padding: '1px 6px' }}>
+                                <Check size={9} strokeWidth={3} />
+                                Laboratory
+                              </span>
+                            )}
                           </div>
                           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                             Must be scheduled in HM / Culinary cooking kitchen and food lab.

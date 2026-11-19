@@ -847,58 +847,229 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
               </div>
             )}
 
+            {/* Separated 3-Mode Selector: Single Lec (Pure) | Lec & Lab | Lab Only (Single Lab) */}
+            {(() => {
+              const currentMode = formData.hasLecLab
+                ? 'lec_lab'
+                : (formData.requiredLab || formData.isFoodLab ? 'single_lab' : 'single_lec');
+              const resolveLabFlags = (prev) => {
+                if (prev.isFoodLab) return { requiredLab: false, isFoodLab: true };
+                if (prev.requiredLab) return { requiredLab: true, isFoodLab: false };
+                const depts = Array.isArray(prev.departments) ? prev.departments.map(d => String(d).toUpperCase()) : [];
+                const det = detectLabRequirement(prev, subjects);
+                if (det?.isFoodLab || depts.includes('BSFT')) {
+                  return { requiredLab: false, isFoodLab: true };
+                }
+                return { requiredLab: true, isFoodLab: false };
+              };
+              return (
+                <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label className="form-label" style={{ marginBottom: 0 }}>Course Mode</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserLabModified(true);
+                        setAutoDetectedReason(null);
+                        setFormData(prev => ({ ...prev, hasLecLab: false, requiredLab: false, isFoodLab: false }));
+                      }}
+                      aria-pressed={currentMode === 'single_lec'}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '8px',
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: currentMode === 'single_lec' ? '1.5px solid #3b82f6' : '1.5px solid var(--border-color)',
+                        background: currentMode === 'single_lec' ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-main)',
+                        color: 'var(--text-main)',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                          <strong style={{ fontSize: '0.82rem' }}>Single Lec</strong>
+                          {currentMode === 'single_lec' && (
+                            <span style={{ fontSize: '0.64rem', fontWeight: 700, padding: '1px 5px', borderRadius: '4px', background: 'rgba(37, 99, 235, 0.14)', color: '#1d4ed8' }}>
+                              Pure
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          Pure lecture only
+                        </span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserLabModified(true);
+                        setAutoDetectedReason(null);
+                        setFormData(prev => ({ ...prev, hasLecLab: true, ...resolveLabFlags(prev) }));
+                      }}
+                      aria-pressed={currentMode === 'lec_lab'}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '8px',
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: currentMode === 'lec_lab' ? '1.5px solid #9333ea' : '1.5px solid var(--border-color)',
+                        background: currentMode === 'lec_lab' ? 'rgba(147, 51, 234, 0.08)' : 'var(--bg-main)',
+                        color: 'var(--text-main)',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                          <strong style={{ fontSize: '0.82rem' }}>Lec &amp; Lab</strong>
+                          {currentMode === 'lec_lab' && (
+                            <span style={{ fontSize: '0.64rem', fontWeight: 700, padding: '1px 5px', borderRadius: '4px', background: 'rgba(147, 51, 234, 0.14)', color: '#7e22ce' }}>
+                              2 Sessions
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          Lecture + Lab room
+                        </span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserLabModified(true);
+                        setAutoDetectedReason(null);
+                        setFormData(prev => ({ ...prev, hasLecLab: false, ...resolveLabFlags(prev) }));
+                      }}
+                      aria-pressed={currentMode === 'single_lab'}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '8px',
+                        padding: '10px',
+                        borderRadius: '10px',
+                        border: currentMode === 'single_lab' ? '1.5px solid #0d9488' : '1.5px solid var(--border-color)',
+                        background: currentMode === 'single_lab' ? 'rgba(13, 148, 136, 0.08)' : 'var(--bg-main)',
+                        color: 'var(--text-main)',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                          <strong style={{ fontSize: '0.82rem' }}>Lab Only</strong>
+                          {currentMode === 'single_lab' && (
+                            <span style={{ fontSize: '0.64rem', fontWeight: 700, padding: '1px 5px', borderRadius: '4px', background: 'rgba(13, 148, 136, 0.16)', color: '#0f766e' }}>
+                              Single Lab
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          Single laboratory only
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Laboratory Room Requirements */}
             <div style={{ marginBottom: '25px', padding: '14px 16px', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input
-                  type="checkbox"
-                  checked={Boolean(formData.hasLecLab)}
-                  onChange={e => {
-                    const checked = e.target.checked;
-                    setFormData(prev => ({
-                      ...prev,
-                      hasLecLab: checked,
-                      requiredLab: checked ? true : prev.requiredLab
-                    }));
-                  }}
-                  style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }}
-                />
-                Requires Lecture and Laboratory separately
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                Laboratory Requirement
+              </div>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '10px',
+                cursor: 'pointer',
+                fontSize: '0.88rem',
+                fontWeight: '600',
+                color: 'var(--text-main)',
+                padding: '8px 10px',
+                borderRadius: '8px',
+                border: formData.requiredLab ? '1.5px solid #10b981' : '1px solid var(--border-color)',
+                background: formData.requiredLab ? 'rgba(16, 185, 129, 0.08)' : 'var(--card-bg, #ffffff)'
+              }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formData.requiredLab)}
+                    onChange={e => {
+                      const checked = e.target.checked;
+                      setUserLabModified(true);
+                      setAutoDetectedReason(null);
+                      setFormData(prev => {
+                        const nextIsFood = checked ? false : Boolean(prev.isFoodLab);
+                        return {
+                          ...prev,
+                          requiredLab: checked,
+                          isFoodLab: nextIsFood,
+                          hasLecLab: (!checked && !nextIsFood) ? false : prev.hasLecLab
+                        };
+                      });
+                    }}
+                    style={{ accentColor: '#059669', width: '17px', height: '17px' }}
+                  />
+                  Requires Computer Laboratory
+                </span>
+                {formData.requiredLab && (
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.16)', color: '#047857', border: '1px solid rgba(16, 185, 129, 0.35)' }}>
+                    Laboratory · Comp Lab
+                  </span>
+                )}
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input
-                  type="checkbox"
-                  checked={Boolean(formData.requiredLab)}
-                  onChange={e => {
-                    const checked = e.target.checked;
-                    setUserLabModified(true);
-                    setAutoDetectedReason(null);
-                    setFormData(prev => ({
-                      ...prev,
-                      requiredLab: checked,
-                      isFoodLab: checked ? false : prev.isFoodLab
-                    }));
-                  }}
-                  style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }}
-                />
-                Requires Computer Laboratory
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                <input
-                  type="checkbox"
-                  checked={Boolean(formData.isFoodLab)}
-                  onChange={e => {
-                    const checked = e.target.checked;
-                    setUserLabModified(true);
-                    setAutoDetectedReason(null);
-                    setFormData(prev => ({
-                      ...prev,
-                      isFoodLab: checked,
-                      requiredLab: checked ? false : prev.requiredLab
-                    }));
-                  }}
-                  style={{ accentColor: 'var(--accent-primary)', width: '18px', height: '18px' }}
-                />
-                Requires Food Laboratory
+
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '10px',
+                cursor: 'pointer',
+                fontSize: '0.88rem',
+                fontWeight: '600',
+                color: 'var(--text-main)',
+                padding: '8px 10px',
+                borderRadius: '8px',
+                border: formData.isFoodLab ? '1.5px solid #f59e0b' : '1px solid var(--border-color)',
+                background: formData.isFoodLab ? 'rgba(217, 119, 6, 0.08)' : 'var(--card-bg, #ffffff)'
+              }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formData.isFoodLab)}
+                    onChange={e => {
+                      const checked = e.target.checked;
+                      setUserLabModified(true);
+                      setAutoDetectedReason(null);
+                      setFormData(prev => {
+                        const nextReqLab = checked ? false : Boolean(prev.requiredLab);
+                        return {
+                          ...prev,
+                          isFoodLab: checked,
+                          requiredLab: nextReqLab,
+                          hasLecLab: (!checked && !nextReqLab) ? false : prev.hasLecLab
+                        };
+                      });
+                    }}
+                    style={{ accentColor: '#d97706', width: '17px', height: '17px' }}
+                  />
+                  Requires Food Laboratory
+                </span>
+                {formData.isFoodLab && (
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(217, 119, 6, 0.16)', color: '#b45309', border: '1px solid rgba(217, 119, 6, 0.35)' }}>
+                    Laboratory · Food Lab
+                  </span>
+                )}
               </label>
 
               {autoDetectedReason && !userLabModified && (
@@ -968,9 +1139,34 @@ const SubjectManagement = ({ subjects, professors, sections, schedules, availabl
       {detailsSubject && createPortal(
         <div className="modal-overlay">
           <div className="modal-content" style={{ width: '500px', maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)', gap: '10px' }}>
               <div>
-                <h3 style={{ margin: 0, color: 'var(--accent-primary)' }}>{detailsSubject.code}</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                  <h3 style={{ margin: 0, color: 'var(--accent-primary)' }}>{detailsSubject.code}</h3>
+                  {detailsSubject.hasLecLab ? (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(147, 51, 234, 0.12)', color: '#7e22ce', border: '1px solid rgba(147, 51, 234, 0.25)' }}>
+                      Lec &amp; Lab ({detailsSubject.lectureHours || 2}h / {detailsSubject.labHours || 3}h)
+                    </span>
+                  ) : (detailsSubject.requiredLab || detailsSubject.isFoodLab) ? (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(13, 148, 136, 0.12)', color: '#0f766e', border: '1px solid rgba(13, 148, 136, 0.28)' }}>
+                      Lab Only ({detailsSubject.hoursPerMeeting || 1.5}h)
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(37, 99, 235, 0.1)', color: '#1d4ed8', border: '1px solid rgba(37, 99, 235, 0.22)' }}>
+                      Single Lec ({detailsSubject.hoursPerMeeting || 1.5}h)
+                    </span>
+                  )}
+                  {detailsSubject.requiredLab && (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.14)', color: '#047857', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                      Computer Lab
+                    </span>
+                  )}
+                  {detailsSubject.isFoodLab && (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(217, 119, 6, 0.14)', color: '#b45309', border: '1px solid rgba(217, 119, 6, 0.3)' }}>
+                      Food Lab
+                    </span>
+                  )}
+                </div>
                 <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>{detailsSubject.name}</p>
               </div>
               <button onClick={() => setDetailsSubject(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '5px' }}>

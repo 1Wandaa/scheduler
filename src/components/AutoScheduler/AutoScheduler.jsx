@@ -402,14 +402,46 @@ function AutoScheduler({
             setAiStatus(`Done. ${finalUnscheduled.length} class${finalUnscheduled.length > 1 ? 'es' : ''} could not be scheduled.`);
           }
 
+          const formatHistorySubject = (subj, component) => {
+            const code = (subj?.code || '').trim();
+            const name = (subj?.name || subj?.title || '').trim();
+            const compLabel = (component || '').trim();
+            const compSuffix = compLabel && !code.toLowerCase().includes(`(${compLabel.toLowerCase()})`)
+              ? ` (${compLabel})`
+              : '';
+            const baseLabel = code && name && code.toLowerCase() !== name.toLowerCase()
+              ? `${code} — ${name}`
+              : (code || name || 'Unknown');
+            return {
+              subject: `${baseLabel}${compSuffix}`,
+              subjectCode: code,
+              subjectName: name,
+              component: compLabel
+            };
+          };
+
           if (onLogHistory) {
             onLogHistory({
               engineMode: activeEngineMode,
               totalAttempted: rawPlaced.length + unscheduledResults.length,
               successCount: writtenCount,
               errorCount: finalUnscheduled.length,
+              semester: activeSemester || '',
+              schoolYear: activeSchoolYear || '',
+              createdSchedules: savedSchedules.map(s => ({
+                ...formatHistorySubject(s.subject, s.component),
+                section: s.section?.name || '',
+                professor: s.professor?.name || '',
+                room: s.room?.name || '',
+                day: s.day || '',
+                timeSlot: getMeetingTimeLabel(s.timeSlot, s.hours || s.subject?.hoursPerMeeting, scheduleMode)
+                  || s.timeSlot?.customLabel
+                  || s.timeSlot?.label
+                  || s.timeSlot?.time
+                  || ''
+              })),
               errors: finalUnscheduled.map(u => ({
-                subject: u.subject?.code || u.subject?.name || 'Unknown',
+                ...formatHistorySubject(u.subject, u.component),
                 section: u.section?.name || 'Unknown',
                 reason: u.reason || 'No open slot or conflict',
                 details: u.details || null
@@ -438,12 +470,29 @@ function AutoScheduler({
             totalAttempted: unscheduledResults.length,
             successCount: 0,
             errorCount: unscheduledResults.length,
-            errors: unscheduledResults.map(u => ({
-              subject: u.subject?.code || u.subject?.name || 'Unknown',
-              section: u.section?.name || 'Unknown',
-              reason: u.reason || 'No open slot or conflict',
-              details: u.details || null
-            }))
+            semester: activeSemester || '',
+            schoolYear: activeSchoolYear || '',
+            createdSchedules: [],
+            errors: unscheduledResults.map(u => {
+              const code = (u.subject?.code || '').trim();
+              const name = (u.subject?.name || u.subject?.title || '').trim();
+              const compLabel = (u.component || '').trim();
+              const compSuffix = compLabel && !code.toLowerCase().includes(`(${compLabel.toLowerCase()})`)
+                ? ` (${compLabel})`
+                : '';
+              const baseLabel = code && name && code.toLowerCase() !== name.toLowerCase()
+                ? `${code} — ${name}`
+                : (code || name || 'Unknown');
+              return {
+                subject: `${baseLabel}${compSuffix}`,
+                subjectCode: code,
+                subjectName: name,
+                component: compLabel,
+                section: u.section?.name || 'Unknown',
+                reason: u.reason || 'No open slot or conflict',
+                details: u.details || null
+              };
+            })
           });
         }
       }
