@@ -16,6 +16,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
 
     const [viewType, setViewType] = useState(location.state?.viewTarget?.viewType || 'department');
     const [selectedId, setSelectedId] = useState(location.state?.viewTarget?.selectedId || user?.department || '');
+    const [facultyDepartment, setFacultyDepartment] = useState(location.state?.viewTarget?.facultyDepartment || '');
     const [deptSectionId, setDeptSectionId] = useState(location.state?.viewTarget?.deptSectionId || '');
     const [selectedYearLevel, setSelectedYearLevel] = useState(
         location.state?.viewTarget
@@ -47,6 +48,11 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
             setSelectedYearLevel(vt.selectedYearLevel ? String(vt.selectedYearLevel) : '');
             if (vt.deptSectionId !== undefined) {
                 setDeptSectionId(vt.deptSectionId);
+            }
+            if (vt.facultyDepartment !== undefined) {
+                setFacultyDepartment(vt.facultyDepartment);
+            } else if (vt.viewType === 'faculty' || vt.selectedId !== undefined) {
+                setFacultyDepartment('');
             }
             if (vt.openFreeTime !== undefined) {
                 setIsFreeTimeMode(Boolean(vt.openFreeTime));
@@ -113,8 +119,14 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
             } else if (viewType === 'faculty' && professors.length > 0) {
                 setSelectedId(prev => {
                     if (!prev || prevViewTypeRef.current !== 'faculty') {
-                        const myProf = isFaculty && user ? professors.find(p => p.name === user.name || p.id === user.id) : null;
-                        return myProf ? myProf.id : professors[0].id;
+                        const targetDept = facultyDepartment.trim().toUpperCase();
+                        const pool = (targetDept
+                            ? professors.filter(p => (p.department || '').trim().toUpperCase() === targetDept)
+                            : professors
+                        ).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                        if (pool.length === 0) return '';
+                        const myProf = isFaculty && user ? pool.find(p => p.name === user.name || String(p.id) === String(user.id)) : null;
+                        return myProf ? myProf.id : pool[0].id;
                     }
                     return prev;
                 });
@@ -124,7 +136,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         }, 0);
 
         return () => clearTimeout(timer);
-    }, [viewType, rooms, professors, sections, user, departments, isFaculty]);
+    }, [viewType, rooms, professors, sections, user, departments, isFaculty, facultyDepartment]);
 
     // Listen for custom events to change view type from mobile Speed Dial
     useEffect(() => {
@@ -133,6 +145,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                 setViewType(e.detail);
                 if (e.detail !== 'faculty') {
                     setIsFreeTimeMode(false);
+                    setFacultyDepartment('');
                 }
             }
         };
@@ -352,6 +365,67 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
         }
     }, [viewType, activeEntity, selectedId, freeTimeContextKey, activeTerm, activeSemester, activeSchoolYear, confirm]);
 
+    // Compute unique departments for filtering faculty
+    const availableFacultyDepartments = React.useMemo(() => {
+        if (viewType !== 'faculty') return [];
+        const deptMap = new Map();
+        const baseDepts = departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS;
+        baseDepts.forEach(d => {
+            const raw = String(d || '').trim();
+            if (!raw) return;
+            const key = raw.toUpperCase();
+            if (!deptMap.has(key)) deptMap.set(key, raw);
+        });
+        professors.forEach(p => {
+            const raw = String(p.department || '').trim();
+            if (!raw) return;
+            const key = raw.toUpperCase();
+            if (!deptMap.has(key)) deptMap.set(key, raw);
+        });
+        return Array.from(deptMap.values()).sort((a, b) => a.localeCompare(b));
+    }, [viewType, departments, professors]);
+
+    const filteredFacultyProfessors = React.useMemo(() => {
+        if (viewType !== 'faculty') return [];
+        const targetDept = facultyDepartment.trim().toUpperCase();
+        const list = targetDept
+            ? professors.filter(p => (p.department || '').trim().toUpperCase() === targetDept)
+            : professors;
+        return [...list].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }, [viewType, professors, facultyDepartment]);
+
+    const handleFacultyDepartmentChange = React.useCallback((nextDept) => {
+        setFacultyDepartment(nextDept);
+        if (viewType !== 'faculty') return;
+        const normDept = nextDept.trim().toUpperCase();
+        const matching = (normDept
+            ? professors.filter(p => (p.department || '').trim().toUpperCase() === normDept)
+            : professors
+        ).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        if (matching.length === 0) {
+            setSelectedId('');
+            return;
+        }
+        if (selectedId && matching.some(p => String(p.id) === String(selectedId))) {
+            return;
+        }
+        const myProf = isFaculty && user
+            ? matching.find(p => p.name === user.name || String(p.id) === String(user.id))
+            : null;
+        setSelectedId(myProf ? myProf.id : matching[0].id);
+    }, [viewType, professors, selectedId, isFaculty, user]);
+
+    // Keep selected faculty valid if the filtered faculty list updates (e.g. faculty edited/removed)
+    useEffect(() => {
+        if (viewType !== 'faculty' || !facultyDepartment || !selectedId || professors.length === 0) return;
+        if (!filteredFacultyProfessors.some(p => String(p.id) === String(selectedId))) {
+            const nextId = filteredFacultyProfessors.length > 0 ? filteredFacultyProfessors[0].id : '';
+            const timer = setTimeout(() => setSelectedId(nextId), 0);
+            return () => clearTimeout(timer);
+        }
+    }, [viewType, facultyDepartment, selectedId, professors.length, filteredFacultyProfessors]);
+
     const targetOptions = React.useMemo(() => {
         if (viewType === 'department') {
             return (departments.length > 0 ? departments.map(d => d.id) : DEPARTMENTS)
@@ -371,10 +445,28 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     options: bRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })).map(r => ({ value: r.id, label: r.name }))
                 }));
         } else if (viewType === 'faculty') {
-            return [...professors].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(p => ({ value: p.id, label: p.name }));
+            if (facultyDepartment) {
+                return filteredFacultyProfessors.map(p => ({ value: p.id, label: p.name }));
+            }
+            const deptMap = {};
+            filteredFacultyProfessors.forEach(p => {
+                const d = (p.department || '').trim() || 'Other';
+                if (!deptMap[d]) deptMap[d] = [];
+                deptMap[d].push(p);
+            });
+            return Object.entries(deptMap)
+                .sort(([dA], [dB]) => {
+                    if (dA === 'Other') return 1;
+                    if (dB === 'Other') return -1;
+                    return dA.localeCompare(dB);
+                })
+                .map(([dept, deptProfs]) => ({
+                    label: dept,
+                    options: deptProfs.map(p => ({ value: p.id, label: p.name }))
+                }));
         }
         return [];
-    }, [viewType, departments, rooms, professors]);
+    }, [viewType, departments, rooms, facultyDepartment, filteredFacultyProfessors]);
 
     const detectedScheduleMode = React.useMemo(() => {
         const hasFriday = schedules.some(s => s.day === 'Friday');
@@ -485,6 +577,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                                 setViewType(nextView);
                                 if (nextView !== 'faculty') {
                                     setIsFreeTimeMode(false);
+                                    setFacultyDepartment('');
                                 }
                             }}
                             style={{ width: '100%' }}
@@ -495,13 +588,32 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                         </select>
                     </div>
 
+                    {viewType === 'faculty' && availableFacultyDepartments.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</label>
+                            <select
+                                className="form-select"
+                                value={facultyDepartment}
+                                onChange={(e) => handleFacultyDepartmentChange(e.target.value)}
+                                style={{ width: '100%', borderColor: facultyDepartment ? 'var(--accent-primary)' : 'var(--border-color)', backgroundColor: facultyDepartment ? '#DBEAFE' : 'white' }}
+                            >
+                                <option value="">All Departments</option>
+                                {availableFacultyDepartments.map(dept => (
+                                    <option key={dept} value={dept}>{dept}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target</label>
+                        <label className="form-label" style={{ marginBottom: 0, fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {viewType === 'faculty' ? 'Faculty' : 'Target'}
+                        </label>
                         <CustomSelect
                             name="targetId"
                             value={selectedId}
                             onChange={(e) => setSelectedId(e.target.value)}
-                            placeholder={`Select ${viewType}...`}
+                            placeholder={viewType === 'faculty' && facultyDepartment ? `Select ${facultyDepartment} faculty...` : `Select ${viewType}...`}
                             style={{ width: '100%' }}
                             options={targetOptions}
                         />
@@ -577,7 +689,7 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     schedules={filteredSchedules}
                     activeSchedules={schedules}
                     title={`${titlePrefix} SCHEDULE: ${titleName}`}
-                    targetDepartment={viewType === 'department' ? selectedId : ''}
+                    targetDepartment={viewType === 'department' ? selectedId : (viewType === 'faculty' ? (activeEntity?.department || facultyDepartment) : '')}
                     onUpdateSchedule={isAdmin ? onUpdateSchedule : undefined}
                     onRemove={isAdmin ? onRemoveSchedule : undefined}
                     departments={departments}
