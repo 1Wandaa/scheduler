@@ -622,7 +622,6 @@ function ScheduleViewer({ user, schedules, rooms, professors, sections, isAdmin,
                     department={viewType === 'department' ? selectedId : (activeEntity?.department || '')}
                     viewType={viewType}
                     facultyName={viewType === 'faculty' ? titleName : ''}
-                    freeTimeActivities={viewType === 'faculty' ? freeTimeActivities : undefined}
                     sectionName={
                         viewType === 'department' && deptSectionId
                             ? (sections.find(s => s.id === deptSectionId)?.name || titleName)

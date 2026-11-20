@@ -89,9 +89,8 @@ function snapRangeToPool(range, poolSlotIds) {
  * Build variable-height sub-rows for a half-day (morning or afternoon) so 1-hour
  * and 30-min classes occupy their exact proportional length and leave real gaps.
  */
-function buildHalfDayGrid(halfBlocks, dayItemsMap, days, isFaculty, freeTimeActivities) {
+function buildHalfDayGrid(halfBlocks, dayItemsMap, days) {
     const classGroupsByDay = {};
-    const freeSegmentsByDay = {};
     const cutSet = new Set();
 
     halfBlocks.forEach(b => {
@@ -124,52 +123,6 @@ function buildHalfDayGrid(halfBlocks, dayItemsMap, days, isFaculty, freeTimeActi
             cutSet.add(g.end);
         });
         classGroupsByDay[day] = classGroups;
-
-        const freeSegments = [];
-        if (isFaculty && freeTimeActivities) {
-            halfBlocks.forEach(block => {
-                let runText = null;
-                let runStart = 0;
-                let runEnd = 0;
-
-                const flushRun = () => {
-                    if (runText && runEnd > runStart) {
-                        freeSegments.push({
-                            type: 'free',
-                            start: runStart,
-                            end: runEnd,
-                            text: runText
-                        });
-                        cutSet.add(runStart);
-                        cutSet.add(runEnd);
-                    }
-                    runText = null;
-                    runStart = 0;
-                    runEnd = 0;
-                };
-
-                block.slotIds.forEach(sid => {
-                    const sw = SLOT_WINDOWS[sid];
-                    if (!sw) return;
-                    const occupied = classGroups.some(g => g.start < sw.end && g.end > sw.start);
-                    const rawTxt = occupied ? '' : (freeTimeActivities[`${day}-${sid}`] || '').trim();
-                    if (rawTxt) {
-                        if (runText && runText.toLowerCase() === rawTxt.toLowerCase()) {
-                            runEnd = sw.end;
-                        } else {
-                            flushRun();
-                            runText = rawTxt;
-                            runStart = sw.start;
-                            runEnd = sw.end;
-                        }
-                    } else {
-                        flushRun();
-                    }
-                });
-                flushRun();
-            });
-        }
-        freeSegmentsByDay[day] = freeSegments;
     });
 
     const cuts = Array.from(cutSet).sort((a, b) => a - b);
@@ -202,10 +155,7 @@ function buildHalfDayGrid(halfBlocks, dayItemsMap, days, isFaculty, freeTimeActi
     const dayCells = {};
     days.forEach(day => {
         const cells = new Array(subRows.length).fill(null);
-        const occupied = [
-            ...classGroupsByDay[day],
-            ...freeSegmentsByDay[day]
-        ].sort((a, b) => a.start - b.start);
+        const occupied = [...classGroupsByDay[day]].sort((a, b) => a.start - b.start);
 
         let occIdx = 0;
         let r = 0;
@@ -260,8 +210,7 @@ const PrintableSchedule = ({
     semesterInfo = '', 
     scheduleMode = 'standard',
     viewType = 'department',
-    facultyName = '',
-    freeTimeActivities = {}
+    facultyName = ''
 }) => {
     const days = DAYS; // Always 5 days (Mon - Fri) to match the official INS-CLS-08 table
     const isFaculty = viewType === 'faculty' || (!sectionName && !!facultyName);
@@ -346,16 +295,12 @@ const PrintableSchedule = ({
         const morningGrid = buildHalfDayGrid(
             MORNING_BLOCKS,
             morningItemsByDay,
-            days,
-            isFaculty,
-            freeTimeActivities
+            days
         );
         const afternoonGrid = buildHalfDayGrid(
             AFTERNOON_BLOCKS,
             afternoonItemsByDay,
-            days,
-            isFaculty,
-            freeTimeActivities
+            days
         );
 
         const rows = [];
@@ -382,7 +327,7 @@ const PrintableSchedule = ({
         });
 
         return rows;
-    }, [scheduleItems, scheduleMode, days, isFaculty, freeTimeActivities]);
+    }, [scheduleItems, scheduleMode, days]);
 
     return (
         <div className="printable-iso-document">
@@ -487,23 +432,6 @@ const PrintableSchedule = ({
                                                 className={`schedule-cell iso-empty-cell ${durClass}`}
                                             >
                                                 <div className="iso-empty-spacer">&nbsp;</div>
-                                            </td>
-                                        );
-                                    }
-
-                                    if (cell.type === 'free') {
-                                        return (
-                                            <td
-                                                key={`${day}-${row.start}`}
-                                                rowSpan={cell.rowSpan > 1 ? cell.rowSpan : undefined}
-                                                data-duration={dur}
-                                                className={`schedule-cell scheduled-cell iso-free-cell ${durClass}`}
-                                            >
-                                                <div className="cell-wrapper">
-                                                    <div className="cell-free-activity">
-                                                        {cell.text}
-                                                    </div>
-                                                </div>
                                             </td>
                                         );
                                     }

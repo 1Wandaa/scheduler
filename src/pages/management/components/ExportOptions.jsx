@@ -99,9 +99,6 @@ function buildIsoScheduleTableCss({
         .iso-schedule-table .iso-empty-spacer { font-size: 1px${imp}; line-height: 1px${imp}; height: 1px${imp}; overflow: hidden${imp}; }
         .cell-wrapper { display: flex${imp}; flex-direction: column${imp}; align-items: center${imp}; justify-content: center${imp}; width: 100%${imp}; height: 100%${imp}; box-sizing: border-box${imp}; }
         .cell-wrapper.cell-multi { flex-direction: row${imp}; align-items: stretch${imp}; justify-content: stretch${imp}; }
-        .cell-free-activity { font-size: 8.5pt${imp}; text-align: center${imp}; padding: 2px 4px${imp}; line-height: 1.15${imp}; width: 100%${imp}; box-sizing: border-box${imp}; }
-        td.iso-dur-60 .cell-free-activity { font-size: 8pt${imp}; padding: 1px 3px${imp}; line-height: 1.1${imp}; }
-        td.iso-dur-30 .cell-free-activity { font-size: 6.8pt${imp}; padding: 0 2px${imp}; line-height: 1.05${imp}; }
         .cell-content { display: flex${imp}; flex-direction: column${imp}; justify-content: center${imp}; padding: 2px 4px${imp}; height: 100%${imp}; overflow: hidden${imp}; box-sizing: border-box${imp}; line-height: 1.2${imp}; flex: 1${imp}; min-width: 0${imp}; width: 100%${imp}; }
         .cell-content.compact { padding: 1px 3px${imp}; line-height: 1.08${imp}; }
         .cell-subject { font-weight: bold${imp}; font-size: ${subjPt}pt${imp}; line-height: 1.2${imp}; white-space: nowrap${imp}; overflow: hidden${imp}; text-overflow: ellipsis${imp}; width: 100%${imp}; text-align: center${imp}; }

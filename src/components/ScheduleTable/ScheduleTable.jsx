@@ -25,7 +25,8 @@ const DAY_COLORS = {
   Friday: '#0288d1',
 };
 
-const LOGO_SRC = '/logo.png?v=1';
+const LOGO_SRC = '/download.jpg';
+const SECONDARY_LOGO = '/capsu-logo.jpg';
 const FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/en/8/8e/Capiz_State_University_logo.png';
 
 // Helper: Format professor name compactly
@@ -634,14 +635,16 @@ const ScheduleTable = React.memo(function ScheduleTable({
       docLogo.style.alignItems = 'center';
       docLogo.style.justifyContent = 'center';
       docLogo.style.borderRight = '1px solid #cbd5e1';
-      docLogo.style.backgroundColor = '#f8fafc';
+      docLogo.style.backgroundColor = '#ffffff';
 
       const logoImg = docLogo.querySelector('img');
       if (logoImg) {
-        logoImg.style.width = '48px';
-        logoImg.style.height = '48px';
-        logoImg.style.borderRadius = '50%';
-        logoImg.style.objectFit = 'cover';
+        logoImg.style.width = 'auto';
+        logoImg.style.height = '50px';
+        logoImg.style.maxWidth = '58px';
+        logoImg.style.borderRadius = '0';
+        logoImg.style.objectFit = 'contain';
+        logoImg.style.display = 'block';
         if (logoImg.complete && logoImg.naturalWidth > 0) {
           try {
             const c = document.createElement('canvas');
@@ -1788,10 +1791,15 @@ const ScheduleTable = React.memo(function ScheduleTable({
         <div className="schedule-doc-logo">
           <img
             src={LOGO_SRC}
-            alt="Logo"
+            alt="Capiz State University Logo"
             onError={(e) => {
-              if (e.currentTarget.src !== FALLBACK_LOGO) {
-                e.currentTarget.src = FALLBACK_LOGO;
+              const img = e.currentTarget;
+              if (!img.dataset.fallbackStep) {
+                img.dataset.fallbackStep = '1';
+                img.src = SECONDARY_LOGO;
+              } else if (img.dataset.fallbackStep === '1') {
+                img.dataset.fallbackStep = '2';
+                img.src = FALLBACK_LOGO;
               }
             }}
           />

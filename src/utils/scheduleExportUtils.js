@@ -841,22 +841,13 @@ export async function exportIsoToWord(user) {
                 tdDur
               });
             } else {
-              const freeAct = td.querySelector('.cell-free-activity')?.textContent.trim() || '';
               td.setAttribute('align', 'center');
               td.setAttribute('valign', 'middle');
               td.style.verticalAlign = 'middle';
-              if (freeAct) {
-                td.style.border = '1.0pt solid #000000';
-                const freePt = tdDur <= 30 ? '7pt' : (tdDur <= 60 ? '8.5pt' : '9.5pt');
-                const freePad = tdDur <= 30 ? '0.5pt 2pt' : (tdDur <= 60 ? '1pt 2pt' : '2pt');
-                td.style.padding = freePad;
-                td.innerHTML = `<p align="center" style="font-family: 'Times New Roman', Times, serif; font-size: ${freePt}; margin: 0; padding: 0; text-align: center; color: #000000; line-height: 1.1;">${escapeHtml(freeAct)}</p>`;
-              } else {
-                td.style.padding = '0';
-                td.style.fontSize = '1pt';
-                td.style.lineHeight = '1pt';
-                td.innerHTML = '<p style="font-size: 1pt; line-height: 1pt; margin: 0; padding: 0; mso-line-height-rule: exactly;">&nbsp;</p>';
-              }
+              td.style.padding = '0';
+              td.style.fontSize = '1pt';
+              td.style.lineHeight = '1pt';
+              td.innerHTML = '<p style="font-size: 1pt; line-height: 1pt; margin: 0; padding: 0; mso-line-height-rule: exactly;">&nbsp;</p>';
             }
           }
         }
