@@ -1,154 +1,291 @@
 /* src/styles/PrintableRoomUtilization.css */
+/* Official CAPSU Room Utilization Document — Optimized for Screen, Print & Export */
+
+.printable-room-utilization-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 24px;
+}
 
 .printable-room-utilization {
     font-family: "Times New Roman", Times, serif;
     color: #000;
     background: #fff;
     width: 100%;
-    margin: 0 auto;
-    padding: 0;
-    /* Basic A4 sizing for screen preview */
     max-width: 8.5in;
     min-height: 11in;
+    margin: 0 auto;
+    padding: 0;
     box-sizing: border-box;
-}
-
-/* Header Area (mimicking the Capiz State Univ logo & ribbons) */
-.room-util-header {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    border-bottom: 3px solid #f2a900; /* Yellow line */
-    padding: 20px 40px 10px;
-    margin-bottom: 20px;
-    position: relative;
-    overflow: hidden;
-}
-.room-util-header::before {
-    content: '';
-    position: absolute;
-    top: 0; right: 0;
-    width: 40%; height: 100%;
-    background: linear-gradient(to right bottom, #0033a0 50%, #f2a900 50%);
-    clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
-    z-index: 0;
-    opacity: 0.1; /* fallback if no image provided */
-}
-
-.room-util-header-content {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    z-index: 1;
-}
-
-.room-util-header img {
-    height: 70px;
-    object-fit: contain;
-}
-
-.room-util-header-text {
     display: flex;
     flex-direction: column;
-}
-.room-util-header-text .republic {
-    font-size: 9pt;
-    font-family: Arial, sans-serif;
-}
-.room-util-header-text .univ {
-    font-size: 16pt;
-    font-weight: bold;
-    color: #002060;
-    font-family: Arial, sans-serif;
-    letter-spacing: 1px;
-}
-.room-util-header-text .campus {
-    font-size: 10pt;
-    font-family: Arial, sans-serif;
-    color: #002060;
-    font-weight: bold;
-}
-
-/* Titles */
-.room-util-titles {
-    text-align: center;
-    margin-bottom: 20px;
-}
-.room-util-titles h2 {
-    font-family: Arial, sans-serif;
-    color: #2e5296; /* Matching the blue in PDF */
-    font-size: 14pt;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin: 0 0 10px 0;
-}
-.room-util-titles h3 {
-    font-size: 14pt;
-    font-weight: bold;
-    margin: 0 0 10px 0;
-    font-family: "Times New Roman", Times, serif;
-}
-.room-util-titles p {
-    font-size: 12pt;
-    margin: 0;
-    font-family: "Times New Roman", Times, serif;
-}
-
-/* Room Name Highlight */
-.room-util-room-name {
-    font-size: 12pt;
-    font-weight: bold;
-    background-color: #ffff00;
-    display: inline-block;
-    padding: 2px 5px;
-    margin-left: 40px;
-    margin-bottom: 10px;
+    box-shadow: 0 2px 14px rgba(15, 23, 42, 0.1);
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    overflow: hidden;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
 }
 
-/* Subjects Table */
-.room-util-subjects {
-    width: calc(100% - 80px);
-    margin: 0 auto 20px auto;
-    border-collapse: collapse;
-    font-family: "Times New Roman", Times, serif;
-    font-size: 11pt;
+/* Official CAPSU Full-Bleed Header */
+.room-util-header {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    line-height: 0;
+    flex-shrink: 0;
+    background: #fff;
+    overflow: hidden;
 }
-.room-util-subjects th, .room-util-subjects td {
-    border: 1px solid #000;
-    padding: 6px;
+
+.room-util-header-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    margin: 0;
+    padding: 0;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+/* Fallback header if banner asset is unavailable */
+.room-util-header-fallback {
+    display: flex;
+    align-items: center;
+    padding: 12px 36px 8px;
+    border-bottom: 3px solid #f2a900;
+    background: linear-gradient(110deg, #dce8f8 0%, #ffffff 55%);
+    line-height: 1.2;
+}
+
+.room-util-header-fallback img {
+    height: 54px;
+    width: auto;
+    margin-right: 12px;
+    object-fit: contain;
+}
+
+.room-util-header-fallback .room-util-header-text {
+    display: flex;
+    flex-direction: column;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.room-util-header-fallback .republic {
+    font-size: 8.5pt;
+    color: #002060;
+}
+
+.room-util-header-fallback .univ {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #002060;
+    letter-spacing: 0.4px;
+}
+
+.room-util-header-fallback .campus {
+    font-size: 9.5pt;
+    font-weight: bold;
+    color: #002060;
+}
+
+/* Document Body (indented symmetrically inside letterhead margins) */
+.room-util-body {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 8px 36px 10px 36px;
+    box-sizing: border-box;
+}
+
+/* Titles matching official ROOM UTILIZATION.docx */
+.room-util-titles {
     text-align: center;
+    margin: 2px 0 6px 0;
 }
+
+.room-util-titles h2 {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #002060;
+    font-size: 11.5pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin: 0 0 2px 0;
+    line-height: 1.18;
+}
+
+.room-util-titles h3 {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11.5pt;
+    font-weight: bold;
+    color: #000;
+    margin: 0 0 2px 0;
+    line-height: 1.15;
+}
+
+.room-util-titles p {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 9.5pt;
+    color: #000;
+    margin: 0;
+    line-height: 1.15;
+}
+
+/* Room Highlight Badge */
+.room-util-room-name-wrapper {
+    margin: 0 0 6px 0;
+    padding: 0;
+    text-align: left;
+}
+
+.room-util-room-name {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 10pt;
+    font-weight: bold;
+    color: #000;
+    background-color: #ffff00;
+    border: 1px solid #000;
+    padding: 2px 8px;
+    display: inline-block;
+    line-height: 1.15;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* Subjects Summary Table */
+.room-util-subjects-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 8px;
+}
+
+.room-util-subjects {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #000;
+    table-layout: fixed;
+    font-family: "Times New Roman", Times, serif;
+    font-size: var(--room-subj-font, 8pt);
+    color: #000;
+}
+
+.room-util-subjects th,
+.room-util-subjects td {
+    border: 1px solid #000;
+    padding: var(--room-subj-pad, 2.5px 5px);
+    vertical-align: middle;
+    line-height: 1.15;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
 .room-util-subjects th {
+    font-weight: bold;
+    text-align: center;
+    background-color: #f2f2f2;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.room-util-subjects td.subj-code-cell {
+    text-align: center;
     font-weight: bold;
 }
 
-/* Timetable */
-.room-util-timetable {
-    width: calc(100% - 80px);
-    margin: 0 auto 30px auto;
-    border-collapse: collapse;
-    font-family: Arial, sans-serif;
-    font-size: 9pt;
-    table-layout: fixed;
+.room-util-subjects td.subj-desc-cell,
+.room-util-subjects td.subj-faculty-cell {
+    text-align: left;
+    padding-left: 6px;
 }
-.room-util-timetable th, .room-util-timetable td {
+
+.room-util-subjects td.subj-unit-cell,
+.room-util-subjects td.subj-sec-cell {
+    text-align: center;
+}
+
+/* Weekly Timetable Grid */
+.room-util-timetable-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 8px;
+}
+
+.room-util-timetable {
+    width: 100%;
+    min-width: 640px;
+    border-collapse: collapse;
+    border: 1px solid #000;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 8pt;
+    table-layout: fixed;
+    color: #000;
+}
+
+.room-util-timetable th,
+.room-util-timetable td {
     border: 1px solid #000;
     text-align: center;
     vertical-align: middle;
     padding: 0;
-    height: 35px; /* compact */
+    box-sizing: border-box;
 }
+
 .room-util-timetable th {
+    font-weight: bold;
     font-size: 8pt;
-    font-weight: normal;
-    padding: 2px;
+    padding: 2px 2px;
+    background-color: #f2f2f2;
+    height: var(--room-th-height, 20px);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
-.room-util-timetable .time-col {
-    width: 15%;
-    font-size: 8pt;
+
+.room-util-timetable td {
+    height: var(--room-slot-height, 21px);
+    line-height: 1.1;
+}
+
+.room-util-timetable tr.hour-row td:not(.time-cell):not(.scheduled-cell) {
+    border-bottom: none;
+}
+
+.room-util-timetable tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) {
+    border-top: none;
+}
+
+.room-util-timetable td.scheduled-cell,
+.room-util-timetable td.cell-scheduled {
+    background-color: var(--cell-bg, #109EEF);
+    border: 1px solid #000 !important;
+    color: #000;
+    font-weight: bold;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.room-util-timetable .time-cell,
+.room-util-timetable th.time-header {
+    position: sticky;
+    left: 0;
+    background-color: #f8fafc;
+    z-index: 2;
+    width: 13%;
+    min-width: 82px;
+    font-weight: bold;
+    font-size: 7.5pt;
+    padding: 1px 2px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.room-util-timetable th.time-header {
+    z-index: 3;
+    background-color: #f2f2f2;
 }
 
 .room-util-timetable .cell-content {
@@ -158,104 +295,330 @@
     align-items: center;
     width: 100%;
     height: 100%;
-    padding: 4px;
+    padding: 1px 2px;
     box-sizing: border-box;
-}
-
-.room-util-timetable .cell-scheduled {
-    background-color: #00b0f0 !important; /* cyan */
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    font-weight: bold;
+    overflow: hidden;
+    line-height: 1.1;
 }
 
 .room-util-timetable .cell-line {
-    font-size: 8.5pt;
-    line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    text-align: center;
 }
 
-/* Signatures */
+.room-util-timetable .cell-line-subj {
+    font-weight: bold;
+    font-size: 7.8pt;
+    line-height: 1.12;
+}
+
+.room-util-timetable .cell-line-comp {
+    font-size: 6.8pt;
+    line-height: 1.05;
+    font-weight: normal;
+    color: #111;
+}
+
+.room-util-timetable .cell-line-prof {
+    font-size: 7.2pt;
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.room-util-timetable .cell-line-room,
+.room-util-timetable .cell-line-sec,
+.room-util-timetable .cell-line-room-sec {
+    font-size: 6.8pt;
+    line-height: 1.08;
+}
+
+/* Signatories Section matching ROOM UTILIZATION.docx */
 .room-util-signatures {
     display: flex;
     justify-content: space-between;
-    padding: 0 40px;
-    margin-top: 40px;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 10px;
+    padding: 0 4px;
     font-family: "Times New Roman", Times, serif;
-    font-size: 11pt;
+    font-size: 8.5pt;
+    color: #000;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.sig-block {
+.room-util-signatures .sig-block {
     text-align: left;
+    flex: 1;
+    max-width: 32%;
 }
-.sig-label {
-    margin-bottom: 30px;
+
+.room-util-signatures .sig-label {
+    margin-bottom: 16px;
+    font-size: 8.5pt;
+    line-height: 1.15;
 }
-.sig-name {
+
+.room-util-signatures .sig-name {
     font-weight: bold;
     text-decoration: underline;
     display: inline-block;
-}
-.sig-title {
-    font-size: 11pt;
+    font-size: 9pt;
+    line-height: 1.15;
+    white-space: nowrap;
 }
 
-/* Screen Settings */
-@media screen {
+.room-util-signatures .sig-title {
+    font-size: 8pt;
+    margin-top: 1px;
+    line-height: 1.15;
+}
+
+/* Official CAPSU Full-Bleed Footer anchored to page bottom */
+.room-util-footer {
+    width: 100%;
+    margin-top: auto;
+    padding: 0;
+    line-height: 0;
+    flex-shrink: 0;
+    background: #fff;
+    overflow: hidden;
+}
+
+.room-util-footer-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    margin: 0;
+    padding: 0;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+/* Fallback footer if banner asset is unavailable */
+.room-util-footer-fallback {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 36px;
+    border-top: 3px solid #f2a900;
+    background: #0c1b56;
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 7.5pt;
+    line-height: 1.3;
+}
+
+.room-util-footer-fallback .footer-slogan {
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    font-size: 8.5pt;
+}
+
+/* Responsive Mobile Screen View */
+@media (max-width: 768px) {
+    .printable-room-utilization-wrapper {
+        zoom: 0.5;
+        margin-top: 16px !important;
+    }
+
     .printable-room-utilization {
-        display: flex;
+        min-width: 720px !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+
+    .room-util-body {
+        padding: 8px 24px 8px 24px !important;
     }
 }
 
+/* Print Layout — Single-Page Full-Bleed US Letter Portrait */
 @media print {
-    @page {
-        size: letter portrait;
-        margin: 0.2in 0.25in;
-    }
-
-    *, *::before, *::after {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        box-sizing: border-box !important;
-    }
-
-    body {
-        padding: 0 !important;
-        margin: 0 !important;
-        background: #fff !important;
-        color: #000 !important;
-        -webkit-font-smoothing: antialiased !important;
-        -moz-osx-font-smoothing: grayscale !important;
-        text-rendering: optimizeLegibility !important;
-        image-rendering: -webkit-optimize-contrast !important;
+    body.print-colored-mode .printable-room-utilization-wrapper {
+        display: none !important;
     }
 
     body.printing-room-utilization * {
         visibility: hidden;
     }
 
+    body.printing-room-utilization .printable-room-utilization-wrapper,
     body.printing-room-utilization .printable-room-utilization,
     body.printing-room-utilization .printable-room-utilization *,
+    .printable-room-utilization-wrapper,
     .printable-room-utilization,
     .printable-room-utilization * {
-        visibility: visible !important;
-        -webkit-font-smoothing: antialiased !important;
-        -moz-osx-font-smoothing: grayscale !important;
-        text-rendering: optimizeLegibility !important;
-        image-rendering: -webkit-optimize-contrast !important;
+        visibility: visible;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .printable-room-utilization-wrapper {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 8.5in !important;
+        height: 10.98in !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        display: block !important;
+        zoom: 1 !important;
     }
 
     .printable-room-utilization {
-        position: static !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 auto !important;
+        position: relative !important;
+        width: 8.5in !important;
+        max-width: 8.5in !important;
+        height: 10.98in !important;
+        max-height: 10.98in !important;
+        min-height: 10.98in !important;
+        margin: 0 !important;
         padding: 0 !important;
-        display: block !important;
+        display: flex !important;
+        flex-direction: column !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        overflow: hidden !important;
+        page-break-inside: avoid !important;
+        page-break-after: avoid !important;
+        break-inside: avoid !important;
+        break-after: avoid !important;
+    }
+
+    .room-util-header,
+    .room-util-footer {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 0 !important;
+        flex-shrink: 0 !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
+    }
+
+    .room-util-footer {
+        margin-top: auto !important;
+    }
+
+    .room-util-header-img,
+    .room-util-footer-img {
+        width: 100% !important;
+        height: auto !important;
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .room-util-body {
+        flex: 1 1 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 6px 34px 4px 34px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .room-util-titles {
+        margin: 0 0 5px 0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .room-util-titles h2 {
+        font-size: 11pt !important;
+        color: #002060 !important;
+        margin: 0 0 1px 0 !important;
+    }
+
+    .room-util-titles h3 {
+        font-size: 11pt !important;
+        margin: 0 0 1px 0 !important;
+    }
+
+    .room-util-titles p {
+        font-size: 9pt !important;
+    }
+
+    .room-util-room-name-wrapper {
+        margin: 0 0 5px 0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .room-util-room-name {
+        font-size: 9.5pt !important;
+        padding: 1.5px 8px !important;
+        background-color: #ffff00 !important;
+        border: 1px solid #000 !important;
+    }
+
+    .room-util-subjects-wrapper {
+        margin-bottom: 6px !important;
+        overflow: visible !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .room-util-subjects {
+        font-size: var(--room-subj-font, 8pt) !important;
+    }
+
+    .room-util-subjects th,
+    .room-util-subjects td {
+        padding: var(--room-subj-pad, 2px 4px) !important;
+    }
+
+    .room-util-timetable-wrapper {
+        margin-bottom: 6px !important;
+        overflow: visible !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .room-util-timetable {
+        min-width: unset !important;
+        width: 100% !important;
+        font-size: 7.5pt !important;
+    }
+
+    .room-util-timetable th {
+        height: var(--room-th-height, 20px) !important;
+        font-size: 8pt !important;
+        background-color: #f2f2f2 !important;
+    }
+
+    .room-util-timetable td {
+        height: var(--room-slot-height, 21px) !important;
+        max-height: var(--room-slot-height, 21px) !important;
+    }
+
+    .room-util-timetable .time-cell,
+    .room-util-timetable th.time-header {
+        position: static !important;
+        min-width: 78px !important;
+    }
+
+    .room-util-timetable td.scheduled-cell,
+    .room-util-timetable td.cell-scheduled {
+        background-color: var(--cell-bg, #109EEF) !important;
+    }
+
+    .room-util-signatures {
+        margin-top: 8px !important;
+        padding: 0 4px !important;
+        font-size: 8.5pt !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .room-util-signatures .sig-label {
+        margin-bottom: 14px !important;
     }
 }

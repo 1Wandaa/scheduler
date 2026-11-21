@@ -269,127 +269,147 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
 
                             const roomStyles = `
                                 .room-export-wrapper {
-                                    font-family: Arial, "Times New Roman", Times, serif;
+                                    font-family: "Times New Roman", Times, serif;
                                     color: #000;
                                     background: #fff;
                                     width: 850px;
-                                    padding: 20px 30px;
+                                    min-height: 1100px;
+                                    padding: 0;
+                                    margin: 0;
                                     box-sizing: border-box;
-                                    display: block;
+                                    display: flex;
+                                    flex-direction: column;
+                                    overflow: hidden;
                                 }
                                 .printable-room-utilization,
                                 .printable-room-utilization-wrapper {
-                                    display: block !important;
+                                    display: flex !important;
+                                    flex-direction: column !important;
                                     visibility: visible !important;
                                     width: 100% !important;
                                     max-width: 100% !important;
                                     padding: 0 !important;
                                     margin: 0 !important;
                                 }
-                                .room-util-header {
-                                    display: flex;
-                                    justify-content: flex-start;
-                                    align-items: center;
-                                    border-bottom: 3px solid #f2a900;
-                                    padding-bottom: 12px;
-                                    margin-bottom: 15px;
-                                    position: relative;
+                                .room-util-header,
+                                .room-util-footer {
                                     width: 100%;
-                                    box-sizing: border-box;
+                                    margin: 0;
+                                    padding: 0;
+                                    line-height: 0;
+                                    flex-shrink: 0;
+                                    background: #fff;
+                                    overflow: hidden;
                                 }
-                                .room-util-header img {
-                                    height: 65px;
-                                    object-fit: contain;
-                                    margin-right: 15px;
+                                .room-util-footer {
+                                    margin-top: auto;
                                 }
-                                .room-util-header-text {
+                                .room-util-header-img,
+                                .room-util-footer-img {
+                                    width: 100%;
+                                    height: auto;
+                                    display: block;
+                                    margin: 0;
+                                    padding: 0;
+                                }
+                                .room-util-body {
+                                    flex: 1 0 auto;
                                     display: flex;
                                     flex-direction: column;
-                                }
-                                .room-util-header-text .republic {
-                                    font-size: 8.5pt;
-                                    font-family: Arial, sans-serif;
-                                }
-                                .room-util-header-text .univ {
-                                    font-size: 15pt;
-                                    font-weight: bold;
-                                    color: #002060;
-                                    font-family: Arial, sans-serif;
-                                    letter-spacing: 0.5px;
-                                }
-                                .room-util-header-text .campus {
-                                    font-size: 9.5pt;
-                                    font-family: Arial, sans-serif;
-                                    color: #002060;
-                                    font-weight: bold;
+                                    width: 100%;
+                                    padding: 10px 36px 10px 36px;
+                                    box-sizing: border-box;
                                 }
                                 .room-util-titles {
                                     text-align: center;
-                                    margin-bottom: 15px;
+                                    margin: 2px 0 8px 0;
                                     width: 100%;
                                 }
                                 .room-util-titles h2 {
-                                    font-family: Arial, sans-serif;
-                                    color: #2e5296;
+                                    font-family: Arial, Helvetica, sans-serif;
+                                    color: #002060;
                                     font-size: 12pt;
                                     font-weight: bold;
                                     text-transform: uppercase;
-                                    margin: 0 0 4px 0;
+                                    letter-spacing: 0.3px;
+                                    margin: 0 0 2px 0;
+                                    line-height: 1.18;
                                 }
                                 .room-util-titles h3 {
                                     font-size: 12pt;
                                     font-weight: bold;
-                                    margin: 0 0 4px 0;
-                                    font-family: Arial, sans-serif;
+                                    margin: 0 0 2px 0;
+                                    font-family: "Times New Roman", Times, serif;
+                                    line-height: 1.15;
                                 }
                                 .room-util-titles p {
                                     font-size: 9.5pt;
                                     margin: 0;
-                                    font-family: Arial, sans-serif;
+                                    font-family: "Times New Roman", Times, serif;
+                                    line-height: 1.15;
                                 }
                                 .room-util-room-name-wrapper {
-                                    margin-bottom: 12px;
+                                    margin-bottom: 8px;
                                     width: 100%;
+                                    text-align: left;
                                 }
                                 .room-util-room-name {
-                                    font-size: 11pt;
+                                    font-family: "Times New Roman", Times, serif;
+                                    font-size: 10.5pt;
                                     font-weight: bold;
                                     background-color: #ffff00 !important;
                                     display: inline-block;
-                                    padding: 3px 8px;
+                                    padding: 2px 8px;
                                     border: 1px solid #000;
                                     -webkit-print-color-adjust: exact;
                                     print-color-adjust: exact;
                                 }
                                 .room-util-subjects-wrapper {
                                     width: 100%;
-                                    margin-bottom: 15px;
+                                    margin-bottom: 10px;
                                 }
                                 .room-util-subjects {
                                     width: 100%;
                                     border-collapse: collapse;
-                                    font-family: Arial, sans-serif;
-                                    font-size: 8.5pt;
+                                    font-family: "Times New Roman", Times, serif;
+                                    font-size: var(--room-subj-font, 8.5pt);
                                     border: 1px solid #000;
+                                    table-layout: fixed;
                                 }
                                 .room-util-subjects th, .room-util-subjects td {
                                     border: 1px solid #000;
-                                    padding: 5px 6px;
-                                    text-align: center;
+                                    padding: var(--room-subj-pad, 3.5px 5px);
+                                    vertical-align: middle;
+                                    line-height: 1.15;
+                                    box-sizing: border-box;
                                 }
                                 .room-util-subjects th {
                                     font-weight: bold;
+                                    text-align: center;
                                     background-color: #f2f2f2 !important;
+                                }
+                                .room-util-subjects td.subj-code-cell {
+                                    text-align: center;
+                                    font-weight: bold;
+                                }
+                                .room-util-subjects td.subj-desc-cell,
+                                .room-util-subjects td.subj-faculty-cell {
+                                    text-align: left;
+                                    padding-left: 6px;
+                                }
+                                .room-util-subjects td.subj-unit-cell,
+                                .room-util-subjects td.subj-sec-cell {
+                                    text-align: center;
                                 }
                                 .room-util-timetable-wrapper {
                                     width: 100%;
-                                    margin-bottom: 25px;
+                                    margin-bottom: 12px;
                                     overflow: visible;
                                 }
                                 .room-util-timetable {
                                     width: 100%;
                                     border-collapse: collapse;
-                                    font-family: Arial, sans-serif;
+                                    font-family: Arial, Helvetica, sans-serif;
                                     font-size: 8pt;
                                     table-layout: fixed;
                                     border: 1px solid #000;
@@ -405,16 +425,17 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     font-size: 8pt;
                                     font-weight: bold;
                                     background-color: #f2f2f2 !important;
-                                    padding: 5px 2px;
+                                    padding: 4px 2px;
+                                    height: 22px;
                                 }
                                 .room-util-timetable .time-col,
                                 .room-util-timetable .time-cell {
                                     width: 13%;
-                                    min-width: 90px;
+                                    min-width: 85px;
                                     font-size: 7.5pt;
                                     font-weight: bold;
                                     background-color: #f8fafc !important;
-                                    padding: 4px;
+                                    padding: 2px 3px;
                                     border: 1px solid #000;
                                     position: static !important;
                                 }
@@ -428,13 +449,14 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     border-top: none;
                                 }
                                 .room-util-timetable td {
-                                    height: 28px;
+                                    height: var(--room-slot-height, 22px);
                                 }
                                 .room-util-timetable td.scheduled-cell,
                                 .room-util-timetable td.cell-scheduled {
                                     background-color: var(--cell-bg, #109EEF) !important;
                                     border: 1px solid #000 !important;
                                     color: #000;
+                                    font-weight: bold;
                                     -webkit-print-color-adjust: exact;
                                     print-color-adjust: exact;
                                 }
@@ -445,9 +467,10 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     align-items: center;
                                     width: 100%;
                                     height: 100%;
-                                    padding: 2px 3px;
+                                    padding: 1px 2px;
                                     box-sizing: border-box;
-                                    overflow: visible;
+                                    overflow: hidden;
+                                    line-height: 1.1;
                                 }
                                 .room-util-timetable .cell-line {
                                     white-space: nowrap;
@@ -456,13 +479,37 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     max-width: 100%;
                                     text-align: center;
                                 }
+                                .room-util-timetable .cell-line-subj {
+                                    font-size: 7.8pt;
+                                    font-weight: bold;
+                                    line-height: 1.12;
+                                }
+                                .room-util-timetable .cell-line-comp {
+                                    font-size: 6.8pt;
+                                    font-weight: normal;
+                                    color: #111;
+                                    line-height: 1.05;
+                                }
+                                .room-util-timetable .cell-line-prof {
+                                    font-size: 7.2pt;
+                                    font-weight: 600;
+                                    line-height: 1.1;
+                                }
+                                .room-util-timetable .cell-line-room,
+                                .room-util-timetable .cell-line-sec,
+                                .room-util-timetable .cell-line-room-sec {
+                                    font-size: 6.8pt;
+                                    line-height: 1.08;
+                                }
                                 .room-util-signatures {
                                     display: flex;
                                     justify-content: space-between;
-                                    padding: 0 10px;
-                                    margin-top: 25px;
-                                    font-family: Arial, "Times New Roman", Times, serif;
-                                    font-size: 9.5pt;
+                                    align-items: flex-start;
+                                    gap: 12px;
+                                    padding: 0 4px;
+                                    margin-top: 12px;
+                                    font-family: "Times New Roman", Times, serif;
+                                    font-size: 9pt;
                                     width: 100%;
                                     box-sizing: border-box;
                                 }
@@ -472,18 +519,19 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     max-width: 32%;
                                 }
                                 .sig-label {
-                                    margin-bottom: 22px;
-                                    font-size: 9.5pt;
+                                    margin-bottom: 18px;
+                                    font-size: 9pt;
                                 }
                                 .sig-name {
                                     font-weight: bold;
                                     text-decoration: underline;
                                     display: inline-block;
-                                    font-size: 10pt;
+                                    font-size: 9.5pt;
+                                    white-space: nowrap;
                                 }
                                 .sig-title {
-                                    font-size: 9pt;
-                                    margin-top: 2px;
+                                    font-size: 8.5pt;
+                                    margin-top: 1px;
                                 }
                             `;
 
@@ -548,10 +596,11 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             `;
                             document.body.appendChild(tempContainer);
 
-                            const origImg = printContent.querySelector('img');
-                            const cloneImg = tempContainer.querySelector('img');
-                            if (origImg && cloneImg) {
-                                if (origImg.complete && origImg.naturalWidth > 0) {
+                            const origImgs = Array.from(printContent.querySelectorAll('img'));
+                            const cloneImgs = Array.from(tempContainer.querySelectorAll('img'));
+                            await Promise.all(cloneImgs.map((cloneImg, idx) => new Promise((resolve) => {
+                                const origImg = origImgs[idx];
+                                if (origImg && origImg.complete && origImg.naturalWidth > 0) {
                                     try {
                                         const c = document.createElement('canvas');
                                         c.width = origImg.naturalWidth;
@@ -562,10 +611,13 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     } catch {
                                         cloneImg.src = origImg.src;
                                     }
-                                } else {
+                                } else if (origImg) {
                                     cloneImg.src = origImg.src;
                                 }
-                            }
+                                if (cloneImg.complete) return resolve();
+                                cloneImg.onload = resolve;
+                                cloneImg.onerror = resolve;
+                            })));
 
                             try {
                                 const html2canvas = (await import('html2canvas')).default;
@@ -760,303 +812,321 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             `;
 
                             const roomPrintStyles = `
-                                @page { 
-                                    size: letter portrait; 
-                                    margin: 0.2in 0.25in; 
+                                @page {
+                                    size: letter portrait;
+                                    margin: 0;
                                 }
                                 * {
                                     -webkit-print-color-adjust: exact !important;
                                     print-color-adjust: exact !important;
                                     box-sizing: border-box !important;
                                 }
-                                html, body { 
-                                    margin: 0 !important; 
-                                    padding: 0 !important; 
-                                    background: #fff !important; 
+                                html, body {
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                    background: #fff !important;
                                     color: #000 !important;
-                                    font-family: Arial, "Times New Roman", Times, serif !important;
-                                    height: auto !important;
-                                    min-height: 0 !important;
+                                    font-family: "Times New Roman", Times, serif !important;
+                                    width: 8.5in !important;
+                                    height: 10.98in !important;
+                                    max-height: 10.98in !important;
                                     overflow: hidden !important;
                                     -webkit-font-smoothing: antialiased !important;
                                     -moz-osx-font-smoothing: grayscale !important;
                                     text-rendering: optimizeLegibility !important;
                                     image-rendering: -webkit-optimize-contrast !important;
                                 }
-                                .print-wrapper { 
-                                    width: 100% !important; 
-                                    max-width: 100% !important;
-                                    margin: 0 !important; 
-                                    padding: 0 !important; 
+                                .print-wrapper {
+                                    width: 8.5in !important;
+                                    max-width: 8.5in !important;
+                                    height: 10.98in !important;
+                                    max-height: 10.98in !important;
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                    display: flex !important;
+                                    flex-direction: column !important;
+                                    overflow: hidden !important;
+                                    background: #fff !important;
                                     page-break-after: avoid !important;
                                     break-after: avoid !important;
                                     page-break-inside: avoid !important;
                                     break-inside: avoid !important;
                                 }
                                 .printable-room-utilization,
-                                .printable-room-utilization-wrapper { 
-                                    display: block !important; 
-                                    visibility: visible !important; 
-                                    width: 100% !important; 
-                                    max-width: 100% !important; 
-                                    padding: 0 !important; 
-                                    margin: 0 !important; 
+                                .printable-room-utilization-wrapper {
+                                    display: flex !important;
+                                    flex-direction: column !important;
+                                    visibility: visible !important;
+                                    width: 100% !important;
+                                    max-width: 100% !important;
+                                    padding: 0 !important;
+                                    margin: 0 !important;
                                     page-break-inside: avoid !important;
                                     break-inside: avoid !important;
                                 }
-                                .room-util-header { 
-                                    display: flex !important; 
-                                    justify-content: flex-start !important; 
-                                    align-items: center !important; 
-                                    border-bottom: 2.5px solid #f2a900 !important; 
-                                    padding-bottom: 4px !important; 
-                                    margin-bottom: 8px !important; 
-                                    position: relative !important; 
-                                    width: 100% !important; 
+                                .room-util-header,
+                                .room-util-footer {
+                                    width: 100% !important;
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                    line-height: 0 !important;
+                                    flex-shrink: 0 !important;
+                                    background: #fff !important;
+                                    overflow: hidden !important;
                                     page-break-inside: avoid !important;
                                     break-inside: avoid !important;
                                 }
-                                .room-util-header img { 
-                                    height: 52px !important; 
-                                    object-fit: contain !important; 
-                                    margin-right: 12px !important; 
+                                .room-util-footer {
+                                    margin-top: auto !important;
                                 }
-                                .room-util-header-text { 
-                                    display: flex !important; 
-                                    flex-direction: column !important; 
+                                .room-util-header-img,
+                                .room-util-footer-img {
+                                    width: 100% !important;
+                                    height: auto !important;
+                                    display: block !important;
+                                    margin: 0 !important;
+                                    padding: 0 !important;
                                 }
-                                .room-util-header-text .republic { 
-                                    font-size: 8.5pt !important; 
-                                    font-family: Arial, sans-serif !important; 
-                                    line-height: 1.15 !important;
+                                .room-util-body {
+                                    flex: 1 1 auto !important;
+                                    display: flex !important;
+                                    flex-direction: column !important;
+                                    width: 100% !important;
+                                    padding: 6px 34px 4px 34px !important;
+                                    box-sizing: border-box !important;
                                 }
-                                .room-util-header-text .univ { 
-                                    font-size: 14pt !important; 
-                                    font-weight: bold !important; 
-                                    color: #002060 !important; 
-                                    font-family: Arial, sans-serif !important; 
-                                    letter-spacing: 0.5px !important; 
-                                    line-height: 1.15 !important;
-                                }
-                                .room-util-header-text .campus { 
-                                    font-size: 9.5pt !important; 
-                                    font-family: Arial, sans-serif !important; 
-                                    color: #002060 !important; 
-                                    font-weight: bold !important; 
-                                    line-height: 1.15 !important;
-                                }
-                                .room-util-titles { 
-                                    text-align: center !important; 
-                                    margin-bottom: 6px !important; 
-                                    width: 100% !important; 
+                                .room-util-titles {
+                                    text-align: center !important;
+                                    margin: 0 0 5px 0 !important;
+                                    width: 100% !important;
                                     page-break-inside: avoid !important;
                                     break-inside: avoid !important;
                                 }
-                                .room-util-titles h2 { 
-                                    font-family: Arial, sans-serif !important; 
-                                    color: #2e5296 !important; 
-                                    font-size: 11pt !important; 
-                                    font-weight: bold !important; 
-                                    text-transform: uppercase !important; 
-                                    margin: 0 0 2px 0 !important; 
+                                .room-util-titles h2 {
+                                    font-family: Arial, Helvetica, sans-serif !important;
+                                    color: #002060 !important;
+                                    font-size: 11pt !important;
+                                    font-weight: bold !important;
+                                    text-transform: uppercase !important;
+                                    letter-spacing: 0.3px !important;
+                                    margin: 0 0 1px 0 !important;
                                     line-height: 1.15 !important;
                                 }
-                                .room-util-titles h3 { 
-                                    font-size: 11pt !important; 
-                                    font-weight: bold !important; 
-                                    margin: 0 0 2px 0 !important; 
-                                    font-family: Arial, sans-serif !important; 
+                                .room-util-titles h3 {
+                                    font-size: 11pt !important;
+                                    font-weight: bold !important;
+                                    margin: 0 0 1px 0 !important;
+                                    font-family: "Times New Roman", Times, serif !important;
                                     line-height: 1.15 !important;
                                 }
-                                .room-util-titles p { 
-                                    font-size: 9pt !important; 
-                                    margin: 0 !important; 
-                                    font-family: Arial, sans-serif !important; 
+                                .room-util-titles p {
+                                    font-size: 9pt !important;
+                                    margin: 0 !important;
+                                    font-family: "Times New Roman", Times, serif !important;
                                     line-height: 1.15 !important;
                                 }
-                                .room-util-room-name-wrapper { 
-                                    margin-bottom: 6px !important; 
-                                    width: 100% !important; 
+                                .room-util-room-name-wrapper {
+                                    margin: 0 0 5px 0 !important;
+                                    width: 100% !important;
+                                    text-align: left !important;
                                     page-break-inside: avoid !important;
                                     break-inside: avoid !important;
                                 }
-                                .room-util-room-name { 
-                                    font-size: 10pt !important; 
-                                    font-weight: bold !important; 
-                                    background-color: #ffff00 !important; 
-                                    display: inline-block !important; 
-                                    padding: 2.5px 9px !important; 
-                                    border: 1px solid #000 !important; 
+                                .room-util-room-name {
+                                    font-family: "Times New Roman", Times, serif !important;
+                                    font-size: 9.5pt !important;
+                                    font-weight: bold !important;
+                                    background-color: #ffff00 !important;
+                                    display: inline-block !important;
+                                    padding: 1.5px 8px !important;
+                                    border: 1px solid #000 !important;
                                     -webkit-print-color-adjust: exact !important;
                                     print-color-adjust: exact !important;
                                 }
-                                .room-util-subjects-wrapper { 
-                                    width: 100% !important; 
-                                    margin-bottom: 8px !important; 
+                                .room-util-subjects-wrapper {
+                                    width: 100% !important;
+                                    margin-bottom: 6px !important;
                                     page-break-inside: avoid !important;
                                     break-inside: avoid !important;
                                 }
-                                .room-util-subjects { 
-                                    width: 100% !important; 
-                                    border-collapse: collapse !important; 
-                                    font-family: Arial, sans-serif !important; 
-                                    font-size: var(--room-subj-font, 8pt) !important; 
-                                    border: 1px solid #000 !important; 
-                                    table-layout: fixed !important; 
+                                .room-util-subjects {
+                                    width: 100% !important;
+                                    border-collapse: collapse !important;
+                                    font-family: "Times New Roman", Times, serif !important;
+                                    font-size: var(--room-subj-font, 8pt) !important;
+                                    border: 1px solid #000 !important;
+                                    table-layout: fixed !important;
                                 }
-                                .room-util-subjects th, .room-util-subjects td { 
-                                    border: 1px solid #000 !important; 
-                                    padding: var(--room-subj-pad, 3px 5px) !important; 
-                                    text-align: center !important; 
+                                .room-util-subjects th, .room-util-subjects td {
+                                    border: 1px solid #000 !important;
+                                    padding: var(--room-subj-pad, 2px 4px) !important;
                                     line-height: 1.15 !important;
-                                    box-sizing: border-box !important; 
+                                    vertical-align: middle !important;
+                                    box-sizing: border-box !important;
                                 }
-                                .room-util-subjects th { 
-                                    font-weight: bold !important; 
-                                    background-color: #f2f2f2 !important; 
+                                .room-util-subjects th {
+                                    font-weight: bold !important;
+                                    text-align: center !important;
+                                    background-color: #f2f2f2 !important;
                                     -webkit-print-color-adjust: exact !important;
                                     print-color-adjust: exact !important;
                                 }
-                                .room-util-timetable-wrapper { 
-                                    width: 100% !important; 
-                                    margin-bottom: 8px !important; 
+                                .room-util-subjects td.subj-code-cell {
+                                    text-align: center !important;
+                                    font-weight: bold !important;
+                                }
+                                .room-util-subjects td.subj-desc-cell,
+                                .room-util-subjects td.subj-faculty-cell {
+                                    text-align: left !important;
+                                    padding-left: 6px !important;
+                                }
+                                .room-util-subjects td.subj-unit-cell,
+                                .room-util-subjects td.subj-sec-cell {
+                                    text-align: center !important;
+                                }
+                                .room-util-timetable-wrapper {
+                                    width: 100% !important;
+                                    margin-bottom: 6px !important;
                                     overflow: visible !important;
                                     page-break-inside: avoid !important;
                                     break-inside: avoid !important;
                                 }
-                                .room-util-timetable { 
-                                    width: 100% !important; 
-                                    min-width: unset !important; 
-                                    border-collapse: collapse !important; 
-                                    font-family: Arial, sans-serif !important; 
-                                    font-size: 8pt !important; 
-                                    table-layout: fixed !important; 
-                                    border: 1px solid #000 !important; 
+                                .room-util-timetable {
+                                    width: 100% !important;
+                                    min-width: unset !important;
+                                    border-collapse: collapse !important;
+                                    font-family: Arial, Helvetica, sans-serif !important;
+                                    font-size: 7.5pt !important;
+                                    table-layout: fixed !important;
+                                    border: 1px solid #000 !important;
                                     flex: none !important;
                                 }
-                                .room-util-timetable th, .room-util-timetable td { 
-                                    border: 1px solid #000 !important; 
-                                    text-align: center !important; 
-                                    vertical-align: middle !important; 
-                                    padding: 0 !important; 
-                                    box-sizing: border-box !important; 
+                                .room-util-timetable th, .room-util-timetable td {
+                                    border: 1px solid #000 !important;
+                                    text-align: center !important;
+                                    vertical-align: middle !important;
+                                    padding: 0 !important;
+                                    box-sizing: border-box !important;
                                 }
-                                .room-util-timetable th { 
-                                    font-size: 8pt !important; 
-                                    font-weight: bold !important; 
-                                    background-color: #f2f2f2 !important; 
-                                    padding: 2px 2px !important; 
-                                    height: var(--room-th-height, 22px) !important;
+                                .room-util-timetable th {
+                                    font-size: 8pt !important;
+                                    font-weight: bold !important;
+                                    background-color: #f2f2f2 !important;
+                                    padding: 2px 2px !important;
+                                    height: var(--room-th-height, 20px) !important;
                                     -webkit-print-color-adjust: exact !important;
                                     print-color-adjust: exact !important;
                                 }
                                 .room-util-timetable .time-col,
-                                .room-util-timetable .time-cell { 
-                                    width: 13% !important; 
-                                    min-width: 80px !important; 
-                                    font-size: 8pt !important; 
-                                    font-weight: bold !important; 
-                                    background-color: #f8fafc !important; 
-                                    padding: 1px 2px !important; 
-                                    border: 1px solid #000 !important; 
-                                    position: static !important; 
+                                .room-util-timetable .time-cell {
+                                    width: 13% !important;
+                                    min-width: 78px !important;
+                                    font-size: 7.5pt !important;
+                                    font-weight: bold !important;
+                                    background-color: #f8fafc !important;
+                                    padding: 1px 2px !important;
+                                    border: 1px solid #000 !important;
+                                    position: static !important;
                                     -webkit-print-color-adjust: exact !important;
                                     print-color-adjust: exact !important;
                                 }
-                                .room-util-timetable th.time-header { 
-                                    position: static !important; 
+                                .room-util-timetable th.time-header {
+                                    position: static !important;
                                 }
-                                .room-util-timetable tr.hour-row td:not(.time-cell):not(.scheduled-cell) { 
-                                    border-bottom: none !important; 
+                                .room-util-timetable tr.hour-row td:not(.time-cell):not(.scheduled-cell) {
+                                    border-bottom: none !important;
                                 }
-                                .room-util-timetable tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) { 
-                                    border-top: none !important; 
+                                .room-util-timetable tr.half-hour-row td:not(.time-cell):not(.scheduled-cell) {
+                                    border-top: none !important;
                                 }
-                                .room-util-timetable td { 
-                                    height: var(--room-slot-height, 23px) !important; 
-                                    max-height: var(--room-slot-height, 23px) !important;
-                                    line-height: 1.15 !important;
+                                .room-util-timetable td {
+                                    height: var(--room-slot-height, 21px) !important;
+                                    max-height: var(--room-slot-height, 21px) !important;
+                                    line-height: 1.1 !important;
                                 }
                                 .room-util-timetable td.scheduled-cell,
-                                .room-util-timetable td.cell-scheduled { 
-                                    background-color: var(--cell-bg, #109EEF) !important; 
-                                    border: 1px solid #000 !important; 
-                                    color: #000 !important; 
+                                .room-util-timetable td.cell-scheduled {
+                                    background-color: var(--cell-bg, #109EEF) !important;
+                                    border: 1px solid #000 !important;
+                                    color: #000 !important;
                                     font-weight: bold !important;
                                     -webkit-print-color-adjust: exact !important;
                                     print-color-adjust: exact !important;
                                 }
-                                .room-util-timetable .cell-content { 
-                                    display: flex !important; 
-                                    flex-direction: column !important; 
-                                    justify-content: center !important; 
-                                    align-items: center !important; 
-                                    width: 100% !important; 
-                                    height: 100% !important; 
-                                    padding: 1px 2px !important; 
-                                    box-sizing: border-box !important; 
+                                .room-util-timetable .cell-content {
+                                    display: flex !important;
+                                    flex-direction: column !important;
+                                    justify-content: center !important;
+                                    align-items: center !important;
+                                    width: 100% !important;
+                                    height: 100% !important;
+                                    padding: 1px 2px !important;
+                                    box-sizing: border-box !important;
                                     overflow: hidden !important;
                                 }
-                                .room-util-timetable .cell-line { 
-                                    white-space: nowrap !important; 
-                                    overflow: hidden !important; 
-                                    text-overflow: ellipsis !important; 
-                                    max-width: 100% !important; 
-                                    text-align: center !important; 
+                                .room-util-timetable .cell-line {
+                                    white-space: nowrap !important;
+                                    overflow: hidden !important;
+                                    text-overflow: ellipsis !important;
+                                    max-width: 100% !important;
+                                    text-align: center !important;
                                 }
                                 .room-util-timetable .cell-line-subj {
-                                    font-size: 8pt !important;
+                                    font-size: 7.8pt !important;
                                     font-weight: bold !important;
-                                    line-height: 1.15 !important;
+                                    line-height: 1.12 !important;
                                 }
                                 .room-util-timetable .cell-line-comp {
-                                    font-size: 7pt !important;
+                                    font-size: 6.8pt !important;
                                     line-height: 1.05 !important;
                                     font-weight: normal !important;
                                     color: #111 !important;
                                 }
                                 .room-util-timetable .cell-line-prof {
-                                    font-size: 7.5pt !important;
+                                    font-size: 7.2pt !important;
                                     font-weight: 600 !important;
-                                    line-height: 1.15 !important;
+                                    line-height: 1.1 !important;
                                 }
                                 .room-util-timetable .cell-line-room,
                                 .room-util-timetable .cell-line-sec,
                                 .room-util-timetable .cell-line-room-sec {
-                                    font-size: 7pt !important;
-                                    line-height: 1.1 !important;
+                                    font-size: 6.8pt !important;
+                                    line-height: 1.08 !important;
                                 }
-                                .room-util-signatures { 
-                                    display: flex !important; 
-                                    justify-content: space-between !important; 
-                                    padding: 0 10px !important; 
-                                    margin-top: 10px !important; 
-                                    font-family: Arial, "Times New Roman", Times, serif !important; 
-                                    font-size: 9pt !important; 
-                                    width: 100% !important; 
-                                    box-sizing: border-box !important; 
+                                .room-util-signatures {
+                                    display: flex !important;
+                                    justify-content: space-between !important;
+                                    align-items: flex-start !important;
+                                    gap: 12px !important;
+                                    padding: 0 4px !important;
+                                    margin-top: 8px !important;
+                                    font-family: "Times New Roman", Times, serif !important;
+                                    font-size: 8.5pt !important;
+                                    width: 100% !important;
+                                    box-sizing: border-box !important;
                                     page-break-inside: avoid !important;
-                                    page-break-after: avoid !important; 
+                                    page-break-after: avoid !important;
                                     break-inside: avoid !important;
                                 }
-                                .sig-block { 
-                                    text-align: left !important; 
-                                    flex: 1 !important; 
-                                    max-width: 32% !important; 
+                                .sig-block {
+                                    text-align: left !important;
+                                    flex: 1 !important;
+                                    max-width: 32% !important;
                                 }
-                                .sig-label { 
-                                    margin-bottom: 16px !important; 
-                                    font-size: 9pt !important; 
+                                .sig-label {
+                                    margin-bottom: 14px !important;
+                                    font-size: 8.5pt !important;
                                 }
-                                .sig-name { 
-                                    font-weight: bold !important; 
-                                    text-decoration: underline !important; 
-                                    display: inline-block !important; 
-                                    font-size: 9.5pt !important; 
+                                .sig-name {
+                                    font-weight: bold !important;
+                                    text-decoration: underline !important;
+                                    display: inline-block !important;
+                                    font-size: 9pt !important;
+                                    white-space: nowrap !important;
                                 }
-                                .sig-title { 
-                                    font-size: 8.5pt !important; 
-                                    margin-top: 1px !important; 
+                                .sig-title {
+                                    font-size: 8pt !important;
+                                    margin-top: 1px !important;
                                 }
                             `;
 
@@ -1141,23 +1211,30 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                             if (isRoom) {
                                 printHtml = printHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
                             }
-                            const origImg = printContent.querySelector('img');
-                            if (origImg && origImg.complete && origImg.naturalWidth > 0) {
-                                try {
-                                    const factor = Math.max(3, Math.ceil(300 / origImg.naturalWidth));
-                                    const c = document.createElement('canvas');
-                                    c.width = origImg.naturalWidth * factor;
-                                    c.height = origImg.naturalHeight * factor;
-                                    const ctx = c.getContext('2d');
-                                    ctx.imageSmoothingEnabled = true;
-                                    ctx.imageSmoothingQuality = 'high';
-                                    ctx.drawImage(origImg, 0, 0, c.width, c.height);
-                                    const dataUrl = c.toDataURL('image/png');
-                                    printHtml = printHtml.replace(/<img[^>]+src="[^"]+"[^>]*>/i, (m) => m.replace(/src="[^"]+"/, `src="${dataUrl}"`));
-                                } catch {
-                                    // Keep original src
+                            const origImgs = Array.from(printContent.querySelectorAll('img'));
+                            const dataUrls = origImgs.map((origImg) => {
+                                if (origImg && origImg.complete && origImg.naturalWidth > 0) {
+                                    try {
+                                        const factor = origImg.naturalWidth >= 600 ? 1 : Math.max(2, Math.ceil(300 / origImg.naturalWidth));
+                                        const c = document.createElement('canvas');
+                                        c.width = origImg.naturalWidth * factor;
+                                        c.height = origImg.naturalHeight * factor;
+                                        const ctx = c.getContext('2d');
+                                        ctx.imageSmoothingEnabled = true;
+                                        ctx.imageSmoothingQuality = 'high';
+                                        ctx.drawImage(origImg, 0, 0, c.width, c.height);
+                                        return c.toDataURL('image/png');
+                                    } catch {
+                                        return origImg.src;
+                                    }
                                 }
-                            }
+                                return origImg?.src || null;
+                            });
+                            let imgReplaceIdx = 0;
+                            printHtml = printHtml.replace(/<img[^>]+src="[^"]+"[^>]*>/gi, (m) => {
+                                const dataUrl = dataUrls[imgReplaceIdx++];
+                                return dataUrl ? m.replace(/src="[^"]+"/, `src="${dataUrl}"`) : m;
+                            });
 
                             doc.write(`
                                 <html>
@@ -1178,14 +1255,24 @@ const ExportOptions = ({ isGenerating, setIsGenerating, setPreviewImage, user })
                                     ? 'Printed room utilization schedule document'
                                     : (isWorkload ? 'Printed faculty workload document' : 'Printed ISO format schedule document')
                             });
-                            setTimeout(() => {
+                            const iframeImgs = Array.from(doc.querySelectorAll('img'));
+                            const triggerPrint = () => {
                                 iframe.contentWindow.print();
                                 setTimeout(() => {
                                     if (iframe.parentNode) {
                                         document.body.removeChild(iframe);
                                     }
                                 }, 2000);
-                            }, 300);
+                            };
+                            Promise.all(iframeImgs.map((img) => {
+                                if (img.complete) return Promise.resolve();
+                                return new Promise((resolve) => {
+                                    img.onload = resolve;
+                                    img.onerror = resolve;
+                                });
+                            })).then(() => {
+                                setTimeout(triggerPrint, 180);
+                            });
                         }}
                         style={itemStyle}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}

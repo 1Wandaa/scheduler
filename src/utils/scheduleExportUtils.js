@@ -305,14 +305,14 @@ function wrapPortraitWordHtml(bodyHtml, title = 'Room Utilization Schedule') {
     @page Section1 {
       size: 8.5in 13.0in; /* Folio / Legal (12242 x 18722 dxa matching ROOM UTILIZATION.docx) */
       mso-page-orientation: portrait;
-      margin: 0.35in 0.5in 0.35in 0.5in;
-      mso-header-margin: 0.35in;
-      mso-footer-margin: 0.35in;
+      margin: 0.25in 0.35in 0.25in 0.35in;
+      mso-header-margin: 0.2in;
+      mso-footer-margin: 0.2in;
       mso-paper-source: 0;
     }
     div.Section1 {
       page: Section1;
-      width: 500pt;
+      width: 560pt;
       margin: 0 auto;
     }
     body {
@@ -932,39 +932,51 @@ export async function exportRoomUtilizationToWord(user) {
       return;
     }
 
-    // 1. Fetch base64 logo if possible
-    const logoBase64 = await getImageAsBase64('/download.jpg') || await getImageAsBase64('/capsu-logo.jpg') || await getImageAsBase64('/logo.png');
+    // 1. Fetch official CAPSU header & footer banners (with logo fallback)
+    const [capsuHeaderBase64, capsuFooterBase64] = await Promise.all([
+      getImageAsBase64('/capsu-header.png'),
+      getImageAsBase64('/capsu-footer.png')
+    ]);
+    const logoBase64 = capsuHeaderBase64
+      ? null
+      : (await getImageAsBase64('/capsu-logo.jpg') || await getImageAsBase64('/download.jpg') || await getImageAsBase64('/logo.png'));
 
-    // 2. Build Header (pure paragraph + float image, ZERO tables so Word CANNOT draw any dashed gridlines)
-    const headerHtml = `
-      <div style="width: 500pt; margin: 0 auto 3pt auto; border-bottom: 2.5pt solid #f2a900; padding-bottom: 2pt;">
-        ${logoBase64 ? `<img src="${logoBase64}" width="34" height="34" align="left" hspace="8" vspace="0" style="float: left; margin-right: 8pt;" alt="CapSU" />` : ''}
-        <div style="font-family: Arial, Helvetica, sans-serif;">
-          <div style="font-size: 8pt; color: #000000; line-height: 9.5pt;">Republic of the Philippines</div>
-          <div style="font-size: 13.5pt; font-weight: bold; color: #002060; letter-spacing: 0.5pt; line-height: 15pt;">CAPIZ STATE UNIVERSITY</div>
-          <div style="font-size: 9pt; font-weight: bold; color: #002060; line-height: 10pt;">MAMBUSAO SATELLITE COLLEGE</div>
+    // 2. Build Official CAPSU Header (aspect-locked 1237x200 -> 560pt x 90.5pt)
+    const headerHtml = capsuHeaderBase64
+      ? `
+        <div style="width: 560pt; margin: 0 auto 4pt auto; padding: 0; text-align: center; line-height: 0;">
+          <img src="${capsuHeaderBase64}" width="746" height="121" style="width: 560pt; height: 91pt; display: block; margin: 0 auto;" alt="Capiz State University - Mambusao Satellite College Header" />
         </div>
-        <div style="clear: both; font-size: 1pt; line-height: 1pt;">&nbsp;</div>
-      </div>
-    `;
+      `
+      : `
+        <div style="width: 500pt; margin: 0 auto 4pt auto; border-bottom: 2.5pt solid #f2a900; padding-bottom: 2pt;">
+          ${logoBase64 ? `<img src="${logoBase64}" width="34" height="34" align="left" hspace="8" vspace="0" style="float: left; margin-right: 8pt;" alt="CapSU" />` : ''}
+          <div style="font-family: Arial, Helvetica, sans-serif;">
+            <div style="font-size: 8pt; color: #000000; line-height: 9.5pt;">Republic of the Philippines</div>
+            <div style="font-size: 13.5pt; font-weight: bold; color: #002060; letter-spacing: 0.5pt; line-height: 15pt;">CAPIZ STATE UNIVERSITY</div>
+            <div style="font-size: 9pt; font-weight: bold; color: #002060; line-height: 10pt;">MAMBUSAO SATELLITE COLLEGE</div>
+          </div>
+          <div style="clear: both; font-size: 1pt; line-height: 1pt;">&nbsp;</div>
+        </div>
+      `;
 
-    // 3. Titles Section (matching reference docx)
+    // 3. Titles Section (matching reference ROOM UTILIZATION.docx)
     const deptName = roomDoc.querySelector('.room-util-titles h2')?.textContent.trim() || 'DEPARTMENT';
     const titleText = roomDoc.querySelector('.room-util-titles h3')?.textContent.trim() || 'Room Utilization';
     const semText = roomDoc.querySelector('.room-util-titles p')?.textContent.trim() || 'First Semester, School Year 2026-2027';
     const titlesHtml = `
-      <div style="text-align: center; margin-bottom: 3pt;">
-        <div style="font-family: Arial, sans-serif; color: #2e5296; font-size: 10.5pt; font-weight: bold; text-transform: uppercase; line-height: 12pt;">${deptName}</div>
-        <div style="font-family: Arial, sans-serif; font-size: 10.5pt; font-weight: bold; line-height: 12pt; margin-top: 1pt;">${titleText}</div>
-        <div style="font-family: Arial, sans-serif; font-size: 8.5pt; line-height: 10pt; margin-top: 1pt;">${semText}</div>
+      <div style="text-align: center; margin-bottom: 4pt;">
+        <div style="font-family: Arial, Helvetica, sans-serif; color: #002060; font-size: 11pt; font-weight: bold; text-transform: uppercase; line-height: 13pt;">${deptName}</div>
+        <div style="font-family: 'Times New Roman', Times, serif; font-size: 11pt; font-weight: bold; line-height: 13pt; margin-top: 1pt;">${titleText}</div>
+        <div style="font-family: 'Times New Roman', Times, serif; font-size: 9pt; line-height: 11pt; margin-top: 1pt;">${semText}</div>
       </div>
     `;
 
     // 4. Room Badge
     const roomBadgeText = roomDoc.querySelector('.room-util-room-name')?.textContent.trim() || 'Room: N/A';
     const roomBadgeHtml = `
-      <div style="margin-bottom: 3pt;">
-        <span style="font-family: Arial, sans-serif; font-size: 9.5pt; font-weight: bold; background-color: #ffff00; border: 1.0pt solid #000000; padding: 1pt 5pt; display: inline-block;">${roomBadgeText}</span>
+      <div style="width: 500pt; margin: 0 auto 4pt auto;">
+        <span style="font-family: 'Times New Roman', Times, serif; font-size: 9.5pt; font-weight: bold; background-color: #ffff00; border: 1.0pt solid #000000; padding: 1pt 5pt; display: inline-block;">${roomBadgeText}</span>
       </div>
     `;
 
@@ -974,13 +986,13 @@ export async function exportRoomUtilizationToWord(user) {
     if (srcSubjTable) {
       const rows = Array.from(srcSubjTable.querySelectorAll('tr'));
       subjTableHtml = `
-        <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="0" style="width: 500pt; border-collapse: collapse; table-layout: fixed; margin-bottom: 3pt; border: 1.0pt solid #000000; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+        <table border="1" bordercolor="#000000" cellspacing="0" cellpadding="0" style="width: 500pt; border-collapse: collapse; table-layout: fixed; margin-bottom: 4pt; border: 1.0pt solid #000000; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
           <colgroup>
-            <col width="60" style="width: 60pt;">
-            <col width="160" style="width: 160pt;">
+            <col width="65" style="width: 65pt;">
+            <col width="180" style="width: 180pt;">
             <col width="40" style="width: 40pt;">
-            <col width="145" style="width: 145pt;">
-            <col width="95" style="width: 95pt;">
+            <col width="115" style="width: 115pt;">
+            <col width="100" style="width: 100pt;">
           </colgroup>
           ${rows.map((tr, rIdx) => {
             const isHead = rIdx === 0;
@@ -991,13 +1003,14 @@ export async function exportRoomUtilizationToWord(user) {
                 ${cells.map((cell, cIdx) => {
                   const colSpan = cell.getAttribute('colspan') || '1';
                   const isHeaderCell = cell.tagName === 'TH' || isHead;
-                  const isDesc = !isHeaderCell && cIdx === 1 && colSpan === '1';
+                  const isLeftAligned = !isHeaderCell && (cIdx === 1 || cIdx === 3) && colSpan === '1';
+                  const isCodeCell = !isHeaderCell && cIdx === 0 && colSpan === '1';
                   const bg = isHeaderCell ? 'background-color: #f2f2f2;' : '';
-                  const weight = isHeaderCell || cell.style.fontWeight === 'bold' ? 'font-weight: bold;' : '';
-                  const align = isDesc ? 'text-align: left; padding: 1pt 4pt;' : 'text-align: center; padding: 1pt 2pt;';
+                  const weight = isHeaderCell || isCodeCell || cell.style.fontWeight === 'bold' ? 'font-weight: bold;' : '';
+                  const align = isLeftAligned ? 'text-align: left; padding: 1pt 4pt;' : 'text-align: center; padding: 1pt 2pt;';
                   const fontSize = isHeaderCell ? '8pt' : '7.5pt';
                   return `
-                    <${cell.tagName.toLowerCase()} colspan="${colSpan}" style="border: 1.0pt solid #000000; font-family: Arial, sans-serif; font-size: ${fontSize}; vertical-align: middle; line-height: 1.15; ${align} ${bg} ${weight}">
+                    <${cell.tagName.toLowerCase()} colspan="${colSpan}" style="border: 1.0pt solid #000000; font-family: 'Times New Roman', Times, serif; font-size: ${fontSize}; vertical-align: middle; line-height: 1.15; ${align} ${bg} ${weight}">
                       ${cell.innerHTML}
                     </${cell.tagName.toLowerCase()}>
                   `;
@@ -1279,7 +1292,7 @@ export async function exportRoomUtilizationToWord(user) {
     }
 
     const sigsHtml = `
-      <table class="room-util-signatures-table" border="1" bordercolor="#ffffff" cellspacing="0" cellpadding="0" style="width: 500pt; margin: 3pt auto 0 auto; border-collapse: collapse; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; table-layout: fixed; mso-table-lspace: 0pt; mso-table-rspace: 0pt; page-break-inside: avoid; page-break-after: avoid; page-break-before: avoid;">
+      <table class="room-util-signatures-table" border="1" bordercolor="#ffffff" cellspacing="0" cellpadding="0" style="width: 500pt; margin: 5pt auto 6pt auto; border-collapse: collapse; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; table-layout: fixed; mso-table-lspace: 0pt; mso-table-rspace: 0pt; page-break-inside: avoid; page-break-after: avoid; page-break-before: avoid;">
         <colgroup>
           <col width="166" style="width: 166pt;">
           <col width="166" style="width: 166pt;">
@@ -1287,35 +1300,35 @@ export async function exportRoomUtilizationToWord(user) {
         </colgroup>
         <tr style="page-break-inside: avoid;">
           <td width="166" style="width: 166pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
-            <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 0 0 10pt 0; padding: 0; font-family: 'Times New Roman', Times, serif; font-size: 8.5pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               ${prepLabel}
             </p>
-            <p style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 0; padding: 0; font-family: 'Times New Roman', Times, serif; font-size: 9.5pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               <u>${prepName}</u>
             </p>
-            <p style="margin: 1pt 0 0 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #4b5563; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 1pt 0 0 0; padding: 0; font-family: 'Times New Roman', Times, serif; font-size: 8pt; color: #333333; line-height: 1.15; mso-line-height-rule: at-least;">
               ${prepTitle}
             </p>
           </td>
           <td width="166" style="width: 166pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
-            <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 0 0 10pt 0; padding: 0; font-family: 'Times New Roman', Times, serif; font-size: 8.5pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               ${notedLabel}
             </p>
-            <p style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 0; padding: 0; font-family: 'Times New Roman', Times, serif; font-size: 9.5pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               <u>${notedName}</u>
             </p>
-            <p style="margin: 1pt 0 0 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #4b5563; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 1pt 0 0 0; padding: 0; font-family: 'Times New Roman', Times, serif; font-size: 8pt; color: #333333; line-height: 1.15; mso-line-height-rule: at-least;">
               ${notedTitle}
             </p>
           </td>
           <td width="168" style="width: 168pt; vertical-align: top; border: 0.5pt solid #ffffff; mso-border-alt: solid #ffffff 0.5pt; padding: 0 4pt; text-align: left; overflow: visible;">
-            <p style="margin: 0 0 8pt 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 0 0 10pt 0; padding: 0; font-family: 'Times New Roman', Times, serif; font-size: 8.5pt; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               ${approvedLabel}
             </p>
-            <p style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 0; padding: 0; font-family: 'Times New Roman', Times, serif; font-size: 9.5pt; font-weight: bold; color: #000000; line-height: 1.15; mso-line-height-rule: at-least;">
               <u>${approvedName}</u>
             </p>
-            <p style="margin: 1pt 0 0 0; padding: 0; font-family: Arial, Helvetica, sans-serif; font-size: 8pt; color: #4b5563; line-height: 1.15; mso-line-height-rule: at-least;">
+            <p style="margin: 1pt 0 0 0; padding: 0; font-family: 'Times New Roman', Times, serif; font-size: 8pt; color: #333333; line-height: 1.15; mso-line-height-rule: at-least;">
               ${approvedTitle}
             </p>
           </td>
@@ -1323,7 +1336,16 @@ export async function exportRoomUtilizationToWord(user) {
       </table>
     `;
 
-    // 8. Assemble full document body without trailing paragraph spacer to prevent empty Page 2
+    // 8. Official CAPSU Footer (aspect-locked 1237x184 -> 560pt x 83pt)
+    const footerHtml = capsuFooterBase64
+      ? `
+        <div style="width: 560pt; margin: 4pt auto 0 auto; padding: 0; text-align: center; line-height: 0; page-break-inside: avoid; page-break-before: avoid;">
+          <img src="${capsuFooterBase64}" width="746" height="111" style="width: 560pt; height: 83pt; display: block; margin: 0 auto;" alt="Capiz State University - Mambusao Satellite College Footer" />
+        </div>
+      `
+      : '';
+
+    // 9. Assemble full document body without trailing paragraph spacer to prevent empty Page 2
     const bodyHtml = `
       ${headerHtml}
       ${titlesHtml}
@@ -1331,6 +1353,7 @@ export async function exportRoomUtilizationToWord(user) {
       ${subjTableHtml}
       ${timetableHtml}
       ${sigsHtml}
+      ${footerHtml}
     `;
 
     const cleanRoomName = (roomBadgeText.replace(/^Room:\s*/i, '') || 'Room').replace(/[^a-zA-Z0-9_-]/g, '_');
