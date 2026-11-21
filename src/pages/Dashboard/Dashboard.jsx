@@ -215,6 +215,21 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
     setActiveTab(tab);
   };
 
+  const handleLogoutClick = async () => {
+    const isConfirmed = await confirm({
+      title: 'Log Out?',
+      text: 'Are you sure you want to log out of your account?',
+      icon: 'logout',
+      confirmButtonText: 'Log Out',
+      cancelButtonText: 'Cancel',
+      isDestructive: true,
+    });
+    if (isConfirmed) {
+      setMobileMenuOpen(false);
+      await onLogout();
+    }
+  };
+
   const handleAutoScheduleAction = async (mode) => {
     setIsFabHidden(true);
     const result = await showAutoScheduleModal(mode, { professors, rooms, sections }, { confirm, prompt });
@@ -300,7 +315,7 @@ const Dashboard = ({ user, onLogout, onUpdateUser }) => {
       if (
         isScheduleFormOpenRef.current ||
         target?.closest('.chatbot-container, .speed-dial-wrapper, input, textarea, select, [role="slider"]') ||
-        document.querySelector('.modal-overlay, .hub-modal-overlay, .swal2-container')
+        document.querySelector('.modal-overlay, .hub-modal-overlay, .dialog-overlay, .swal2-container')
       ) {
         tracking = false;
         return;
@@ -821,7 +836,7 @@ return (
               active={activeTab === 'settings'}
               onClick={() => handleTabClick('settings')}
             />
-            <NavItem label="Log Out" iconPath={NAV_ICONS.logout} danger onClick={onLogout} />
+            <NavItem label="Log Out" iconPath={NAV_ICONS.logout} danger onClick={handleLogoutClick} />
           </ul>
         </nav>
 

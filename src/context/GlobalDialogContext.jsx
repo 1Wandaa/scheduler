@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { AlertTriangle, CheckCircle2, Info, XCircle, CalendarDays, CalendarRange } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, XCircle, CalendarDays, CalendarRange, LogOut } from 'lucide-react';
 import '../styles/dialogs.css';
 
 const GlobalDialogContext = createContext(null);
@@ -19,6 +19,7 @@ export const GlobalDialogProvider = ({ children }) => {
   const [inputValue, setInputValue] = useState('');
 
   const closeDialog = useCallback((result = null) => {
+    if (isClosing) return;
     setIsClosing(true);
     setTimeout(() => {
       if (dialogConfig?.resolve) {
@@ -28,7 +29,7 @@ export const GlobalDialogProvider = ({ children }) => {
       setIsClosing(false);
       setInputValue('');
     }, 200); // Matches CSS animation duration
-  }, [dialogConfig]);
+  }, [dialogConfig, isClosing]);
 
   const confirm = useCallback((options) => {
     return new Promise((resolve) => {
@@ -83,6 +84,7 @@ export const GlobalDialogProvider = ({ children }) => {
       case 'error': return <XCircle size={24} />;
       case 'calendar': return <CalendarDays size={24} />;
       case 'calendar-range': return <CalendarRange size={24} />;
+      case 'logout': return <LogOut size={24} />;
       case 'info':
       default: return <Info size={24} />;
     }
